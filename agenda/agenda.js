@@ -1,11 +1,10 @@
-// Import the functions you need from the SDKs you need
+// Seu código Firebase aqui
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getFirestore, collection, getDocs, addDoc } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Seu web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
   authDomain: "agenda-6accc.firebaseapp.com",
@@ -16,6 +15,33 @@ const firebaseConfig = {
   measurementId: "G-QS6WRF6Y6L"
 };
 
-// Initialize Firebase
+// Inicialize Firebase
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
+
+// Inicialize Firestore
+const db = getFirestore(app);
+
+// Inicialize Authentication (se necessário)
+const auth = getAuth(app);
+
+function redirectToIndex() {
+    // Adicione o redirecionamento para o Index aqui
+}
+
+// Funções para manipular o banco de dados Firestore
+async function fetchEvents() {
+    const eventsCollection = collection(db, 'events');
+    const eventsSnapshot = await getDocs(eventsCollection);
+    const events = eventsSnapshot.docs.map(doc => doc.data());
+    return events;
+}
+
+async function addEvent(eventData) {
+    const eventsCollection = collection(db, 'events');
+    const newEventRef = await addDoc(eventsCollection, eventData);
+    return newEventRef.id;
+}
+
+// Adicione outras funções conforme necessário
+
