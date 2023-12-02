@@ -1,41 +1,22 @@
-// Simulação de dados da agenda
-const eventsData = [
-    { id: 1, title: 'Reunião de equipe', date: '2023-12-15', time: '14:00' },
-    { id: 2, title: 'Almoço com cliente', date: '2023-12-18', time: '12:30' },
-    // Adicione mais eventos conforme necessário
-];
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-document.addEventListener('DOMContentLoaded', function () {
-    const calendarContainer = document.getElementById('calendar-container');
-    const calendar = document.getElementById('calendar');
-    const eventDetails = document.getElementById('event-details');
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+  authDomain: "agenda-6accc.firebaseapp.com",
+  projectId: "agenda-6accc",
+  storageBucket: "agenda-6accc.appspot.com",
+  messagingSenderId: "794262176773",
+  appId: "1:794262176773:web:9bcd82e5cffd858adc086c",
+  measurementId: "G-QS6WRF6Y6L"
+};
 
-    // Função para renderizar os eventos no calendário
-    function renderEvents() {
-        // Limpar conteúdo atual
-        calendar.innerHTML = '';
-
-        // Renderizar eventos
-        eventsData.forEach(event => {
-            const eventElement = document.createElement('div');
-            eventElement.classList.add('calendar-event');
-            eventElement.innerText = event.title;
-
-            // Adicionar manipulador de evento para exibir detalhes
-            eventElement.addEventListener('click', () => showEventDetails(event));
-
-            calendar.appendChild(eventElement);
-        });
-    }
-
-    // Função para exibir detalhes do evento
-    function showEventDetails(event) {
-        eventDetails.innerHTML = `<h2>${event.title}</h2>
-                                  <p>Data: ${event.date}</p>
-                                  <p>Hora: ${event.time}</p>`;
-    }
-
-    // Renderizar eventos iniciais
-    renderEvents();
-});
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 
