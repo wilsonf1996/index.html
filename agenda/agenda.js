@@ -1,62 +1,41 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minha Agenda</title>
-    <link rel="stylesheet" href="style.css">
-    <style>
-        /* Adicione estilos específicos para a agenda, se necessário */
-        #visualizar-eventos {
-            margin-top: 20px;
-        }
+// Simulação de dados da agenda
+const eventsData = [
+    { id: 1, title: 'Reunião de equipe', date: '2023-12-15', time: '14:00' },
+    { id: 2, title: 'Almoço com cliente', date: '2023-12-18', time: '12:30' },
+    // Adicione mais eventos conforme necessário
+];
 
-        #lista-eventos {
-            list-style: none;
-            padding: 0;
-        }
+document.addEventListener('DOMContentLoaded', function () {
+    const calendarContainer = document.getElementById('calendar-container');
+    const calendar = document.getElementById('calendar');
+    const eventDetails = document.getElementById('event-details');
 
-        .evento {
-            margin-bottom: 10px;
-        }
+    // Função para renderizar os eventos no calendário
+    function renderEvents() {
+        // Limpar conteúdo atual
+        calendar.innerHTML = '';
 
-        .evento button {
-            margin-left: 10px;
-            cursor: pointer;
-        }
-    </style>
-</head>
-<body>
-    <h1>Minha Agenda</h1>
-    
-    <!-- Seção para Adicionar Eventos -->
-    <section id="adicionar-evento">
-        <h2>Adicionar Evento</h2>
-        <form onsubmit="adicionarEvento(); return false;">
-            <label for="nome-evento">Nome do Evento:</label>
-            <input type="text" id="nome-evento" required>
-            
-            <label for="data-evento">Data do Evento:</label>
-            <input type="date" id="data-evento" required>
-            
-            <label for="hora-inicio">Hora de Início:</label>
-            <input type="time" id="hora-inicio" required>
-            
-            <label for="hora-termino">Hora de Término:</label>
-            <input type="time" id="hora-termino" required>
+        // Renderizar eventos
+        eventsData.forEach(event => {
+            const eventElement = document.createElement('div');
+            eventElement.classList.add('calendar-event');
+            eventElement.innerText = event.title;
 
-            <button type="submit">Adicionar</button>
-        </form>
-    </section>
+            // Adicionar manipulador de evento para exibir detalhes
+            eventElement.addEventListener('click', () => showEventDetails(event));
 
-    <!-- Seção para Visualizar Eventos -->
-    <section id="visualizar-eventos">
-        <h2>Eventos</h2>
-        <!-- Lista de eventos -->
-        <ul id="lista-eventos"></ul>
-    </section>
+            calendar.appendChild(eventElement);
+        });
+    }
 
-    <!-- Adicione scripts para a lógica da agenda -->
-    <script src="agenda.js"></script>
-</body>
-</html>
+    // Função para exibir detalhes do evento
+    function showEventDetails(event) {
+        eventDetails.innerHTML = `<h2>${event.title}</h2>
+                                  <p>Data: ${event.date}</p>
+                                  <p>Hora: ${event.time}</p>`;
+    }
+
+    // Renderizar eventos iniciais
+    renderEvents();
+});
+
