@@ -84,7 +84,6 @@
         function initNotes() {
             notes = getSavedNotes();
             updateNotesTable();
-            setInterval(checkAndSyncNotes, 5000); // Atualiza as notas a cada 5 segundos
         }
 
         function getSavedNotes() {
@@ -99,16 +98,15 @@
         function createOrUpdateNote() {
             const noteText = document.getElementById('note-input').value.trim();
             if (noteText) {
-                const currentDate = new Date().getTime(); // Timestamp
-                const randomId = generateRandomId();
-                const existingNoteIndex = findNoteIndexByDate(currentDate);
+                const currentDate = new Date().getTime(); // Identificador único (timestamp)
+                const newNote = { id: currentDate, text: noteText, date: new Date(currentDate).toLocaleString() };
 
+                const existingNoteIndex = findNoteIndexById(currentDate);
                 if (existingNoteIndex !== -1) {
-                    // If note with the current date exists, update it
-                    notes[existingNoteIndex].text = noteText;
+                    // If note with the current id exists, update it
+                    notes[existingNoteIndex] = newNote;
                 } else {
                     // Otherwise, create a new note
-                    const newNote = { id: randomId, text: noteText, date: currentDate };
                     notes.push(newNote);
                 }
 
@@ -118,27 +116,24 @@
             }
         }
 
-        function generateRandomId() {
-            return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        function findNoteIndexById(id) {
+            return notes.findIndex(note => note.id === id);
         }
 
-        function findNoteIndexByDate(date) {
-            return notes.findIndex(note => note.date === date);
-        }
-
-        function editNote(index) {
-            const editedText = prompt('Editar nota:', notes[index].text);
+        function editNote(id) {
+            const editedText = prompt('Editar nota:', notes.find(note => note.id === id).text);
             if (editedText !== null) {
-                notes[index].text = editedText;
+                const existingNoteIndex = findNoteIndexById(id);
+                notes[existingNoteIndex].text = editedText;
                 saveNotes();
                 updateNotesTable();
             }
         }
 
-        function deleteNote(index) {
+        function deleteNote(id) {
             const confirmDelete = confirm('Tem certeza que deseja excluir esta nota?');
             if (confirmDelete) {
-                notes.splice(index, 1);
+                notes = notes.filter(note => note.id !== id);
                 saveNotes();
                 updateNotesTable();
             }
@@ -148,13 +143,13 @@
             const notesBody = document.getElementById('notes-body');
             notesBody.innerHTML = '';
 
-            notes.forEach((note, index) => {
+            notes.forEach(note => {
                 const row = notesBody.insertRow();
                 const dateCell = row.insertCell(0);
                 const textCell = row.insertCell(1);
                 const actionsCell = row.insertCell(2);
 
-                dateCell.textContent = new Date(note.date).toLocaleString();
+                dateCell.textContent = note.date;
                 textCell.textContent = note.text;
 
                 const viewButton = document.createElement('button');
@@ -163,11 +158,11 @@
 
                 const editButton = document.createElement('button');
                 editButton.textContent = 'Editar';
-                editButton.onclick = () => editNote(index);
+                editButton.onclick = () => editNote(note.id);
 
                 const deleteButton = document.createElement('button');
                 deleteButton.textContent = 'Excluir';
-                deleteButton.onclick = () => deleteNote(index);
+                deleteButton.onclick = () => deleteNote(note.id);
 
                 actionsCell.appendChild(viewButton);
                 actionsCell.appendChild(editButton);
@@ -179,15 +174,6 @@
             window.location.href = 'https://wilsonf1996.github.io/index.html';
         }
 
-        // Função para verificar e sincronizar notas em intervalos regulares
-        function checkAndSyncNotes() {
-            const localNotes = getSavedNotes();
-            if (JSON.stringify(localNotes) !== JSON.stringify(notes)) {
-                notes = localNotes;
-                updateNotesTable();
-            }
-        }
-
         document.addEventListener('DOMContentLoaded', function () {
             initNotes();
         });
@@ -195,4 +181,3 @@
 </body>
 
 </html>
-
