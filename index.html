@@ -82,78 +82,96 @@
     <div id="buttons-container">
         <button onclick="goToAgendaPage()">Ir para a Agenda</button>
         <button onclick="goToCalculatorPage()">Ir para a Calculadora</button>
+        <button onclick="goToNotesPage()">Ir para Notas</button>
+        <button onclick="goToExpensesPage()">Ir para Gastos</button>
     </div>
 
     <script>
-        // Função para obter a localização do usuário
-        function getLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(showPosition);
-            } else {
-                document.getElementById('location').innerHTML = 'Geolocalização não suportada pelo navegador.';
-            }
-        }
-
-        // Função para mostrar a posição (latitude e longitude) do usuário
-        function showPosition(position) {
-            const latitude = position.coords.latitude;
-            const longitude = position.coords.longitude;
-
-            // Chamada à API do OpenWeatherMap para obter informações sobre o clima
+        function fetchWeatherData(city) {
             const apiKey = 'e18e61a7e515eb3b92b588155acd3bc1';
-            const apiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${apiKey}`;
 
+            // Construa a URL da API do OpenWeatherMap
+            const apiUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}`;
+
+            // Faça a requisição para a API
             fetch(apiUrl)
                 .then(response => response.json())
                 .then(data => {
-                    const locationName = data.name;
-                    const weatherDescription = data.weather[0].description;
-                    const temperature = (data.main.temp - 273.15).toFixed(2); // Convertendo de Kelvin para Celsius
+                    const weather = data.weather[0].description;
+                    const temperature = (data.main.temp - 273.15).toFixed(2);
+                    const location = data.name;
 
-                    document.getElementById('location').innerHTML = `Localização: ${locationName}`;
-                    document.getElementById('weather').innerHTML = `Clima: ${weatherDescription}`;
-                    document.getElementById('temperature').innerHTML = `Temperatura: ${temperature} °C`;
+                    // Atualize os elementos HTML com os dados do clima
+                    document.getElementById('location').innerText = `Localização: ${location}`;
+                    document.getElementById('weather').innerText = `Condição do Tempo: ${weather}`;
+                    document.getElementById('temperature').innerText = `Temperatura: ${temperature}°C`;
                 })
                 .catch(error => {
-                    console.error('Erro ao obter informações de clima:', error);
-                    document.getElementById('location').innerHTML = 'Erro ao obter informações de clima.';
-                });
-
-            // Chamada à API do OpenWeatherMap para obter a previsão diária
-            const forecastApiUrl = `https://api.openweathermap.org/data/2.5/onecall?lat=${latitude}&lon=${longitude}&exclude=current,minutely,hourly&appid=${apiKey}`;
-
-            fetch(forecastApiUrl)
-                .then(response => response.json())
-                .then(data => {
-                    const dailyForecast = data.daily;
-
-                    // Extraindo a previsão para o dia seguinte (índice 1 no array de previsões diárias)
-                    const nextDayForecast = dailyForecast[1];
-                    const forecastDescription = nextDayForecast.weather[0].description;
-                    const maxTemperature = (nextDayForecast.temp.max - 273.15).toFixed(2);
-                    const minTemperature = (nextDayForecast.temp.min - 273.15).toFixed(2);
-
-                    document.getElementById('forecast').innerHTML = `Previsão para amanhã: ${forecastDescription}, Máxima: ${maxTemperature} °C, Mínima: ${minTemperature} °C`;
-                })
-                .catch(error => {
-                    console.error('Erro ao obter previsão diária:', error);
-                    document.getElementById('forecast').innerHTML = 'Erro ao obter previsão diária.';
+                    console.error('Erro ao obter dados do clima:', error);
                 });
         }
 
-        // Função para atualizar o relógio e a data a cada segundo
-        function updateClockAndDate() {
+        function fetchDailyForecast(city) {
+            const apiKey = 'e18e61a7e515eb3b92b588155acd3bc1';
+
+            // Construa a URL da API do OpenWeatherMap para previsão diária
+            const apiUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}`;
+
+            // Faça a requisição para a API
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    // Extraia as informações da previsão diária (por exemplo, primeira entrada)
+                    const dailyForecast = data.list[0].weather[0].description;
+
+                    // Atualize o elemento HTML com a previsão diária
+                    document.getElementById('forecast').innerText = `Previsão Diária: ${dailyForecast}`;
+                })
+                .catch(error => {
+                    console.error('Erro ao obter previsão diária:', error);
+                });
+        }
+
+        function fetchDateTime() {
             const now = new Date();
-            const hours = now.getHours().toString().padStart(2, '0');
-            const minutes = now.getMinutes().toString().padStart(2, '0');
-            const seconds = now.getSeconds().toString().padStart(2, '0');
+            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const timeOptions = { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false };
 
-            const year = now.getFullYear();
-            const month = (now.getMonth() + 1).toString().padStart(2, '0'); // Mês começa do 0
-            const day = now.getDate().toString().padStart(2, '0');
+            // Atualize os elementos HTML com data e hora
+            document.getElementById('date').innerText = `Data: ${now.toLocaleDateString('pt-BR', dateOptions)}`;
+            document.getElementById('clock').innerText = `Hora: ${now.toLocaleTimeString('pt-BR', timeOptions)}`;
+        }
 
-            document.getElementById('clock').innerHTML = `${hours}:${minutes}:${seconds}`;
-            document.getElementById('date').innerHTML = `${year}-${month}-${day}`;
+        // Função para obter a localização do usuário
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        const latitude = position.coords.latitude;
+                        const longitude = position.coords.longitude;
+
+                        // Obtenha a cidade com base na latitude e longitude
+                        fetch(`https://api.openweathermap.org/geo/1.0/reverse?lat=${latitude}&lon=${longitude}&limit=1&appid=${apiKey}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                const city = data[0].name;
+                                document.getElementById('location').innerText = `Localização: ${city}`;
+
+                                // Chame as funções para buscar dados do clima
+                                fetchWeatherData(city);
+                                fetchDailyForecast(city);
+                            })
+                            .catch(error => {
+                                console.error('Erro ao obter localização:', error);
+                            });
+                    },
+                    error => {
+                        console.error('Erro ao obter localização:', error);
+                    }
+                );
+            } else {
+                console.error('Geolocalização não suportada pelo navegador.');
+            }
         }
 
         // Função para redirecionar para a página da agenda
@@ -166,17 +184,24 @@
             window.location.href = 'https://wilsonf1996.github.io/index.html/calculadora/calculadora.html';
         }
 
-        function goToCalculatorPage() {
+        // Função para redirecionar para a página de notas
+        function goToNotesPage() {
             window.location.href = 'https://wilsonf1996.github.io/index.html/notas/notas.html';
         }
 
-        function goToCalculatorPage() {
+        // Função para redirecionar para a página de gastos
+        function goToExpensesPage() {
             window.location.href = 'https://wilsonf1996.github.io/index.html/gastos/gastos.html';
         }
 
-        // Inicializa o relógio, a data, a obtenção da localização e a exibição do clima ao carregar a página
-        setInterval(updateClockAndDate, 1000);
-        getLocation();
+        // Chamada da função para obter a localização ao carregar a página
+        document.addEventListener('DOMContentLoaded', getLocation);
+
+        // Atualize os dados a cada 30 minutos (ou o intervalo desejado)
+        setInterval(() => {
+            getLocation();
+            fetchDateTime();
+        }, 1800000); // 30 minutos (em milissegundos)
     </script>
 </body>
 </html>
