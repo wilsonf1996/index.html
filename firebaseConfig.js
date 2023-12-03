@@ -1,7 +1,5 @@
 // firebaseConfig.js
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-
+// Configuração do Firebase
 const firebaseConfig = {
     apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
     authDomain: "agenda-6accc.firebaseapp.com",
@@ -12,5 +10,4 @@ const firebaseConfig = {
     measurementId: "G-QS6WRF6Y6L"
 };
 
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+export default firebaseConfig;
