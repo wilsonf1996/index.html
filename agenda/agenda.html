@@ -41,6 +41,11 @@
             padding: 10px;
             border: 1px solid #dddddd;
         }
+
+        .edit-mode input,
+        .edit-mode textarea {
+            background-color: #f0f8ff; /* Cor de destaque em modo de edição */
+        }
     </style>
 </head>
 <body>
@@ -119,41 +124,148 @@
         }
 
         function loadEventsTable() {
-            const tableBody = document.getElementById('events-ul');
-            tableBody.innerHTML = ""; // Limpa a lista
+            const listContainer = document.getElementById('events-ul');
+            listContainer.innerHTML = ""; // Limpa a lista
 
             events.forEach((event, index) => {
                 const listItem = document.createElement('li');
-                listItem.innerHTML = `<strong>${event.title}</strong><br>
-                                     <span>${event.start} - ${event.end}</span><br>
-                                     <button onclick="editEvent(${index})">Editar</button>
-                                     <button onclick="deleteEvent(${index})">Excluir</button>`;
+                listItem.classList.add('event-item');
 
-                tableBody.appendChild(listItem);
+                const titleInput = document.createElement('input');
+                titleInput.type = 'text';
+                titleInput.value = event.title;
+                titleInput.classList.add('edit-mode');
+
+                const descriptionTextarea = document.createElement('textarea');
+                descriptionTextarea.rows = 4;
+                descriptionTextarea.value = event.description;
+                descriptionTextarea.classList.add('edit-mode');
+
+                const startInput = document.createElement('input');
+                startInput.type = 'datetime-local';
+                startInput.value = event.start;
+                startInput.classList.add('edit-mode');
+
+                const endInput = document.createElement('input');
+                endInput.type = 'datetime-local';
+                endInput.value = event.end;
+                endInput.classList.add('edit-mode');
+
+                const editButton = document.createElement('button');
+                editButton.textContent = 'Editar';
+                editButton.onclick = () => toggleEditMode(listItem);
+
+                const saveButton = document.createElement('button');
+                saveButton.textContent = 'Salvar';
+                saveButton.style.display = 'none';
+                saveButton.onclick = () => saveChanges(index);
+
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Excluir';
+                deleteButton.onclick = () => deleteEvent(index);
+
+                listItem.appendChild(titleInput);
+                listItem.appendChild(descriptionTextarea);
+                listItem.appendChild(startInput);
+                listItem.appendChild(endInput);
+                listItem.appendChild(editButton);
+                listItem.appendChild(saveButton);
+                listItem.appendChild(deleteButton);
+
+                listContainer.appendChild(listItem);
             });
         }
 
-        // ... (restante do código) ...
+        function toggleEditMode(item) {
+            const editModeElements = item.querySelectorAll('.edit-mode');
+            const buttons = item.querySelectorAll('button');
 
-        // Função para criar ou atualizar um evento
+            editModeElements.forEach((element) => {
+                element.disabled = !element.disabled;
+            });
+
+            buttons.forEach((button) => {
+                button.style.display = button.style.display === 'none' ? 'inline-block' : 'none';
+            });
+        }
+
+        function saveChanges(index) {
+            const item = document.getElementsByClassName('event-item')[index];
+            const title = item.querySelector('input').value;
+            const description = item.querySelector('textarea').value;
+            const start = item.querySelector('input[type="datetime-local"]').value;
+            const end = item.querySelector('input[type="datetime-local"]').value;
+
+            events[index] = { title, description, start, end };
+
+            loadEventsTable();
+            $('#calendar').fullCalendar('refetchEvents');
+        }
+
+        function deleteEvent(index) {
+            events.splice(index, 1);
+            loadEventsTable();
+            $('#calendar').fullCalendar('refetchEvents');
+        }
+
+        function searchEvents() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const searchDate = document.getElementById('search-date').value;
+
+            const filteredEvents = events.filter(event =>
+                event.title.toLowerCase().includes(searchTerm) &&
+                (searchDate === '' || event.start.includes(searchDate))
+            );
+
+            loadEventsTable(filteredEvents);
+        }
+
         function createOrUpdateEvent() {
             const title = document.getElementById('event-title').value;
             const description = document.getElementById('event-description').value;
             const start = document.getElementById('event-start').value;
             const end = document.getElementById('event-end').value;
 
-            const event = { title, description, start, end };
-            events.push(event);
+            const newEvent = { title, description, start, end };
 
-            // Atualiza a tabela, o calendário e limpa os campos do formulário
+            events.push(newEvent);
             loadEventsTable();
-            $('#calendar').fullCalendar('refetchEvents');
-            clearEventForm();
-
             closeModal();
+            $('#calendar').fullCalendar('refetchEvents');
         }
 
-        // ... (restante do código) ...
+        function closeModal() {
+            document.getElementById('edit-event-form').reset();
+            document.getElementById('edit-event-modal').style.display = 'none';
+        }
+
+        function openEventDetailsModal(event) {
+            const modal = document.getElementById('event-details-modal');
+            const content = document.getElementById('event-details-content');
+
+            content.innerHTML = `
+                <h2>${event.title}</h2>
+                <p><strong>Data de Início:</strong> ${event.start.format('YYYY-MM-DD HH:mm')}</p>
+                <p><strong>Data de Término:</strong> ${event.end.format('YYYY-MM-DD HH:mm')}</p>
+                <p><strong>Descrição:</strong> ${event.description}</p>
+            `;
+
+            modal.style.display = 'block';
+        }
+
+        function goToHomePage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html';
+        }
+
+        // Inicializa o calendário e outras funções ao carregar a página
+        document.addEventListener('DOMContentLoaded', function() {
+            initCalendar();
+
+            // Exemplo de atualização do relógio a cada segundo
+            setInterval(function() {
+                document.getElementById('clock').innerHTML = dayjs().format('YYYY-MM-DD HH:mm:ss');
+            }, 1000);
+        });
     </script>
 </body>
 </html>
