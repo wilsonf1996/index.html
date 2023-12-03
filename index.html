@@ -3,18 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minha Página Web</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>Minha Agenda</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@3.10.2/dist/fullcalendar.min.css"/>
+    <style>
+        /* Seu estilo CSS aqui */
+    </style>
 </head>
 <body>
-    <h1>Minha Página Web</h1>
-    <p>Bem-vindo à minha página!</p>
+    <h1>Minha Agenda</h1>
 
-    <ul>
-        <li><a href="calculadora/calculadora.html">Calculadora</a></li>
-        <li><a href="agenda/agenda.html">Agenda</a></li>
-    </ul>
+    <button onclick="goToHomePage()">Voltar para a Página Principal</button>
 
-    <script src="js/index.js"></script>
+    <div id="calendar"></div>
+
+    <div id="edit-event-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <!-- Formulário para editar evento -->
+            <form id="edit-event-form">
+                <label for="event-title">Título:</label>
+                <input type="text" id="event-title" name="event-title" required>
+
+                <label for="event-start">Data de Início:</label>
+                <input type="datetime-local" id="event-start" name="event-start" required>
+
+                <label for="event-end">Data de Término:</label>
+                <input type="datetime-local" id="event-end" name="event-end" required>
+
+                <button type="submit">Atualizar Evento</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="event-details-modal" class="modal">
+        <div class="modal-content" id="event-details-content"></div>
+    </div>
+
+    <div id="search-form">
+        <form id="search-form">
+            <label for="search-input">Pesquisar Eventos:</label>
+            <input type="text" id="search-input" name="search-input">
+            <button type="button" onclick="searchEvents()">Pesquisar</button>
+        </form>
+    </div>
+
+    <div id="event-list">
+        <h2>Lista de Eventos</h2>
+        <ul id="events-list"></ul>
+    </div>
+
+    <div id="clock"></div>
+
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/dayjs@1.10.7/dist/dayjs.min.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/9.1.0/firebase-auth.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/9.1.0/firebase-firestore.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/fullcalendar@3.10.2/dist/fullcalendar.min.js"></script>
+
+    <script>
+        // Firebase Config
+        const firebaseConfig = {
+            apiKey: "SuaApiKey",
+            authDomain: "SeuDominio.firebaseapp.com",
+            projectId: "SeuProjetoId",
+            storageBucket: "SeuStorageBucket.appspot.com",
+            messagingSenderId: "SeuMessagingSenderId",
+            appId: "SeuAppId",
+            measurementId: "SuaMeasurementId"
+        };
+        
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = app.firestore();
+
+        function initCalendar() {
+            $('#calendar').fullCalendar({
+                header: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'month,agendaWeek,agendaDay'
+                },
+                events: [], // Carregará eventos posteriormente
+                editable: true,
+                eventClick: function (event) {
+                    openEventDetailsModal(event);
+                }
+            });
+        }
+
+        function loadEvents() {
+            db.collection("events").onSnapshot(snapshot => {
+                const events = [];
+                const eventsList = document.getElementById('events-list');
+                eventsList.innerHTML = ""; // Limpa a lista de eventos
+
+                snapshot.forEach(doc => {
+                    const event = doc.data();
+                    event.id = doc.id;
+                    events.push(event);
+
+                    // Adiciona o evento à lista
+                    const li = document.createElement('li');
+                    li.textContent = `Título: ${event.title}, Início: ${event.start}, Término: ${event.end}`;
+                    eventsList.appendChild(li);
+                });
+
+                $('#calendar').fullCalendar('removeEvents');
+                $('#calendar').fullCalendar('addEventSource', events);
+            });
+        }
+
+        // ... (restante do código)
+
+        document.addEventListener('DOMContentLoaded', function () {
+            initCalendar();
+            loadEvents();
+            setInterval(updateClock, 1000);
+        });
+
+        // ... (restante do código)
+    </script>
 </body>
 </html>
