@@ -24,7 +24,8 @@
         }
 
         input, textarea {
-            width: 100%;
+            width: calc(100% - 16px);
+            margin-bottom: 10px;
         }
 
         #events-list {
@@ -45,6 +46,22 @@
         .edit-mode input,
         .edit-mode textarea {
             background-color: #f0f8ff; /* Cor de destaque em modo de edição */
+        }
+
+        .edit-mode button {
+            display: inline-block;
+        }
+
+        .edit-mode .view-mode {
+            display: none;
+        }
+
+        .view-mode button {
+            display: inline-block;
+        }
+
+        .view-mode .edit-mode {
+            display: none;
         }
     </style>
 </head>
@@ -83,7 +100,7 @@
 
     <div id="search-form">
         <form id="search-form">
-            <label for="search-input">Pesquisar por Título:</label>
+            <label for="search-input">Pesquisar por Título ou Descrição:</label>
             <input type="text" id="search-input" name="search-input">
 
             <label for="search-date">Pesquisar por Data:</label>
@@ -108,6 +125,11 @@
         // Variável para armazenar os eventos
         let events = [];
 
+        // Carregar eventos salvos no armazenamento local
+        if (localStorage.getItem('savedEvents')) {
+            events = JSON.parse(localStorage.getItem('savedEvents'));
+        }
+
         function initCalendar() {
             $('#calendar').fullCalendar({
                 header: {
@@ -131,6 +153,12 @@
                 const listItem = document.createElement('li');
                 listItem.classList.add('event-item');
 
+                const viewMode = document.createElement('div');
+                viewMode.classList.add('view-mode');
+
+                const editMode = document.createElement('div');
+                editMode.classList.add('edit-mode');
+
                 const titleInput = document.createElement('input');
                 titleInput.type = 'text';
                 titleInput.value = event.title;
@@ -153,7 +181,7 @@
 
                 const editButton = document.createElement('button');
                 editButton.textContent = 'Editar';
-                editButton.onclick = () => editEvent(index);
+                editButton.onclick = () => toggleEditMode(listItem);
 
                 const saveButton = document.createElement('button');
                 saveButton.textContent = 'Salvar';
@@ -164,39 +192,54 @@
                 deleteButton.textContent = 'Excluir';
                 deleteButton.onclick = () => deleteEvent(index);
 
-                listItem.appendChild(titleInput);
-                listItem.appendChild(descriptionTextarea);
-                listItem.appendChild(startInput);
-                listItem.appendChild(endInput);
-                listItem.appendChild(editButton);
-                listItem.appendChild(saveButton);
-                listItem.appendChild(deleteButton);
+                viewMode.appendChild(document.createTextNode(`Título: ${event.title}, Descrição: ${event.description}, Início: ${event.start}, Término: ${event.end}`));
+
+                titleInput.value = event.title;
+                descriptionTextarea.value = event.description;
+                startInput.value = event.start;
+                endInput.value = event.end;
+
+                viewMode.appendChild(document.createTextNode(`Título: ${event.title}, Descrição: ${event.description}, Início: ${event.start}, Término: ${event.end}`));
+
+                viewMode.appendChild(editButton);
+
+                editMode.appendChild(document.createTextNode('Título:'));
+                editMode.appendChild(titleInput);
+                editMode.appendChild(document.createTextNode('Descrição:'));
+                editMode.appendChild(descriptionTextarea);
+                editMode.appendChild(document.createTextNode('Início:'));
+                editMode.appendChild(startInput);
+                editMode.appendChild(document.createTextNode('Término:'));
+                editMode.appendChild(endInput);
+                editMode.appendChild(saveButton);
+                editMode.appendChild(deleteButton);
+
+                listItem.appendChild(viewMode);
+                listItem.appendChild(editMode);
 
                 listContainer.appendChild(listItem);
             });
         }
 
         function toggleEditMode(item) {
-            const editModeElements = item.querySelectorAll('.edit-mode');
-            const buttons = item.querySelectorAll('button');
+            const viewMode = item.querySelector('.view-mode');
+            const editMode = item.querySelector('.edit-mode');
 
-            editModeElements.forEach((element) => {
-                element.disabled = !element.disabled;
-            });
-
-            buttons.forEach((button) => {
-                button.style.display = button.style.display === 'none' ? 'inline-block' : 'none';
-            });
+            viewMode.style.display = 'none';
+            editMode.style.display = 'block';
         }
 
         function saveChanges(index) {
             const item = document.getElementsByClassName('event-item')[index];
-            const title = item.querySelector('input').value;
-            const description = item.querySelector('textarea').value;
-            const start = item.querySelector('input[type="datetime-local"]').value;
-            const end = item.querySelector('input[type="datetime-local"]').value;
+            const title = item.querySelector('.edit-mode input').value;
+            const description = item.querySelector('.edit-mode textarea').value;
+            const start = item.querySelector('.edit-mode input[type="datetime-local"]').value;
+            const end = item.querySelector('.edit-mode input[type="datetime-local"]').value;
 
             events[index] = { title, description, start, end };
+
+            // Salvar eventos no armazenamento local
+            localStorage.setItem('savedEvents', JSON.stringify(events));
 
             loadEventsTable();
             closeModal();
@@ -205,6 +248,10 @@
 
         function deleteEvent(index) {
             events.splice(index, 1);
+
+            // Salvar eventos no armazenamento local
+            localStorage.setItem('savedEvents', JSON.stringify(events));
+
             loadEventsTable();
             $('#calendar').fullCalendar('refetchEvents');
         }
@@ -230,6 +277,10 @@
             const newEvent = { title, description, start, end };
 
             events.push(newEvent);
+
+            // Salvar eventos no armazenamento local
+            localStorage.setItem('savedEvents', JSON.stringify(events));
+
             loadEventsTable();
             closeModal();
             $('#calendar').fullCalendar('refetchEvents');
