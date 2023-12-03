@@ -15,32 +15,22 @@
             color: #333;
         }
 
-        #note-container {
-            display: flex;
-            justify-content: space-around;
-            align-items: flex-start;
-            margin-top: 20px;
-        }
-
-        #note-list {
-            width: 30%;
-            text-align: left;
-            border: 1px solid #ddd;
-            padding: 10px;
-            overflow-y: auto;
+        table {
+            width: 50%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            overflow-y: scroll;
             max-height: 400px;
         }
 
-        #note-text {
-            width: 60%;
-            height: 400px;
+        th, td {
             border: 1px solid #ddd;
-            padding: 10px;
-            resize: none;
+            padding: 8px;
+            text-align: left;
         }
 
-        #buttons-container {
-            margin-top: 20px;
+        th {
+            background-color: #f2f2f2;
         }
 
         button {
@@ -53,102 +43,104 @@
 <body>
     <h1>Minhas Notas</h1>
 
-    <div id="note-container">
-        <div id="note-list"></div>
-        <textarea id="note-text" placeholder="Digite sua nota aqui..."></textarea>
-    </div>
+    <table id="notes-table">
+        <thead>
+            <tr>
+                <th>Data e Hora</th>
+                <th>Nota</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="notes-body"></tbody>
+    </table>
 
-    <div id="buttons-container">
-        <button onclick="createNote()">Criar Nota</button>
-        <button onclick="editNote()">Editar Nota</button>
-        <button onclick="deleteNote()">Excluir Nota</button>
-    </div>
+    <button onclick="createNote()">Criar Nova Nota</button>
+    <button onclick="goToHomePage()">Voltar para a Página Principal</button>
 
     <script>
-        // Função para obter notas salvas localmente
+        let notes = [];
+
+        function initNotes() {
+            notes = getSavedNotes();
+            updateNotesTable();
+        }
+
         function getSavedNotes() {
             const savedNotes = localStorage.getItem('notes');
             return savedNotes ? JSON.parse(savedNotes) : [];
         }
 
-        // Função para salvar notas localmente
-        function saveNotes(notes) {
+        function saveNotes() {
             localStorage.setItem('notes', JSON.stringify(notes));
         }
 
-        // Função para criar uma nova nota
         function createNote() {
-            const noteText = document.getElementById('note-text').value;
-            const currentDate = new Date().toLocaleString();
-
-            const newNote = { text: noteText, date: currentDate };
-
-            const notes = getSavedNotes();
-            notes.push(newNote);
-
-            saveNotes(notes);
-            updateNoteList();
-        }
-
-        // Função para editar uma nota
-        function editNote() {
-            const noteList = document.getElementById('note-list');
-            const selectedIndex = noteList.selectedIndex;
-
-            if (selectedIndex !== -1) {
-                const editedText = document.getElementById('note-text').value;
+            const noteText = prompt('Digite sua nota:');
+            if (noteText) {
                 const currentDate = new Date().toLocaleString();
-
-                const notes = getSavedNotes();
-                notes[selectedIndex] = { text: editedText, date: currentDate };
-
-                saveNotes(notes);
-                updateNoteList();
-            } else {
-                alert('Selecione uma nota para editar.');
+                const newNote = { text: noteText, date: currentDate };
+                notes.push(newNote);
+                saveNotes();
+                updateNotesTable();
             }
         }
 
-        // Função para excluir uma nota
-        function deleteNote() {
-            const noteList = document.getElementById('note-list');
-            const selectedIndex = noteList.selectedIndex;
-
-            if (selectedIndex !== -1) {
-                const notes = getSavedNotes();
-                notes.splice(selectedIndex, 1);
-
-                saveNotes(notes);
-                updateNoteList();
-            } else {
-                alert('Selecione uma nota para excluir.');
+        function editNote(index) {
+            const editedText = prompt('Editar nota:', notes[index].text);
+            if (editedText !== null) {
+                notes[index].text = editedText;
+                saveNotes();
+                updateNotesTable();
             }
         }
 
-        // Função para atualizar a lista de notas
-        function updateNoteList() {
-            const notes = getSavedNotes();
-            const noteList = document.getElementById('note-list');
+        function deleteNote(index) {
+            const confirmDelete = confirm('Tem certeza que deseja excluir esta nota?');
+            if (confirmDelete) {
+                notes.splice(index, 1);
+                saveNotes();
+                updateNotesTable();
+            }
+        }
 
-            noteList.innerHTML = '';
+        function updateNotesTable() {
+            const notesBody = document.getElementById('notes-body');
+            notesBody.innerHTML = '';
 
             notes.forEach((note, index) => {
-                const option = document.createElement('option');
-                option.value = index;
-                option.text = `${note.date}: ${note.text.slice(0, 20)}...`;
-                noteList.add(option);
-            });
+                const row = notesBody.insertRow();
+                const dateCell = row.insertCell(0);
+                const textCell = row.insertCell(1);
+                const actionsCell = row.insertCell(2);
 
-            // Limpar o campo de texto da nota após a atualização
-            document.getElementById('note-text').value = '';
+                dateCell.textContent = note.date;
+                textCell.textContent = note.text;
+
+                const viewButton = document.createElement('button');
+                viewButton.textContent = 'Ver';
+                viewButton.onclick = () => alert(note.text);
+
+                const editButton = document.createElement('button');
+                editButton.textContent = 'Editar';
+                editButton.onclick = () => editNote(index);
+
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Excluir';
+                deleteButton.onclick = () => deleteNote(index);
+
+                actionsCell.appendChild(viewButton);
+                actionsCell.appendChild(editButton);
+                actionsCell.appendChild(deleteButton);
+            });
         }
 
-        // Ao carregar a página, carregue as notas salvas e atualize a lista de notas
+        function goToHomePage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html';
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
-            updateNoteList();
+            initNotes();
         });
     </script>
 </body>
 </html>
-
-
