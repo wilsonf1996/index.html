@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Minha Agenda</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@3.10.2/dist/fullcalendar.min.css"/>
     <style>
         /* Seu estilo CSS aqui */
     </style>
@@ -11,10 +12,9 @@
 <body>
     <h1>Minha Agenda</h1>
 
-    <div id="calendar-container">
-        <div id="calendar"></div>
-        <div id="event-details"></div>
-    </div>
+    <button onclick="goToHomePage()">Voltar para a Página Principal</button>
+
+    <div id="calendar"></div>
 
     <div id="edit-event-modal" class="modal">
         <div class="modal-content">
@@ -35,10 +35,12 @@
         </div>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1.10.7/dist/dayjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/firebase@9.1.0/app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/firebase@9.1.0/auth.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/firebase@9.1.0/firestore.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@3.10.2/dist/fullcalendar.min.js"></script>
 
     <script>
         // Seu código FirebaseConfig aqui
@@ -52,14 +54,39 @@
             measurementId: "G-QS6WRF6Y6L"
         };
 
+        // Initialize Firebase
         const app = firebase.initializeApp(firebaseConfig);
         const db = app.firestore();
 
-        // Coloque aqui a lógica da sua agenda.js
-        // Certifique-se de substituir as funções específicas do Firebase conforme necessário.
-        // ...
+        function initCalendar() {
+            $('#calendar').fullCalendar({
+                header: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'month,agendaWeek,agendaDay'
+                },
+                events: [], // Carregará eventos posteriormente
+                editable: true,
+                eventClick: function (event) {
+                    // Exibir detalhes do evento ou abrir modal de edição aqui
+                    alert('Evento: ' + event.title);
+                }
+            });
+        }
 
-        // Exemplo de função para adicionar um evento ao Firestore
+        function loadEvents() {
+            db.collection("events").onSnapshot(snapshot => {
+                const events = [];
+                snapshot.forEach(doc => {
+                    const event = doc.data();
+                    event.id = doc.id;
+                    events.push(event);
+                });
+                $('#calendar').fullCalendar('removeEvents');
+                $('#calendar').fullCalendar('addEventSource', events);
+            });
+        }
+
         function addEvent(title, start, end) {
             db.collection("events").add({
                 title: title,
@@ -68,7 +95,74 @@
             });
         }
 
-        // Se precisar de mais funções específicas do Firebase, adicione-as aqui.
+        function editEvent(eventId, title, start, end) {
+            db.collection("events").doc(eventId).update({
+                title: title,
+                start: start,
+                end: end
+            });
+        }
+
+        function deleteEvent(eventId) {
+            db.collection("events").doc(eventId).delete();
+        }
+
+        function searchEvents(query) {
+            db.collection("events").where("title", "==", query).get()
+                .then(snapshot => {
+                    const events = [];
+                    snapshot.forEach(doc => {
+                        const event = doc.data();
+                        event.id = doc.id;
+                        events.push(event);
+                    });
+                    $('#calendar').fullCalendar('removeEvents');
+                    $('#calendar').fullCalendar('addEventSource', events);
+                });
+        }
+
+        function closeModal() {
+            // Feche o modal aqui
+        }
+
+        function goToHomePage() {
+            window.location.href = "../index.html";
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            initCalendar();
+            loadEvents();
+        });
+
+        // Adicione manipuladores de eventos para o formulário de edição
+        document.getElementById('edit-event-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const eventId = /* obtenha o ID do evento a ser editado */;
+            const title = document.getElementById('event-title').value;
+            const start = document.getElementById('event-start').value;
+            const end = document.getElementById('event-end').value;
+            
+            // Verifique se está adicionando ou editando
+            if (eventId) {
+                editEvent(eventId, title, start, end);
+            } else {
+                addEvent(title, start, end);
+            }
+            closeModal();
+        });
+
+        // Adicione manipuladores de eventos para a exclusão
+        document.getElementById('calendar').addEventListener('eventClick', function (event) {
+            const eventId = event.id;
+            deleteEvent(eventId);
+        });
+
+        // Adicione manipuladores de eventos para a pesquisa
+        document.getElementById('search-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const query = document.getElementById('search-input').value;
+            searchEvents(query);
+        });
     </script>
 </body>
 </html>
