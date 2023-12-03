@@ -49,9 +49,17 @@
 
     <div id="event-list">
         <h2>Lista de Eventos</h2>
-        <select id="events-dropdown"></select>
-        <button onclick="editEvent()">Editar Evento</button>
-        <button onclick="deleteEvent()">Excluir Evento</button>
+        <table id="events-table">
+            <thead>
+                <tr>
+                    <th>Título</th>
+                    <th>Data de Início</th>
+                    <th>Data de Término</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="events-body"></tbody>
+        </table>
     </div>
 
     <div id="clock"></div>
@@ -79,22 +87,26 @@
             });
         }
 
-        function loadEventsDropdown() {
-            const dropdown = document.getElementById('events-dropdown');
-            dropdown.innerHTML = ""; // Limpa o dropdown
+        function loadEventsTable() {
+            const tableBody = document.getElementById('events-body');
+            tableBody.innerHTML = ""; // Limpa a tabela
 
             events.forEach((event, index) => {
-                const option = document.createElement('option');
-                option.value = index;
-                option.text = event.title;
-                dropdown.add(option);
+                const row = tableBody.insertRow();
+                const titleCell = row.insertCell(0);
+                const startCell = row.insertCell(1);
+                const endCell = row.insertCell(2);
+                const actionsCell = row.insertCell(3);
+
+                titleCell.innerHTML = `<input type="text" value="${event.title}" disabled>`;
+                startCell.innerHTML = `<input type="datetime-local" value="${event.start}" disabled>`;
+                endCell.innerHTML = `<input type="datetime-local" value="${event.end}" disabled>`;
+                actionsCell.innerHTML = `<button onclick="editEvent(${index})">Editar</button> 
+                                         <button onclick="deleteEvent(${index})">Excluir</button>`;
             });
         }
 
-        document.addEventListener('DOMContentLoaded', function () {
-            initCalendar();
-            setInterval(updateClock, 1000);
-        });
+        // ... (restante do código)
 
         // Função para criar ou atualizar um evento
         function createOrUpdateEvent() {
@@ -105,60 +117,42 @@
             const event = { title, start, end };
             events.push(event);
 
-            // Atualiza o dropdown e o calendário
-            loadEventsDropdown();
+            // Atualiza a tabela e o calendário
+            loadEventsTable();
             $('#calendar').fullCalendar('refetchEvents');
 
             closeModal();
         }
 
         // Função para editar um evento
-        function editEvent() {
-            const dropdown = document.getElementById('events-dropdown');
-            const selectedIndex = dropdown.value;
-
-            if (selectedIndex !== "" && selectedIndex !== null) {
-                const selectedEvent = events[selectedIndex];
-
-                // Preenche o formulário de edição com os dados do evento selecionado
-                document.getElementById('event-title').value = selectedEvent.title;
-                document.getElementById('event-start').value = selectedEvent.start;
-                document.getElementById('event-end').value = selectedEvent.end;
-
-                openModal();
-            } else {
-                alert("Selecione um evento para editar.");
-            }
+        function editEvent(index) {
+            // Habilita os campos de edição para o evento selecionado
+            const row = document.getElementById('events-body').rows[index];
+            row.cells[0].firstElementChild.disabled = false; // Título
+            row.cells[1].firstElementChild.disabled = false; // Data de Início
+            row.cells[2].firstElementChild.disabled = false; // Data de Término
         }
 
         // Função para excluir um evento
-        function deleteEvent() {
-            const dropdown = document.getElementById('events-dropdown');
-            const selectedIndex = dropdown.value;
+        function deleteEvent(index) {
+            // Remove o evento da lista
+            events.splice(index, 1);
 
-            if (selectedIndex !== "" && selectedIndex !== null) {
-                // Remove o evento da lista
-                events.splice(selectedIndex, 1);
-
-                // Atualiza o dropdown e o calendário
-                loadEventsDropdown();
-                $('#calendar').fullCalendar('refetchEvents');
-            } else {
-                alert("Selecione um evento para excluir.");
-            }
+            // Atualiza a tabela e o calendário
+            loadEventsTable();
+            $('#calendar').fullCalendar('refetchEvents');
         }
 
         // Função para pesquisar eventos
         function searchEvents() {
             const searchTerm = document.getElementById('search-input').value.toLowerCase();
-            const dropdown = document.getElementById('events-dropdown');
+            const tableBody = document.getElementById('events-body');
 
-            Array.from(dropdown.options).forEach((option, index) => {
-                const title = events[index].title.toLowerCase();
-                option.style.display = title.includes(searchTerm) ? 'block' : 'none';
+            Array.from(tableBody.rows).forEach((row) => {
+                const title = row.cells[0].firstElementChild.value.toLowerCase();
+                row.style.display = title.includes(searchTerm) ? 'table-row' : 'none';
             });
         }
     </script>
 </body>
 </html>
-
