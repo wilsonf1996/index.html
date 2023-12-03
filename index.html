@@ -19,7 +19,7 @@
     <div id="edit-event-modal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal()">&times;</span>
-            <!-- Formulário para editar evento -->
+            <!-- Formulário para editar/criar evento -->
             <form id="edit-event-form">
                 <label for="event-title">Título:</label>
                 <input type="text" id="event-title" name="event-title" required>
@@ -30,7 +30,7 @@
                 <label for="event-end">Data de Término:</label>
                 <input type="datetime-local" id="event-end" name="event-end" required>
 
-                <button type="submit">Atualizar Evento</button>
+                <button type="submit" id="submit-button">Criar Evento</button>
             </form>
         </div>
     </div>
@@ -104,7 +104,9 @@
 
                     // Adiciona o evento à lista
                     const li = document.createElement('li');
-                    li.textContent = `Título: ${event.title}, Início: ${event.start}, Término: ${event.end}`;
+                    li.innerHTML = `Título: ${event.title}, Início: ${event.start}, Término: ${event.end} 
+                                    <button onclick="editEvent('${event.id}')">Editar</button> 
+                                    <button onclick="deleteEvent('${event.id}')">Excluir</button>`;
                     eventsList.appendChild(li);
                 });
 
@@ -119,9 +121,71 @@
             initCalendar();
             loadEvents();
             setInterval(updateClock, 1000);
+
+            // Adiciona evento de clique no botão "Criar Evento"
+            document.getElementById('submit-button').addEventListener('click', function (e) {
+                e.preventDefault();
+                createOrUpdateEvent();
+            });
         });
+
+        // ... (restante do código)
+
+        // Função para criar ou atualizar um evento
+        function createOrUpdateEvent() {
+            const eventId = document.getElementById('edit-event-form').getAttribute('data-event-id');
+            const title = document.getElementById('event-title').value;
+            const start = document.getElementById('event-start').value;
+            const end = document.getElementById('event-end').value;
+
+            if (eventId) {
+                // Se eventId existe, então estamos atualizando um evento existente
+                db.collection("events").doc(eventId).update({
+                    title: title,
+                    start: start,
+                    end: end
+                });
+            } else {
+                // Caso contrário, estamos criando um novo evento
+                db.collection("events").add({
+                    title: title,
+                    start: start,
+                    end: end
+                });
+            }
+
+            closeModal();
+        }
+
+        // Função para editar um evento
+        function editEvent(eventId) {
+            const eventRef = db.collection("events").doc(eventId);
+
+            eventRef.get().then((doc) => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    document.getElementById('edit-event-form').setAttribute('data-event-id', eventId);
+                    document.getElementById('event-title').value = data.title;
+                    document.getElementById('event-start').value = data.start;
+                    document.getElementById('event-end').value = data.end;
+
+                    openModal();
+                } else {
+                    console.log("Evento não encontrado!");
+                }
+            }).catch((error) => {
+                console.log("Erro ao obter o evento:", error);
+            });
+        }
+
+        // Função para excluir um evento
+        function deleteEvent(eventId) {
+            const eventRef = db.collection("events").doc(eventId);
+            eventRef.delete();
+        }
 
         // ... (restante do código)
     </script>
 </body>
 </html>
+
