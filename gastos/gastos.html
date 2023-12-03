@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,7 +17,7 @@
         }
 
         table {
-            width: 50%;
+            width: 100%;
             margin: 20px auto;
             border-collapse: collapse;
             overflow-y: scroll;
@@ -44,11 +45,18 @@
             margin: 10px 0;
         }
 
-        #expenses-table {
-            overflow-y: auto;
+        @media (max-width: 600px) {
+            input {
+                width: 100%;
+            }
+
+            table {
+                width: 100%;
+            }
         }
     </style>
 </head>
+
 <body>
     <h1>Meus Gastos</h1>
 
@@ -71,18 +79,35 @@
     <button onclick="generateReport()">Gerar Relatório</button>
     <button onclick="goToHomePage()">Voltar para a Página Principal</button>
 
+    <!-- Firebase JavaScript SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+
     <script>
-        let expenses = [];
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:7a1690aa6d89bb07dc086c",
+            measurementId: "G-PBQGHC30M1"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const expensesRef = database.ref('expenses');
 
         function initExpenses() {
-            const storedExpenses = localStorage.getItem('expenses');
-            if (storedExpenses) {
-                expenses = JSON.parse(storedExpenses);
-                loadExpensesTable();
-            }
+            expensesRef.on('value', (snapshot) => {
+                const expenses = snapshot.val() || [];
+                loadExpensesTable(expenses);
+            }, (error) => {
+                console.error("Erro ao recuperar gastos:", error);
+            });
         }
 
-        function loadExpensesTable() {
+        function loadExpensesTable(expenses) {
             const tableBody = document.getElementById('expenses-body');
             tableBody.innerHTML = "";
 
@@ -124,18 +149,10 @@
             }
 
             // Formatando a data para "dia/mes/ano"
-            const formattedDate = new Date(date).toLocaleDateString('pt-BR', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-            });
-
             const dateTime = new Date(date).toLocaleString();
             const newExpense = { dateTime, description, amount };
 
-            expenses.push(newExpense);
-            localStorage.setItem('expenses', JSON.stringify(expenses));
-            loadExpensesTable();
+            expensesRef.push(newExpense);
         }
 
         function editExpense(index) {
@@ -145,17 +162,13 @@
 
             if (editedDescription !== null && !isNaN(editedAmount) && editedAmount > 0 && editedDate) {
                 // Formatando a data para "dia/mes/ano"
-                const formattedDate = new Date(editedDate).toLocaleDateString('pt-BR', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                });
+                const dateTime = new Date(editedDate).toLocaleString();
 
-                expenses[index].description = editedDescription;
-                expenses[index].amount = editedAmount;
-                expenses[index].dateTime = new Date(editedDate).toLocaleString();
-                localStorage.setItem('expenses', JSON.stringify(expenses));
-                loadExpensesTable();
+                expensesRef.child(index).set({
+                    dateTime,
+                    description: editedDescription,
+                    amount: editedAmount
+                });
             } else {
                 alert('Edição cancelada ou valores inválidos.');
             }
@@ -164,9 +177,7 @@
         function deleteExpense(index) {
             const confirmDelete = confirm('Tem certeza que deseja excluir este gasto?');
             if (confirmDelete) {
-                expenses.splice(index, 1);
-                localStorage.setItem('expenses', JSON.stringify(expenses));
-                loadExpensesTable();
+                expensesRef.child(index).remove();
             }
         }
 
@@ -175,7 +186,7 @@
             const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
 
             if (startDate && endDate) {
-                const filteredExpenses = expenses.filter(expense => {
+                const filteredExpenses = Object.values(expenses).filter(expense => {
                     const expenseDate = new Date(expense.dateTime).toLocaleDateString('pt-BR');
                     return expenseDate >= startDate && expenseDate <= endDate;
                 });
@@ -196,5 +207,7 @@
         });
     </script>
 </body>
+
 </html>
+
 
