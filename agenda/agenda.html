@@ -26,6 +26,21 @@
         input, textarea {
             width: 100%;
         }
+
+        #events-list {
+            margin-top: 20px;
+        }
+
+        #events-list ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        #events-list li {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #dddddd;
+        }
     </style>
 </head>
 <body>
@@ -73,20 +88,9 @@
         </form>
     </div>
 
-    <div id="event-list">
+    <div id="events-list">
         <h2>Lista de Eventos</h2>
-        <table id="events-table">
-            <thead>
-                <tr>
-                    <th>Título</th>
-                    <th>Descrição</th>
-                    <th>Data de Início</th>
-                    <th>Data de Término</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody id="events-body"></tbody>
-        </table>
+        <ul id="events-ul"></ul>
     </div>
 
     <div id="clock"></div>
@@ -115,44 +119,42 @@
         }
 
         function loadEventsTable() {
-            const tableBody = document.getElementById('events-body');
-            tableBody.innerHTML = ""; // Limpa a tabela
+            const tableBody = document.getElementById('events-ul');
+            tableBody.innerHTML = ""; // Limpa a lista
 
             events.forEach((event, index) => {
-                const row = tableBody.insertRow();
-                const titleCell = row.insertCell(0);
-                const descriptionCell = row.insertCell(1);
-                const startCell = row.insertCell(2);
-                const endCell = row.insertCell(3);
-                const actionsCell = row.insertCell(4);
+                const listItem = document.createElement('li');
+                listItem.innerHTML = `<strong>${event.title}</strong><br>
+                                     <span>${event.start} - ${event.end}</span><br>
+                                     <button onclick="editEvent(${index})">Editar</button>
+                                     <button onclick="deleteEvent(${index})">Excluir</button>`;
 
-                titleCell.innerHTML = `<input type="text" value="${event.title}" disabled>`;
-                descriptionCell.innerHTML = `<textarea rows="4" disabled>${event.description}</textarea>`;
-                startCell.innerHTML = `<input type="datetime-local" value="${event.start}" disabled>`;
-                endCell.innerHTML = `<input type="datetime-local" value="${event.end}" disabled>`;
-                actionsCell.innerHTML = `<button onclick="editEvent(${index})">Editar</button> 
-                                         <button onclick="deleteEvent(${index})">Excluir</button>`;
+                tableBody.appendChild(listItem);
             });
         }
 
         // ... (restante do código) ...
 
-        // Função para pesquisar eventos
-        function searchEvents() {
-            const searchTerm = document.getElementById('search-input').value.toLowerCase();
-            const searchDate = document.getElementById('search-date').value;
-            const tableBody = document.getElementById('events-body');
+        // Função para criar ou atualizar um evento
+        function createOrUpdateEvent() {
+            const title = document.getElementById('event-title').value;
+            const description = document.getElementById('event-description').value;
+            const start = document.getElementById('event-start').value;
+            const end = document.getElementById('event-end').value;
 
-            Array.from(tableBody.rows).forEach((row) => {
-                const title = row.cells[0].firstElementChild.value.toLowerCase();
-                const date = row.cells[2].firstElementChild.value.split('T')[0];
+            const event = { title, description, start, end };
+            events.push(event);
 
-                const titleMatch = title.includes(searchTerm);
-                const dateMatch = !searchDate || date === searchDate;
+            // Atualiza a tabela, o calendário e limpa os campos do formulário
+            loadEventsTable();
+            $('#calendar').fullCalendar('refetchEvents');
+            clearEventForm();
 
-                row.style.display = titleMatch && dateMatch ? 'table-row' : 'none';
-            });
+            closeModal();
         }
+
+        // ... (restante do código) ...
     </script>
 </body>
 </html>
+
