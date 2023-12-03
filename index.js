@@ -6,6 +6,7 @@ function goToCalculator() {
 }
 
 // Função para redirecionar para a página da agenda
+
 function goToAgenda() {
-  window.location.href = "agenda/agenda.html";
+    window.location.href = "agenda/agenda.html";
 }
