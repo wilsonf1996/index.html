@@ -7,6 +7,25 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@3.10.2/dist/fullcalendar.min.css"/>
     <style>
         /* Seu estilo CSS aqui */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        input, textarea {
+            width: 100%;
+        }
     </style>
 </head>
 <body>
@@ -23,6 +42,9 @@
             <form id="edit-event-form">
                 <label for="event-title">Título:</label>
                 <input type="text" id="event-title" name="event-title" required>
+
+                <label for="event-description">Descrição:</label>
+                <textarea id="event-description" name="event-description" rows="4"></textarea>
 
                 <label for="event-start">Data de Início:</label>
                 <input type="datetime-local" id="event-start" name="event-start" required>
@@ -41,8 +63,12 @@
 
     <div id="search-form">
         <form id="search-form">
-            <label for="search-input">Pesquisar Eventos:</label>
+            <label for="search-input">Pesquisar por Título:</label>
             <input type="text" id="search-input" name="search-input">
+
+            <label for="search-date">Pesquisar por Data:</label>
+            <input type="date" id="search-date" name="search-date">
+
             <button type="button" onclick="searchEvents()">Pesquisar</button>
         </form>
     </div>
@@ -53,6 +79,7 @@
             <thead>
                 <tr>
                     <th>Título</th>
+                    <th>Descrição</th>
                     <th>Data de Início</th>
                     <th>Data de Término</th>
                     <th>Ações</th>
@@ -94,11 +121,13 @@
             events.forEach((event, index) => {
                 const row = tableBody.insertRow();
                 const titleCell = row.insertCell(0);
-                const startCell = row.insertCell(1);
-                const endCell = row.insertCell(2);
-                const actionsCell = row.insertCell(3);
+                const descriptionCell = row.insertCell(1);
+                const startCell = row.insertCell(2);
+                const endCell = row.insertCell(3);
+                const actionsCell = row.insertCell(4);
 
                 titleCell.innerHTML = `<input type="text" value="${event.title}" disabled>`;
+                descriptionCell.innerHTML = `<textarea rows="4" disabled>${event.description}</textarea>`;
                 startCell.innerHTML = `<input type="datetime-local" value="${event.start}" disabled>`;
                 endCell.innerHTML = `<input type="datetime-local" value="${event.end}" disabled>`;
                 actionsCell.innerHTML = `<button onclick="editEvent(${index})">Editar</button> 
@@ -106,53 +135,25 @@
             });
         }
 
-        // ... (restante do código)
-
-        // Função para criar ou atualizar um evento
-        function createOrUpdateEvent() {
-            const title = document.getElementById('event-title').value;
-            const start = document.getElementById('event-start').value;
-            const end = document.getElementById('event-end').value;
-
-            const event = { title, start, end };
-            events.push(event);
-
-            // Atualiza a tabela e o calendário
-            loadEventsTable();
-            $('#calendar').fullCalendar('refetchEvents');
-
-            closeModal();
-        }
-
-        // Função para editar um evento
-        function editEvent(index) {
-            // Habilita os campos de edição para o evento selecionado
-            const row = document.getElementById('events-body').rows[index];
-            row.cells[0].firstElementChild.disabled = false; // Título
-            row.cells[1].firstElementChild.disabled = false; // Data de Início
-            row.cells[2].firstElementChild.disabled = false; // Data de Término
-        }
-
-        // Função para excluir um evento
-        function deleteEvent(index) {
-            // Remove o evento da lista
-            events.splice(index, 1);
-
-            // Atualiza a tabela e o calendário
-            loadEventsTable();
-            $('#calendar').fullCalendar('refetchEvents');
-        }
+        // ... (restante do código) ...
 
         // Função para pesquisar eventos
         function searchEvents() {
             const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const searchDate = document.getElementById('search-date').value;
             const tableBody = document.getElementById('events-body');
 
             Array.from(tableBody.rows).forEach((row) => {
                 const title = row.cells[0].firstElementChild.value.toLowerCase();
-                row.style.display = title.includes(searchTerm) ? 'table-row' : 'none';
+                const date = row.cells[2].firstElementChild.value.split('T')[0];
+
+                const titleMatch = title.includes(searchTerm);
+                const dateMatch = !searchDate || date === searchDate;
+
+                row.style.display = titleMatch && dateMatch ? 'table-row' : 'none';
             });
         }
     </script>
 </body>
 </html>
+
