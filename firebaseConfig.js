@@ -1,4 +1,5 @@
 // firebaseConfig.js
+
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 
@@ -10,3 +11,7 @@ const firebaseConfig = {
   messagingSenderId: "794262176773",
   appId: "1:794262176773:web:9bcd82e5cffd858adc086c",
   measurementId: "G-QS6WRF6Y6L"
+};
+
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
