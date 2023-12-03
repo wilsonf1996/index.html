@@ -49,32 +49,20 @@
 
     <div id="event-list">
         <h2>Lista de Eventos</h2>
-        <ul id="events-list"></ul>
+        <select id="events-dropdown"></select>
+        <button onclick="editEvent()">Editar Evento</button>
+        <button onclick="deleteEvent()">Excluir Evento</button>
     </div>
 
     <div id="clock"></div>
 
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/dayjs@1.10.7/dist/dayjs.min.js"></script>
-    <script defer src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app.js"></script>
-    <script defer src="https://www.gstatic.com/firebasejs/9.1.0/firebase-auth.js"></script>
-    <script defer src="https://www.gstatic.com/firebasejs/9.1.0/firebase-firestore.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/fullcalendar@3.10.2/dist/fullcalendar.min.js"></script>
 
     <script>
-        // Firebase Config
-        const firebaseConfig = {
-            apiKey: "SuaApiKey",
-            authDomain: "SeuDominio.firebaseapp.com",
-            projectId: "SeuProjetoId",
-            storageBucket: "SeuStorageBucket.appspot.com",
-            messagingSenderId: "SeuMessagingSenderId",
-            appId: "SeuAppId",
-            measurementId: "SuaMeasurementId"
-        };
-        
-        const app = firebase.initializeApp(firebaseConfig);
-        const db = app.firestore();
+        // Variável para armazenar os eventos
+        let events = [];
 
         function initCalendar() {
             $('#calendar').fullCalendar({
@@ -83,7 +71,7 @@
                     center: 'title',
                     right: 'month,agendaWeek,agendaDay'
                 },
-                events: [], // Carregará eventos posteriormente
+                events: events, // Utiliza a variável events para carregar eventos
                 editable: true,
                 eventClick: function (event) {
                     openEventDetailsModal(event);
@@ -91,101 +79,83 @@
             });
         }
 
-        function loadEvents() {
-            db.collection("events").onSnapshot(snapshot => {
-                const events = [];
-                const eventsList = document.getElementById('events-list');
-                eventsList.innerHTML = ""; // Limpa a lista de eventos
+        function loadEventsDropdown() {
+            const dropdown = document.getElementById('events-dropdown');
+            dropdown.innerHTML = ""; // Limpa o dropdown
 
-                snapshot.forEach(doc => {
-                    const event = doc.data();
-                    event.id = doc.id;
-                    events.push(event);
-
-                    // Adiciona o evento à lista
-                    const li = document.createElement('li');
-                    li.innerHTML = `Título: ${event.title}, Início: ${event.start}, Término: ${event.end} 
-                                    <button onclick="editEvent('${event.id}')">Editar</button> 
-                                    <button onclick="deleteEvent('${event.id}')">Excluir</button>`;
-                    eventsList.appendChild(li);
-                });
-
-                $('#calendar').fullCalendar('removeEvents');
-                $('#calendar').fullCalendar('addEventSource', events);
+            events.forEach((event, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.text = event.title;
+                dropdown.add(option);
             });
         }
 
-        // ... (restante do código)
-
         document.addEventListener('DOMContentLoaded', function () {
             initCalendar();
-            loadEvents();
             setInterval(updateClock, 1000);
         });
 
-        // ... (restante do código)
-
         // Função para criar ou atualizar um evento
         function createOrUpdateEvent() {
-            const eventId = document.getElementById('edit-event-form').getAttribute('data-event-id');
             const title = document.getElementById('event-title').value;
             const start = document.getElementById('event-start').value;
             const end = document.getElementById('event-end').value;
 
-            if (eventId) {
-                // Se eventId existe, então estamos atualizando um evento existente
-                db.collection("events").doc(eventId).update({
-                    title: title,
-                    start: start,
-                    end: end
-                });
-            } else {
-                // Caso contrário, estamos criando um novo evento
-                db.collection("events").add({
-                    title: title,
-                    start: start,
-                    end: end
-                });
-            }
+            const event = { title, start, end };
+            events.push(event);
+
+            // Atualiza o dropdown e o calendário
+            loadEventsDropdown();
+            $('#calendar').fullCalendar('refetchEvents');
 
             closeModal();
         }
 
         // Função para editar um evento
-        function editEvent(eventId) {
-            const eventRef = db.collection("events").doc(eventId);
+        function editEvent() {
+            const dropdown = document.getElementById('events-dropdown');
+            const selectedIndex = dropdown.value;
 
-            eventRef.get().then((doc) => {
-                if (doc.exists) {
-                    const data = doc.data();
-                    document.getElementById('edit-event-form').setAttribute('data-event-id', eventId);
-                    document.getElementById('event-title').value = data.title;
-                    document.getElementById('event-start').value = data.start;
-                    document.getElementById('event-end').value = data.end;
+            if (selectedIndex !== "" && selectedIndex !== null) {
+                const selectedEvent = events[selectedIndex];
 
-                    openModal();
-                } else {
-                    console.log("Evento não encontrado!");
-                }
-            }).catch((error) => {
-                console.log("Erro ao obter o evento:", error);
-            });
+                // Preenche o formulário de edição com os dados do evento selecionado
+                document.getElementById('event-title').value = selectedEvent.title;
+                document.getElementById('event-start').value = selectedEvent.start;
+                document.getElementById('event-end').value = selectedEvent.end;
+
+                openModal();
+            } else {
+                alert("Selecione um evento para editar.");
+            }
         }
 
         // Função para excluir um evento
-        function deleteEvent(eventId) {
-            const eventRef = db.collection("events").doc(eventId);
-            eventRef.delete();
+        function deleteEvent() {
+            const dropdown = document.getElementById('events-dropdown');
+            const selectedIndex = dropdown.value;
+
+            if (selectedIndex !== "" && selectedIndex !== null) {
+                // Remove o evento da lista
+                events.splice(selectedIndex, 1);
+
+                // Atualiza o dropdown e o calendário
+                loadEventsDropdown();
+                $('#calendar').fullCalendar('refetchEvents');
+            } else {
+                alert("Selecione um evento para excluir.");
+            }
         }
 
         // Função para pesquisar eventos
         function searchEvents() {
             const searchTerm = document.getElementById('search-input').value.toLowerCase();
-            const eventsList = document.getElementById('events-list');
+            const dropdown = document.getElementById('events-dropdown');
 
-            Array.from(eventsList.getElementsByTagName('li')).forEach(li => {
-                const title = li.textContent.toLowerCase();
-                li.style.display = title.includes(searchTerm) ? 'block' : 'none';
+            Array.from(dropdown.options).forEach((option, index) => {
+                const title = events[index].title.toLowerCase();
+                option.style.display = title.includes(searchTerm) ? 'block' : 'none';
             });
         }
     </script>
