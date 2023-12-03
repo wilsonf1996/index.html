@@ -78,22 +78,35 @@
     <button onclick="createOrUpdateNote()">Criar Nova Nota</button>
     <button onclick="goToHomePage()">Voltar para a Página Principal</button>
 
+    <!-- Inclua a configuração do Firebase abaixo -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database.js"></script>
+
     <script>
+        // Sua configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:9bcd82e5cffd858adc086c",
+            measurementId: "G-QS6WRF6Y6L"
+        };
+
+        // Inicializa o Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const notesRef = database.ref('notes');
+
         let notes = [];
 
         function initNotes() {
-            notes = getSavedNotes();
-            updateNotesTable();
-        }
-
-        function getSavedNotes() {
-            const savedNotes = localStorage.getItem('notes');
-            return savedNotes ? JSON.parse(savedNotes) : [];
-        }
-
-        function saveNotes() {
-            localStorage.setItem('notes', JSON.stringify(notes));
-            triggerCustomEvent();
+            // Adiciona um ouvinte para mudanças no banco de dados em tempo real
+            notesRef.on('value', (snapshot) => {
+                notes = snapshot.val() || [];
+                updateNotesTable();
+            });
         }
 
         function createOrUpdateNote() {
@@ -111,8 +124,8 @@
                     notes.push(newNote);
                 }
 
-                saveNotes();
-                updateNotesTable();
+                // Atualiza o banco de dados em tempo real
+                notesRef.set(notes);
                 document.getElementById('note-input').value = '';
             }
         }
@@ -126,8 +139,8 @@
             if (editedText !== null) {
                 const existingNoteIndex = findNoteIndexById(id);
                 notes[existingNoteIndex].text = editedText;
-                saveNotes();
-                updateNotesTable();
+                // Atualiza o banco de dados em tempo real
+                notesRef.set(notes);
             }
         }
 
@@ -135,8 +148,8 @@
             const confirmDelete = confirm('Tem certeza que deseja excluir esta nota?');
             if (confirmDelete) {
                 notes = notes.filter(note => note.id !== id);
-                saveNotes();
-                updateNotesTable();
+                // Atualiza o banco de dados em tempo real
+                notesRef.set(notes);
             }
         }
 
@@ -175,25 +188,10 @@
             window.location.href = 'https://wilsonf1996.github.io/index.html';
         }
 
-        function triggerCustomEvent() {
-            // Cria e dispara um evento personalizado para notificar outras instâncias
-            const event = new Event('notesUpdated');
-            window.dispatchEvent(event);
-        }
-
         document.addEventListener('DOMContentLoaded', function () {
             initNotes();
-        });
-
-        // Adiciona um ouvinte para o evento personalizado
-        window.addEventListener('notesUpdated', function () {
-            // Atualiza as notas quando o evento é recebido
-            notes = getSavedNotes();
-            updateNotesTable();
         });
     </script>
 </body>
 
 </html>
-
-
