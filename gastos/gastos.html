@@ -66,6 +66,7 @@
 
     <input type="text" id="expense-description" placeholder="Descrição do Gasto">
     <input type="number" id="expense-amount" placeholder="Valor do Gasto (R$)">
+    <input type="datetime-local" id="expense-date" placeholder="Data do Gasto">
     <button onclick="createOrUpdateExpense()">Registrar Gasto</button>
     <button onclick="generateReport()">Gerar Relatório</button>
     <button onclick="goToHomePage()">Voltar para a Página Principal</button>
@@ -112,13 +113,14 @@
         function createOrUpdateExpense() {
             const description = document.getElementById('expense-description').value;
             const amount = parseFloat(document.getElementById('expense-amount').value);
+            const date = document.getElementById('expense-date').value;
 
-            if (isNaN(amount) || amount <= 0) {
-                alert('Por favor, insira um valor válido para o gasto.');
+            if (isNaN(amount) || amount <= 0 || !date) {
+                alert('Por favor, preencha todos os campos corretamente.');
                 return;
             }
 
-            const dateTime = new Date().toLocaleString();
+            const dateTime = new Date(date).toLocaleString();
             const newExpense = { dateTime, description, amount };
 
             expenses.push(newExpense);
@@ -129,20 +131,21 @@
         function editExpense(index) {
             const editedDescription = prompt('Editar Descrição:', expenses[index].description);
             const editedAmount = parseFloat(prompt('Editar Valor (R$):', expenses[index].amount.toFixed(2)));
+            const editedDate = prompt('Editar Data:', expenses[index].dateTime);
 
-            if (editedDescription !== null && !isNaN(editedAmount) && editedAmount > 0) {
+            if (editedDescription !== null && !isNaN(editedAmount) && editedAmount > 0 && editedDate) {
                 expenses[index].description = editedDescription;
                 expenses[index].amount = editedAmount;
+                expenses[index].dateTime = new Date(editedDate).toLocaleString();
                 localStorage.setItem('expenses', JSON.stringify(expenses));
                 loadExpensesTable();
             } else {
-                alert('Edição cancelada. Certifique-se de inserir um valor válido.');
+                alert('Edição cancelada ou valores inválidos.');
             }
         }
 
         function deleteExpense(index) {
             const confirmDelete = confirm('Tem certeza que deseja excluir este gasto?');
-
             if (confirmDelete) {
                 expenses.splice(index, 1);
                 localStorage.setItem('expenses', JSON.stringify(expenses));
@@ -151,8 +154,20 @@
         }
 
         function generateReport() {
-            const totalAmount = expenses.reduce((total, expense) => total + expense.amount, 0);
-            alert(`Total de Gastos: R$ ${totalAmount.toFixed(2)}`);
+            const startDate = prompt('Informe a data de início (AAAA-MM-DD):');
+            const endDate = prompt('Informe a data de fim (AAAA-MM-DD):');
+
+            if (startDate && endDate) {
+                const filteredExpenses = expenses.filter(expense => {
+                    const expenseDate = new Date(expense.dateTime).toLocaleDateString();
+                    return expenseDate >= startDate && expenseDate <= endDate;
+                });
+
+                const totalAmount = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+                alert(`Total de Gastos no Período: R$ ${totalAmount.toFixed(2)}`);
+            } else {
+                alert('Período inválido ou não informado.');
+            }
         }
 
         function goToHomePage() {
@@ -165,4 +180,3 @@
     </script>
 </body>
 </html>
-
