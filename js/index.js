@@ -9,4 +9,3 @@ function goToCalculator() {
 function goToAgenda() {
   window.location.href = "agenda/agenda.html";
 }
-
