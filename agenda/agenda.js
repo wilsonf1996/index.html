@@ -1,4 +1,13 @@
 // agenda.js
+import { initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+import firebaseConfig from "../js/firebaseConfig.js";
+
+// Seu código JS da agenda aqui
+
+
+// agenda.js
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, addDoc, collection, getDocs, query, where, deleteDoc, doc, updateDoc } from "firebase/firestore";
 
