@@ -139,3 +139,55 @@ const calendar = new FullCalendar.Calendar(document.getElementById("calendar"), 
 
 // Renderização do calendário
 calendar.render();
+
+// agenda.js
+
+// Your code here...
+
+// Function to navigate to the calculator page
+function goToCalculator() {
+  window.location.href = "calculadora/calculadora.html";
+}
+
+// Function to navigate to the main menu
+function goToMainMenu() {
+  window.location.href = "index.html";
+}
+
+// Initialize Firebase (move this part to the top)
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+import { getFirestore, collection, getDocs } from "firebase/firestore";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+  authDomain: "agenda-6accc.firebaseapp.com",
+  projectId: "agenda-6accc",
+  storageBucket: "agenda-6accc.appspot.com",
+  messagingSenderId: "794262176773",
+  appId: "1:794262176773:web:9bcd82e5cffd858adc086c",
+  measurementId: "G-QS6WRF6Y6L"
+};
+
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const db = getFirestore(app);
+
+// Function to retrieve events from Firestore
+async function getEvents() {
+  const eventsCollection = collection(db, "events");
+  const eventsSnapshot = await getDocs(eventsCollection);
+  const events = [];
+  eventsSnapshot.forEach((doc) => {
+    events.push({ id: doc.id, ...doc.data() });
+  });
+  return events;
+}
+
+// Other functions...
+
+// Example usage
+getEvents().then((events) => {
+  console.log(events);
+});
+
