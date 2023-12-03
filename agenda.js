@@ -1,5 +1,8 @@
-// firebaseConfig.js
-// Configuração do Firebase
+// agenda.js
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+
+// Your Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
     authDomain: "agenda-6accc.firebaseapp.com",
@@ -10,5 +13,13 @@ const firebaseConfig = {
     measurementId: "G-QS6WRF6Y6L"
 };
 
-export default firebaseConfig;
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
+// Restante do código da agenda.js
+// ...
+
+
+
 
