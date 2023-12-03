@@ -2,7 +2,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import firebaseConfig from "../js/firebaseConfig.js";
+firebaseConfig from "../js/firebaseConfig.js";
 
 // Seu código JS da agenda aqui
 
