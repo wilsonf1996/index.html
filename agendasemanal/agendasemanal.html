@@ -23,30 +23,39 @@
             flex-wrap: wrap;
         }
 
-        .week {
+        .day {
             margin: 10px;
             padding: 10px;
             border: 1px solid #ddd;
             cursor: pointer;
+            position: relative;
         }
 
-        #weekly-schedule {
+        .day .weekly-schedule {
             display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
             width: 100%;
-            margin: 20px auto;
-            border-collapse: collapse;
-            overflow-y: scroll;
-            max-height: 400px;
+            border: 1px solid #ddd;
+            background-color: #fff;
+            z-index: 1;
         }
 
-        th, td {
+        #weekly-schedule table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #weekly-schedule th,
+        #weekly-schedule td {
             border: 1px solid #ddd;
-            padding: 15px;
+            padding: 10px;
             text-align: center;
             min-width: 50px;
         }
 
-        th {
+        #weekly-schedule th {
             background-color: #f2f2f2;
         }
 
@@ -54,7 +63,7 @@
             background-color: #aee3e3;
         }
 
-        .selected-week {
+        .selected-day {
             background-color: #c8e6c8;
         }
 
@@ -64,9 +73,30 @@
             margin: 0 10px;
         }
 
-        #week-selector {
+        #day-selector {
             padding: 10px;
             font-size: 16px;
+        }
+
+        .schedule-cell {
+            position: relative;
+        }
+
+        .schedule-input {
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .schedule-input:focus {
+            outline: none;
+        }
+
+        .schedule-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
         }
     </style>
     <!-- Firebase Library -->
@@ -80,25 +110,8 @@
     <!-- Calendar Container -->
     <div id="calendar-container"></div>
 
-    <!-- Weekly Schedule Table -->
-    <table id="weekly-schedule">
-        <thead>
-            <tr>
-                <th>Hora</th>
-                <th>Segunda</th>
-                <th>Terça</th>
-                <th>Quarta</th>
-                <th>Quinta</th>
-                <th>Sexta</th>
-                <th>Sábado</th>
-                <th>Domingo</th>
-            </tr>
-        </thead>
-        <tbody id="schedule-body"></tbody>
-    </table>
-
-    <!-- Week Selector -->
-    <input type="week" id="week-selector" min="2022-W01" max="2030-W52" placeholder="Selecione a Semana">
+    <!-- Day Selector -->
+    <input type="date" id="day-selector" min="2022-01-01" max="2030-12-31" placeholder="Selecione o Dia">
 
     <!-- Back to Home Button -->
     <button onclick="goToHomePage()">Voltar para a Página Principal</button>
@@ -121,51 +134,68 @@
         const database = firebase.database();
 
         // Initialize an empty schedule
-        let weeklySchedule = [];
+        let dailySchedule = {};
 
         // Function to render the schedule on the page
-        function renderSchedule() {
-            const scheduleBody = document.getElementById('schedule-body');
-            scheduleBody.innerHTML = '';
+        function renderSchedule(dayDiv) {
+            const weeklyScheduleDiv = dayDiv.querySelector('.weekly-schedule');
+            const scheduleBody = document.createElement('div');
+            scheduleBody.classList.add('weekly-schedule');
+            scheduleBody.innerHTML = '<h3>Agenda Semanal</h3><table><thead><tr><th>Hora</th><th>Segunda</th><th>Terça</th><th>Quarta</th><th>Quinta</th><th>Sexta</th><th>Sábado</th><th>Domingo</th></tr></thead><tbody></tbody></table>';
 
             for (let hour = 0; hour < 24; hour++) {
-                const row = scheduleBody.insertRow();
+                const row = scheduleBody.querySelector('tbody').insertRow();
                 const cellHour = row.insertCell(0);
                 cellHour.textContent = `${hour}:00`;
 
-                for (let day in weeklySchedule[hour]) {
+                for (let day in dailySchedule) {
                     const cell = row.insertCell();
                     const input = document.createElement('input');
                     input.type = 'text';
-                    input.value = weeklySchedule[hour][day];
-                    input.setAttribute('data-hour', hour);
+                    input.value = dailySchedule[day][hour] || '';
                     input.setAttribute('data-day', day);
+                    input.setAttribute('data-hour', hour);
+                    input.classList.add('schedule-input');
                     input.addEventListener('input', updateSchedule);
-                    cell.appendChild(input);
+
+                    const contentDiv = document.createElement('div');
+                    contentDiv.classList.add('schedule-content');
+                    contentDiv.appendChild(input);
+
+                    cell.classList.add('schedule-cell');
+                    cell.appendChild(contentDiv);
                 }
             }
+
+            weeklyScheduleDiv.innerHTML = '';
+            weeklyScheduleDiv.appendChild(scheduleBody);
         }
 
         // Function to update the schedule data
         function updateSchedule(event) {
-            const hour = parseInt(event.target.getAttribute('data-hour'));
             const day = event.target.getAttribute('data-day');
-            weeklySchedule[hour][day] = event.target.value;
+            const hour = parseInt(event.target.getAttribute('data-hour'));
+            const value = event.target.value;
+
+            if (!dailySchedule[day]) {
+                dailySchedule[day] = {};
+            }
+
+            dailySchedule[day][hour] = value;
 
             // Save the updated schedule to Firebase
-            const selectedWeek = document.getElementById('week-selector').value;
-            const scheduleRef = database.ref(`/schedules/${selectedWeek}`);
-            scheduleRef.set(weeklySchedule);
+            const selectedDay = document.getElementById('day-selector').value;
+            const scheduleRef = database.ref(`/schedules/${selectedDay}`);
+            scheduleRef.set(dailySchedule);
         }
 
         // Function to load the schedule from Firebase
         function loadSchedule() {
-            const selectedWeek = document.getElementById('week-selector').value;
-            const scheduleRef = database.ref(`/schedules/${selectedWeek}`);
+            const selectedDay = document.getElementById('day-selector').value;
+            const scheduleRef = database.ref(`/schedules/${selectedDay}`);
             scheduleRef.once('value', (snapshot) => {
                 const scheduleData = snapshot.val();
-                weeklySchedule = scheduleData || [];
-                renderSchedule();
+                dailySchedule = scheduleData || {};
             });
         }
 
@@ -177,75 +207,66 @@
         // Function to highlight the current day
         function highlightCurrentDay() {
             const today = new Date();
-            const currentDay = today.getDay();
-            const cells = document.querySelectorAll(`#weekly-schedule tbody tr td:nth-child(${currentDay + 2})`);
+            const currentDay = today.toISOString().split('T')[0];
+            const cells = document.querySelectorAll(`#calendar-container .day[data-day="${currentDay}"]`);
             cells.forEach(cell => cell.classList.add('current-day'));
         }
 
-        // Function to handle week selection
-        function handleWeekSelection() {
-            const weekSelector = document.getElementById('week-selector');
-            weekSelector.addEventListener('input', () => {
+        // Function to handle day selection
+        function handleDaySelection() {
+            const daySelector = document.getElementById('day-selector');
+            daySelector.addEventListener('change', () => {
+                highlightSelectedDay();
                 loadSchedule();
-                highlightSelectedWeek();
             });
         }
 
-        // Function to highlight the selected week
-        function highlightSelectedWeek() {
-            const selectedWeek = document.getElementById('week-selector').value;
-            const weekStart = new Date(selectedWeek + 'T00:00:00');
-            const today = new Date();
-            const differenceInDays = Math.floor((today - weekStart) / (1000 * 60 * 60 * 24));
-            const selectedWeekNumber = Math.floor(differenceInDays / 7);
+        // Function to highlight the selected day
+        function highlightSelectedDay() {
+            const selectedDay = document.getElementById('day-selector').value;
+            const cells = document.querySelectorAll(`#calendar-container .day`);
+            cells.forEach(cell => cell.classList.remove('selected-day'));
 
-            const calendarContainer = document.getElementById('calendar-container');
-            const weeks = calendarContainer.children;
+            const selectedCells = document.querySelectorAll(`#calendar-container .day[data-day="${selectedDay}"]`);
+            selectedCells.forEach(cell => cell.classList.add('selected-day'));
 
-            for (let i = 0; i < weeks.length; i++) {
-                if (i === selectedWeekNumber) {
-                    weeks[i].classList.add('selected-week');
-                } else {
-                    weeks[i].classList.remove('selected-week');
-                }
-            }
+            // Render the schedule for the selected day
+            selectedCells.forEach(cell => renderSchedule(cell));
         }
 
         // Function to generate the calendar interface
         function generateCalendar() {
             const calendarContainer = document.getElementById('calendar-container');
-            const totalWeeks = 500; // Adjust the total weeks as needed
+            const totalDays = 365 * 8; // Approximately 8 years
 
-            for (let i = 0; i < totalWeeks; i++) {
-                const weekDiv = document.createElement('div');
-                weekDiv.classList.add('week');
-                const startDate = new Date();
-                startDate.setDate(startDate.getDate() + (i * 7));
-                const endDate = new Date(startDate);
-                endDate.setDate(endDate.getDate() + 6);
+            for (let i = 0; i < totalDays; i++) {
+                const dayDiv = document.createElement('div');
+                dayDiv.classList.add('day');
+                const currentDate = new Date();
+                currentDate.setDate(currentDate.getDate() + i);
 
-                const weekText = document.createElement('p');
-                weekText.textContent = `Semana ${i + 1}: ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`;
-                weekDiv.appendChild(weekText);
+                dayDiv.textContent = currentDate.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'numeric', day: 'numeric' });
+                dayDiv.setAttribute('data-day', currentDate.toISOString().split('T')[0]);
 
-                calendarContainer.appendChild(weekDiv);
+                // Weekly Schedule Container
+                const weeklyScheduleDiv = document.createElement('div');
+                weeklyScheduleDiv.classList.add('weekly-schedule');
+                dayDiv.appendChild(weeklyScheduleDiv);
+
+                dayDiv.addEventListener('click', () => {
+                    highlightSelectedDay();
+                });
+
+                calendarContainer.appendChild(dayDiv);
             }
         }
 
-        // Event listener for changes in the week selector
-        handleWeekSelection();
-
-        // Generate the calendar interface
+        // Initial setup
         generateCalendar();
-
-        // Highlight the current day
+        handleDaySelection();
         highlightCurrentDay();
-
-        // Initial load of schedule
-        loadSchedule();
     </script>
 </body>
 
 </html>
-
 
