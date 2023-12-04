@@ -64,35 +64,15 @@
 
         .editable {
             min-height: 30px;
+            max-width: 80px; /* Ajuste para acomodar até 10 caracteres */
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            cursor: pointer;
         }
 
         .editable:hover {
-            cursor: pointer;
             background-color: #e0e0e0;
-        }
-
-        .editable-content {
-            display: none;
-        }
-
-        .edit-mode .editable-content {
-            display: block;
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            box-sizing: border-box;
-        }
-
-        .edit-mode .editable-content textarea {
-            width: calc(100% - 16px);
-            height: calc(100% - 16px);
-            margin: 8px;
-            padding: 4px;
-            font-size: 14px;
-            border: 1px solid #ddd;
-            resize: none;
         }
     </style>
     <!-- Carregue a biblioteca do Firebase -->
@@ -140,7 +120,6 @@
 
         let selectedWeek = null;
         let agendaData = {};
-        let editMode = false;
 
         function initCalendar() {
             const calendar = document.getElementById('calendar');
@@ -194,12 +173,7 @@
                     const cellData = agendaData[cellKey] || "";
                     const editableClass = "editable";
                     cell.className = editableClass;
-                    cell.innerHTML = `<div class="editable-content">${cellData}</div>`;
-                    const editableContent = cell.querySelector('.editable-content');
-                    if (editMode) {
-                        editableContent.innerHTML = `<textarea>${cellData}</textarea>`;
-                    }
-                    cell.addEventListener('click', () => enterEditMode(cell, cellKey));
+                    cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')">${cellData}</div>`;
                 }
             }
 
@@ -207,37 +181,16 @@
         }
 
         function enterEditMode(cell, cellKey) {
-            if (editMode) return;
-            editMode = true;
-            document.body.classList.add('edit-mode');
-            renderAgendaTable(); // Renderiza a tabela novamente para exibir os campos editáveis
-            const editableContent = cell.querySelector('.editable-content textarea');
-            if (editableContent) {
-                editableContent.focus();
-                editableContent.setSelectionRange(editableContent.value.length, editableContent.value.length);
+            const value = prompt('Digite o conteúdo:', cell.textContent);
+            if (value !== null) {
+                updateCellData(cellKey, value);
             }
-
-            // Adicionar um ouvinte de evento de clique fora do campo de edição para salvar automaticamente
-            const clickOutsideListener = (event) => {
-                const isClickInside = cell.contains(event.target);
-                if (!isClickInside) {
-                    saveCellData(cellKey, editableContent.value);
-                    document.removeEventListener('click', clickOutsideListener);
-                }
-            };
-
-            document.addEventListener('click', clickOutsideListener);
-        }
-
-        function saveCellData(cellKey, value) {
-            editMode = false;
-            document.body.classList.remove('edit-mode');
-            updateCellData(cellKey, value);
         }
 
         function updateCellData(cellKey, value) {
             agendaData[cellKey] = value;
             database.ref(`/agenda/${selectedWeek}`).set(agendaData);
+            renderAgendaTable(); // Atualiza a tabela após a edição
         }
 
         initCalendar();
@@ -245,6 +198,5 @@
 </body>
 
 </html>
-
 
 
