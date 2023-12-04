@@ -144,15 +144,18 @@
             const amount = parseFloat(document.getElementById('expense-amount').value);
             const date = document.getElementById('expense-date').value;
 
-            if (isNaN(amount) || amount <= 0 || !date) {
+            if (!isValidExpense(description, amount, date)) {
                 alert('Por favor, preencha todos os campos corretamente.');
                 return;
             }
 
-            const dateTime = new Date(date).toLocaleString();
-            const newExpense = { dateTime, description, amount };
+            const newExpense = { dateTime: new Date(date.replace("T", " ")).toISOString(), description, amount };
 
             database.ref('/expenses').push(newExpense);
+        }
+
+        function isValidExpense(description, amount, date) {
+            return description.trim() !== '' && !isNaN(amount) && amount > 0 && date !== '';
         }
 
         function editExpense(index) {
@@ -160,10 +163,10 @@
             const editedAmount = parseFloat(prompt('Editar Valor (R$):', expenses[index].amount.toFixed(2)));
             const editedDate = prompt('Editar Data:', expenses[index].dateTime);
 
-            if (editedDescription !== null && !isNaN(editedAmount) && editedAmount > 0 && editedDate) {
+            if (isValidExpense(editedDescription, editedAmount, editedDate)) {
                 expenses[index].description = editedDescription;
                 expenses[index].amount = editedAmount;
-                expenses[index].dateTime = new Date(editedDate).toLocaleString();
+                expenses[index].dateTime = new Date(editedDate.replace("T", " ")).toISOString();
 
                 database.ref(`/expenses/${index}`).set(expenses[index]);
             } else {
