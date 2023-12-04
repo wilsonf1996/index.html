@@ -5,46 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Minha Agenda Semanal</title>
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            text-align: center;
-            margin: 20px;
-        }
-
-        h1 {
-            color: #333;
-        }
-
-        table {
-            width: 100%;
-            margin-top: 20px;
-            border-collapse: collapse;
-        }
-
-        th,
-        td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-
-        th {
-            background-color: #f2f2f2;
-        }
-
-        button {
-            padding: 10px;
-            font-size: 16px;
-            margin: 0 10px;
-        }
-
-        input {
-            width: 80%;
-            margin: 10px 0;
-        }
-    </style>
-    <!-- Carregue a biblioteca do Firebase -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.css" />
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
 </head>
@@ -52,25 +16,9 @@
 <body>
     <h1>Minha Agenda Semanal</h1>
 
-    <table id="weekly-schedule">
-        <thead>
-            <tr>
-                <th>Hora</th>
-                <th>Segunda</th>
-                <th>Terça</th>
-                <th>Quarta</th>
-                <th>Quinta</th>
-                <th>Sexta</th>
-                <th>Sábado</th>
-                <th>Domingo</th>
-            </tr>
-        </thead>
-        <tbody id="schedule-body"></tbody>
-    </table>
+    <div id="calendar"></div>
 
-    <input type="time" id="activity-time">
-    <input type="text" id="activity-name" placeholder="Nome da Atividade">
-    <button onclick="addOrUpdateActivity()">Adicionar/Atualizar Atividade</button>
+    <div id="schedule-table-container"></div>
 
     <script>
         // Configuração do Firebase
@@ -83,87 +31,122 @@
         const database = firebase.database();
 
         // Estrutura de atividades
-        const activities = [];
+        let activities = [];
 
-        function initSchedule() {
-            const scheduleRef = database.ref('/schedule');
-
-            scheduleRef.on('value', (snapshot) => {
-                const scheduleData = snapshot.val();
-                activities = scheduleData ? scheduleData : [];
-                loadScheduleTable(activities);
+        // Função para inicializar o calendário
+        function initCalendar() {
+            $('#calendar').fullCalendar({
+                header: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'month,agendaWeek,agendaDay'
+                },
+                defaultView: 'agendaWeek',
+                editable: true,
+                events: loadActivities,
+                eventDrop: updateActivity
             });
         }
 
-        function loadScheduleTable(activities) {
-            const tableBody = document.getElementById('schedule-body');
-            tableBody.innerHTML = "";
-
-            for (let hour = 0; hour < 24; hour++) {
-                const row = tableBody.insertRow();
-                const cellHour = row.insertCell(0);
-                cellHour.textContent = `${hour.toString().padStart(2, '0')}:00`;
-
-                for (let day = 1; day <= 7; day++) {
-                    const cell = row.insertCell(day);
-                    const activity = activities.find(a => a.hour === hour && a.day === day);
-
-                    if (activity) {
-                        cell.textContent = activity.name;
-                        cell.onclick = () => editActivity(activity.id);
-                    } else {
-                        cell.textContent = '-';
-                        cell.onclick = () => addOrUpdateActivity(hour, day);
-                    }
-                }
-            }
+        // Função para carregar as atividades no calendário
+        function loadActivities(start, end, timezone, callback) {
+            const scheduleRef = database.ref('/schedule');
+            scheduleRef.on('value', (snapshot) => {
+                activities = snapshot.val() || [];
+                const events = activities.map(activity => {
+                    return {
+                        id: activity.id,
+                        title: activity.name,
+                        start: moment(activity.dateTime).toISOString(),
+                        end: moment(activity.dateTime).add(30, 'minutes').toISOString()
+                    };
+                });
+                callback(events);
+            });
         }
 
-        function addOrUpdateActivity(hour, day) {
-            const activityTime = document.getElementById('activity-time').value;
-            const activityName = document.getElementById('activity-name').value;
-
-            if (!isValidActivity(activityTime, activityName)) {
-                alert('Por favor, preencha todos os campos corretamente.');
-                return;
-            }
-
-            const existingActivity = activities.find(a => a.hour === hour && a.day === day);
+        // Função para adicionar ou editar uma atividade
+        function updateActivity(event) {
+            const existingActivity = activities.find(activity => activity.id === event.id);
 
             if (existingActivity) {
                 // Atualizar atividade existente
-                existingActivity.name = activityName;
+                existingActivity.dateTime = moment(event.start).toISOString();
             } else {
                 // Adicionar nova atividade
-                const newActivity = { id: generateId(), hour, day, name: activityName };
+                const newActivity = {
+                    id: generateId(),
+                    name: event.title,
+                    dateTime: moment(event.start).toISOString()
+                };
                 activities.push(newActivity);
             }
 
             database.ref('/schedule').set(activities);
         }
 
-        function isValidActivity(time, name) {
-            return time !== '' && name.trim() !== '';
-        }
-
-        function editActivity(id) {
-            const editedName = prompt('Editar Nome da Atividade:');
-            const activity = activities.find(a => a.id === id);
-
-            if (editedName !== null && activity) {
-                activity.name = editedName;
-                database.ref('/schedule').set(activities);
-            } else {
-                alert('Edição cancelada ou nome inválido.');
-            }
-        }
-
+        // Função para gerar um ID único
         function generateId() {
             return '_' + Math.random().toString(36).substr(2, 9);
         }
 
+        // Função para construir a tabela de horários
+        function buildScheduleTable() {
+            const scheduleTableContainer = document.getElementById('schedule-table-container');
+            scheduleTableContainer.innerHTML = '<h2>Tabela de Horários</h2>';
+            scheduleTableContainer.innerHTML += '<table id="schedule-table" border="1"></table>';
+
+            const scheduleTable = document.getElementById('schedule-table');
+            scheduleTable.innerHTML = '<tr><th>Dia/Hora</th><th>Segunda</th><th>Terça</th><th>Quarta</th><th>Quinta</th><th>Sexta</th><th>Sábado</th><th>Domingo</th></tr>';
+
+            for (let i = 0; i < 24; i++) {
+                const row = scheduleTable.insertRow();
+                const timeCell = row.insertCell(0);
+                timeCell.textContent = `${i}:00 - ${i + 1}:00`;
+
+                for (let j = 0; j < 7; j++) {
+                    const dayCell = row.insertCell(j + 1);
+                    const day = moment().isoWeekday(j + 1).startOf('day');
+                    const hour = moment().hour(i).startOf('hour');
+                    const dateTime = day.add(hour.diff(day, 'minutes'), 'minutes').toISOString();
+                    const activity = getActivityByDateTime(dateTime);
+                    const cellContent = activity ? `<div contenteditable="true">${activity.name}</div>` : '';
+                    dayCell.innerHTML = cellContent;
+                    dayCell.setAttribute('data-date-time', dateTime);
+                    dayCell.addEventListener('blur', onCellBlur);
+                }
+            }
+        }
+
+        // Função para obter uma atividade com base na data e hora
+        function getActivityByDateTime(dateTime) {
+            return activities.find(activity => moment(activity.dateTime).toISOString() === dateTime);
+        }
+
+        // Função chamada quando uma célula perde o foco
+        function onCellBlur(event) {
+            const dateTime = event.currentTarget.getAttribute('data-date-time');
+            const cellContent = event.currentTarget.innerHTML;
+            const existingActivity = getActivityByDateTime(dateTime);
+
+            if (existingActivity) {
+                existingActivity.name = cellContent;
+            } else {
+                const newActivity = {
+                    id: generateId(),
+                    name: cellContent,
+                    dateTime: dateTime
+                };
+                activities.push(newActivity);
+            }
+
+            database.ref('/schedule').set(activities);
+        }
+
+        // Ao carregar a página, inicialize o calendário e construa a tabela de horários
         document.addEventListener('DOMContentLoaded', function () {
-            initSchedule();
+            initCalendar();
+            buildScheduleTable();
         });
     </script>
 </body>
