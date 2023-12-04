@@ -12,43 +12,44 @@
             margin: 20px;
         }
 
+        h1 {
+            color: #333;
+        }
+
         table {
             width: 100%;
             margin: 20px auto;
             border-collapse: collapse;
+            overflow-y: scroll;
+            max-height: 400px;
         }
 
         th, td {
             border: 1px solid #ddd;
             padding: 8px;
             text-align: left;
-            white-space: nowrap; /* Impede que o texto seja quebrado */
         }
 
         th {
             background-color: #f2f2f2;
         }
 
-        #calendar {
-            max-width: 1000px;
-            margin: 20px auto;
+        button {
+            padding: 10px;
+            font-size: 16px;
+            margin: 0 10px;
         }
 
-        .editable-cell {
-            cursor: pointer;
+        input {
+            width: 80%;
+            margin: 10px 0;
         }
 
-        .selected-week {
-            background-color: lightblue;
+        #weekly-schedule {
+            overflow-y: auto;
         }
     </style>
-    <!-- Adicione no cabeçalho para incluir o FullCalendar e o Firebase -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.css" />
-    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.js"></script>
-
-    <!-- Carregue a biblioteca do Firebase -->
+    <!-- Firebase Library -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
 </head>
@@ -56,73 +57,28 @@
 <body>
     <h1>Agenda Semanal</h1>
 
-    <div id="calendar"></div>
-
     <table id="weekly-schedule">
         <thead>
             <tr>
-                <th>Dia da Semana</th>
-                <th>Data</th>
-                <th class="editable-cell">0:00</th>
-                <th class="editable-cell">1:00</th>
-                <th class="editable-cell">2:00</th>
-                <th class="editable-cell">3:00</th>
-                <th class="editable-cell">4:00</th>
-                <th class="editable-cell">5:00</th>
-                <th class="editable-cell">6:00</th>
-                <th class="editable-cell">7:00</th>
-                <th class="editable-cell">8:00</th>
-                <th class="editable-cell">9:00</th>
-                <th class="editable-cell">10:00</th>
-                <th class="editable-cell">11:00</th>
-                <th class="editable-cell">12:00</th>
-                <th class="editable-cell">13:00</th>
-                <th class="editable-cell">14:00</th>
-                <th class="editable-cell">15:00</th>
-                <th class="editable-cell">16:00</th>
-                <th class="editable-cell">17:00</th>
-                <th class="editable-cell">18:00</th>
-                <th class="editable-cell">19:00</th>
-                <th class="editable-cell">20:00</th>
-                <th class="editable-cell">21:00</th>
-                <th class="editable-cell">22:00</th>
-                <th class="editable-cell">23:00</th>
-            </tr>
-            <tr>
-                <th></th>
-                <th></th>
-                <th class="editable-cell"></th>
-                <th class="editable-cell"></th>
-                <th class="editable-cell"></th>
-                <th class="editable-cell"></th>
-                <th class="editable-cell"></th>
-                <th class="editable-cell"></th>
-                <th class="editable-cell"></th>
-                <th class="editable-cell"></th>
-                <th class="editable-cell"></th>
-                <th class="editable-cell"></th>
-                <th class="editable-cell"></th>
-                <th class="editable-cell"></th>
-                <th class="editable-cell"></th>
-                <th class="editable-cell"></th>
-                <th class="editable-cell"></th>
-                <th class="editable-cell"></th>
-                <th class="editable-cell"></th>
-                <th class="editable-cell"></th>
-                <th class="editable-cell"></th>
-                <th class="editable-cell"></th>
-                <th class="editable-cell"></th>
-                <th class="editable-cell"></th>
-                <th class="editable-cell"></th>
-                <th class="editable-cell"></th>
+                <th>Hora</th>
+                <th>Segunda</th>
+                <th>Terça</th>
+                <th>Quarta</th>
+                <th>Quinta</th>
+                <th>Sexta</th>
+                <th>Sábado</th>
+                <th>Domingo</th>
             </tr>
         </thead>
-        <tbody id="weekly-schedule-body"></tbody>
+        <tbody id="schedule-body"></tbody>
     </table>
 
-    <!-- Script do seu Firebase -->
+    <input type="week" id="week-selector" placeholder="Selecione a Semana">
+    <button onclick="saveSchedule()">Salvar Agenda</button>
+    <button onclick="loadSchedule()">Carregar Agenda</button>
+
     <script>
-        // Sua configuração do Firebase
+        // Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
             authDomain: "agenda-6accc.firebaseapp.com",
@@ -134,58 +90,79 @@
             measurementId: "G-WVYXHMRJ11"
         };
 
-        // Inicialização do Firebase
+        // Firebase Initialization
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        // Função para inicializar a tabela
-        function initWeeklySchedule() {
-            const tableBody = document.getElementById('weekly-schedule-body');
+        // Initialize an empty schedule
+        let weeklySchedule = [];
 
-            // Adicione a lógica de sincronização com o Firebase aqui
+        // Function to initialize or reset the schedule
+        function initializeSchedule() {
+            weeklySchedule = Array.from({ length: 24 }, () => ({
+                Monday: '',
+                Tuesday: '',
+                Wednesday: '',
+                Thursday: '',
+                Friday: '',
+                Saturday: '',
+                Sunday: ''
+            }));
+        }
 
-            // Exemplo de preenchimento da tabela
-            const daysOfWeek = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-            const currentDate = new Date(); // Data atual para exemplo
+        // Function to render the schedule on the page
+        function renderSchedule() {
+            const scheduleBody = document.getElementById('schedule-body');
+            scheduleBody.innerHTML = '';
 
-            daysOfWeek.forEach((day, index) => {
-                const row = tableBody.insertRow();
-                const cellDayOfWeek = row.insertCell(0);
-                const cellDate = row.insertCell(1);
+            for (let hour = 0; hour < 24; hour++) {
+                const row = scheduleBody.insertRow();
+                const cellHour = row.insertCell(0);
+                cellHour.textContent = `${hour}:00`;
 
-                cellDayOfWeek.textContent = day;
-                cellDate.textContent = formatDate(addDays(currentDate, index));
-            });
-
-            // Exemplo: Preencha algumas células com dados existentes
-            // Nota: Adapte isso para o seu caso de uso real
-            for (let i = 0; i < daysOfWeek.length; i++) {
-                for (let j = 2; j <= 25; j++) { // Comece da coluna 2 para as horas
-                    const cell = tableBody.rows[i].insertCell(j);
-                    cell.classList.add('editable-cell');
-                    cell.contentEditable = true;
-                    cell.textContent = `Atividade ${i + 1}-${j - 1}`;
+                for (let day in weeklySchedule[hour]) {
+                    const cell = row.insertCell();
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = weeklySchedule[hour][day];
+                    input.setAttribute('data-hour', hour);
+                    input.setAttribute('data-day', day);
+                    input.addEventListener('input', updateSchedule);
+                    cell.appendChild(input);
                 }
             }
         }
 
-        // Função auxiliar para adicionar dias a uma data
-        function addDays(date, days) {
-            const result = new Date(date);
-            result.setDate(result.getDate() + days);
-            return result;
+        // Function to update the schedule data
+        function updateSchedule(event) {
+            const hour = parseInt(event.target.getAttribute('data-hour'));
+            const day = event.target.getAttribute('data-day');
+            weeklySchedule[hour][day] = event.target.value;
         }
 
-        // Função auxiliar para formatar a data como DD/MM
-        function formatDate(date) {
-            const day = date.getDate().toString().padStart(2, '0');
-            const month = (date.getMonth() + 1).toString().padStart(2, '0');
-            return `${day}/${month}`;
+        // Function to save the schedule to Firebase
+        function saveSchedule() {
+            const selectedWeek = document.getElementById('week-selector').value;
+            const scheduleRef = database.ref(`/schedules/${selectedWeek}`);
+            scheduleRef.set(weeklySchedule);
         }
 
-        // Inicialize a tabela ao carregar a página
-        initWeeklySchedule();
+        // Function to load the schedule from Firebase
+        function loadSchedule() {
+            const selectedWeek = document.getElementById('week-selector').value;
+            const scheduleRef = database.ref(`/schedules/${selectedWeek}`);
+            scheduleRef.once('value', (snapshot) => {
+                const scheduleData = snapshot.val();
+                weeklySchedule = scheduleData || [];
+                renderSchedule();
+            });
+        }
+
+        // Initial setup
+        initializeSchedule();
+        renderSchedule();
     </script>
 </body>
 
 </html>
+
