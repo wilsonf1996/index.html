@@ -5,11 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meus Gastos</title>
-
-    <!-- Inclua os scripts do Firebase (versão 9.x) -->
-    <script defer src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
-    <script defer src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
-
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -54,6 +49,9 @@
             overflow-y: auto;
         }
     </style>
+    <!-- Carregue a biblioteca do Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
 </head>
 
 <body>
@@ -79,7 +77,7 @@
     <button onclick="goToHomePage()">Voltar para a Página Principal</button>
 
     <script>
-        // Configurações do Firebase - substitua pelos seus próprios dados do projeto Firebase
+        // Configuração do Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
             authDomain: "agenda-6accc.firebaseapp.com",
@@ -91,18 +89,22 @@
             measurementId: "G-CVBQ54PERH"
         };
 
-        // Inicialize o Firebase
+        // Inicialização do Firebase
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
-        const expensesRef = database.ref('/expenses');
+
+        // Suas funções vão aqui
         let expenses = [];
 
-        // Evento de valor para obter dados em tempo real
-        expensesRef.on('value', (snapshot) => {
-            const expensesData = snapshot.val();
-            expenses = expensesData ? Object.values(expensesData) : [];
-            loadExpensesTable(expenses);
-        });
+        function initExpenses() {
+            const expensesRef = database.ref('/expenses');
+
+            expensesRef.on('value', (snapshot) => {
+                const expensesData = snapshot.val();
+                expenses = expensesData ? Object.values(expensesData) : [];
+                loadExpensesTable(expenses);
+            });
+        }
 
         function loadExpensesTable(expenses) {
             const tableBody = document.getElementById('expenses-body');
@@ -116,6 +118,7 @@
                     const cellAmount = row.insertCell(2);
                     const cellActions = row.insertCell(3);
 
+                    // Formatando a data para "dia/mes/ano"
                     const formattedDate = new Date(expense.dateTime).toLocaleDateString('pt-BR');
 
                     cellDateTime.textContent = formattedDate;
@@ -148,6 +151,7 @@
                 return;
             }
 
+            // Formatando a data para "dia/mes/ano"
             const formattedDate = new Date(date).toLocaleDateString('pt-BR', {
                 day: '2-digit',
                 month: '2-digit',
@@ -157,7 +161,8 @@
             const dateTime = new Date(date).toLocaleString();
             const newExpense = { dateTime, description, amount };
 
-            expensesRef.push(newExpense);
+            // Assuming you have a reference to the Firebase database
+            database.ref('/expenses').push(newExpense);
         }
 
         function editExpense(index) {
@@ -166,6 +171,7 @@
             const editedDate = prompt('Editar Data:', expenses[index].dateTime);
 
             if (editedDescription !== null && !isNaN(editedAmount) && editedAmount > 0 && editedDate) {
+                // Formatando a data para "dia/mes/ano"
                 const formattedDate = new Date(editedDate).toLocaleDateString('pt-BR', {
                     day: '2-digit',
                     month: '2-digit',
@@ -176,7 +182,8 @@
                 expenses[index].amount = editedAmount;
                 expenses[index].dateTime = new Date(editedDate).toLocaleString();
 
-                expensesRef.child(index).set(expenses[index]);
+                // Assuming you have a reference to the Firebase database
+                database.ref(`/expenses/${index}`).set(expenses[index]);
             } else {
                 alert('Edição cancelada ou valores inválidos.');
             }
@@ -185,7 +192,8 @@
         function deleteExpense(index) {
             const confirmDelete = confirm('Tem certeza que deseja excluir este gasto?');
             if (confirmDelete) {
-                expensesRef.child(index).remove();
+                // Assuming you have a reference to the Firebase database
+                database.ref(`/expenses/${index}`).remove();
             }
         }
 
@@ -209,8 +217,11 @@
         function goToHomePage() {
             window.location.href = 'https://wilsonf1996.github.io/index.html';
         }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            initExpenses();
+        });
     </script>
 </body>
 
 </html>
-
