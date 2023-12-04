@@ -6,9 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meus Gastos</title>
 
-    <!-- Inclua os scripts do Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <!-- Inclua os scripts do Firebase (versão 9.x) -->
+    <script defer src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
 
     <style>
         body {
@@ -29,8 +29,7 @@
             max-height: 400px;
         }
 
-        th,
-        td {
+        th, td {
             border: 1px solid #ddd;
             padding: 8px;
             text-align: left;
@@ -65,7 +64,7 @@
             <tr>
                 <th>Data e Hora</th>
                 <th>Descrição</th>
-                th>Valor (R$)</th>
+                <th>Valor (R$)</th>
                 <th>Ações</th>
             </tr>
         </thead>
@@ -79,34 +78,31 @@
     <button onclick="generateReport()">Gerar Relatório</button>
     <button onclick="goToHomePage()">Voltar para a Página Principal</button>
 
-    <!-- Configurações do Firebase - substitua pelos seus próprios dados do projeto Firebase -->
     <script>
+        // Configurações do Firebase - substitua pelos seus próprios dados do projeto Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
             authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
             projectId: "agenda-6accc",
             storageBucket: "agenda-6accc.appspot.com",
             messagingSenderId: "794262176773",
-            appId: "1:794262176773:web:9bcd82e5cffd858adc086c",
-            measurementId: "G-QS6WRF6Y6L"
+            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+            measurementId: "G-CVBQ54PERH"
         };
 
         // Inicialize o Firebase
-        firebase.initializeApp(firebaseConfig);
-    </script>
-
-    <script>
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const expensesRef = database.ref('/expenses');
         let expenses = [];
 
-        function initExpenses() {
-            const expensesRef = firebase.database().ref('/expenses');
-
-            expensesRef.on('value', (snapshot) => {
-                const expensesData = snapshot.val();
-                expenses = expensesData ? Object.values(expensesData) : [];
-                loadExpensesTable(expenses);
-            });
-        }
+        // Evento de valor para obter dados em tempo real
+        expensesRef.on('value', (snapshot) => {
+            const expensesData = snapshot.val();
+            expenses = expensesData ? Object.values(expensesData) : [];
+            loadExpensesTable(expenses);
+        });
 
         function loadExpensesTable(expenses) {
             const tableBody = document.getElementById('expenses-body');
@@ -161,7 +157,7 @@
             const dateTime = new Date(date).toLocaleString();
             const newExpense = { dateTime, description, amount };
 
-            firebase.database().ref('/expenses').push(newExpense);
+            expensesRef.push(newExpense);
         }
 
         function editExpense(index) {
@@ -180,7 +176,7 @@
                 expenses[index].amount = editedAmount;
                 expenses[index].dateTime = new Date(editedDate).toLocaleString();
 
-                firebase.database().ref(`/expenses/${index}`).set(expenses[index]);
+                expensesRef.child(index).set(expenses[index]);
             } else {
                 alert('Edição cancelada ou valores inválidos.');
             }
@@ -189,7 +185,7 @@
         function deleteExpense(index) {
             const confirmDelete = confirm('Tem certeza que deseja excluir este gasto?');
             if (confirmDelete) {
-                firebase.database().ref(`/expenses/${index}`).remove();
+                expensesRef.child(index).remove();
             }
         }
 
@@ -213,10 +209,6 @@
         function goToHomePage() {
             window.location.href = 'https://wilsonf1996.github.io/index.html';
         }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            initExpenses();
-        });
     </script>
 </body>
 
