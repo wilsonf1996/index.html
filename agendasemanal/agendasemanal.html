@@ -16,90 +16,46 @@
             color: #333;
         }
 
-        #calendar-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .day {
-            margin: 10px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            cursor: pointer;
-            position: relative;
-        }
-
-        .day .weekly-schedule {
-            display: none;
-            position: absolute;
-            top: 100%;
-            left: 0;
+        table {
             width: 100%;
-            border: 1px solid #ddd;
-            background-color: #fff;
-            z-index: 1;
-        }
-
-        #weekly-schedule table {
-            width: 100%;
+            margin: 20px auto;
             border-collapse: collapse;
         }
 
-        #weekly-schedule th,
-        #weekly-schedule td {
+        th, td {
             border: 1px solid #ddd;
-            padding: 10px;
-            text-align: center;
-            min-width: 50px;
+            padding: 8px;
+            text-align: left;
         }
 
-        #weekly-schedule th {
+        th {
             background-color: #f2f2f2;
         }
 
-        .current-day {
-            background-color: #aee3e3;
+        #calendar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            list-style: none;
+            padding: 0;
         }
 
-        .selected-day {
-            background-color: #c8e6c8;
+        #calendar li {
+            width: calc(14.2857% - 4px);
+            margin: 2px;
+            text-align: center;
+            cursor: pointer;
         }
 
-        button {
-            padding: 10px;
-            font-size: 16px;
-            margin: 0 10px;
+        #calendar li:hover {
+            background-color: #f0f0f0;
         }
 
-        #day-selector {
-            padding: 10px;
-            font-size: 16px;
-        }
-
-        .schedule-cell {
-            position: relative;
-        }
-
-        .schedule-input {
-            width: 100%;
-            height: 100%;
-            box-sizing: border-box;
-        }
-
-        .schedule-input:focus {
-            outline: none;
-        }
-
-        .schedule-content {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+        #agenda-table {
+            display: none;
         }
     </style>
-    <!-- Firebase Library -->
+    <!-- Carregue a biblioteca do Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
 </head>
@@ -107,17 +63,26 @@
 <body>
     <h1>Agenda Semanal</h1>
 
-    <!-- Calendar Container -->
-    <div id="calendar-container"></div>
+    <ul id="calendar"></ul>
 
-    <!-- Day Selector -->
-    <input type="date" id="day-selector" min="2022-01-01" max="2030-12-31" placeholder="Selecione o Dia">
-
-    <!-- Back to Home Button -->
-    <button onclick="goToHomePage()">Voltar para a Página Principal</button>
+    <table id="agenda-table">
+        <thead>
+            <tr>
+                <th>Hora</th>
+                <th>Segunda</th>
+                <th>Terça</th>
+                <th>Quarta</th>
+                <th>Quinta</th>
+                <th>Sexta</th>
+                <th>Sábado</th>
+                <th>Domingo</th>
+            </tr>
+        </thead>
+        <tbody id="agenda-body"></tbody>
+    </table>
 
     <script>
-        // Firebase Configuration
+        // Configuração do Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
             authDomain: "agenda-6accc.firebaseapp.com",
@@ -125,146 +90,78 @@
             projectId: "agenda-6accc",
             storageBucket: "agenda-6accc.appspot.com",
             messagingSenderId: "794262176773",
-            appId: "1:794262176773:web:c3fa03f04d870bdcdc086c",
-            measurementId: "G-WVYXHMRJ11"
+            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+            measurementId: "G-CVBQ54PERH"
         };
 
-        // Firebase Initialization
+        // Inicialização do Firebase
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        // Initialize an empty schedule
-        let weeklySchedule = {};
+        let selectedWeek = null;
+        let agendaData = {};
 
-        // Function to render the schedule on the page
-        function renderSchedule(dayDiv) {
-            const weeklyScheduleDiv = dayDiv.querySelector('.weekly-schedule');
-            const scheduleBody = document.createElement('div');
-            scheduleBody.classList.add('weekly-schedule');
-            scheduleBody.innerHTML = '<h3>Agenda Semanal</h3><table><thead><tr><th>Hora</th><th>Segunda</th><th>Terça</th><th>Quarta</th><th>Quinta</th><th>Sexta</th><th>Sábado</th><th>Domingo</th></tr></thead><tbody></tbody></table>';
+        function initCalendar() {
+            const calendar = document.getElementById('calendar');
+            for (let i = 2022; i <= 2030; i++) {
+                const li = document.createElement('li');
+                li.textContent = `Semana ${i}`;
+                li.addEventListener('click', () => loadAgenda(i));
+                calendar.appendChild(li);
+            }
+        }
 
+        function loadAgenda(week) {
+            selectedWeek = week;
+            agendaData = {};
+
+            // Carregar dados da agenda para a semana selecionada do banco de dados
+            const agendaRef = database.ref(`/agenda/${selectedWeek}`);
+            agendaRef.on('value', (snapshot) => {
+                agendaData = snapshot.val() || {};
+                renderAgendaTable();
+            });
+        }
+
+        function renderAgendaTable() {
+            const agendaTable = document.getElementById('agenda-table');
+            const agendaBody = document.getElementById('agenda-body');
+            agendaBody.innerHTML = "";
+
+            // Cabeçalho da tabela
+            const tableHeader = agendaTable.querySelector('thead tr');
+            tableHeader.innerHTML = "<th>Hora</th>";
+            for (let i = 1; i <= 7; i++) {
+                const day = new Date(selectedWeek, 0, 1 + i - (new Date(selectedWeek, 0, 1).getDay() || 7)).toLocaleDateString('en-US', { weekday: 'long' });
+                tableHeader.innerHTML += `<th>${day}</th>`;
+            }
+
+            // Conteúdo da tabela
             for (let hour = 0; hour < 24; hour++) {
-                const row = scheduleBody.querySelector('tbody').insertRow();
+                const row = agendaBody.insertRow();
                 const cellHour = row.insertCell(0);
                 cellHour.textContent = `${hour}:00`;
 
-                for (let day in weeklySchedule) {
-                    const cell = row.insertCell();
-                    const input = document.createElement('input');
-                    input.type = 'text';
-                    input.value = weeklySchedule[day][hour] || '';
-                    input.setAttribute('data-day', day);
-                    input.setAttribute('data-hour', hour);
-                    input.classList.add('schedule-input');
-                    input.addEventListener('input', updateSchedule);
-
-                    const contentDiv = document.createElement('div');
-                    contentDiv.classList.add('schedule-content');
-                    contentDiv.appendChild(input);
-
-                    cell.classList.add('schedule-cell');
-                    cell.appendChild(contentDiv);
+                for (let day = 1; day <= 7; day++) {
+                    const cell = row.insertCell(day);
+                    const cellKey = `${hour}-${day}`;
+                    const cellData = agendaData[cellKey] || "";
+                    cell.textContent = cellData;
+                    cell.contentEditable = true;
+                    cell.addEventListener('input', () => updateCellData(cellKey, cell.textContent));
                 }
             }
 
-            weeklyScheduleDiv.innerHTML = '';
-            weeklyScheduleDiv.appendChild(scheduleBody);
+            agendaTable.style.display = 'block';
         }
 
-        // Function to update the schedule data
-        function updateSchedule(event) {
-            const day = event.target.getAttribute('data-day');
-            const hour = parseInt(event.target.getAttribute('data-hour'));
-            const value = event.target.value;
-
-            if (!weeklySchedule[day]) {
-                weeklySchedule[day] = {};
-            }
-
-            weeklySchedule[day][hour] = value;
-
-            // Save the updated schedule to Firebase
-            const selectedWeek = document.getElementById('day-selector').value;
-            const scheduleRef = database.ref(`/schedules/${selectedWeek}`);
-            scheduleRef.set(weeklySchedule);
+        function updateCellData(cellKey, value) {
+            agendaData[cellKey] = value;
+            const agendaRef = database.ref(`/agenda/${selectedWeek}`);
+            agendaRef.set(agendaData);
         }
 
-        // Function to load the schedule from Firebase
-        function loadSchedule() {
-            const selectedWeek = document.getElementById('day-selector').value;
-            const scheduleRef = database.ref(`/schedules/${selectedWeek}`);
-            scheduleRef.once('value', (snapshot) => {
-                const scheduleData = snapshot.val();
-                weeklySchedule = scheduleData || {};
-            });
-        }
-
-        // Function to navigate to the home page
-        function goToHomePage() {
-            window.location.href = 'https://wilsonf1996.github.io/index.html';
-        }
-
-        // Function to highlight the current day
-        function highlightCurrentDay() {
-            const today = new Date();
-            const currentDay = today.toISOString().split('T')[0];
-            const cells = document.querySelectorAll(`#calendar-container .day[data-day="${currentDay}"]`);
-            cells.forEach(cell => cell.classList.add('current-day'));
-        }
-
-        // Function to handle day selection
-        function handleDaySelection() {
-            const daySelector = document.getElementById('day-selector');
-            daySelector.addEventListener('change', () => {
-                highlightSelectedDay();
-                loadSchedule();
-            });
-        }
-
-        // Function to highlight the selected day
-        function highlightSelectedDay() {
-            const selectedDay = document.getElementById('day-selector').value;
-            const cells = document.querySelectorAll(`#calendar-container .day`);
-            cells.forEach(cell => cell.classList.remove('selected-day'));
-
-            const selectedCells = document.querySelectorAll(`#calendar-container .day[data-day="${selectedDay}"]`);
-            selectedCells.forEach(cell => cell.classList.add('selected-day'));
-
-            // Render the schedule for the selected day
-            selectedCells.forEach(cell => renderSchedule(cell));
-        }
-
-        // Function to generate the calendar interface
-        function generateCalendar() {
-            const calendarContainer = document.getElementById('calendar-container');
-            const totalDays = 365 * 8; // Approximately 8 years
-
-            for (let i = 0; i < totalDays; i++) {
-                const dayDiv = document.createElement('div');
-                dayDiv.classList.add('day');
-                const currentDate = new Date();
-                currentDate.setDate(currentDate.getDate() + i);
-
-                dayDiv.textContent = currentDate.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'numeric', day: 'numeric' });
-                dayDiv.setAttribute('data-day', currentDate.toISOString().split('T')[0]);
-
-                // Weekly Schedule Container
-                const weeklyScheduleDiv = document.createElement('div');
-                weeklyScheduleDiv.classList.add('weekly-schedule');
-                dayDiv.appendChild(weeklyScheduleDiv);
-
-                dayDiv.addEventListener('click', () => {
-                    highlightSelectedDay();
-                });
-
-                calendarContainer.appendChild(dayDiv);
-            }
-        }
-
-        // Initial setup
-        generateCalendar();
-        handleDaySelection();
-        highlightCurrentDay();
+        initCalendar();
     </script>
 </body>
 
