@@ -129,7 +129,7 @@
 
                     const deleteButton = document.createElement('button');
                     deleteButton.textContent = 'Excluir';
-                    deleteButton.onclick = () => deleteExpense(index);
+                    deleteButton.onclick = () => deleteExpense(expense.dateTime);
 
                     cellActions.appendChild(editButton);
                     cellActions.appendChild(deleteButton);
@@ -149,9 +149,19 @@
                 return;
             }
 
-            const newExpense = { dateTime: new Date(date.replace("T", " ")).toISOString(), description, amount };
+            const existingExpenseIndex = expenses.findIndex(expense => expense.dateTime === date);
 
-            database.ref('/expenses').push(newExpense);
+            if (existingExpenseIndex !== -1) {
+                // Editar despesa existente
+                expenses[existingExpenseIndex].description = description;
+                expenses[existingExpenseIndex].amount = amount;
+            } else {
+                // Adicionar nova despesa
+                const newExpense = { dateTime: date, description, amount };
+                expenses.push(newExpense);
+            }
+
+            database.ref('/expenses').set(expenses);
         }
 
         function isValidExpense(description, amount, date) {
@@ -161,23 +171,25 @@
         function editExpense(index) {
             const editedDescription = prompt('Editar Descrição:', expenses[index].description);
             const editedAmount = parseFloat(prompt('Editar Valor (R$):', expenses[index].amount.toFixed(2)));
-            const editedDate = prompt('Editar Data:', expenses[index].dateTime);
 
-            if (isValidExpense(editedDescription, editedAmount, editedDate)) {
+            if (isValidExpense(editedDescription, editedAmount, expenses[index].dateTime)) {
                 expenses[index].description = editedDescription;
                 expenses[index].amount = editedAmount;
-                expenses[index].dateTime = new Date(editedDate.replace("T", " ")).toISOString();
 
-                database.ref(`/expenses/${index}`).set(expenses[index]);
+                database.ref('/expenses').set(expenses);
             } else {
                 alert('Edição cancelada ou valores inválidos.');
             }
         }
 
-        function deleteExpense(index) {
+        function deleteExpense(dateTime) {
             const confirmDelete = confirm('Tem certeza que deseja excluir este gasto?');
+
             if (confirmDelete) {
-                database.ref(`/expenses/${index}`).remove();
+                const indexToDelete = expenses.findIndex(expense => expense.dateTime === dateTime);
+                expenses.splice(indexToDelete, 1);
+
+                database.ref('/expenses').set(expenses);
             }
         }
 
