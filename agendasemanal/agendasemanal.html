@@ -4,37 +4,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minha Agenda Semanal</title>
+    <title>Agenda Semanal</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+
+        table {
+            width: 100%;
+            margin: 20px auto;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            white-space: nowrap; /* Impede que o texto seja quebrado */
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        #calendar {
+            max-width: 1000px;
+            margin: 20px auto;
+        }
+
+        .editable-cell {
+            cursor: pointer;
+        }
+    </style>
+    <!-- Adicione no cabeçalho para incluir o FullCalendar e o Firebase -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.css" />
-    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.js"></script>
+
+    <!-- Carregue a biblioteca do Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
 </head>
 
 <body>
-    <h1>Minha Agenda Semanal</h1>
+    <h1>Agenda Semanal</h1>
 
     <div id="calendar"></div>
 
-    <div id="schedule-table-container"></div>
+    <table id="weekly-schedule">
+        <thead>
+            <tr>
+                <th>Dia da Semana</th>
+                <th>Data</th>
+                <th class="editable-cell">0:00</th>
+                <th class="editable-cell">1:00</th>
+                <th class="editable-cell">2:00</th>
+                <th class="editable-cell">3:00</th>
+                <th class="editable-cell">4:00</th>
+                <th class="editable-cell">5:00</th>
+                <th class="editable-cell">6:00</th>
+                <th class="editable-cell">7:00</th>
+                <th class="editable-cell">8:00</th>
+                <th class="editable-cell">9:00</th>
+                <th class="editable-cell">10:00</th>
+                <th class="editable-cell">11:00</th>
+                <th class="editable-cell">12:00</th>
+                <th class="editable-cell">13:00</th>
+                <th class="editable-cell">14:00</th>
+                <th class="editable-cell">15:00</th>
+                <th class="editable-cell">16:00</th>
+                <th class="editable-cell">17:00</th>
+                <th class="editable-cell">18:00</th>
+                <th class="editable-cell">19:00</th>
+                <th class="editable-cell">20:00</th>
+                <th class="editable-cell">21:00</th>
+                <th class="editable-cell">22:00</th>
+                <th class="editable-cell">23:00</th>
+            </tr>
+            <tr>
+                <th></th>
+                <th></th>
+                <th class="editable-cell"></th>
+                <th class="editable-cell"></th>
+                <th class="editable-cell"></th>
+                <th class="editable-cell"></th>
+                <th class="editable-cell"></th>
+                <th class="editable-cell"></th>
+                <th class="editable-cell"></th>
+                <th class="editable-cell"></th>
+                <th class="editable-cell"></th>
+                <th class="editable-cell"></th>
+                <th class="editable-cell"></th>
+                <th class="editable-cell"></th>
+                <th class="editable-cell"></th>
+                <th class="editable-cell"></th>
+                <th class="editable-cell"></th>
+                <th class="editable-cell"></th>
+                <th class="editable-cell"></th>
+                <th class="editable-cell"></th>
+                <th class="editable-cell"></th>
+                <th class="editable-cell"></th>
+                <th class="editable-cell"></th>
+                <th class="editable-cell"></th>
+                <th class="editable-cell"></th>
+                <th class="editable-cell"></th>
+            </tr>
+        </thead>
+        <tbody id="weekly-schedule-body"></tbody>
+    </table>
 
+    <!-- Script do seu Firebase -->
     <script>
-        // Configuração do Firebase
+        // Sua configuração do Firebase
         const firebaseConfig = {
-            // Insira suas configurações do Firebase aqui
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:c3fa03f04d870bdcdc086c",
+            measurementId: "G-WVYXHMRJ11"
         };
 
         // Inicialização do Firebase
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        // Estrutura de atividades
-        let activities = [];
-
-        // Função para inicializar o calendário
-        function initCalendar() {
+        // Inicialização do FullCalendar
+        $(document).ready(function () {
             $('#calendar').fullCalendar({
                 header: {
                     left: 'prev,next today',
@@ -43,114 +144,18 @@
                 },
                 defaultView: 'agendaWeek',
                 editable: true,
-                events: loadActivities,
-                eventDrop: updateActivity
+                eventLimit: true, // allow "more" link when too many events
+                events: []
             });
-        }
 
-        // Função para carregar as atividades no calendário
-        function loadActivities(start, end, timezone, callback) {
-            const scheduleRef = database.ref('/schedule');
-            scheduleRef.on('value', (snapshot) => {
-                activities = snapshot.val() || [];
-                const events = activities.map(activity => {
-                    return {
-                        id: activity.id,
-                        title: activity.name,
-                        start: moment(activity.dateTime).toISOString(),
-                        end: moment(activity.dateTime).add(30, 'minutes').toISOString()
-                    };
-                });
-                callback(events);
-            });
-        }
-
-        // Função para adicionar ou editar uma atividade
-        function updateActivity(event) {
-            const existingActivity = activities.find(activity => activity.id === event.id);
-
-            if (existingActivity) {
-                // Atualizar atividade existente
-                existingActivity.dateTime = moment(event.start).toISOString();
-            } else {
-                // Adicionar nova atividade
-                const newActivity = {
-                    id: generateId(),
-                    name: event.title,
-                    dateTime: moment(event.start).toISOString()
-                };
-                activities.push(newActivity);
-            }
-
-            database.ref('/schedule').set(activities);
-        }
-
-        // Função para gerar um ID único
-        function generateId() {
-            return '_' + Math.random().toString(36).substr(2, 9);
-        }
-
-        // Função para construir a tabela de horários
-        function buildScheduleTable() {
-            const scheduleTableContainer = document.getElementById('schedule-table-container');
-            scheduleTableContainer.innerHTML = '<h2>Tabela de Horários</h2>';
-            scheduleTableContainer.innerHTML += '<table id="schedule-table" border="1"></table>';
-
-            const scheduleTable = document.getElementById('schedule-table');
-            scheduleTable.innerHTML = '<tr><th>Dia/Hora</th><th>Segunda</th><th>Terça</th><th>Quarta</th><th>Quinta</th><th>Sexta</th><th>Sábado</th><th>Domingo</th></tr>';
-
-            for (let i = 0; i < 24; i++) {
-                const row = scheduleTable.insertRow();
-                const timeCell = row.insertCell(0);
-                timeCell.textContent = `${i}:00 - ${i + 1}:00`;
-
-                for (let j = 0; j < 7; j++) {
-                    const dayCell = row.insertCell(j + 1);
-                    const day = moment().isoWeekday(j + 1).startOf('day');
-                    const hour = moment().hour(i).startOf('hour');
-                    const dateTime = day.add(hour.diff(day, 'minutes'), 'minutes').toISOString();
-                    const activity = getActivityByDateTime(dateTime);
-                    const cellContent = activity ? `<div contenteditable="true">${activity.name}</div>` : '';
-                    dayCell.innerHTML = cellContent;
-                    dayCell.setAttribute('data-date-time', dateTime);
-                    dayCell.addEventListener('blur', onCellBlur);
-                }
-            }
-        }
-
-        // Função para obter uma atividade com base na data e hora
-        function getActivityByDateTime(dateTime) {
-            return activities.find(activity => moment(activity.dateTime).toISOString() === dateTime);
-        }
-
-        // Função chamada quando uma célula perde o foco
-        function onCellBlur(event) {
-            const dateTime = event.currentTarget.getAttribute('data-date-time');
-            const cellContent = event.currentTarget.innerHTML;
-            const existingActivity = getActivityByDateTime(dateTime);
-
-            if (existingActivity) {
-                existingActivity.name = cellContent;
-            } else {
-                const newActivity = {
-                    id: generateId(),
-                    name: cellContent,
-                    dateTime: dateTime
-                };
-                activities.push(newActivity);
-            }
-
-            database.ref('/schedule').set(activities);
-        }
-
-        // Ao carregar a página, inicialize o calendário e construa a tabela de horários
-        document.addEventListener('DOMContentLoaded', function () {
-            initCalendar();
-            buildScheduleTable();
+            initWeeklySchedule();
         });
+
+        function initWeeklySchedule() {
+            // Implemente a lógica de sincronização com o Firebase aqui
+            // Use a tabela semanal e a tabela de eventos do FullCalendar
+        }
     </script>
 </body>
 
 </html>
-
-
