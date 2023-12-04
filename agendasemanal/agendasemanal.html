@@ -1,1 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda Semanal</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        select, button {
+            padding: 10px;
+            font-size: 16px;
+            margin: 10px;
+        }
+
+        #schedule-table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .hour-input {
+            width: 80px;
+        }
+    </style>
+    <!-- Carregue a biblioteca do Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+</head>
+
+<body>
+    <h1>Agenda Semanal</h1>
+
+    <label for="week-select">Selecione a Semana:</label>
+    <select id="week-select" onchange="loadSchedule()">
+        <!-- Opções do calendário vão aqui -->
+    </select>
+
+    <table id="schedule-table">
+        <thead>
+            <tr>
+                <th>Hora</th>
+                <th>Segunda</th>
+                <th>Terça</th>
+                <th>Quarta</th>
+                <th>Quinta</th>
+                <th>Sexta</th>
+                <th>Sábado</th>
+                <th>Domingo</th>
+            </tr>
+        </thead>
+        <tbody id="schedule-body"></tbody>
+    </table>
+
+    <button onclick="goToHomePage()">Voltar para a Página Principal</button>
+
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            // suas configurações do Firebase aqui
+        };
+
+        // Inicialização do Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        let currentWeek = ''; // Para rastrear a semana atual
+
+        function loadSchedule() {
+            const selectedWeek = document.getElementById('week-select').value;
+            const scheduleRef = database.ref(`/schedule/${selectedWeek}`);
+
+            scheduleRef.on('value', (snapshot) => {
+                const scheduleData = snapshot.val();
+                currentWeek = selectedWeek; // Atualiza a semana atual
+                const schedule = scheduleData ? scheduleData : {};
+                loadScheduleTable(schedule);
+            });
+        }
+
+        function loadWeekOptions() {
+            const weekSelect = document.getElementById('week-select');
+
+            // Lógica para carregar as opções do calendário
+            // ...
+
+            // Após carregar as opções, dispare o evento de mudança para carregar a tabela
+            weekSelect.dispatchEvent(new Event('change'));
+        }
+
+        function loadScheduleTable(schedule) {
+            const tableBody = document.getElementById('schedule-body');
+            tableBody.innerHTML = "";
+
+            const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+            for (let hour = 0; hour < 24; hour++) {
+                const row = tableBody.insertRow();
+                const cellHour = row.insertCell(0);
+                cellHour.textContent = `${hour.toString().padStart(2, '0')}:00 - ${hour.toString().padStart(2, '0')}:30`;
+
+                daysOfWeek.forEach(day => {
+                    const cell = row.insertCell();
+                    const activity = schedule[day] && schedule[day][hour] ? schedule[day][hour] : '';
+
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = activity;
+                    input.classList.add('hour-input');
+                    input.onchange = () => updateActivity(day, hour, input.value);
+
+                    cell.appendChild(input);
+                });
+            }
+        }
+
+        function updateActivity(day, hour, activity) {
+            const scheduleRef = database.ref(`/schedule/${currentWeek}`);
+            
+            // Verifica se a estrutura do banco de dados está pronta para receber os dados
+            if (!scheduleRef.child(day).child(hour).set) {
+                scheduleRef.child(day).child(hour).set(activity);
+            } else {
+                scheduleRef.child(day).child(hour).update({ activity });
+            }
+        }
+
+        function goToHomePage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html';
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            loadWeekOptions();
+        });
+    </script>
+</body>
+
+</html>
 
