@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,17 +18,18 @@
 
         #info-container {
             display: flex;
-            flex-direction: column; /* Empilhar elementos em dispositivos móveis */
+            flex-direction: column;
+            justify-content: space-between;
             align-items: center;
             margin-top: 20px;
         }
 
         #weather-info {
-            text-align: center; /* Centralizar informações do clima */
+            text-align: center;
         }
 
         #clock-container {
-            margin-top: 20px;
+            margin-top: 10px;
         }
 
         #buttons-container {
@@ -40,22 +42,52 @@
             margin: 0 10px;
         }
 
-        /* Estilos para tornar o botão de agenda semanal atraente */
-        #agenda-button {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 16px;
-            margin: 4px 2px;
-            cursor: pointer;
-            border-radius: 4px;
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+            overflow-y: scroll;
+            max-height: 400px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        input {
+            width: 80%;
+            margin: 10px 0;
+        }
+
+        #expenses-table {
+            overflow-y: auto;
+        }
+
+        @media only screen and (min-width: 600px) {
+            /* Ajuste para telas maiores (por exemplo, tablets) */
+            #info-container {
+                flex-direction: row;
+            }
+
+            #weather-info {
+                text-align: left;
+            }
+
+            #clock-container {
+                margin-top: 0;
+                margin-left: 20px;
+            }
         }
     </style>
 </head>
+
 <body>
     <h1>Minha Página Principal</h1>
 
@@ -74,58 +106,134 @@
     </div>
 
     <div id="buttons-container">
-        <button onclick="goToAgendaPage()" id="agenda-button">Ir para a Agenda Semanal</button>
+        <button onclick="goToAgendaPage()">Ir para a Agenda</button>
+        <button onclick="goToAgendaSemanalPage()">Ir para a Agenda Semanal</button>
         <button onclick="goToCalculatorPage()">Ir para a Calculadora</button>
         <button onclick="goToNotesPage()">Ir para Notas</button>
         <button onclick="goToExpensesPage()">Ir para Gastos</button>
     </div>
 
     <script>
+        // Função para obter a localização do usuário usando a API de Geolocalização
         function getLocation() {
-            // Código para obter a localização (seção omitida para brevidade)
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        const latitude = position.coords.latitude;
+                        const longitude = position.coords.longitude;
+
+                        // Chame as funções para buscar dados do clima
+                        fetchWeatherDataByCoordinates(latitude, longitude);
+                        fetchDailyForecastByCoordinates(latitude, longitude);
+                        fetchLocationByCoordinates(latitude, longitude);
+                    },
+                    error => {
+                        console.error('Erro ao obter localização:', error);
+                        // Em caso de erro, carregue dados por IP como uma alternativa
+                        fetchLocationByIP();
+                    }
+                );
+            } else {
+                console.error('Geolocalização não é suportada neste navegador.');
+                // Em navegadores que não suportam geolocalização, carregue dados por IP
+                fetchLocationByIP();
+            }
         }
 
         function fetchWeatherDataByCoordinates(latitude, longitude) {
-            // Código para obter dados do clima (seção omitida para brevidade)
+            const apiKey = 'e18e61a7e515eb3b92b588155acd3bc1';
+            // Construa a URL da API do OpenWeatherMap usando as coordenadas
+            const apiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${apiKey}`;
+            // Faça a requisição para a API
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    const weather = data.weather[0].description;
+                    const temperature = (data.main.temp - 273.15).toFixed(2);
+                    // Atualize os elementos HTML com os dados do clima
+                    document.getElementById('location').innerText = `Localização: ${data.name}`;
+                    document.getElementById('weather').innerText = `Condição do Tempo: ${weather}`;
+                    document.getElementById('temperature').innerText = `Temperatura: ${temperature}°C`;
+                })
+                .catch(error => {
+                    console.error('Erro ao obter dados do clima:', error);
+                });
         }
 
         function fetchDailyForecastByCoordinates(latitude, longitude) {
-            // Código para obter previsão diária (seção omitida para brevidade)
+            const apiKey = 'e18e61a7e515eb3b92b588155acd3bc1';
+            // Construa a URL da API do OpenWeatherMap para previsão diária usando as coordenadas
+            const apiUrl = `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&appid=${apiKey}`;
+            // Faça a requisição para a API
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    // Extraia as informações da previsão diária (por exemplo, primeira entrada)
+                    const dailyForecast = data.list[0].weather[0].description;
+                    // Atualize o elemento HTML com a previsão diária
+                    document.getElementById('forecast').innerText = `Previsão Diária: ${dailyForecast}`;
+                })
+                .catch(error => {
+                    console.error('Erro ao obter previsão diária:', error);
+                });
         }
 
         function fetchLocationByCoordinates(latitude, longitude) {
-            // Código para obter localização por coordenadas (seção omitida para brevidade)
+            // Usando o serviço gratuito de localização por coordenadas
+            fetch(`https://geocode.xyz/${latitude},${longitude}?json=1`)
+                .then(response => response.json())
+                .then(data => {
+                    const city = data.city;
+                    document.getElementById('location').innerText = `Localização: ${city}`;
+                })
+                .catch(error => {
+                    console.error('Erro ao obter localização por coordenadas:', error);
+                });
         }
 
         function fetchLocationByIP() {
-            // Código para obter localização por IP (seção omitida para brevidade)
+            // Usando o serviço gratuito de localização por IP
+            fetch('https://ipinfo.io/json?token=e29e8990f87a11')
+                .then(response => response.json())
+                .then(data => {
+                    const city = data.city;
+                    document.getElementById('location').innerText = `Localização: ${city}`;
+                    // Chame as funções para buscar dados do clima
+                    fetchWeatherData(city);
+                    fetchDailyForecast(city);
+                })
+                .catch(error => {
+                    console.error('Erro ao obter localização por IP:', error);
+                });
         }
 
         function fetchDateTime() {
-            // Código para obter data e hora (seção omitida para brevidade)
+            const now = new Date();
+            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const timeOptions = { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false };
+            // Atualize os elementos HTML com data e hora
+            document.getElementById('date').innerText = `Data: ${now.toLocaleDateString('pt-BR', dateOptions)}`;
+            document.getElementById('clock').innerText = `Hora: ${now.toLocaleTimeString('pt-BR', timeOptions)}`;
         }
 
+        // Função para redirecionar para a página da agenda
         function goToAgendaPage() {
             window.location.href = 'https://wilsonf1996.github.io/index.html/agenda/agenda.html';
         }
 
-        function goToCalculatorPage() {
-            window.location.href = 'https://wilsonf1996.github.io/index.html/calculadora/calculadora.html';
+        // Função para redirecionar para a página da agenda semanal
+        function goToAgendaSemanalPage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html/agenda/agendasemanal.html';
         }
 
-        function goToNotesPage() {
-            window.location.href = 'https://wilsonf1996.github.io/index.html/notas/notas.html';
-        }
+        // ... Seu código existente ...
 
-        function goToExpensesPage() {
-            window.location.href = 'https://wilsonf1996.github.io/index.html/gastos/gastos.html';
-        }
-
+        // Ao carregar a página, chame as funções para obter dados e atualizar elementos
         document.addEventListener('DOMContentLoaded', function () {
             getLocation();
             fetchDateTime();
         });
     </script>
 </body>
-</html>
 
+</html>
