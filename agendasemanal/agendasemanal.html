@@ -26,7 +26,7 @@
         }
 
         li {
-            width: calc(33.3333% - 8px);
+            width: calc(25% - 8px);
             margin: 4px;
             text-align: center;
             cursor: pointer;
@@ -59,6 +59,40 @@
 
         td {
             background-color: #fff;
+            position: relative;
+        }
+
+        .editable {
+            min-height: 30px;
+        }
+
+        .editable:hover {
+            cursor: pointer;
+            background-color: #e0e0e0;
+        }
+
+        .editable-content {
+            display: none;
+        }
+
+        .edit-mode .editable-content {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .edit-mode .editable-content textarea {
+            width: calc(100% - 16px);
+            height: calc(100% - 16px);
+            margin: 8px;
+            padding: 4px;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            resize: none;
         }
     </style>
     <!-- Carregue a biblioteca do Firebase -->
@@ -106,11 +140,12 @@
 
         let selectedWeek = null;
         let agendaData = {};
+        let editMode = false;
 
         function initCalendar() {
             const calendar = document.getElementById('calendar');
             const currentDate = new Date();
-            for (let i = 0; i < 52; i++) {
+            for (let i = 0; i < 52 * 4; i++) {
                 const li = document.createElement('li');
                 const weekStartDate = new Date(currentDate.getFullYear(), 0, 1 + (i * 7) - (new Date(currentDate.getFullYear(), 0, 1).getDay() || 7));
                 const weekEndDate = new Date(weekStartDate);
@@ -157,19 +192,52 @@
                     const cell = row.insertCell(day);
                     const cellKey = `${hour}-${day}`;
                     const cellData = agendaData[cellKey] || "";
-                    cell.textContent = cellData;
-                    cell.contentEditable = true;
-                    cell.addEventListener('input', () => updateCellData(cellKey, cell.textContent));
+                    const editableClass = "editable";
+                    cell.className = editableClass;
+                    cell.innerHTML = `<div class="editable-content">${cellData}</div>`;
+                    const editableContent = cell.querySelector('.editable-content');
+                    if (editMode) {
+                        editableContent.innerHTML = `<textarea>${cellData}</textarea>`;
+                    }
+                    cell.addEventListener('click', () => enterEditMode(cell, cellKey));
                 }
             }
 
             agendaTable.style.display = 'block';
         }
 
+        function enterEditMode(cell, cellKey) {
+            if (editMode) return;
+            editMode = true;
+            document.body.classList.add('edit-mode');
+            renderAgendaTable(); // Renderiza a tabela novamente para exibir os campos editáveis
+            const editableContent = cell.querySelector('.editable-content textarea');
+            if (editableContent) {
+                editableContent.focus();
+                editableContent.setSelectionRange(editableContent.value.length, editableContent.value.length);
+            }
+
+            // Adicionar um ouvinte de evento de clique fora do campo de edição para salvar automaticamente
+            const clickOutsideListener = (event) => {
+                const isClickInside = cell.contains(event.target);
+                if (!isClickInside) {
+                    saveCellData(cellKey, editableContent.value);
+                    document.removeEventListener('click', clickOutsideListener);
+                }
+            };
+
+            document.addEventListener('click', clickOutsideListener);
+        }
+
+        function saveCellData(cellKey, value) {
+            editMode = false;
+            document.body.classList.remove('edit-mode');
+            updateCellData(cellKey, value);
+        }
+
         function updateCellData(cellKey, value) {
             agendaData[cellKey] = value;
-            const agendaRef = database.ref(`/agenda/${selectedWeek}`);
-            agendaRef.set(agendaData);
+            database.ref(`/agenda/${selectedWeek}`).set(agendaData);
         }
 
         initCalendar();
