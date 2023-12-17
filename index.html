@@ -10,12 +10,10 @@
             font-family: 'Arial', sans-serif;
             text-align: center;
             margin: 20px;
-            background-color: #f3f3f3;
-            color: #333;
         }
 
         h1 {
-            color: #007bff;
+            color: #333;
         }
 
         #info-container {
@@ -28,10 +26,6 @@
 
         #weather-info {
             text-align: center;
-            background-color: #ffffff;
-            padding: 10px;
-            border-radius: 10px;
-            margin: 10px;
         }
 
         #clock-container {
@@ -46,11 +40,6 @@
             padding: 10px;
             font-size: 16px;
             margin: 0 10px;
-            background-color: #007bff;
-            color: #ffffff;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
         }
 
         table {
@@ -75,7 +64,6 @@
         input {
             width: 80%;
             margin: 10px 0;
-            padding: 10px;
         }
 
         #expenses-table {
@@ -83,7 +71,6 @@
         }
 
         @media only screen and (min-width: 600px) {
-            /* Ajuste para telas maiores (por exemplo, tablets) */
             #info-container {
                 flex-direction: row;
             }
@@ -98,6 +85,7 @@
             }
         }
     </style>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
 </head>
 
 <body>
@@ -118,57 +106,150 @@
     </div>
 
     <div id="buttons-container">
-        <!-- Os botões da agenda foram removidos -->
         <button onclick="goToAgendaSemanalPage()">Ir para a Agenda Semanal</button>
         <button onclick="goToCalculatorPage()">Ir para a Calculadora</button>
         <button onclick="goToNotesPage()">Ir para Notas</button>
         <button onclick="goToExpensesPage()">Ir para Gastos</button>
+        <!-- Botão para autenticação -->
+        <button onclick="signIn()">Entrar</button>
     </div>
 
     <script>
-        // Função simulada de autenticação
-        function authenticateUser() {
-            const username = prompt("Digite seu nome de usuário:");
-            if (username) {
-                document.getElementById('authenticated-user').innerText = `Usuário autenticado: ${username}`;
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+            measurementId: "G-CVBQ54PERH"
+        };
+
+        // Inicialização do Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // Função para autenticar
+        function signIn() {
+            firebase.auth().signInWithEmailAndPassword("seu-email@example.com", "sua-senha")
+                .then((userCredential) => {
+                    // Autenticação bem-sucedida
+                    const user = userCredential.user;
+                    console.log("Usuário autenticado:", user);
+                })
+                .catch((error) => {
+                    // Erro na autenticação
+                    const errorCode = error.code;
+                    const errorMessage = error.message;
+                    console.error("Erro na autenticação:", errorCode, errorMessage);
+                });
+        }
+
+        async function updateWeatherData() {
+            try {
+                const position = await getCurrentPosition();
+                const weatherData = await fetchWeatherDataByCoordinates(position.coords.latitude, position.coords.longitude);
+                updateWeatherUI(weatherData);
+            } catch (error) {
+                console.error('Erro ao atualizar dados de clima:', error);
             }
         }
 
-        // Função para obter a localização do usuário usando a API de Geolocalização
-        function getLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    position => {
-                        const latitude = position.coords.latitude;
-                        const longitude = position.coords.longitude;
+        async function getCurrentPosition() {
+            return new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject);
+            });
+        }
 
-                        // Chame as funções para buscar dados do clima
-                        fetchWeatherDataByCoordinates(latitude, longitude);
-                        fetchDailyForecastByCoordinates(latitude, longitude);
-                        fetchLocationByCoordinates(latitude, longitude);
-                    },
-                    error => {
-                        console.error('Erro ao obter localização:', error);
-                        // Em caso de erro, carregue dados por IP como uma alternativa
-                        fetchLocationByIP();
-                    }
-                );
-            } else {
-                console.error('Geolocalização não é suportada neste navegador.');
-                // Em navegadores que não suportam geolocalização, carregue dados por IP
-                fetchLocationByIP();
+        async function fetchWeatherDataByCoordinates(latitude, longitude) {
+            const apiKey = 'e18e61a7e515eb3b92b588155acd3bc1';
+            const apiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${apiKey}`;
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+            return {
+                location: data.name,
+                weather: data.weather[0].description,
+                temperature: (data.main.temp - 273.15).toFixed(2),
+            };
+        }
+
+        function updateWeatherUI(weatherData) {
+            document.getElementById('location').innerText = `Localização: ${weatherData.location}`;
+            document.getElementById('weather').innerText = `Condição do Tempo: ${weatherData.weather}`;
+            document.getElementById('temperature').innerText = `Temperatura: ${weatherData.temperature}°C`;
+        }
+
+        async function updateDateTime() {
+            const now = new Date();
+            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const timeOptions = { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false };
+            document.getElementById('date').innerText = `Data: ${now.toLocaleDateString('pt-BR', dateOptions)}`;
+            document.getElementById('clock').innerText = `Hora: ${now.toLocaleTimeString('pt-BR', timeOptions)}`;
+        }
+
+        async function updateForecast() {
+            try {
+                const position = await getCurrentPosition();
+                const forecastData = await fetchDailyForecastByCoordinates(position.coords.latitude, position.coords.longitude);
+                updateForecastUI(forecastData);
+            } catch (error) {
+                console.error('Erro ao atualizar previsão diária:', error);
             }
         }
 
-        // ... (funções originais mantidas)
+        async function fetchDailyForecastByCoordinates(latitude, longitude) {
+            const apiKey = 'e18e61a7e515eb3b92b588155acd3bc1';
+            const apiUrl = `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&appid=${apiKey}`;
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+            const dailyForecast = data.list[0].weather[0].description;
+            return {
+                forecast: dailyForecast,
+            };
+        }
+
+        function updateForecastUI(forecastData) {
+            document.getElementById('forecast').innerText = `Previsão Diária: ${forecastData.forecast}`;
+        }
+
+        // Função para redirecionar para a página da agenda semanal
+        function goToAgendaSemanalPage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html/agendasemanal/agendasemanal.html';
+        }
+
+        // Função para redirecionar para a página da calculadora
+        function goToCalculatorPage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html/calculadora/calculadora.html';
+        }
+
+        // Função para redirecionar para a página de notas
+        function goToNotesPage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html/notas/notas.html';
+        }
+
+        // Função para redirecionar para a página de gastos
+        function goToExpensesPage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html/gastos/gastos.html';
+        }
 
         // Ao carregar a página, chame as funções para obter dados e atualizar elementos
         document.addEventListener('DOMContentLoaded', function () {
-            getLocation();
-            fetchDateTime();
+            // Chame as funções iniciais
+            updateWeatherData();
+            updateDateTime();
+            updateForecast();
+
+            // Atualize os dados periodicamente a cada 30 minutos (1800000 milissegundos)
+            setInterval(() => {
+                updateWeatherData();
+                updateDateTime();
+                updateForecast();
+            }, 1800000);
         });
     </script>
-    <div id="authenticated-user"></div>
 </body>
 
 </html>
+
