@@ -118,7 +118,7 @@
     </div>
 
     <script>
-        // Configuração do Firebase para a Página Principal
+        // Configuração do Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
             authDomain: "agenda-6accc.firebaseapp.com",
@@ -130,16 +130,13 @@
             measurementId: "G-CVBQ54PERH"
         };
 
-        // Inicialização do Firebase para a Página Principal
+        // Inicialização do Firebase
         const app = firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
+        const database = firebase.database();
 
         // Função para autenticar
         function signIn() {
-            const email = "wilson.fernandesjunior@hotmail.com";
-            const password = "corinthians1996@civil";
-
-            auth.signInWithEmailAndPassword(email, password)
+            firebase.auth().signInWithEmailAndPassword("wilson.fernandesjunior@hotmail.com", "corinthians1996@civil")
                 .then((userCredential) => {
                     // Autenticação bem-sucedida
                     const user = userCredential.user;
@@ -153,14 +150,92 @@
                 });
         }
 
-        // ... (seu código existente)
+        async function updateWeatherData() {
+            try {
+                const position = await getCurrentPosition();
+                const weatherData = await fetchWeatherDataByCoordinates(position.coords.latitude, position.coords.longitude);
+                updateWeatherUI(weatherData);
+            } catch (error) {
+                console.error('Erro ao atualizar dados de clima:', error);
+            }
+        }
+
+        async function getCurrentPosition() {
+            return new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject);
+            });
+        }
+
+        async function fetchWeatherDataByCoordinates(latitude, longitude) {
+            const apiKey = 'e18e61a7e515eb3b92b588155acd3bc1';
+            const apiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${apiKey}`;
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+            return {
+                location: data.name,
+                weather: data.weather[0].description,
+                temperature: (data.main.temp - 273.15).toFixed(2),
+            };
+        }
+
+        function updateWeatherUI(weatherData) {
+            document.getElementById('location').innerText = `Localização: ${weatherData.location}`;
+            document.getElementById('weather').innerText = `Condição do Tempo: ${weatherData.weather}`;
+            document.getElementById('temperature').innerText = `Temperatura: ${weatherData.temperature}°C`;
+        }
+
+        async function updateDateTime() {
+            const now = new Date();
+            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const timeOptions = { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false };
+            document.getElementById('date').innerText = `Data: ${now.toLocaleDateString('pt-BR', dateOptions)}`;
+            document.getElementById('clock').innerText = `Hora: ${now.toLocaleTimeString('pt-BR', timeOptions)}`;
+        }
+
+        async function updateForecast() {
+            try {
+                const position = await getCurrentPosition();
+                const forecastData = await fetchDailyForecastByCoordinates(position.coords.latitude, position.coords.longitude);
+                updateForecastUI(forecastData);
+            } catch (error) {
+                console.error('Erro ao atualizar previsão diária:', error);
+            }
+        }
+
+        async function fetchDailyForecastByCoordinates(latitude, longitude) {
+            const apiKey = 'e18e61a7e515eb3b92b588155acd3bc1';
+            const apiUrl = `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&appid=${apiKey}`;
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+            const dailyForecast = data.list[0].weather[0].description;
+            return {
+                forecast: dailyForecast,
+            };
+        }
+
+        function updateForecastUI(forecastData) {
+            document.getElementById('forecast').innerText = `Previsão Diária: ${forecastData.forecast}`;
+        }
 
         // Função para redirecionar para a página da agenda semanal
         function goToAgendaSemanalPage() {
-            window.location.href = 'https://wilsonf1996.github.io/agendasemanal/agendasemanal.html';
+            window.location.href = 'https://wilsonf1996.github.io/index.html/agendasemanal/agendasemanal.html';
         }
 
-        // ... (seu código existente)
+        // Função para redirecionar para a página da calculadora
+        function goToCalculatorPage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html/calculadora/calculadora.html';
+        }
+
+        // Função para redirecionar para a página de notas
+        function goToNotesPage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html/notas/notas.html';
+        }
+
+        // Função para redirecionar para a página de gastos
+        function goToExpensesPage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html/gastos/gastos.html';
+        }
 
         // Ao carregar a página, chame as funções para obter dados e atualizar elementos
         document.addEventListener('DOMContentLoaded', function () {
