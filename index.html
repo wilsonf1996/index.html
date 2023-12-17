@@ -105,102 +105,151 @@
     </div>
 
     <div id="buttons-container">
-        <button onclick="checkAuthentication()">Ir para a Agenda Semanal</button>
-        <!-- Adicionado botão para a calculadora -->
+        <button onclick="goToAgendaSemanalPage()">Ir para a Agenda Semanal</button>
         <button onclick="goToCalculatorPage()">Ir para a Calculadora</button>
         <button onclick="goToNotesPage()">Ir para Notas</button>
         <button onclick="goToExpensesPage()">Ir para Gastos</button>
+        <!-- Botão para autenticação -->
+        <button onclick="authenticate()">Entrar</button>
     </div>
 
     <script>
-        // Função para verificar a autenticação
-        function checkAuthentication() {
-            // Verificar se a senha já foi definida
-            const storedPassword = localStorage.getItem('password');
-
-            if (storedPassword) {
-                authenticate(storedPassword);
-            } else {
-                // Se a senha ainda não foi definida, solicitar e armazenar localmente
-                const newPassword = prompt('Defina uma senha para autenticação (Ex: 1996):');
-                localStorage.setItem('password', newPassword);
-                authenticate(newPassword);
-            }
-        }
-
         // Função para autenticar
-        function authenticate(password) {
-            const passwordInput = prompt('Digite a senha:');
-            
-            if (passwordInput === password) {
-                // Senha correta, realizar ações desejadas
-                alert('Autenticação bem-sucedida!');
+        function authenticate() {
+            // Verifica se a senha já foi inserida anteriormente
+            const passwordSet = getCookie("passwordSet");
+
+            if (!passwordSet || passwordSet !== "true") {
+                const password = prompt("Digite a senha para acessar a página principal:");
+
+                if (password === "2020") {
+                    // Define um cookie indicando que a senha foi inserida
+                    setCookie("passwordSet", "true", 365);
+                    alert("Senha correta. Você será redirecionado para a página principal.");
+                    // Redireciona para a página principal
+                    window.location.href = 'https://wilsonf1996.github.io/index.html';
+                } else {
+                    alert("Senha incorreta. Tente novamente.");
+                }
             } else {
-                // Senha incorreta
-                alert('Senha incorreta. Tente novamente.');
+                // Se a senha já foi inserida, redireciona para a página principal
+                window.location.href = 'https://wilsonf1996.github.io/index.html';
             }
         }
 
-        // Função para redirecionar para a página da calculadora
+        // Função para obter um cookie pelo nome
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        // Função para definir um cookie
+        function setCookie(name, value, days) {
+            const expires = new Date();
+            expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+            document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
+        }
+
+        // Funções adicionais, como goToCalculatorPage(), goToNotesPage(), etc.
+        function goToAgendaSemanalPage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html/agendasemanal/agendasemanal.html';
+        }
+
         function goToCalculatorPage() {
             window.location.href = 'https://wilsonf1996.github.io/index.html/calculadora/calculadora.html';
         }
 
-        // Função para redirecionar para a página de notas
         function goToNotesPage() {
             window.location.href = 'https://wilsonf1996.github.io/index.html/notas/notas.html';
         }
 
-        // Função para redirecionar para a página de gastos
         function goToExpensesPage() {
             window.location.href = 'https://wilsonf1996.github.io/index.html/gastos/gastos.html';
         }
 
-        // Restante do seu código...
-   <!-- Restante do seu código... -->
+        async function updateWeatherData() {
+            try {
+                const position = await getCurrentPosition();
+                const weatherData = await fetchWeatherDataByCoordinates(position.coords.latitude, position.coords.longitude);
+                updateWeatherUI(weatherData);
+            } catch (error) {
+                console.error('Erro ao atualizar dados de clima:', error);
+            }
+        }
 
-<script>
-    // Continuação do seu código...
+        async function getCurrentPosition() {
+            return new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject);
+            });
+        }
 
-    // Função para atualizar dados climáticos
-    function updateWeatherData() {
-        // Adicione aqui a lógica para obter dados climáticos
-        // Exemplo:
-        const locationElement = document.getElementById('location');
-        const weatherElement = document.getElementById('weather');
-        const temperatureElement = document.getElementById('temperature');
-        const forecastElement = document.getElementById('forecast');
+        async function fetchWeatherDataByCoordinates(latitude, longitude) {
+            const apiKey = 'e18e61a7e515eb3b92b588155acd3bc1';
+            const apiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${apiKey}`;
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+            return {
+                location: data.name,
+                weather: data.weather[0].description,
+                temperature: (data.main.temp - 273.15).toFixed(2),
+            };
+        }
 
-        locationElement.textContent = 'São Paulo, Brasil';
-        weatherElement.textContent = 'Ensolarado';
-        temperatureElement.textContent = '25°C';
-        forecastElement.textContent = 'Previsão: Ensolarado durante o dia';
-    }
+        function updateWeatherUI(weatherData) {
+            document.getElementById('location').innerText = `Localização: ${weatherData.location}`;
+            document.getElementById('weather').innerText = `Condição do Tempo: ${weatherData.weather}`;
+            document.getElementById('temperature').innerText = `Temperatura: ${weatherData.temperature}°C`;
+        }
 
-    // Função para atualizar relógio e data
-    function updateClockAndDate() {
-        const clockElement = document.getElementById('clock');
-        const dateElement = document.getElementById('date');
+        async function updateDateTime() {
+            const now = new Date();
+            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const timeOptions = { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false };
+            document.getElementById('date').innerText = `Data: ${now.toLocaleDateString('pt-BR', dateOptions)}`;
+            document.getElementById('clock').innerText = `Hora: ${now.toLocaleTimeString('pt-BR', timeOptions)}`;
+        }
 
-        const now = new Date();
-        const hours = now.getHours().toString().padStart(2, '0');
-        const minutes = now.getMinutes().toString().padStart(2, '0');
-        const seconds = now.getSeconds().toString().padStart(2, '0');
+        async function updateForecast() {
+            try {
+                const position = await getCurrentPosition();
+                const forecastData = await fetchDailyForecastByCoordinates(position.coords.latitude, position.coords.longitude);
+                updateForecastUI(forecastData);
+            } catch (error) {
+                console.error('Erro ao atualizar previsão diária:', error);
+            }
+        }
 
-        clockElement.textContent = `Hora: ${hours}:${minutes}:${seconds}`;
-        dateElement.textContent = `Data: ${now.toLocaleDateString()}`;
-    }
+        async function fetchDailyForecastByCoordinates(latitude, longitude) {
+            const apiKey = 'e18e61a7e515eb3b92b588155acd3bc1';
+            const apiUrl = `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&appid=${apiKey}`;
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+            const dailyForecast = data.list[0].weather[0].description;
+            return {
+                forecast: dailyForecast,
+            };
+        }
 
-  // Atualizar dados climáticos, relógio e data ao carregar a página
-    updateWeatherData();
-    updateClockAndDate();
+        function updateForecastUI(forecastData) {
+            document.getElementById('forecast').innerText = `Previsão Diária: ${forecastData.forecast}`;
+        }
 
-    // Configurar intervalos para atualização automática
-    setInterval(updateWeatherData, 60000); // Atualizar a cada minuto
-    setInterval(updateClockAndDate, 1000); // Atualizar a cada segundo
-        
-</script>
+        // Ao carregar a página, chame as funções para obter dados e atualizar elementos
+        document.addEventListener('DOMContentLoaded', function () {
+            // Chame as funções iniciais
+            updateWeatherData();
+            updateDateTime();
+            updateForecast();
 
+            // Atualize os dados periodicamente a cada 30 minutos (1800000 milissegundos)
+            setInterval(() => {
+                updateWeatherData();
+                updateDateTime();
+                updateForecast();
+            }, 1800000);
+        });
+    </script>
 </body>
 
 </html>
