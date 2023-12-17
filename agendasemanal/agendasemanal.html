@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minha Página Principal</title>
+    <title>Agenda Semanal</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -16,103 +16,90 @@
             color: #333;
         }
 
-        #info-container {
+        ul {
+            list-style: none;
+            padding: 0;
             display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 20px;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            margin-bottom: 20px;
         }
 
-        #weather-info {
+        li {
+            width: calc(25% - 8px);
+            margin: 4px;
             text-align: center;
-        }
-
-        #clock-container {
-            margin-top: 10px;
-        }
-
-        #buttons-container {
-            margin-top: 20px;
-        }
-
-        button {
+            cursor: pointer;
             padding: 10px;
-            font-size: 16px;
-            margin: 0 10px;
+            border: 1px solid #ddd;
+            background-color: #f0f0f0;
+        }
+
+        li:hover {
+            background-color: #e0e0e0;
         }
 
         table {
             width: 100%;
-            margin-top: 20px;
+            margin: 20px auto;
             border-collapse: collapse;
-            overflow-y: scroll;
-            max-height: 400px;
+            overflow-x: auto;
         }
 
-        th,
-        td {
+        th, td {
             border: 1px solid #ddd;
             padding: 8px;
             text-align: left;
+            white-space: nowrap;
         }
 
         th {
             background-color: #f2f2f2;
         }
 
-        input {
-            width: 80%;
-            margin: 10px 0;
+        td {
+            background-color: #fff;
+            position: relative;
         }
 
-        #expenses-table {
-            overflow-y: auto;
+        .editable {
+            min-height: 30px;
+            max-width: 80px; /* Ajuste para acomodar até 10 caracteres */
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            cursor: pointer;
         }
 
-        @media only screen and (min-width: 600px) {
-            #info-container {
-                flex-direction: row;
-            }
-
-            #weather-info {
-                text-align: left;
-            }
-
-            #clock-container {
-                margin-top: 0;
-                margin-left: 20px;
-            }
+        .editable:hover {
+            background-color: #e0e0e0;
         }
     </style>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <!-- Carregue a biblioteca do Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
 </head>
 
 <body>
-    <h1>Minha Página Principal</h1>
+    <h1>Agenda Semanal</h1>
 
-    <div id="info-container">
-        <div id="weather-info">
-            <p id="location">Carregando localização...</p>
-            <p id="weather">Carregando clima...</p>
-            <p id="temperature">Carregando temperatura...</p>
-            <p id="forecast">Carregando previsão diária...</p>
-        </div>
+    <ul id="calendar"></ul>
 
-        <div id="clock-container">
-            <p id="clock">Carregando relógio...</p>
-            <p id="date">Carregando data...</p>
-        </div>
-    </div>
-
-    <div id="buttons-container">
-        <button onclick="goToAgendaSemanalPage()">Ir para a Agenda Semanal</button>
-        <button onclick="goToCalculatorPage()">Ir para a Calculadora</button>
-        <button onclick="goToNotesPage()">Ir para Notas</button>
-        <button onclick="goToExpensesPage()">Ir para Gastos</button>
-        <!-- Botão para autenticação -->
-        <button onclick="signIn()">Entrar</button>
-    </div>
+    <table id="agenda-table">
+        <thead>
+            <tr>
+                <th>Hora</th>
+                <th>Seg</th>
+                <th>Ter</th>
+                <th>Qua</th>
+                <th>Qui</th>
+                <th>Sex</th>
+                <th>Sáb</th>
+                <th>Dom</th>
+            </tr>
+        </thead>
+        <tbody id="agenda-body"></tbody>
+    </table>
 
     <script>
         // Configuração do Firebase
@@ -131,124 +118,92 @@
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        // Função para autenticar
-        function signIn() {
-            firebase.auth().signInWithEmailAndPassword("seu-email@example.com", "sua-senha")
-                .then((userCredential) => {
-                    // Autenticação bem-sucedida
-                    const user = userCredential.user;
-                    console.log("Usuário autenticado:", user);
-                })
-                .catch((error) => {
-                    // Erro na autenticação
-                    const errorCode = error.code;
-                    const errorMessage = error.message;
-                    console.error("Erro na autenticação:", errorCode, errorMessage);
-                });
-        }
+        let selectedWeek = null;
+        let agendaData = {};
 
-        async function updateWeatherData() {
-            try {
-                const position = await getCurrentPosition();
-                const weatherData = await fetchWeatherDataByCoordinates(position.coords.latitude, position.coords.longitude);
-                updateWeatherUI(weatherData);
-            } catch (error) {
-                console.error('Erro ao atualizar dados de clima:', error);
+        function initCalendar() {
+            const calendar = document.getElementById('calendar');
+            const currentDate = new Date();
+            for (let i = 0; i < 52 * 4; i++) {
+                const li = document.createElement('li');
+                const weekStartDate = new Date(currentDate.getFullYear(), 0, 1 + (i * 7) - (new Date(currentDate.getFullYear(), 0, 1).getDay() || 7));
+                const weekEndDate = new Date(weekStartDate);
+                weekEndDate.setDate(weekStartDate.getDate() + 6);
+
+                li.textContent = `Semana ${i + 1}\n${weekStartDate.toLocaleDateString()} - ${weekEndDate.toLocaleDateString()}`;
+                li.addEventListener('click', () => loadAgenda(i + 1));
+                calendar.appendChild(li);
             }
         }
 
-        async function getCurrentPosition() {
-            return new Promise((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(resolve, reject);
+        function loadAgenda(week) {
+            selectedWeek = week;
+            agendaData = {};
+
+            // Carregar dados da agenda para a semana selecionada do banco de dados
+            const agendaRef = database.ref(`/agenda/${selectedWeek}`);
+            agendaRef.on('value', (snapshot) => {
+                agendaData = snapshot.val() || {};
+                renderAgendaTable();
             });
         }
 
-        async function fetchWeatherDataByCoordinates(latitude, longitude) {
-            const apiKey = 'e18e61a7e515eb3b92b588155acd3bc1';
-            const apiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${apiKey}`;
-            const response = await fetch(apiUrl);
-            const data = await response.json();
-            return {
-                location: data.name,
-                weather: data.weather[0].description,
-                temperature: (data.main.temp - 273.15).toFixed(2),
-            };
+        function renderAgendaTable() {
+            const agendaTable = document.getElementById('agenda-table');
+            const agendaBody = document.getElementById('agenda-body');
+            agendaBody.innerHTML = "";
+
+            // Cabeçalho da tabela
+            const tableHeader = agendaTable.querySelector('thead tr');
+            tableHeader.innerHTML = "<th>Hora</th>";
+            const weekdays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+            for (let i = 0; i < 7; i++) {
+                tableHeader.innerHTML += `<th>${weekdays[i]}</th>`;
+            }
+
+            // Conteúdo da tabela
+            for (let hour = 0; hour < 24; hour++) {
+                const row = agendaBody.insertRow();
+                const cellHour = row.insertCell(0);
+                cellHour.textContent = `${hour}:00`;
+
+                for (let day = 1; day <= 7; day++) {
+                    const cell = row.insertCell(day);
+                    const cellKey = `${hour}-${day}`;
+                    const cellData = agendaData[cellKey] || "";
+                    const editableClass = "editable";
+                    cell.className = editableClass;
+                    cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')">${cellData}</div>`;
+                }
+            }
+
+            agendaTable.style.display = 'block';
         }
 
-        function updateWeatherUI(weatherData) {
-            document.getElementById('location').innerText = `Localização: ${weatherData.location}`;
-            document.getElementById('weather').innerText = `Condição do Tempo: ${weatherData.weather}`;
-            document.getElementById('temperature').innerText = `Temperatura: ${weatherData.temperature}°C`;
-        }
-
-        async function updateDateTime() {
-            const now = new Date();
-            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            const timeOptions = { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false };
-            document.getElementById('date').innerText = `Data: ${now.toLocaleDateString('pt-BR', dateOptions)}`;
-            document.getElementById('clock').innerText = `Hora: ${now.toLocaleTimeString('pt-BR', timeOptions)}`;
-        }
-
-        async function updateForecast() {
-            try {
-                const position = await getCurrentPosition();
-                const forecastData = await fetchDailyForecastByCoordinates(position.coords.latitude, position.coords.longitude);
-                updateForecastUI(forecastData);
-            } catch (error) {
-                console.error('Erro ao atualizar previsão diária:', error);
+        function enterEditMode(cell, cellKey) {
+            const value = prompt('Digite o conteúdo:', cell.textContent);
+            if (value !== null) {
+                updateCellData(cellKey, value);
             }
         }
 
-        async function fetchDailyForecastByCoordinates(latitude, longitude) {
-            const apiKey = 'e18e61a7e515eb3b92b588155acd3bc1';
-            const apiUrl = `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&appid=${apiKey}`;
-            const response = await fetch(apiUrl);
-            const data = await response.json();
-            const dailyForecast = data.list[0].weather[0].description;
-            return {
-                forecast: dailyForecast,
-            };
+        function updateCellData(cellKey, value) {
+            agendaData[cellKey] = value;
+            database.ref(`/agenda/${selectedWeek}`).set(agendaData);
+            renderAgendaTable(); // Atualiza a tabela após a edição
         }
 
-        function updateForecastUI(forecastData) {
-            document.getElementById('forecast').innerText = `Previsão Diária: ${forecastData.forecast}`;
-        }
-
-        // Função para redirecionar para a página da agenda semanal
-        function goToAgendaSemanalPage() {
-            window.location.href = 'https://wilsonf1996.github.io/index.html/agendasemanal/agendasemanal.html';
-        }
-
-        // Função para redirecionar para a página da calculadora
-        function goToCalculatorPage() {
-            window.location.href = 'https://wilsonf1996.github.io/index.html/calculadora/calculadora.html';
-        }
-
-        // Função para redirecionar para a página de notas
-        function goToNotesPage() {
-            window.location.href = 'https://wilsonf1996.github.io/index.html/notas/notas.html';
-        }
-
-        // Função para redirecionar para a página de gastos
-        function goToExpensesPage() {
-            window.location.href = 'https://wilsonf1996.github.io/index.html/gastos/gastos.html';
-        }
-
-        // Ao carregar a página, chame as funções para obter dados e atualizar elementos
-        document.addEventListener('DOMContentLoaded', function () {
-            // Chame as funções iniciais
-            updateWeatherData();
-            updateDateTime();
-            updateForecast();
-
-            // Atualize os dados periodicamente a cada 30 minutos (1800000 milissegundos)
-            setInterval(() => {
-                updateWeatherData();
-                updateDateTime();
-                updateForecast();
-            }, 1800000);
-        });
+        initCalendar();
     </script>
+
+<button onclick="goToHomePage()">Voltar para a Página Principal</button>
+
+<script>
+    function goToHomePage() {
+        window.location.href = 'https://wilsonf1996.github.io/index.html';
+    }
+</script>
+    
 </body>
 
 </html>
