@@ -36,6 +36,10 @@
             margin-top: 20px;
         }
 
+        #search-container {
+            margin-top: 20px;
+        }
+
         button {
             padding: 10px;
             font-size: 16px;
@@ -70,6 +74,10 @@
             overflow-y: auto;
         }
 
+        #chat-response {
+            margin-top: 20px;
+        }
+
         @media only screen and (min-width: 600px) {
             #info-container {
                 flex-direction: row;
@@ -84,139 +92,156 @@
                 margin-left: 20px;
             }
         }
+
+        /* Esconde a seção principal até a senha ser inserida corretamente */
+        #main-content,
+        #search-container,
+        #chat-response {
+            display: none;
+        }
+
+        /* Estilo para destacar mensagens do ChatGPT */
+        .chat-message {
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-top: 10px;
+            text-align: left;
+        }
     </style>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
 </head>
 
 <body>
     <h1>Minha Página Principal</h1>
 
-    <div id="info-container">
-        <div id="weather-info">
-            <p id="location">Carregando localização...</p>
-            <p id="weather">Carregando clima...</p>
-            <p id="temperature">Carregando temperatura...</p>
-            <p id="forecast">Carregando previsão diária...</p>
+    <!-- Seção principal -->
+    <div id="main-content">
+        <div id="info-container">
+            <div id="weather-info">
+                <p id="location">Carregando localização...</p>
+                <p id="weather">Carregando clima...</p>
+                <p id="temperature">Carregando temperatura...</p>
+                <p id="forecast">Carregando previsão diária...</p>
+            </div>
+
+            <div id="clock-container">
+                <p id="clock">Carregando relógio...</p>
+                <p id="date">Carregando data...</p>
+            </div>
         </div>
 
-        <div id="clock-container">
-            <p id="clock">Carregando relógio...</p>
-            <p id="date">Carregando data...</p>
+        <div id="buttons-container">
+            <button onclick="goToAgendaSemanalPage()">Ir para a Agenda Semanal</button>
+            <button onclick="goToCalculatorPage()">Ir para a Calculadora</button>
+            <button onclick="goToNotesPage()">Ir para Notas</button>
+            <button onclick="goToExpensesPage()">Ir para Gastos</button>
+        </div>
+
+        <!-- Seção de pesquisa e resposta do ChatGPT -->
+        <div id="search-container">
+            <input type="text" id="search-input" placeholder="Digite sua pesquisa">
+            <button onclick="search()">Pesquisar</button>
+        </div>
+
+        <div id="chat-response">
+            <p class="chat-message" id="chat-text">Resposta do ChatGPT:</p>
+            <div id="chat-content"></div>
         </div>
     </div>
 
-    <div id="buttons-container">
-        <button onclick="goToAgendaSemanalPage()">Ir para a Agenda Semanal</button>
-        <button onclick="goToCalculatorPage()">Ir para a Calculadora</button>
-        <button onclick="goToNotesPage()">Ir para Notas</button>
-        <button onclick="goToExpensesPage()">Ir para Gastos</button>
-        <button onclick="signIn()">Entrar</button>
+    <!-- Seção de autenticação -->
+    <div id="auth-section">
+        <label for="password">Digite a senha:</label>
+        <input type="password" id="password">
+        <button onclick="authenticate()">Entrar</button>
     </div>
-
-    <div id="search-container">
-        <input type="text" id="search-input" placeholder="Digite sua pesquisa...">
-        <button onclick="search()">Pesquisar</button>
-    </div>
-
-    <div id="search-results"></div>
-
-    <textarea id="chat-response" rows="10" cols="50" readonly></textarea>
 
     <script>
-        // Configuração do Firebase
-        const firebaseConfig = {
-            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
-            authDomain: "agenda-6accc.firebaseapp.com",
-            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
-            projectId: "agenda-6accc",
-            storageBucket: "agenda-6accc.appspot.com",
-            messagingSenderId: "794262176773",
-            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
-            measurementId: "G-CVBQ54PERH"
-        };
+        // Função para verificar se o usuário já foi autenticado
+        function checkAuthentication() {
+            const isAuthenticated = localStorage.getItem('authenticated');
 
-        // Inicialização do Firebase
-        const app = firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
+            if (isAuthenticated === 'true') {
+                // Se o usuário já foi autenticado, exibe a seção principal e esconde a seção de autenticação
+                document.getElementById('main-content').style.display = 'block';
+                document.getElementById('auth-section').style.display = 'none';
+            } else {
+                // Se o usuário não foi autenticado, exibe a seção de autenticação e esconde a seção principal
+                document.getElementById('main-content').style.display = 'none';
+                document.getElementById('auth-section').style.display = 'block';
+            }
+        }
 
+        // Função para autenticar
+        function authenticate() {
+            const enteredPassword = document.getElementById('password').value;
+
+            if (enteredPassword === "2020") {
+                // Se a senha está correta, marca o usuário como autenticado e exibe a seção principal
+                localStorage.setItem('authenticated', 'true');
+                document.getElementById('main-content').style.display = 'block';
+                document.getElementById('auth-section').style.display = 'none';
+            } else {
+                alert("Senha incorreta. Tente novamente.");
+            }
+        }
+
+        // Função para realizar pesquisa
         function search() {
             const searchTerm = document.getElementById('search-input').value;
 
-            if (searchTerm.trim() === '') {
-                alert('Digite um termo de pesquisa válido.');
-                return;
-            }
+            // Adicione sua lógica de pesquisa aqui
+            // Você pode usar a variável 'searchTerm' para realizar a pesquisa
 
-            getChatGPTResults(searchTerm);
+            // Exemplo simples: exibindo a pesquisa no campo de resposta do ChatGPT
+            showChatResponse(`Você pesquisou por: ${searchTerm}`);
+
+            // Exemplo de chamada à API do ChatGPT (substitua 'yourApiKeyHere' pela sua chave da API)
+            const apiKey = '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';
+            const endpoint = 'https://api.openai.com/v1/engines/davinci-codex/completions';
+
+            // Exemplo de chamada à API usando fetch
+            fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    prompt: searchTerm,
+                    max_tokens: 150
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Manipule a resposta do ChatGPT aqui
+                const chatResponse = data.choices[0].text;
+                showChatResponse(chatResponse);
+            })
+            .catch(error => console.error('Erro na chamada da API do ChatGPT:', error));
         }
 
-        async function getChatGPTResults(searchTerm) {
-            try {
-                const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer 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', // Substitua pela sua chave de API
-                    },
-                    body: JSON.stringify({
-                        model: "gpt-3.5-turbo",
-                        messages: [
-                            {"role": "system", "content": "Você é um assistente virtual."},
-                            {"role": "user", "content": searchTerm},
-                        ],
-                    }),
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    document.getElementById('search-results').innerHTML = result.choices[0].message.content;
-                    document.getElementById('chat-response').value = result.choices[0].message.content;
-                } else {
-                    console.error('Erro ao obter resultados do ChatGPT:', response.status, response.statusText);
-                }
-            } catch (error) {
-                console.error('Erro na requisição para o ChatGPT:', error);
-            }
-        }
-
-        // Função para redirecionar para a página da agenda semanal
+        // Funções adicionais, como goToCalculatorPage(), goToNotesPage(), etc.
         function goToAgendaSemanalPage() {
             window.location.href = 'https://wilsonf1996.github.io/index.html/agendasemanal/agendasemanal.html';
         }
 
-        // Função para redirecionar para a página da calculadora
         function goToCalculatorPage() {
             window.location.href = 'https://wilsonf1996.github.io/index.html/calculadora/calculadora.html';
         }
 
-        // Função para redirecionar para a página de notas
         function goToNotesPage() {
             window.location.href = 'https://wilsonf1996.github.io/index.html/notas/notas.html';
         }
 
-        // Função para redirecionar para a página de gastos
         function goToExpensesPage() {
             window.location.href = 'https://wilsonf1996.github.io/index.html/gastos/gastos.html';
         }
 
-        // Função para autenticar
-        function signIn() {
-            firebase.auth().signInWithEmailAndPassword("seu-email@example.com", "sua-senha")
-                .then((userCredential) => {
-                    // Autenticação bem-sucedida
-                    const user = userCredential.user;
-                    console.log("Usuário autenticado:", user);
-                })
-                .catch((error) => {
-                    // Erro na autenticação
-                    const errorCode = error.code;
-                    const errorMessage = error.message;
-                    console.error("Erro na autenticação:", errorCode, errorMessage);
-                });
-        }
-
-        // Ao carregar a página, chame as funções para obter dados e atualizar elementos
+        // Ao carregar a página, verifica se o usuário já foi autenticado
         document.addEventListener('DOMContentLoaded', function () {
+            checkAuthentication();
+
             // Chame as funções iniciais
             updateWeatherData();
             updateDateTime();
@@ -230,9 +255,7 @@
             }, 1800000);
         });
 
-        // Adicione suas funções de atualização de dados aqui
-
-            // Restante do seu script...
+        // Restante do seu script...
 
         // Script para atualizar dados de clima, tempo e previsão
         async function updateWeatherData() {
@@ -303,7 +326,17 @@
         function updateForecastUI(forecastData) {
             document.getElementById('forecast').innerText = `Previsão Diária: ${forecastData.forecast}`;
         }
+
+        // Função para exibir resposta do ChatGPT
+        function showChatResponse(response) {
+            const chatContent = document.getElementById('chat-content');
+            const chatMessage = document.createElement('div');
+            chatMessage.className = 'chat-message';
+            chatMessage.textContent = response;
+            chatContent.appendChild(chatMessage);
+        }
     </script>
 </body>
 
 </html>
+
