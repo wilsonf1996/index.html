@@ -85,10 +85,7 @@
             }
         }
     </style>
-    <!-- Carregue a biblioteca do Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
 </head>
 
 <body>
@@ -204,53 +201,58 @@
 
         async function fetchDailyForecastByCoordinates(latitude, longitude) {
             const apiKey = 'e18e61a7e515eb3b92b588155acd3bc1';
-            const apiUrl = `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&appid=${apiKey}`;
+            const apiUrl = `https://api.openweathermap.org/data/2.5/onecall?lat=${latitude}&lon=${longitude}&exclude=current,minutely,hourly&appid=${apiKey}`;
             const response = await fetch(apiUrl);
             const data = await response.json();
-            const dailyForecast = data.list[0].weather[0].description;
-            return {
-                forecast: dailyForecast,
-            };
+            const dailyForecast = data.daily.map(day => {
+                return {
+                    date: new Date(day.dt * 1000).toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+                    weather: day.weather[0].description,
+                    temperature: {
+                        min: (day.temp.min - 273.15).toFixed(2),
+                        max: (day.temp.max - 273.15).toFixed(2),
+                    }
+                };
+            });
+            return dailyForecast;
         }
 
         function updateForecastUI(forecastData) {
-            document.getElementById('forecast').innerText = `Previsão Diária: ${forecastData.forecast}`;
+            const forecastElement = document.getElementById('forecast');
+            forecastElement.innerHTML = '<strong>Previsão Diária:</strong><br>';
+            forecastData.forEach(day => {
+                const dayInfo = `<p>${day.date}: ${day.weather}, Mín: ${day.temperature.min}°C, Máx: ${day.temperature.max}°C</p>`;
+                forecastElement.innerHTML += dayInfo;
+            });
         }
 
-        // Função para redirecionar para a página da agenda semanal
-        function goToAgendaSemanalPage() {
-            window.location.href = 'https://wilsonf1996.github.io/index.html/agendasemanal/agendasemanal.html';
+        async function goToAgendaSemanalPage() {
+            window.location.href = 'https://wilsonf1996.github.io/agenda.html';
         }
 
-        // Função para redirecionar para a página da calculadora
-        function goToCalculatorPage() {
-            window.location.href = 'https://wilsonf1996.github.io/index.html/calculadora/calculadora.html';
+        async function goToCalculatorPage() {
+            window.location.href = 'https://wilsonf1996.github.io/calculadora.html';
         }
 
-        // Função para redirecionar para a página de notas
-        function goToNotesPage() {
-            window.location.href = 'https://wilsonf1996.github.io/index.html/notas/notas.html';
+        async function goToNotesPage() {
+            window.location.href = 'https://wilsonf1996.github.io/notas.html';
         }
 
-        // Função para redirecionar para a página de gastos
-        function goToExpensesPage() {
-            window.location.href = 'https://wilsonf1996.github.io/index.html/gastos/gastos.html';
+        async function goToExpensesPage() {
+            window.location.href = 'https://wilsonf1996.github.io/gastos.html';
         }
 
-        // Ao carregar a página, chame as funções para obter dados e atualizar elementos
-        document.addEventListener('DOMContentLoaded', function () {
-            // Chame as funções iniciais
+        // Inicialização das funções
+        updateWeatherData();
+        updateDateTime();
+        updateForecast();
+
+        // Atualiza os dados a cada 15 minutos
+        setInterval(() => {
             updateWeatherData();
             updateDateTime();
             updateForecast();
-
-            // Atualize os dados periodicamente a cada 30 minutos (1800000 milissegundos)
-            setInterval(() => {
-                updateWeatherData();
-                updateDateTime();
-                updateForecast();
-            }, 1800000);
-        });
+        }, 900000); // 15 minutos
     </script>
 </body>
 
