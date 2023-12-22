@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dieta Semanal</title>
+    <title>Plano de Refeições Semanal</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -41,7 +41,7 @@
 
         .editable {
             min-height: 30px;
-            max-width: 150px;
+            max-width: 200px; /* Ajuste conforme necessário */
             overflow: hidden;
             white-space: nowrap;
             text-overflow: ellipsis;
@@ -58,9 +58,9 @@
 </head>
 
 <body>
-    <h1>Dieta Semanal</h1>
+    <h1>Plano de Refeições Semanal</h1>
 
-    <table id="diet-table">
+    <table id="meal-plan-table">
         <thead>
             <tr>
                 <th>Refeição</th>
@@ -73,52 +73,58 @@
                 <th>Dom</th>
             </tr>
         </thead>
-        <tbody id="diet-body"></tbody>
+        <tbody id="meal-plan-body"></tbody>
     </table>
 
     <script>
         // Configuração do Firebase
         const firebaseConfig = {
-            apiKey: "SUA_API_KEY",
-            authDomain: "SEU_AUTH_DOMAIN",
-            databaseURL: "SUA_DATABASE_URL",
-            projectId: "SEU_PROJECT_ID",
-            storageBucket: "SEU_STORAGE_BUCKET",
-            messagingSenderId: "SEU_MESSAGING_SENDER_ID",
-            appId: "SEU_APP_ID",
-            measurementId: "SUA_MEASUREMENT_ID"
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:a9fdf09a95aa7022dc086c",
+            measurementId: "G-ZN6E5S9QCL"
         };
 
         // Inicialização do Firebase
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        function initDietTable() {
-            const dietTable = document.getElementById('diet-table');
-            const dietBody = document.getElementById('diet-body');
+        let selectedMeal = null;
+        let mealPlanData = {};
+
+        function initMealPlan() {
+            const mealPlanTable = document.getElementById('meal-plan-table');
+            const mealPlanBody = document.getElementById('meal-plan-body');
+            mealPlanBody.innerHTML = "";
 
             // Cabeçalho da tabela
-            const tableHeader = dietTable.querySelector('thead tr');
+            const tableHeader = mealPlanTable.querySelector('thead tr');
+            tableHeader.innerHTML = "<th>Refeição</th>";
             const weekdays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
-            for (let i = 0; i < 8; i++) {
+            for (let i = 0; i < 7; i++) {
                 tableHeader.innerHTML += `<th>${weekdays[i]}</th>`;
             }
 
             // Conteúdo da tabela
             const meals = ['Refeição 1', 'Refeição 2', 'Refeição 3', 'Refeição 4', 'Refeição 5', 'Refeição 6', 'Refeição 7', 'Refeição 8'];
             for (let mealIndex = 0; mealIndex < meals.length; mealIndex++) {
-                const row = dietBody.insertRow();
+                const row = mealPlanBody.insertRow();
                 const cellMeal = row.insertCell(0);
                 cellMeal.textContent = meals[mealIndex];
 
                 for (let day = 1; day <= 7; day++) {
-                    const cell = row.insertCell(day);
-                    const cellKey = `${meals[mealIndex]}-${weekdays[day - 1]}`;
-                    const cellData = ""; // Obtém os dados do Firebase usando firebase.database().ref(`/agenda/${meal}/${day}`).once('value').then(snapshot => snapshot.val());
-                    
-                    const editableClass = "editable";
-                    cell.className = editableClass;
-                    cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')">${cellData}</div>`;
+                    for (let i = 0; i < 6; i++) {
+                        const cell = row.insertCell(day);
+                        const cellKey = `${meals[mealIndex]}-${weekdays[day - 1]}-${i}`;
+                        const cellData = mealPlanData[cellKey] || "";
+                        const editableClass = "editable";
+                        cell.className = editableClass;
+                        cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')">${cellData}</div>`;
+                    }
                 }
             }
         }
@@ -131,19 +137,12 @@
         }
 
         function updateCellData(cellKey, value) {
-            // Use o cellKey para obter a refeição e o dia da semana
-            const [meal, day] = cellKey.split('-');
-            
-            // Salve os dados no Firebase (substitua por sua lógica de salvamento)
-            const data = {
-                meal: meal,
-                day: day,
-                value: value
-            };
-            database.ref(`/diet/${meal}/${day}`).set(data);
+            mealPlanData[cellKey] = value;
+            database.ref(`/mealPlan/${selectedMeal}`).set(mealPlanData);
+            initMealPlan(); // Atualiza a tabela após a edição
         }
 
-        initDietTable();
+        initMealPlan();
     </script>
 
     <button onclick="goToHomePage()">Voltar para a Página Principal</button>
@@ -153,6 +152,11 @@
             window.location.href = 'https://wilsonf1996.github.io/index.html';
         }
     </script>
+
+</body>
+
+</html>
+
     
 </body>
 
