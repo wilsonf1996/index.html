@@ -48,8 +48,8 @@
             background-color: #666; /* Cor diferente para hover em células editáveis */
         }
 
-        .meal-row, .day-col {
-            background-color: #777; /* Cor diferente para linhas de refeições e colunas de dias */
+        .meal-row {
+            background-color: #777 !important; /* Cor diferente para linhas de refeições */
         }
 
         button {
@@ -77,14 +77,14 @@
     <table id="diet-table">
         <thead>
             <tr>
-                <th class="meal-row day-col">Refeição / Dia</th>
-                <th class="day-col">Seg</th>
-                <th class="day-col">Ter</th>
-                <th class="day-col">Qua</th>
-                <th class="day-col">Qui</th>
-                <th class="day-col">Sex</th>
-                <th class="day-col">Sáb</th>
-                <th class="day-col">Dom</th>
+                <th>Refeição / Dia</th>
+                <th>Seg</th>
+                <th>Ter</th>
+                <th>Qua</th>
+                <th>Qui</th>
+                <th>Sex</th>
+                <th>Sáb</th>
+                <th>Dom</th>
             </tr>
         </thead>
         <tbody id="diet-body"></tbody>
@@ -114,62 +114,38 @@
 
             // Cabeçalho da tabela
             const tableHeader = dietTable.querySelector('thead tr');
-            tableHeader.innerHTML = "<th class='meal-row day-col'>Refeição / Dia</th>";
+            tableHeader.innerHTML = "<th>Refeição / Dia</th>";
             const weekdays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
             for (let i = 0; i < 7; i++) {
-                tableHeader.innerHTML += `<th class='day-col'>${weekdays[i]}</th>`;
+                tableHeader.innerHTML += `<th>${weekdays[i]}</th>`;
             }
 
             // Conteúdo da tabela
             const meals = ['Refeição 1', 'Refeição 2', 'Refeição 3', 'Refeição 4', 'Refeição 5', 'Refeição 6', 'Refeição 7', 'Refeição 8'];
             const categories = ['Alimentos', 'Bebidas', 'Quantidade de Alimentos', 'Quantidade de Bebidas', 'Horário da Refeição', 'Ações'];
 
-            const promises = [];
-
             for (let mealIndex = 0; mealIndex < meals.length; mealIndex++) {
                 for (let categoryIndex = 0; categoryIndex < categories.length; categoryIndex++) {
                     const row = dietBody.insertRow();
                     const cellMeal = row.insertCell(0);
                     const cellData = (categoryIndex === 0) ? meals[mealIndex] : categories[categoryIndex];
-
-                    if (categoryIndex === 0) {
-                        // Verificar se é a primeira coluna (não editável)
-                        cellMeal.className = 'meal-row day-col'; // Adicionar classe para linhas de refeição
-                        cellMeal.innerHTML = `<div>${meals[mealIndex]}</div>`;
-                    } else {
-                        cellMeal.className = 'day-col';
-                        cellMeal.innerHTML = `<div>${cellData}</div>`;
-                    }
+                    cellMeal.innerHTML = `<div class="editable" onclick="enterEditMode(this, '${meals[mealIndex]}-${categories[categoryIndex]}')">${cellData}</div>`;
 
                     for (let day = 1; day <= 7; day++) {
                         const cell = row.insertCell(day);
                         const cellKey = `${meals[mealIndex]}-${weekdays[day - 1]}-${categories[categoryIndex]}`;
                         const editableClass = "editable";
-
-                        if (categoryIndex === 0) {
-                            // Verificar se é a primeira coluna (não editável)
-                            cell.className = `day-col`;
-                            cell.innerHTML = `<div>${meals[mealIndex]}</div>`;
-                        } else {
-                            cell.className = `${editableClass} day-col`;
-                            cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')"></div>`;
-
-                            // Adicionar a promessa para buscar dados do Firebase
-                            promises.push(
-                                database.ref(`/dieta/${cellKey}`).once('value').then(snapshot => {
-                                    const value = snapshot.val();
-                                    cell.firstChild.textContent = value || ""; // Exibir valor ou string vazia se for nulo
-                                })
-                            );
-                        }
+                        cell.className = editableClass;
+                        cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')"></div>`;
+                        
+                        // Buscar dados do Firebase e preencher célula
+                        database.ref(`/dieta/${cellKey}`).once('value').then(snapshot => {
+                            const value = snapshot.val();
+                            cell.firstChild.textContent = value || ""; // Exibir valor ou string vazia se for nulo
+                        });
                     }
                 }
             }
-
-            // Aguardar que todas as promessas sejam resolvidas antes de finalizar a inicialização
-            Promise.all(promises).then(() => {
-                console.log("Tabela inicializada com sucesso!");
-            });
         }
 
         function enterEditMode(cell, cellKey) {
@@ -202,6 +178,5 @@
 </body>
 
 </html>
-
 
 
