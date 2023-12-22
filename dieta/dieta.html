@@ -124,6 +124,8 @@
             const meals = ['Refeição 1', 'Refeição 2', 'Refeição 3', 'Refeição 4', 'Refeição 5', 'Refeição 6', 'Refeição 7', 'Refeição 8'];
             const categories = ['Alimentos', 'Bebidas', 'Quantidade de Alimentos', 'Quantidade de Bebidas', 'Horário da Refeição', 'Ações'];
 
+            const promises = [];
+
             for (let mealIndex = 0; mealIndex < meals.length; mealIndex++) {
                 for (let categoryIndex = 0; categoryIndex < categories.length; categoryIndex++) {
                     const row = dietBody.insertRow();
@@ -147,24 +149,33 @@
                             // Verificar se é a primeira coluna (não editável)
                             cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')"></div>`;
 
-                            // Buscar dados do Firebase e preencher célula
-                            database.ref(`/dieta/${cellKey}`).once('value').then(snapshot => {
-                                const value = snapshot.val();
-                                cell.firstChild.textContent = value || ""; // Exibir valor ou string vazia se for nulo
-                            });
+                            // Adicionar a promessa para buscar dados do Firebase
+                            promises.push(
+                                database.ref(`/dieta/${cellKey}`).once('value').then(snapshot => {
+                                    const value = snapshot.val();
+                                    cell.firstChild.textContent = value || ""; // Exibir valor ou string vazia se for nulo
+                                })
+                            );
                         } else {
                             cell.className = editableClass;
                             cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')"></div>`;
 
-                            // Buscar dados do Firebase e preencher célula
-                            database.ref(`/dieta/${cellKey}`).once('value').then(snapshot => {
-                                const value = snapshot.val();
-                                cell.firstChild.textContent = value || ""; // Exibir valor ou string vazia se for nulo
-                            });
+                            // Adicionar a promessa para buscar dados do Firebase
+                            promises.push(
+                                database.ref(`/dieta/${cellKey}`).once('value').then(snapshot => {
+                                    const value = snapshot.val();
+                                    cell.firstChild.textContent = value || ""; // Exibir valor ou string vazia se for nulo
+                                })
+                            );
                         }
                     }
                 }
             }
+
+            // Aguardar todas as promessas serem resolvidas antes de prosseguir
+            Promise.all(promises).then(() => {
+                console.log("Todas as operações assíncronas concluídas. Inicializando a tabela...");
+            });
         }
 
         function enterEditMode(cell, cellKey) {
