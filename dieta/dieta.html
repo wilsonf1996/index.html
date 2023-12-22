@@ -6,7 +6,65 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dieta Semanal</title>
     <style>
-        /* (Estilos CSS permanecem inalterados) */
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            margin: 20px;
+            background-color: #333; /* Fundo escuro */
+            color: white; /* Texto branco */
+        }
+
+        table {
+            width: 100%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            overflow-x: auto;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #444; /* Cor diferente para cabeçalho */
+        }
+
+        td {
+            background-color: #555; /* Cor diferente para células normais */
+            position: relative;
+        }
+
+        .editable {
+            min-height: 30px;
+            max-width: 200px; /* Ajuste conforme necessário */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+        }
+
+        .editable:hover {
+            background-color: #666; /* Cor diferente para hover em células editáveis */
+        }
+
+        .meal-row {
+            background-color: #777 !important; /* Cor diferente para linhas de refeições */
+        }
+
+        button {
+            background-color: #999; /* Cor neutra para botões */
+            color: white; /* Texto branco nos botões */
+            padding: 10px;
+            margin-top: 10px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #aaa; /* Cor diferente para hover em botões */
+        }
     </style>
     <!-- Carregue a biblioteca do Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
@@ -58,40 +116,41 @@
             const tableHeader = dietTable.querySelector('thead tr');
             tableHeader.innerHTML = "<th>Refeição / Dia</th>";
             const weekdays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
-            weekdays.forEach(day => {
-                tableHeader.innerHTML += `<th>${day}</th>`;
-            });
+            for (let i = 0; i < 7; i++) {
+                tableHeader.innerHTML += `<th>${weekdays[i]}</th>`;
+            }
 
             // Conteúdo da tabela
             const meals = ['Refeição 1', 'Refeição 2', 'Refeição 3', 'Refeição 4', 'Refeição 5', 'Refeição 6', 'Refeição 7', 'Refeição 8'];
             const categories = ['Alimentos', 'Bebidas', 'Quantidade de Alimentos', 'Quantidade de Bebidas', 'Horário da Refeição', 'Ações'];
 
-            meals.forEach((meal, mealIndex) => {
-                const row = dietBody.insertRow();
-                const cellMeal = row.insertCell(0);
-                cellMeal.innerHTML = `<div class="editable" onclick="enterEditMode(this, '${meal}')">${meal}</div>`;
+            for (let mealIndex = 0; mealIndex < meals.length; mealIndex++) {
+                for (let categoryIndex = 0; categoryIndex < categories.length; categoryIndex++) {
+                    const row = dietBody.insertRow();
+                    const cellMeal = row.insertCell(0);
+                    const cellData = (categoryIndex === 0) ? meals[mealIndex] : categories[categoryIndex];
+                    cellMeal.innerHTML = `<div class="editable" onclick="enterEditMode(this, '${meals[mealIndex]}-${categories[categoryIndex]}')">${cellData}</div>`;
 
-                for (let day = 1; day <= 7; day++) {
-                    categories.forEach((category, categoryIndex) => {
+                    for (let day = 1; day <= 7; day++) {
                         const cell = row.insertCell(day);
-                        const cellKey = `${meal}-${weekdays[day - 1]}-${category}`;
+                        const cellKey = `${meals[mealIndex]}-${weekdays[day - 1]}-${categories[categoryIndex]}`;
                         const editableClass = "editable";
                         cell.className = editableClass;
                         cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')"></div>`;
-
+                        
                         // Buscar dados do Firebase e preencher célula
                         database.ref(`/dieta/${cellKey}`).once('value').then(snapshot => {
                             const value = snapshot.val();
                             cell.firstChild.textContent = value || ""; // Exibir valor ou string vazia se for nulo
                         });
-                    });
+                    }
                 }
-            });
+            }
         }
 
         function enterEditMode(cell, cellKey) {
             const value = prompt('Digite o conteúdo:', cell.textContent);
-            if (value !== null) {
+            if (value !== null || value !== "") {
                 // Atualizar localmente antes de atualizar no Firebase
                 cell.firstChild.textContent = value;
                 updateCellData(cellKey, value);
@@ -104,8 +163,6 @@
                 console.log("Dados atualizados no Firebase com sucesso!");
             }).catch(error => {
                 console.error("Erro ao atualizar dados no Firebase:", error);
-            }).finally(() => {
-                initDietTable(); // Atualizar a tabela após a sincronização (agora colocado no bloco finally)
             });
         }
 
