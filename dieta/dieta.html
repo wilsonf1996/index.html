@@ -32,7 +32,6 @@
         }
 
         td {
-            background-color: #555; /* Cor diferente para células normais */
             position: relative;
         }
 
@@ -50,6 +49,10 @@
 
         .meal-row {
             background-color: #777; /* Cor diferente para linhas de refeições */
+        }
+
+        .button-row {
+            background-color: #555; /* Cor diferente para linhas de botões */
         }
 
         button {
@@ -91,8 +94,90 @@
     </table>
 
     <script>
-        // Restante do código permanece inalterado
-        // ...
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+            measurementId: "G-CVBQ54PERH"
+        };
+
+        // Inicialização do Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        function initDietTable() {
+            const dietTable = document.getElementById('diet-table');
+            const dietBody = document.getElementById('diet-body');
+            dietBody.innerHTML = "";
+
+            // Cabeçalho da tabela
+            const tableHeader = dietTable.querySelector('thead tr');
+            tableHeader.innerHTML = "<th>Refeição / Dia</th>";
+            const weekdays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+            for (let i = 0; i < 7; i++) {
+                tableHeader.innerHTML += `<th>${weekdays[i]}</th>`;
+            }
+
+            // Conteúdo da tabela
+            const meals = ['Refeição 1', 'Refeição 2', 'Refeição 3', 'Refeição 4', 'Refeição 5', 'Refeição 6', 'Refeição 7', 'Refeição 8'];
+            const categories = ['Alimentos', 'Bebidas', 'Quantidade de Alimentos', 'Quantidade de Bebidas', 'Horário da Refeição', 'Ações'];
+
+            let rowCounter = 0; // Contador de linhas
+
+            for (let mealIndex = 0; mealIndex < meals.length; mealIndex++) {
+                for (let categoryIndex = 0; categoryIndex < categories.length; categoryIndex++) {
+                    const row = dietBody.insertRow();
+                    const cellMeal = row.insertCell(0);
+                    const cellData = (categoryIndex === 0) ? meals[mealIndex] : categories[categoryIndex];
+                    cellMeal.innerHTML = `<div>${cellData}</div>`;
+
+                    for (let day = 1; day <= 7; day++) {
+                        const cell = row.insertCell(day);
+                        const cellKey = `${meals[mealIndex]}-${weekdays[day - 1]}-${categories[categoryIndex]}`;
+                        const editableClass = "editable";
+                        cell.className = editableClass;
+                        cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')"></div>`;
+                        
+                        // Buscar dados do Firebase e preencher célula
+                        database.ref(`/dieta/${cellKey}`).once('value').then(snapshot => {
+                            const value = snapshot.val();
+                            cell.firstChild.textContent = value || ""; // Exibir valor ou string vazia se for nulo
+                        });
+                    }
+                }
+
+                // Adicionar a classe de linha de refeição às linhas enumeradas
+                row.classList.add('meal-row');
+
+                // Alternar a cor da tabela a cada 6 linhas
+                if (++rowCounter % 6 === 0) {
+                    row.classList.add('button-row');
+                }
+            }
+        }
+
+        function enterEditMode(cell, cellKey) {
+            const value = prompt('Digite o conteúdo:', cell.textContent);
+            if (value !== null) {
+                // Atualizar localmente antes de atualizar no Firebase
+                cell.firstChild.textContent = value;
+                updateCellData(cellKey, value);
+            }
+        }
+
+        function updateCellData(cellKey, value) {
+            // Atualizar dados no Firebase
+            database.ref(`/dieta/${cellKey}`).set(value).catch(error => {
+                console.error("Erro ao atualizar dados no Firebase:", error);
+            });
+        }
+
+        initDietTable();
     </script>
 
     <button onclick="goToHomePage()">Voltar para a Página Principal</button>
