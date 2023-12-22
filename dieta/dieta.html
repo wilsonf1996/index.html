@@ -42,7 +42,6 @@
             overflow: hidden;
             text-overflow: ellipsis;
             cursor: pointer;
-            padding: 5px; /* Adicionado padding para melhor visibilidade */
         }
 
         .editable:hover {
@@ -130,26 +129,34 @@
                     const row = dietBody.insertRow();
                     const cellMeal = row.insertCell(0);
                     const cellData = (categoryIndex === 0) ? meals[mealIndex] : categories[categoryIndex];
-                    cellMeal.innerHTML = `<div class="editable" onclick="enterEditMode(this, '${cellData}')"></div>`;
+
+                    // Verificar se é a primeira coluna (não editável)
+                    if (categoryIndex === 0) {
+                        cellMeal.innerHTML = `<div>${cellData}</div>`;
+                    } else {
+                        cellMeal.className = 'meal-row'; // Adicionar classe para linhas de refeição a cada 6 linhas
+                        cellMeal.innerHTML = `<div>${cellData}</div>`;
+                    }
 
                     for (let day = 1; day <= 7; day++) {
                         const cell = row.insertCell(day);
                         const cellKey = `${meals[mealIndex]}-${weekdays[day - 1]}-${categories[categoryIndex]}`;
                         const editableClass = "editable";
-                        cell.className = editableClass;
-                        cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')"></div>`;
-                        
-                        // Buscar dados do Firebase e preencher célula
-                        database.ref(`/dieta/${cellKey}`).once('value').then(snapshot => {
-                            const value = snapshot.val();
-                            cell.firstChild.textContent = value || ""; // Exibir valor ou string vazia se for nulo
-                        });
-                    }
-                }
 
-                // Adicionar a classe de linha de refeição a cada 6 linhas
-                if ((mealIndex + 1) % 6 === 0) {
-                    row.classList.add('meal-row');
+                        // Verificar se é a primeira coluna (não editável)
+                        if (categoryIndex === 0) {
+                            cell.innerHTML = `<div>${cellData}</div>`;
+                        } else {
+                            cell.className = editableClass;
+                            cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')"></div>`;
+                            
+                            // Buscar dados do Firebase e preencher célula
+                            database.ref(`/dieta/${cellKey}`).once('value').then(snapshot => {
+                                const value = snapshot.val();
+                                cell.firstChild.textContent = value || ""; // Exibir valor ou string vazia se for nulo
+                            });
+                        }
+                    }
                 }
             }
         }
@@ -184,5 +191,4 @@
 </body>
 
 </html>
-
 
