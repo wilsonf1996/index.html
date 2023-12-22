@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplicativo de Dieta</title>
+    <title>Agenda Semanal</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -41,7 +41,7 @@
 
         .editable {
             min-height: 30px;
-            max-width: 120px; /* Ajuste para acomodar até 15 caracteres */
+            max-width: 200px; /* Ajuste conforme necessário */
             overflow: hidden;
             white-space: nowrap;
             text-overflow: ellipsis;
@@ -51,48 +51,29 @@
         .editable:hover {
             background-color: #e0e0e0;
         }
-
-        .row-divider {
-            border-bottom: 2px solid #ddd;
-        }
-
-        .subline {
-            font-size: 12px;
-            color: #666;
-        }
     </style>
     <!-- Carregue a biblioteca do Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
 </head>
 
 <body>
-    <h1>Aplicativo de Dieta</h1>
+    <h1>Agenda Semanal</h1>
 
-    <table id="diet-table">
+    <table id="agenda-table">
         <thead>
             <tr>
                 <th>Refeição</th>
-                <th colspan="6">Segunda-feira</th>
-                <th colspan="6">Terça-feira</th>
-                <th colspan="6">Quarta-feira</th>
-                <th colspan="6">Quinta-feira</th>
-                <th colspan="6">Sexta-feira</th>
-                <th colspan="6">Sábado</th>
-                <th colspan="6">Domingo</th>
-            </tr>
-            <tr>
-                <th></th>
-                <th>Alimentos</th>
-                <th>Bebidas</th>
-                <th>Quantidade Alimentos</th>
-                <th>Quantidade Bebidas</th>
-                <th>Horário Refeição</th>
-                <th>Ações</th>
-                <!-- Repita o padrão para os outros dias -->
+                <th>Seg</th>
+                <th>Ter</th>
+                <th>Qua</th>
+                <th>Qui</th>
+                <th>Sex</th>
+                <th>Sáb</th>
+                <th>Dom</th>
             </tr>
         </thead>
-        <tbody id="diet-body"></tbody>
+        <tbody id="agenda-body"></tbody>
     </table>
 
     <script>
@@ -112,39 +93,40 @@
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        let selectedDay = null;
-        let dietData = {};
+        let selectedMeal = null;
+        let agendaData = {};
 
-        function initDietTable() {
-            const dietTable = document.getElementById('diet-table');
-            const dietBody = document.getElementById('diet-body');
-            dietBody.innerHTML = "";
-
-            // Linhas para cada refeição
-            const meals = ['Café da Manhã', 'Lanche da Manhã', 'Almoço', 'Lanche da Tarde', 'Jantar', 'Ceia', 'Refeição Extra 1', 'Refeição Extra 2'];
+        function initAgenda() {
+            const agendaTable = document.getElementById('agenda-table');
+            const agendaBody = document.getElementById('agenda-body');
+            agendaBody.innerHTML = "";
 
             // Cabeçalho da tabela
-            const tableHeader = dietTable.querySelector('thead tr:last-child');
-            meals.forEach(meal => {
-                tableHeader.innerHTML += `<th colspan="6">${meal}</th>`;
-            });
+            const tableHeader = agendaTable.querySelector('thead tr');
+            tableHeader.innerHTML = "<th>Refeição</th>";
+            const weekdays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+            for (let i = 0; i < 7; i++) {
+                tableHeader.innerHTML += `<th>${weekdays[i]}</th>`;
+            }
 
             // Conteúdo da tabela
-            for (let subLineIndex = 1; subLineIndex <= 6; subLineIndex++) {
-                const row = dietBody.insertRow();
-                for (let day = 0; day < 7; day++) {
-                    const cell = row.insertCell(day);
-                    cell.className = "editable row-divider";
-                    const cellKey = `${meals[subLineIndex - 1]}-${day}`;
-                    const cellData = dietData[cellKey] || "";
-                    cell.innerHTML = `<div class="editable" onclick="enterEditMode(this, '${cellKey}')">${cellData}</div>`;
-                    if (subLineIndex === 6) {
-                        cell.innerHTML += '<div class="subline">Ações</div>';
+            const meals = ['Refeição 1', 'Refeição 2', 'Refeição 3', 'Refeição 4', 'Refeição 5', 'Refeição 6', 'Refeição 7', 'Refeição 8'];
+            for (let mealIndex = 0; mealIndex < meals.length; mealIndex++) {
+                const row = agendaBody.insertRow();
+                const cellMeal = row.insertCell(0);
+                cellMeal.textContent = meals[mealIndex];
+
+                for (let day = 1; day <= 7; day++) {
+                    for (let i = 0; i < 6; i++) {
+                        const cell = row.insertCell(day);
+                        const cellKey = `${meals[mealIndex]}-${weekdays[day - 1]}-${i}`;
+                        const cellData = agendaData[cellKey] || "";
+                        const editableClass = "editable";
+                        cell.className = editableClass;
+                        cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')">${cellData}</div>`;
                     }
                 }
             }
-
-            dietTable.style.display = 'block';
         }
 
         function enterEditMode(cell, cellKey) {
@@ -155,12 +137,12 @@
         }
 
         function updateCellData(cellKey, value) {
-            dietData[cellKey] = value;
-            database.ref(`/diet/${selectedDay}`).set(dietData);
-            initDietTable(); // Atualiza a tabela após a edição
+            agendaData[cellKey] = value;
+            database.ref(`/agenda/${selectedMeal}`).set(agendaData);
+            initAgenda(); // Atualiza a tabela após a edição
         }
 
-        initDietTable();
+        initAgenda();
     </script>
 
     <button onclick="goToHomePage()">Voltar para a Página Principal</button>
@@ -174,5 +156,6 @@
 </body>
 
 </html>
+
 
 
