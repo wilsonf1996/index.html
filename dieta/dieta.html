@@ -48,10 +48,6 @@
             background-color: #666; /* Cor diferente para hover em células editáveis */
         }
 
-        .meal-row {
-            background-color: #777 !important; /* Cor diferente para linhas de refeições */
-        }
-
         button {
             background-color: #999; /* Cor neutra para botões */
             color: white; /* Texto branco nos botões */
@@ -116,54 +112,43 @@
             const tableHeader = dietTable.querySelector('thead tr');
             tableHeader.innerHTML = "<th>Refeição / Dia</th>";
             const weekdays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
-            for (let i = 0; i < 7; i++) {
-                tableHeader.innerHTML += `<th>${weekdays[i]}</th>`;
-            }
+            weekdays.forEach(day => {
+                tableHeader.innerHTML += `<th>${day}</th>`;
+            });
 
             // Conteúdo da tabela
             const meals = ['Refeição 1', 'Refeição 2', 'Refeição 3', 'Refeição 4', 'Refeição 5', 'Refeição 6', 'Refeição 7', 'Refeição 8'];
-            const categories = ['Alimentos', 'Bebidas', 'Quantidade de Alimentos', 'Quantidade de Bebidas', 'Horário da Refeição', 'Ações'];
 
-            for (let mealIndex = 0; mealIndex < meals.length; mealIndex++) {
-                for (let categoryIndex = 0; categoryIndex < categories.length; categoryIndex++) {
-                    const row = dietBody.insertRow();
-                    const cellMeal = row.insertCell(0);
-                    const cellData = (categoryIndex === 0) ? meals[mealIndex] : categories[categoryIndex];
-                    cellMeal.innerHTML = `<div class="editable" onclick="enterEditMode(this, '${meals[mealIndex]}-${categories[categoryIndex]}')">${cellData}</div>`;
+            meals.forEach((meal, mealIndex) => {
+                const row = dietBody.insertRow();
+                const cellMeal = row.insertCell(0);
+                cellMeal.innerHTML = `<div class="editable">${meal}</div>`;
 
-                    for (let day = 1; day <= 7; day++) {
-                        const cell = row.insertCell(day);
-                        const cellKey = `${meals[mealIndex]}-${weekdays[day - 1]}-${categories[categoryIndex]}`;
-                        const editableClass = "editable";
-                        cell.className = editableClass;
-                        cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')"></div>`;
-                        
-                        // Buscar dados do Firebase e preencher célula
-                        database.ref(`/dieta/${cellKey}`).once('value').then(snapshot => {
-                            const value = snapshot.val();
-                            cell.firstChild.textContent = value || ""; // Exibir valor ou string vazia se for nulo
+                for (let day = 1; day <= 7; day++) {
+                    const cell = row.insertCell(day);
+                    const cellKey = `${meal}-${weekdays[day - 1]}`;
+                    const editableClass = "editable";
+                    cell.className = editableClass;
+                    cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')"></div>`;
+                    
+                    // Buscar dados do Firebase e preencher célula
+                    const cellDataRef = database.ref(`/dieta/${cellKey}`);
+                    cellDataRef.once('value').then(snapshot => {
+                        const value = snapshot.val();
+                        cell.firstChild.textContent = value || ""; // Exibir valor ou string vazia se for nulo
+
+                        // Adicionar listener para atualizar dados no Firebase quando a célula for editada
+                        cell.firstChild.addEventListener('click', () => {
+                            const newValue = prompt('Digite o conteúdo:', cell.firstChild.textContent);
+                            if (newValue !== null || newValue !== "") {
+                                // Atualizar dados no Firebase
+                                cellDataRef.set(newValue).catch(error => {
+                                    console.error("Erro ao atualizar dados no Firebase:", error);
+                                });
+                            }
                         });
-                    }
+                    });
                 }
-            }
-        }
-
-        function enterEditMode(cell, cellKey) {
-            const value = prompt('Digite o conteúdo:', cell.textContent);
-            if (value !== null || value !== "") {
-                // Atualizar localmente antes de atualizar no Firebase
-                cell.firstChild.textContent = value;
-                updateCellData(cellKey, value);
-            }
-        }
-
-        function updateCellData(cellKey, value) {
-            // Atualizar dados no Firebase
-            database.ref(`/dieta/${cellKey}`).set(value).then(() => {
-                console.log("Dados atualizados no Firebase com sucesso!");
-                initDietTable(); // Atualizar a tabela após a sincronização
-            }).catch(error => {
-                console.error("Erro ao atualizar dados no Firebase:", error);
             });
         }
 
@@ -181,4 +166,5 @@
 </body>
 
 </html>
+
 
