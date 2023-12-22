@@ -25,17 +25,14 @@
             <th>Quantidade Alimentos</th>
             <th>Quantidade Bebidas</th>
             <th>Horário Refeição</th>
+            <th>Dia da Semana</th>
         </tr>
     </thead>
     <tbody id="corpoTabelaRefeicoes"></tbody>
 </table>
 
 <script type="module">
-    // Configuração do Firebase do app da agenda semanal
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.2/firebase-app.js';
-    import { getFirestore, collection, addDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/9.6.2/firebase-firestore.js';
-    
-    // Inicialização do Firebase
+    // Configuração do Firebase com seus detalhes
     const firebaseConfig = {
         apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
         authDomain: "agenda-6accc.firebaseapp.com",
@@ -43,10 +40,11 @@
         projectId: "agenda-6accc",
         storageBucket: "agenda-6accc.appspot.com",
         messagingSenderId: "794262176773",
-        appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
-        measurementId: "G-CVBQ54PERH"
+        appId: "1:794262176773:web:a9fdf09a95aa7022dc086c",
+        measurementId: "G-ZN6E5S9QCL"
     };
     
+    // Inicialização do Firebase
     const firebaseApp = initializeApp(firebaseConfig);
     const firestore = getFirestore(firebaseApp);
 
@@ -56,18 +54,29 @@
         const quantidadeAlimentos = document.getElementById('quantidadeAlimentos').value;
         const quantidadeBebidas = document.getElementById('quantidadeBebidas').value;
         const horarioRefeicao = document.getElementById('horarioRefeicao').value;
+        const diaSemana = document.getElementById('diaSemana').value;
 
-        // Agora você pode adicionar os dados da refeição ao Firestore
-        const refeicaoData = {
-            alimentos: alimentos,
-            bebidas: bebidas,
-            quantidade_alimentos: quantidadeAlimentos,
-            quantidade_bebidas: quantidadeBebidas,
-            horario_refeicao: horarioRefeicao
-        };
+        // Verificar se já existem 8 refeições para o dia da semana selecionado
+        if (quantidadeRefeicoesExistentes(diaSemana) >= 8) {
+            alert("Já existem 8 refeições para este dia. Limite atingido!");
+            return;
+        }
 
-        addDoc(collection(firestore, 'semanaFixa'), refeicaoData);
+        // Adicionar os dados da refeição à tabela
+        const corpoTabelaRefeicoes = document.getElementById('corpoTabelaRefeicoes');
+        const novaLinha = `
+            <tr>
+                <td>${alimentos}</td>
+                <td>${bebidas}</td>
+                <td>${quantidadeAlimentos}</td>
+                <td>${quantidadeBebidas}</td>
+                <td>${horarioRefeicao}</td>
+                <td>${diaSemana}</td>
+            </tr>
+        `;
+        corpoTabelaRefeicoes.innerHTML += novaLinha;
 
+        // Limpar campos
         limparCampos();
     }
 
@@ -77,36 +86,27 @@
         document.getElementById('quantidadeAlimentos').value = '';
         document.getElementById('quantidadeBebidas').value = '';
         document.getElementById('horarioRefeicao').value = '';
-        atualizarRefeicoes();
+        document.getElementById('diaSemana').value = '';
     }
 
-    function atualizarRefeicoes() {
+    // Função para contar a quantidade de refeições existentes para um dia da semana
+    function quantidadeRefeicoesExistentes(diaSemana) {
+        let quantidade = 0;
+
+        // Contar refeições existentes na tabela
         const corpoTabelaRefeicoes = document.getElementById('corpoTabelaRefeicoes');
-
-        // Aqui você pode modificar a consulta para recuperar os dados do Firestore conforme necessário
-        onSnapshot(collection(firestore, 'semanaFixa'), (snapshot) => {
-            corpoTabelaRefeicoes.innerHTML = ''; // Limpa a exibição anterior
-
-            snapshot.forEach(refeicao => {
-                const dados = refeicao.data();
-                const linhaTabelaRefeicoes = `
-                    <tr>
-                        <td>${dados.alimentos}</td>
-                        <td>${dados.bebidas}</td>
-                        <td>${dados.quantidade_alimentos}</td>
-                        <td>${dados.quantidade_bebidas}</td>
-                        <td>${dados.horario_refeicao}</td>
-                    </tr>
-                `;
-                corpoTabelaRefeicoes.innerHTML += linhaTabelaRefeicoes;
-            });
+        corpoTabelaRefeicoes.querySelectorAll('tr').forEach((linha) => {
+            const colunaDiaSemana = linha.querySelector('td:last-child');
+            if (colunaDiaSemana.textContent === diaSemana) {
+                quantidade++;
+            }
         });
-    }
 
-    // Chama a função para exibir as refeições existentes
-    atualizarRefeicoes();
+        return quantidade;
+    }
 </script>
 
 </body>
 </html>
+
 
