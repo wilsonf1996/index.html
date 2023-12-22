@@ -17,7 +17,7 @@
         }
 
         table {
-            width: 100%;
+            width: 80%;
             margin: 20px auto;
             border-collapse: collapse;
             overflow-y: scroll;
@@ -26,7 +26,7 @@
 
         th, td {
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 12px;
             text-align: left;
         }
 
@@ -43,10 +43,7 @@
         input {
             width: 80%;
             margin: 10px 0;
-        }
-
-        #shopping-list {
-            overflow-y: auto;
+            padding: 8px;
         }
 
         #total-price {
@@ -56,6 +53,11 @@
         #final-observation {
             width: 80%;
             margin: 10px 0;
+            padding: 8px;
+        }
+
+        #select-list {
+            margin-bottom: 10px;
         }
     </style>
     <!-- Carregue a biblioteca do Firebase -->
@@ -72,17 +74,26 @@
         <option value="lista1">Lista 1</option>
         <option value="lista2">Lista 2</option>
         <option value="lista3">Lista 3</option>
-        <!-- Adicione até 10 opções conforme necessário -->
+        <option value="lista4">Lista 4</option>
+        <option value="lista5">Lista 5</option>
+        <option value="lista6">Lista 6</option>
+        <option value="lista7">Lista 7</option>
+        <option value="lista8">Lista 8</option>
+        <option value="lista9">Lista 9</option>
+        <option value="lista10">Lista 10</option>
     </select>
 
-    <table id="shopping-list">
+    <button onclick="editListName()">Editar Nome da Lista</button>
+
+    <table>
         <thead>
             <tr>
                 <th>Item</th>
                 <th>Quantidade</th>
-                <th>Preço</th>
-                <th>Preço Total</th>
+                <th>Preço (R$)</th>
+                <th>Total (R$)</th>
                 <th>Descrição da Situação</th>
+                <th>Data de Criação</th>
                 <th>Ações</th>
             </tr>
         </thead>
@@ -91,7 +102,12 @@
 
     <div id="total-price">Total: R$ 0.00</div>
 
-    <input type="text" id="final-observation" placeholder="Observação do Valor Final">
+    <div>
+        <input type="text" id="item-name" placeholder="Nome do Item">
+        <input type="number" id="item-quantity" placeholder="Quantidade">
+        <input type="number" id="item-price" placeholder="Preço (R$)">
+        <input type="text" id="item-situation" placeholder="Descrição da Situação">
+    </div>
 
     <button onclick="addItem()">Adicionar Item</button>
     <button onclick="saveList()">Salvar Lista</button>
@@ -107,20 +123,20 @@
             projectId: "agenda-6accc",
             storageBucket: "agenda-6accc.appspot.com",
             messagingSenderId: "794262176773",
-            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
-            measurementId: "G-CVBQ54PERH"
+            appId: "1:794262176773:web:a9fdf09a95aa7022dc086c",
+            measurementId: "G-ZN6E5S9QCL"
         };
 
         // Inicialização do Firebase
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        let currentList = 'lista1'; // Lista padrão
-        let shoppingList = [];
+        // Variáveis globais
+        let currentList = "lista1"; // Lista padrão ao carregar a página
 
         function loadSelectedList() {
-            currentList = document.getElementById('select-list').value;
-            loadShoppingListTable(shoppingList);
+            currentList = document.getElementById("select-list").value;
+            initShoppingList();
         }
 
         function initShoppingList() {
@@ -128,109 +144,150 @@
 
             shoppingListRef.on('value', (snapshot) => {
                 const shoppingListData = snapshot.val();
-                shoppingList = shoppingListData ? Object.values(shoppingListData) : [];
-                loadShoppingListTable(shoppingList);
+                const shoppingList = shoppingListData ? shoppingListData.items : [];
+                const listCreationDate = shoppingListData ? shoppingListData.creationDate : '';
+
+                // Atualize a tabela e outras partes da interface aqui
+                loadShoppingListTable(shoppingList, listCreationDate);
             });
         }
 
-        function loadShoppingListTable(shoppingList) {
+        function loadShoppingListTable(shoppingList, listCreationDate) {
             const tableBody = document.getElementById('shopping-body');
             tableBody.innerHTML = "";
 
-            let totalPrice = 0;
-
             if (Array.isArray(shoppingList)) {
-                shoppingList.forEach((item, index) => {
+                shoppingList.forEach((item) => {
                     const row = tableBody.insertRow();
-                    const cellItemName = row.insertCell(0);
+                    const cellItem = row.insertCell(0);
                     const cellQuantity = row.insertCell(1);
                     const cellPrice = row.insertCell(2);
-                    const cellTotalPrice = row.insertCell(3);
+                    const cellTotal = row.insertCell(3);
                     const cellSituation = row.insertCell(4);
-                    const cellActions = row.insertCell(5);
+                    const cellDate = row.insertCell(5);
+                    const cellActions = row.insertCell(6);
 
-                    cellItemName.innerHTML = `<input type="text" value="${item.name}">`;
-                    cellQuantity.innerHTML = `<input type="number" value="${item.quantity}">`;
-                    cellPrice.innerHTML = `<input type="number" value="${item.price}">`;
-                    const totalItemPrice = item.quantity * item.price;
-                    cellTotalPrice.textContent = `R$ ${totalItemPrice.toFixed(2)}`;
-                    totalPrice += totalItemPrice;
-                    cellSituation.innerHTML = `<input type="text" value="${item.situation}">`;
+                    cellItem.textContent = item.name;
+                    cellQuantity.textContent = item.quantity;
+                    cellPrice.textContent = `R$ ${item.price.toFixed(2)}`;
+                    cellTotal.textContent = `R$ ${(item.quantity * item.price).toFixed(2)}`;
+                    cellSituation.textContent = item.situation;
+                    cellDate.textContent = listCreationDate;
+
+                    const editButton = document.createElement('button');
+                    editButton.textContent = 'Editar';
+                    editButton.onclick = () => editItem(item);
 
                     const deleteButton = document.createElement('button');
-                    deleteButton.textContent = 'Remover';
-                    deleteButton.onclick = () => removeItem(index);
+                    deleteButton.textContent = 'Excluir';
+                    deleteButton.onclick = () => deleteItem(item);
 
+                    cellActions.appendChild(editButton);
                     cellActions.appendChild(deleteButton);
                 });
             } else {
                 console.error("Dados da lista de compras inválidos:", shoppingList);
             }
-
-            document.getElementById('total-price').textContent = `Total: R$ ${totalPrice.toFixed(2)}`;
         }
 
         function addItem() {
-            const itemName = prompt('Nome do Item:');
-            const quantity = parseFloat(prompt('Quantidade:'));
-            const price = parseFloat(prompt('Preço por unidade:'));
-            const situation = prompt('Descrição da Situação:');
+            const itemName = document.getElementById('item-name').value;
+            const itemQuantity = parseInt(document.getElementById('item-quantity').value);
+            const itemPrice = parseFloat(document.getElementById('item-price').value);
+            const itemSituation = document.getElementById('item-situation').value;
 
-            if (!isValidItem(itemName, quantity, price, situation)) {
+            if (!isValidItem(itemName, itemQuantity, itemPrice, itemSituation)) {
                 alert('Por favor, preencha todos os campos corretamente.');
                 return;
             }
 
-            const existingItemIndex = shoppingList.findIndex(item => item.name === itemName);
-
-            if (existingItemIndex !== -1) {
-                // Atualizar item existente
-                shoppingList[existingItemIndex] = { name: itemName, quantity, price, situation };
-            } else {
-                // Adicionar novo item à lista
-                shoppingList.push({ name: itemName, quantity, price, situation });
-            }
-
-            loadShoppingListTable(shoppingList);
+            const newItem = { name: itemName, quantity: itemQuantity, price: itemPrice, situation: itemSituation };
+            const shoppingListRef = database.ref(`/${currentList}/items`);
+            shoppingListRef.push(newItem);
         }
 
-        function isValidItem(itemName, quantity, price, situation) {
-            return itemName.trim() !== '' && !isNaN(quantity) && quantity > 0 &&
+        function isValidItem(name, quantity, price, situation) {
+            return name.trim() !== '' && !isNaN(quantity) && quantity > 0 &&
                 !isNaN(price) && price > 0 && situation.trim() !== '';
         }
 
-        function removeItem(index) {
-            const confirmRemove = confirm('Tem certeza que deseja remover este item da lista?');
+        function editItem(item) {
+            const editedName = prompt('Editar Nome do Item:', item.name);
+            const editedQuantity = parseInt(prompt('Editar Quantidade:', item.quantity));
+            const editedPrice = parseFloat(prompt('Editar Preço (R$):', item.price));
+            const editedSituation = prompt('Editar Descrição da Situação:', item.situation);
 
-            if (confirmRemove) {
-                shoppingList.splice(index, 1);
-                loadShoppingListTable(shoppingList);
+            if (isValidItem(editedName, editedQuantity, editedPrice, editedSituation)) {
+                const shoppingListRef = database.ref(`/${currentList}/items`);
+                shoppingListRef.child(item.key).update({
+                    name: editedName,
+                    quantity: editedQuantity,
+                    price: editedPrice,
+                    situation: editedSituation
+                });
+            } else {
+                alert('Edição cancelada ou valores inválidos.');
+            }
+        }
+
+        function deleteItem(item) {
+            const confirmDelete = confirm('Tem certeza que deseja excluir este item?');
+
+            if (confirmDelete) {
+                const shoppingListRef = database.ref(`/${currentList}/items`);
+                shoppingListRef.child(item.key).remove();
             }
         }
 
         function saveList() {
-            const finalObservation = document.getElementById('final-observation').value;
+            // Implemente a lógica para salvar a lista e outras informações necessárias
+            const shoppingListRef = database.ref(`/${currentList}`);
+            const listData = {
+                items: [],
+                creationDate: new Date().toLocaleString('pt-BR')
+            };
 
-            database.ref(`/${currentList}`).set(shoppingList);
-            database.ref(`/${currentList}/finalObservation`).set(finalObservation);
+            const tableBody = document.getElementById('shopping-body');
+            const rows = tableBody.getElementsByTagName('tr');
+
+            for (let i = 0; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                const item = {
+                    name: cells[0].textContent,
+                    quantity: parseInt(cells[1].textContent),
+                    price: parseFloat(cells[2].textContent.replace('R$ ', '')),
+                    situation: cells[4].textContent
+                };
+                listData.items.push(item);
+            }
+
+            shoppingListRef.set(listData);
+            alert('Lista salva com sucesso!');
         }
 
         function clearList() {
-            const confirmClear = confirm('Tem certeza que deseja limpar toda a lista de compras?');
+            // Implemente a lógica para limpar a lista
+            const shoppingListRef = database.ref(`/${currentList}`);
+            shoppingListRef.remove();
+            alert('Lista limpa com sucesso!');
+        }
 
-            if (confirmClear) {
-                shoppingList = [];
-                document.getElementById('final-observation').value = '';
-                loadShoppingListTable(shoppingList);
+        function editListName() {
+            // Implemente a lógica para editar o nome da lista
+            const newListName = prompt('Digite o novo nome da lista:');
+            if (newListName !== null) {
+                const selectList = document.getElementById('select-list');
+                selectList.options[selectList.selectedIndex].text = newListName;
+                currentList = newListName;
+                initShoppingList();
             }
         }
 
         function goToHomePage() {
-            window.location.href = 'https://wilsonf1996.github.io/index.html';
+            window.location.href = 'https://seu-site.com/index.html';
         }
 
         document.addEventListener('DOMContentLoaded', function () {
-            loadSelectedList();
             initShoppingList();
         });
     </script>
