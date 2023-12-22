@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Listas de Compras</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            overflow-y: scroll;
+            max-height: 400px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        button {
+            padding: 10px;
+            font-size: 16px;
+            margin: 0 10px;
+        }
+
+        input {
+            width: 80%;
+            margin: 10px 0;
+        }
+
+        #shopping-list {
+            overflow-y: auto;
+        }
+
+        #total-price {
+            font-weight: bold;
+        }
+
+        #final-observation {
+            width: 80%;
+            margin: 10px 0;
+        }
+    </style>
+    <!-- Carregue a biblioteca do Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+</head>
+
+<body>
+    <h1>Listas de Compras</h1>
+
+    <label for="select-list">Escolha a Lista:</label>
+    <select id="select-list" onchange="loadSelectedList()">
+        <!-- Opções para até 10 listas -->
+        <option value="lista1">Lista 1</option>
+        <option value="lista2">Lista 2</option>
+        <option value="lista3">Lista 3</option>
+        <!-- Adicione até 10 opções conforme necessário -->
+    </select>
+
+    <table id="shopping-list">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Quantidade</th>
+                <th>Preço</th>
+                <th>Preço Total</th>
+                <th>Descrição da Situação</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="shopping-body"></tbody>
+    </table>
+
+    <div id="total-price">Total: R$ 0.00</div>
+
+    <input type="text" id="final-observation" placeholder="Observação do Valor Final">
+
+    <button onclick="addItem()">Adicionar Item</button>
+    <button onclick="saveList()">Salvar Lista</button>
+    <button onclick="clearList()">Limpar Lista</button>
+    <button onclick="goToHomePage()">Voltar para a Página Principal</button>
+
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+            measurementId: "G-CVBQ54PERH"
+        };
+
+        // Inicialização do Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        let currentList = 'lista1'; // Lista padrão
+        let shoppingList = [];
+
+        function loadSelectedList() {
+            currentList = document.getElementById('select-list').value;
+            loadShoppingListTable(shoppingList);
+        }
+
+        function initShoppingList() {
+            const shoppingListRef = database.ref(`/${currentList}`);
+
+            shoppingListRef.on('value', (snapshot) => {
+                const shoppingListData = snapshot.val();
+                shoppingList = shoppingListData ? Object.values(shoppingListData) : [];
+                loadShoppingListTable(shoppingList);
+            });
+        }
+
+        function loadShoppingListTable(shoppingList) {
+            const tableBody = document.getElementById('shopping-body');
+            tableBody.innerHTML = "";
+
+            let totalPrice = 0;
+
+            if (Array.isArray(shoppingList)) {
+                shoppingList.forEach((item, index) => {
+                    const row = tableBody.insertRow();
+                    const cellItemName = row.insertCell(0);
+                    const cellQuantity = row.insertCell(1);
+                    const cellPrice = row.insertCell(2);
+                    const cellTotalPrice = row.insertCell(3);
+                    const cellSituation = row.insertCell(4);
+                    const cellActions = row.insertCell(5);
+
+                    cellItemName.innerHTML = `<input type="text" value="${item.name}">`;
+                    cellQuantity.innerHTML = `<input type="number" value="${item.quantity}">`;
+                    cellPrice.innerHTML = `<input type="number" value="${item.price}">`;
+                    const totalItemPrice = item.quantity * item.price;
+                    cellTotalPrice.textContent = `R$ ${totalItemPrice.toFixed(2)}`;
+                    totalPrice += totalItemPrice;
+                    cellSituation.innerHTML = `<input type="text" value="${item.situation}">`;
+
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Remover';
+                    deleteButton.onclick = () => removeItem(index);
+
+                    cellActions.appendChild(deleteButton);
+                });
+            } else {
+                console.error("Dados da lista de compras inválidos:", shoppingList);
+            }
+
+            document.getElementById('total-price').textContent = `Total: R$ ${totalPrice.toFixed(2)}`;
+        }
+
+        function addItem() {
+            const itemName = prompt('Nome do Item:');
+            const quantity = parseFloat(prompt('Quantidade:'));
+            const price = parseFloat(prompt('Preço por unidade:'));
+            const situation = prompt('Descrição da Situação:');
+
+            if (!isValidItem(itemName, quantity, price, situation)) {
+                alert('Por favor, preencha todos os campos corretamente.');
+                return;
+            }
+
+            const existingItemIndex = shoppingList.findIndex(item => item.name === itemName);
+
+            if (existingItemIndex !== -1) {
+                // Atualizar item existente
+                shoppingList[existingItemIndex] = { name: itemName, quantity, price, situation };
+            } else {
+                // Adicionar novo item à lista
+                shoppingList.push({ name: itemName, quantity, price, situation });
+            }
+
+            loadShoppingListTable(shoppingList);
+        }
+
+        function isValidItem(itemName, quantity, price, situation) {
+            return itemName.trim() !== '' && !isNaN(quantity) && quantity > 0 &&
+                !isNaN(price) && price > 0 && situation.trim() !== '';
+        }
+
+        function removeItem(index) {
+            const confirmRemove = confirm('Tem certeza que deseja remover este item da lista?');
+
+            if (confirmRemove) {
+                shoppingList.splice(index, 1);
+                loadShoppingListTable(shoppingList);
+            }
+        }
+
+        function saveList() {
+            const finalObservation = document.getElementById('final-observation').value;
+
+            database.ref(`/${currentList}`).set(shoppingList);
+            database.ref(`/${currentList}/finalObservation`).set(finalObservation);
+        }
+
+        function clearList() {
+            const confirmClear = confirm('Tem certeza que deseja limpar toda a lista de compras?');
+
+            if (confirmClear) {
+                shoppingList = [];
+                document.getElementById('final-observation').value = '';
+                loadShoppingListTable(shoppingList);
+            }
+        }
+
+        function goToHomePage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html';
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            loadSelectedList();
+            initShoppingList();
+        });
+    </script>
+</body>
+
+</html>
