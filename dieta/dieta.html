@@ -36,7 +36,7 @@
 
         .editable {
             min-height: 30px;
-            max-width: 200px;
+            max-width: 200px; /* Ajuste conforme necessário */
             overflow: hidden;
             text-overflow: ellipsis;
             cursor: pointer;
@@ -71,6 +71,7 @@
     </table>
 
     <script>
+        // Configuração do Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
             authDomain: "agenda-6accc.firebaseapp.com",
@@ -82,6 +83,7 @@
             measurementId: "G-CVBQ54PERH"
         };
 
+        // Inicialização do Firebase
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
@@ -90,6 +92,7 @@
             const dietBody = document.getElementById('diet-body');
             dietBody.innerHTML = "";
 
+            // Cabeçalho da tabela
             const tableHeader = dietTable.querySelector('thead tr');
             tableHeader.innerHTML = "<th>Refeição / Dia</th>";
             const weekdays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
@@ -97,30 +100,24 @@
                 tableHeader.innerHTML += `<th>${weekdays[i]}</th>`;
             }
 
+            // Conteúdo da tabela
             const meals = ['Refeição 1', 'Refeição 2', 'Refeição 3', 'Refeição 4', 'Refeição 5', 'Refeição 6', 'Refeição 7', 'Refeição 8'];
-            const categories = ['Nome da Refeição', 'Bebidas', 'Quant. Alimentos', 'Quant. Bebidas', 'Horário da Refeição', 'Ações'];
+            const categories = ['Alimentos', 'Bebidas', 'Quantidade de Alimentos', 'Quantidade de Bebidas', 'Horário da Refeição', 'Ações'];
 
             for (let mealIndex = 0; mealIndex < meals.length; mealIndex++) {
-                const row = dietBody.insertRow();
-                const cellMeal = row.insertCell(0);
-                const cellDataMeal = meals[mealIndex];
-                cellMeal.innerHTML = `<div class="editable" onclick="editMealName(this, '${mealIndex}')">${cellDataMeal}</div>`;
+                for (let categoryIndex = 0; categoryIndex < categories.length; categoryIndex++) {
+                    const row = dietBody.insertRow();
+                    const cellMeal = row.insertCell(0);
+                    const cellData = (categoryIndex === 0) ? meals[mealIndex] : categories[categoryIndex];
+                    cellMeal.innerHTML = `<div>${cellData}</div>`;
 
-                for (let day = 1; day <= 7; day++) {
-                    for (let categoryIndex = 0; categoryIndex < categories.length; categoryIndex++) {
-                        const cell = row.insertCell(day * categories.length + categoryIndex);
+                    for (let day = 1; day <= 7; day++) {
+                        const cell = row.insertCell(day);
                         const cellKey = `${meals[mealIndex]}-${weekdays[day - 1]}-${categories[categoryIndex]}`;
+                        const cellData = ""; // Carregar dados do Firebase aqui
                         const editableClass = "editable";
-                        const cellDataRef = database.ref(`/dieta/${cellKey}`);
-
                         cell.className = editableClass;
-                        cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')"></div>`;
-
-                        // Carregar dados do Firebase
-                        cellDataRef.once('value').then(snapshot => {
-                            const cellData = snapshot.val() || "";
-                            cell.firstChild.textContent = cellData;
-                        });
+                        cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')">${cellData}</div>`;
                     }
                 }
             }
@@ -139,14 +136,6 @@
             initDietTable(); // Atualiza a tabela após a edição
         }
 
-        function editMealName(cell, mealIndex) {
-            const newName = prompt('Digite o novo nome da refeição:', cell.textContent);
-            if (newName !== null) {
-                meals[mealIndex] = newName;
-                initDietTable(); // Atualiza a tabela após a edição
-            }
-        }
-
         initDietTable();
     </script>
 
@@ -161,4 +150,3 @@
 </body>
 
 </html>
-
