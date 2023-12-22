@@ -55,6 +55,11 @@
         .row-divider {
             border-bottom: 2px solid #ddd;
         }
+
+        .subline {
+            font-size: 12px;
+            color: #666;
+        }
     </style>
     <!-- Carregue a biblioteca do Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -67,7 +72,6 @@
     <table id="diet-table">
         <thead>
             <tr>
-                <th>&nbsp;</th>
                 <th colspan="7">Segunda-feira</th>
                 <th colspan="7">Terça-feira</th>
                 <th colspan="7">Quarta-feira</th>
@@ -78,12 +82,6 @@
             </tr>
             <tr>
                 <th>Refeição</th>
-                <th>Alimentos</th>
-                <th>Bebidas</th>
-                <th>Quantidade Alimentos</th>
-                <th>Quantidade Bebidas</th>
-                <th>Horário Refeição</th>
-                <th>Ações</th>
                 <!-- Repita o padrão para os outros dias -->
             </tr>
         </thead>
@@ -91,7 +89,7 @@
     </table>
 
     <script>
-        // Configuração do Firebase para o Aplicativo de Dieta
+        // Configuração do Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
             authDomain: "agenda-6accc.firebaseapp.com",
@@ -103,111 +101,86 @@
             measurementId: "G-CVBQ54PERH"
         };
 
-        // Inicialização do Firebase para o Aplicativo de Dieta
+        // Inicialização do Firebase
         const app = firebase.initializeApp(firebaseConfig);
-        const dietDatabase = app.database();
+        const database = firebase.database();
 
-        // Função para carregar dados da dieta
-        function loadDietData() {
-            // Carregar dados da dieta do banco de dados do Aplicativo de Dieta
-            const dietRef = dietDatabase.ref("/diet");
-            dietRef.on("value", (snapshot) => {
-                const dietData = snapshot.val() || {};
-                renderDietTable(dietData);
+        let selectedDay = null;
+        let dietData = {};
+
+        function initDietTable() {
+            const dietTable = document.getElementById('diet-table');
+            const dietBody = document.getElementById('diet-body');
+            dietBody.innerHTML = "";
+
+            // Linhas para cada refeição
+            const meals = ['Café da Manhã', 'Lanche da Manhã', 'Almoço', 'Lanche da Tarde', 'Jantar', 'Ceia', 'Refeição Extra 1', 'Refeição Extra 2'];
+
+            // Cabeçalho da tabela
+            const tableHeader = dietTable.querySelector('thead tr');
+            const weekdays = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'];
+            for (let i = 0; i < 7; i++) {
+                tableHeader.innerHTML += `<th colspan="8">${weekdays[i]}</th>`;
+            }
+
+            // Conteúdo da tabela
+            for (let mealIndex = 0; mealIndex < meals.length; mealIndex++) {
+                const row = dietBody.insertRow();
+                const cellMeal = row.insertCell(0);
+                cellMeal.textContent = meals[mealIndex];
+
+                for (let day = 1; day <= 7; day++) {
+                    for (let subLineIndex = 1; subLineIndex <= 6; subLineIndex++) {
+                        const cell = row.insertCell((day - 1) * 8 + subLineIndex);
+                        const cellKey = `${meals[mealIndex]}-${day}-${subLineIndex}`;
+                        const cellData = dietData[cellKey] || "";
+                        const editableClass = "editable";
+                        cell.className = editableClass + (subLineIndex !== 6 ? ' row-divider' : '');
+                        cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')">${cellData}</div>`;
+                    }
+                }
+            }
+        }
+
+        function enterEditMode(cell, cellKey) {
+            const value = prompt('Digite o conteúdo:', cell.textContent);
+            if (value !== null) {
+                updateCellData(cellKey, value);
+            }
+        }
+
+        function updateCellData(cellKey, value) {
+            dietData[cellKey] = value;
+            database.ref(`/diet/${selectedDay}`).set(dietData);
+            initDietTable(); // Atualiza a tabela após a edição
+        }
+
+        function loadDiet(day) {
+            selectedDay = day;
+            dietData = {};
+
+            // Carregar dados da dieta para o dia selecionado do banco de dados
+            const dietRef = database.ref(`/diet/${selectedDay}`);
+            dietRef.on('value', (snapshot) => {
+                dietData = snapshot.val() || {};
+                initDietTable();
             });
         }
 
-        // Função para renderizar a tabela de dieta
-        function renderDietTable(dietData) {
-            const dietTable = document.getElementById("diet-table");
-            const dietBody = document.getElementById("diet-body");
-            dietBody.innerHTML = "";
-
-            // Dias da semana
-            const weekdays = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
-
-            // Conteúdo da tabela
-            for (let mealNumber = 1; mealNumber <= 8; mealNumber++) {
-                const row = dietBody.insertRow();
-                const cellMealNumber = row.insertCell();
-                cellMealNumber.textContent = `Refeição ${mealNumber}`;
-                cellMealNumber.className = "editable";
-
-                weekdays.forEach((day) => {
-                    const mealKey = `${day.toLowerCase()}-${mealNumber}`;
-                    const mealData = dietData[mealKey] || {};
-                    appendCell(row, mealData.alimentos);
-                    appendCell(row, mealData.bebidas);
-                    appendCell(row, mealData.quantidadeAlimentos);
-                    appendCell(row, mealData.quantidadeBebidas);
-                    appendCell(row, mealData.horarioRefeicao);
-                    appendActionCell(row, mealKey);
-                });
-
-                row.className = "row-divider";
-            }
-
-            dietTable.style.display = "block";
-        }
-
-        // Função auxiliar para adicionar célula
-        function appendCell(row, text) {
-            const cell = row.insertCell();
-            cell.className = "editable";
-            cell.textContent = text;
-            cell.onclick = function () {
-                enterEditMode(cell);
-            };
-        }
-
-        // Função auxiliar para adicionar célula de ação
-        function appendActionCell(row, mealKey) {
-            const cell = row.insertCell();
-            const editButton = document.createElement("button");
-            editButton.textContent = "Editar";
-            editButton.onclick = function () {
-                editMeal(mealKey);
-            };
-            cell.appendChild(editButton);
-        }
-
-        // Função para entrar no modo de edição
-        function enterEditMode(cell) {
-            const value = prompt("Digite o conteúdo:", cell.textContent);
-            if (value !== null) {
-                cell.textContent = value;
-            }
-        }
-
-        // Função para editar uma refeição
-        function editMeal(mealKey) {
-            const mealData = promptMealData(mealKey);
-            if (mealData !== null) {
-                dietDatabase.ref(`/diet/${mealKey}`).set(mealData);
-                loadDietData(); // Recarrega os dados após a edição
-            }
-        }
-
-        // Função para solicitar dados da refeição ao usuário
-        function promptMealData(mealKey) {
-            const day = mealKey.split("-")[0];
-            const mealNumber = mealKey.split("-")[1];
-            const mealData = dietDatabase.ref(`/diet/${mealKey}`).once("value").then((snapshot) => snapshot.val());
-            const newMealData = {
-                alimentos: prompt(`Digite os alimentos para a Refeição ${mealNumber} na ${day}:`, mealData.alimentos || ""),
-                bebidas: prompt(`Digite as bebidas para a Refeição ${mealNumber} na ${day}:`, mealData.bebidas || ""),
-                quantidadeAlimentos: prompt(`Digite a quantidade de alimentos para a Refeição ${mealNumber} na ${day}:`, mealData.quantidadeAlimentos || ""),
-                quantidadeBebidas: prompt(`Digite a quantidade de bebidas para a Refeição ${mealNumber} na ${day}:`, mealData.quantidadeBebidas || ""),
-                horarioRefeicao: prompt(`Digite o horário da Refeição ${mealNumber} na ${day}:`, mealData.horarioRefeicao || "")
-            };
-
-            return newMealData;
-        }
-
-        loadDietData(); // Carrega os dados da dieta ao carregar a página
+        initDietTable();
     </script>
+
+    <button onclick="goToHomePage()">Voltar para a Página Principal</button>
+
+    <script>
+        function goToHomePage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html';
+        }
+    </script>
+
 </body>
 
 </html>
+
 
 
