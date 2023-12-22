@@ -1,41 +1,18 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Planilha de Dieta</title>
-    <!-- Adicione as bibliotecas do Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.2/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.2/firebase-firestore.js"></script>
+    <!-- Carregue a biblioteca do Firebase versão modular -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.2/firebase-app.js';
+        import { getFirestore, collection, addDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/9.6.2/firebase-firestore.js';
+    </script>
 </head>
 <body>
 
 <h1>Planilha de Dieta</h1>
-
-<div>
-    <label for="alimentos">Alimentos (separados por vírgula): </label>
-    <input type="text" id="alimentos">
-</div>
-
-<div>
-    <label for="bebidas">Bebidas (separadas por vírgula): </label>
-    <input type="text" id="bebidas">
-</div>
-
-<div>
-    <label for="quantidadeAlimentos">Quantidade dos Alimentos: </label>
-    <input type="text" id="quantidadeAlimentos">
-</div>
-
-<div>
-    <label for="quantidadeBebidas">Quantidade das Bebidas: </label>
-    <input type="text" id="quantidadeBebidas">
-</div>
-
-<div>
-    <label for="horarioRefeicao">Horário da Refeição: </label>
-    <input type="text" id="horarioRefeicao">
-</div>
 
 <div>
     <label for="semanaSelecionada">Semana Selecionada: </label>
@@ -44,10 +21,40 @@
 
 <button onclick="adicionarRefeicao()">Adicionar Refeição</button>
 
-<div id="refeicoes"></div>
+<h2>Entrada de Dados</h2>
+<table id="tabelaEntrada">
+    <thead>
+        <tr>
+            <th>Alimentos</th>
+            <th>Bebidas</th>
+            <th>Quantidade Alimentos</th>
+            <th>Quantidade Bebidas</th>
+            <th>Horário Refeição</th>
+        </tr>
+    </thead>
+    <tbody id="corpoTabelaEntrada"></tbody>
+</table>
 
-<script>
+<h2>Refeições</h2>
+<table id="tabelaRefeicoes">
+    <thead>
+        <tr>
+            <th>Alimentos</th>
+            <th>Bebidas</th>
+            <th>Quantidade Alimentos</th>
+            <th>Quantidade Bebidas</th>
+            <th>Horário Refeição</th>
+        </tr>
+    </thead>
+    <tbody id="corpoTabelaRefeicoes"></tbody>
+</table>
+
+<script type="module">
     // Configuração do Firebase do app da agenda semanal
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.2/firebase-app.js';
+    import { getFirestore, collection, addDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/9.6.2/firebase-firestore.js';
+    
+    // Inicialização do Firebase
     const firebaseConfig = {
         apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
         authDomain: "agenda-6accc.firebaseapp.com",
@@ -59,69 +66,72 @@
         measurementId: "G-CVBQ54PERH"
     };
     
-    // Inicialização do Firebase
-    const firebaseApp = firebase.initializeApp(firebaseConfig);
-    const firestore = firebase.firestore();
+    const firebaseApp = initializeApp(firebaseConfig);
+    const firestore = getFirestore(firebaseApp);
 
     function adicionarRefeicao() {
-        const alimentos = document.getElementById('alimentos').value.split(',');
-        const bebidas = document.getElementById('bebidas').value.split(',');
-        const quantidadeAlimentos = document.getElementById('quantidadeAlimentos').value;
-        const quantidadeBebidas = document.getElementById('quantidadeBebidas').value;
-        const horarioRefeicao = document.getElementById('horarioRefeicao').value;
         const semanaSelecionada = document.getElementById('semanaSelecionada').value;
+        const alimentos = [];
+        const bebidas = [];
+        const quantidadeAlimentos = [];
+        const quantidadeBebidas = [];
+        const horarioRefeicao = [];
 
-        // Use os dados do Firebase do app da agenda semanal
-        const agendaRef = firebase.database().ref(`/agenda/${semanaSelecionada}`);
-        agendaRef.once('value').then(snapshot => {
-            const dadosAgenda = snapshot.val();
-            console.log('Dados da Agenda Semanal:', dadosAgenda);
-
-            // Aqui você pode usar os dados da agenda conforme necessário
-            // Por exemplo, você pode acessar dadosAgenda['1-1'] para obter o conteúdo da célula da primeira hora da segunda-feira
-
-            // Agora você pode adicionar os dados da refeição ao Firestore
-            firestore.collection(semanaSelecionada).add({
-                alimentos: alimentos,
-                bebidas: bebidas,
-                quantidade_alimentos: quantidadeAlimentos,
-                quantidade_bebidas: quantidadeBebidas,
-                horario_refeicao: horarioRefeicao
-            });
-
-            limparCampos();
-            atualizarRefeicoes();
+        // Preenche os arrays com os dados da tabela de entrada
+        const corpoTabelaEntrada = document.getElementById('corpoTabelaEntrada');
+        corpoTabelaEntrada.querySelectorAll('tr').forEach((linha) => {
+            const colunas = linha.querySelectorAll('td');
+            alimentos.push(colunas[0].textContent);
+            bebidas.push(colunas[1].textContent);
+            quantidadeAlimentos.push(colunas[2].textContent);
+            quantidadeBebidas.push(colunas[3].textContent);
+            horarioRefeicao.push(colunas[4].textContent);
         });
+
+        // Agora você pode adicionar os dados da refeição ao Firestore
+        const refeicaoData = {
+            alimentos: alimentos,
+            bebidas: bebidas,
+            quantidade_alimentos: quantidadeAlimentos,
+            quantidade_bebidas: quantidadeBebidas,
+            horario_refeicao: horarioRefeicao
+        };
+
+        addDoc(collection(firestore, semanaSelecionada), refeicaoData);
+
+        limparCampos();
     }
 
     function limparCampos() {
-        document.getElementById('alimentos').value = '';
-        document.getElementById('bebidas').value = '';
-        document.getElementById('quantidadeAlimentos').value = '';
-        document.getElementById('quantidadeBebidas').value = '';
-        document.getElementById('horarioRefeicao').value = '';
         document.getElementById('semanaSelecionada').value = '';
+        atualizarEntrada(); // Limpa a tabela de entrada
+        atualizarRefeicoes(); // Atualiza a tabela de refeições
+    }
+
+    function atualizarEntrada() {
+        const corpoTabelaEntrada = document.getElementById('corpoTabelaEntrada');
+        corpoTabelaEntrada.innerHTML = '';
     }
 
     function atualizarRefeicoes() {
-        const refeicoesDiv = document.getElementById('refeicoes');
+        const corpoTabelaRefeicoes = document.getElementById('corpoTabelaRefeicoes');
 
         // Aqui você pode modificar a consulta para recuperar os dados do Firestore conforme necessário
-        firestore.collection('semana1').onSnapshot(snapshot => {
-            refeicoesDiv.innerHTML = ''; // Limpa a exibição anterior
+        onSnapshot(collection(firestore, 'semana1'), (snapshot) => {
+            corpoTabelaRefeicoes.innerHTML = ''; // Limpa a exibição anterior
 
             snapshot.forEach(refeicao => {
                 const dados = refeicao.data();
-                const refeicaoHtml = `
-                    <div>
-                        <p>Alimentos: ${dados.alimentos.join(', ')}</p>
-                        <p>Bebidas: ${dados.bebidas.join(', ')}</p>
-                        <p>Quantidade Alimentos: ${dados.quantidade_alimentos}</p>
-                        <p>Quantidade Bebidas: ${dados.quantidade_bebidas}</p>
-                        <p>Horário Refeição: ${dados.horario_refeicao}</p>
-                    </div>
+                const linhaTabelaRefeicao = `
+                    <tr>
+                        <td>${dados.alimentos.join(', ')}</td>
+                        <td>${dados.bebidas.join(', ')}</td>
+                        <td>${dados.quantidade_alimentos.join(', ')}</td>
+                        <td>${dados.quantidade_bebidas.join(', ')}</td>
+                        <td>${dados.horario_refeicao.join(', ')}</td>
+                    </tr>
                 `;
-                refeicoesDiv.innerHTML += refeicaoHtml;
+                corpoTabelaRefeicoes.innerHTML += linhaTabelaRefeicao;
             });
         });
     }
