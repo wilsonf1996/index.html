@@ -48,6 +48,7 @@
 
         #total-price {
             font-weight: bold;
+            margin-top: 10px;
         }
 
         #final-observation {
@@ -112,6 +113,14 @@
     <button onclick="addItem()">Adicionar Item</button>
     <button onclick="saveList()">Salvar Lista</button>
     <button onclick="clearList()">Limpar Lista</button>
+
+    <div>
+        <div>
+            <label for="final-observation">Observação Final:</label>
+        </div>
+        <textarea id="final-observation"></textarea>
+    </div>
+
     <button onclick="goToHomePage()">Voltar para a Página Principal</button>
 
     <script>
@@ -146,9 +155,11 @@
                 const shoppingListData = snapshot.val();
                 const shoppingList = shoppingListData ? shoppingListData.items : [];
                 const listCreationDate = shoppingListData ? shoppingListData.creationDate : '';
+                const finalObservation = shoppingListData ? shoppingListData.finalObservation : '';
 
                 // Atualize a tabela e outras partes da interface aqui
                 loadShoppingListTable(shoppingList, listCreationDate);
+                loadFinalObservation(finalObservation);
             });
         }
 
@@ -157,6 +168,8 @@
             tableBody.innerHTML = "";
 
             if (Array.isArray(shoppingList)) {
+                let totalPrice = 0;
+
                 shoppingList.forEach((item) => {
                     const row = tableBody.insertRow();
                     const cellItem = row.insertCell(0);
@@ -174,6 +187,8 @@
                     cellSituation.textContent = item.situation;
                     cellDate.textContent = listCreationDate;
 
+                    totalPrice += item.quantity * item.price;
+
                     const editButton = document.createElement('button');
                     editButton.textContent = 'Editar';
                     editButton.onclick = () => editItem(item);
@@ -185,9 +200,24 @@
                     cellActions.appendChild(editButton);
                     cellActions.appendChild(deleteButton);
                 });
+
+                // Exibe o preço total no final da tabela
+                const totalRow = tableBody.insertRow();
+                totalRow.insertCell(0).textContent = 'Total:';
+                totalRow.insertCell(1).textContent = ''; // Quantidade
+                totalRow.insertCell(2).textContent = ''; // Preço
+                totalRow.insertCell(3).textContent = `R$ ${totalPrice.toFixed(2)}`;
+                totalRow.insertCell(4).textContent = ''; // Descrição da Situação
+                totalRow.insertCell(5).textContent = ''; // Data de Criação
+                totalRow.insertCell(6).textContent = ''; // Ações
             } else {
                 console.error("Dados da lista de compras inválidos:", shoppingList);
             }
+        }
+
+        function loadFinalObservation(finalObservation) {
+            const observationField = document.getElementById('final-observation');
+            observationField.value = finalObservation || '';
         }
 
         function addItem() {
@@ -240,17 +270,17 @@
         }
 
         function saveList() {
-            // Implemente a lógica para salvar a lista e outras informações necessárias
             const shoppingListRef = database.ref(`/${currentList}`);
             const listData = {
                 items: [],
-                creationDate: new Date().toLocaleString('pt-BR')
+                creationDate: new Date().toLocaleString('pt-BR'),
+                finalObservation: document.getElementById('final-observation').value
             };
 
             const tableBody = document.getElementById('shopping-body');
             const rows = tableBody.getElementsByTagName('tr');
 
-            for (let i = 0; i < rows.length; i++) {
+            for (let i = 0; i < rows.length - 1; i++) { // Exclui a última linha (total)
                 const cells = rows[i].getElementsByTagName('td');
                 const item = {
                     name: cells[0].textContent,
@@ -266,14 +296,12 @@
         }
 
         function clearList() {
-            // Implemente a lógica para limpar a lista
             const shoppingListRef = database.ref(`/${currentList}`);
             shoppingListRef.remove();
             alert('Lista limpa com sucesso!');
         }
 
         function editListName() {
-            // Implemente a lógica para editar o nome da lista
             const newListName = prompt('Digite o novo nome da lista:');
             if (newListName !== null) {
                 const selectList = document.getElementById('select-list');
@@ -294,3 +322,4 @@
 </body>
 
 </html>
+
