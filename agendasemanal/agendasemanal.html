@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agenda Semanal</title>
+    <title>Aplicativo de Dieta</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -14,29 +14,6 @@
 
         h1 {
             color: #333;
-        }
-
-        ul {
-            list-style: none;
-            padding: 0;
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-around;
-            margin-bottom: 20px;
-        }
-
-        li {
-            width: calc(25% - 8px);
-            margin: 4px;
-            text-align: center;
-            cursor: pointer;
-            padding: 10px;
-            border: 1px solid #ddd;
-            background-color: #f0f0f0;
-        }
-
-        li:hover {
-            background-color: #e0e0e0;
         }
 
         table {
@@ -81,28 +58,27 @@
 </head>
 
 <body>
-    <h1>Agenda Semanal</h1>
+    <h1>Aplicativo de Dieta</h1>
 
-    <ul id="calendar"></ul>
-
-    <table id="agenda-table">
+    <table id="diet-table">
         <thead>
             <tr>
-                <th>Hora</th>
-                <th>Seg</th>
-                <th>Ter</th>
-                <th>Qua</th>
-                <th>Qui</th>
-                <th>Sex</th>
-                <th>Sáb</th>
-                <th>Dom</th>
+                <th>Dia</th>
+                <th>Refeição 1</th>
+                <th>Refeição 2</th>
+                <th>Refeição 3</th>
+                <th>Refeição 4</th>
+                <th>Refeição 5</th>
+                <th>Refeição 6</th>
+                <th>Refeição 7</th>
+                <th>Refeição 8</th>
             </tr>
         </thead>
-        <tbody id="agenda-body"></tbody>
+        <tbody id="diet-body"></tbody>
     </table>
 
     <script>
-        // Configuração do Firebase
+        // Configuração do Firebase para o Agenda Semanal
         const firebaseConfig = {
             apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
             authDomain: "agenda-6accc.firebaseapp.com",
@@ -114,96 +90,91 @@
             measurementId: "G-CVBQ54PERH"
         };
 
-        // Inicialização do Firebase
-        const app = firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
+        // Inicialização do Firebase para o Agenda Semanal
+        const agendaApp = firebase.initializeApp(firebaseConfig, "agendaApp");
+        const agendaDatabase = agendaApp.database();
 
-        let selectedWeek = null;
-        let agendaData = {};
+        // Use as configurações do Firebase do Agenda Semanal
+        const dietFirebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+            measurementId: "G-CVBQ54PERH"
+        };
 
-        function initCalendar() {
-            const calendar = document.getElementById('calendar');
-            const currentDate = new Date();
-            for (let i = 0; i < 52 * 4; i++) {
-                const li = document.createElement('li');
-                const weekStartDate = new Date(currentDate.getFullYear(), 0, 1 + (i * 7) - (new Date(currentDate.getFullYear(), 0, 1).getDay() || 7));
-                const weekEndDate = new Date(weekStartDate);
-                weekEndDate.setDate(weekStartDate.getDate() + 6);
+        // Inicialização do Firebase para o Aplicativo de Dieta
+        const dietApp = firebase.initializeApp(dietFirebaseConfig, "dietApp");
+        const dietDatabase = dietApp.database();
 
-                li.textContent = `Semana ${i + 1}\n${weekStartDate.toLocaleDateString()} - ${weekEndDate.toLocaleDateString()}`;
-                li.addEventListener('click', () => loadAgenda(i + 1));
-                calendar.appendChild(li);
-            }
-        }
-
-        function loadAgenda(week) {
-            selectedWeek = week;
-            agendaData = {};
-
-            // Carregar dados da agenda para a semana selecionada do banco de dados
-            const agendaRef = database.ref(`/agenda/${selectedWeek}`);
-            agendaRef.on('value', (snapshot) => {
-                agendaData = snapshot.val() || {};
-                renderAgendaTable();
+        // Função para carregar dados da dieta
+        function loadDietData() {
+            // Carregar dados da dieta do banco de dados do Aplicativo de Dieta
+            const dietRef = dietDatabase.ref("/diet");
+            dietRef.on("value", (snapshot) => {
+                const dietData = snapshot.val() || {};
+                renderDietTable(dietData);
             });
         }
 
-        function renderAgendaTable() {
-            const agendaTable = document.getElementById('agenda-table');
-            const agendaBody = document.getElementById('agenda-body');
-            agendaBody.innerHTML = "";
+        // Função para renderizar a tabela de dieta
+        function renderDietTable(dietData) {
+            const dietTable = document.getElementById("diet-table");
+            const dietBody = document.getElementById("diet-body");
+            dietBody.innerHTML = "";
 
-            // Cabeçalho da tabela
-            const tableHeader = agendaTable.querySelector('thead tr');
-            tableHeader.innerHTML = "<th>Hora</th>";
-            const weekdays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
-            for (let i = 0; i < 7; i++) {
-                tableHeader.innerHTML += `<th>${weekdays[i]}</th>`;
-            }
+            // Dias da semana
+            const weekdays = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
             // Conteúdo da tabela
-            for (let hour = 0; hour < 24; hour++) {
-                const row = agendaBody.insertRow();
-                const cellHour = row.insertCell(0);
-                cellHour.textContent = `${hour}:00`;
+            weekdays.forEach((day) => {
+                const row = dietBody.insertRow();
+                const cellDay = row.insertCell(0);
+                cellDay.textContent = day;
 
-                for (let day = 1; day <= 7; day++) {
-                    const cell = row.insertCell(day);
-                    const cellKey = `${hour}-${day}`;
-                    const cellData = agendaData[cellKey] || "";
+                for (let i = 1; i <= 8; i++) {
+                    const cell = row.insertCell(i);
+                    const mealKey = `${day}-${i}`;
+                    const mealData = dietData[mealKey] || "";
                     const editableClass = "editable";
                     cell.className = editableClass;
-                    cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')">${cellData}</div>`;
+                    cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${mealKey}')">${mealData}</div>`;
                 }
-            }
+            });
 
-            agendaTable.style.display = 'block';
+            dietTable.style.display = "block";
         }
 
-        function enterEditMode(cell, cellKey) {
-            const value = prompt('Digite o conteúdo:', cell.textContent);
+        // Função para entrar no modo de edição
+        function enterEditMode(cell, mealKey) {
+            const value = prompt("Digite o conteúdo:", cell.textContent);
             if (value !== null) {
-                updateCellData(cellKey, value);
+                updateMealData(mealKey, value);
             }
         }
 
-        function updateCellData(cellKey, value) {
-            agendaData[cellKey] = value;
-            database.ref(`/agenda/${selectedWeek}`).set(agendaData);
-            renderAgendaTable(); // Atualiza a tabela após a edição
+        // Função para atualizar os dados da refeição
+        function updateMealData(mealKey, value) {
+            dietDatabase.ref(`/diet/${mealKey}`).set(value);
+            loadDietData(); // Atualiza a tabela após a edição
         }
 
-        initCalendar();
+        // Carregar dados da dieta ao inicializar
+        loadDietData();
     </script>
 
-<button onclick="goToHomePage()">Voltar para a Página Principal</button>
+    <button onclick="goToHomePage()">Voltar para a Página Principal</button>
 
-<script>
-    function goToHomePage() {
-        window.location.href = 'https://wilsonf1996.github.io/index.html';
-    }
-</script>
-    
+    <script>
+        function goToHomePage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html';
+        }
+    </script>
+
 </body>
 
 </html>
+
