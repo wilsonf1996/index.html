@@ -72,16 +72,23 @@
     <table id="diet-table">
         <thead>
             <tr>
-                <th colspan="7">Segunda-feira</th>
-                <th colspan="7">Terça-feira</th>
-                <th colspan="7">Quarta-feira</th>
-                <th colspan="7">Quinta-feira</th>
-                <th colspan="7">Sexta-feira</th>
-                <th colspan="7">Sábado</th>
-                <th colspan="7">Domingo</th>
+                <th>Refeição</th>
+                <th colspan="6">Segunda-feira</th>
+                <th colspan="6">Terça-feira</th>
+                <th colspan="6">Quarta-feira</th>
+                <th colspan="6">Quinta-feira</th>
+                <th colspan="6">Sexta-feira</th>
+                <th colspan="6">Sábado</th>
+                <th colspan="6">Domingo</th>
             </tr>
             <tr>
-                <th>Refeição</th>
+                <th></th>
+                <th>Alimentos</th>
+                <th>Bebidas</th>
+                <th>Quantidade Alimentos</th>
+                <th>Quantidade Bebidas</th>
+                <th>Horário Refeição</th>
+                <th>Ações</th>
                 <!-- Repita o padrão para os outros dias -->
             </tr>
         </thead>
@@ -117,29 +124,27 @@
             const meals = ['Café da Manhã', 'Lanche da Manhã', 'Almoço', 'Lanche da Tarde', 'Jantar', 'Ceia', 'Refeição Extra 1', 'Refeição Extra 2'];
 
             // Cabeçalho da tabela
-            const tableHeader = dietTable.querySelector('thead tr');
-            const weekdays = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'];
-            for (let i = 0; i < 7; i++) {
-                tableHeader.innerHTML += `<th colspan="8">${weekdays[i]}</th>`;
-            }
+            const tableHeader = dietTable.querySelector('thead tr:last-child');
+            meals.forEach(meal => {
+                tableHeader.innerHTML += `<th colspan="6">${meal}</th>`;
+            });
 
             // Conteúdo da tabela
-            for (let mealIndex = 0; mealIndex < meals.length; mealIndex++) {
+            for (let subLineIndex = 1; subLineIndex <= 6; subLineIndex++) {
                 const row = dietBody.insertRow();
-                const cellMeal = row.insertCell(0);
-                cellMeal.textContent = meals[mealIndex];
-
-                for (let day = 1; day <= 7; day++) {
-                    for (let subLineIndex = 1; subLineIndex <= 6; subLineIndex++) {
-                        const cell = row.insertCell((day - 1) * 8 + subLineIndex);
-                        const cellKey = `${meals[mealIndex]}-${day}-${subLineIndex}`;
-                        const cellData = dietData[cellKey] || "";
-                        const editableClass = "editable";
-                        cell.className = editableClass + (subLineIndex !== 6 ? ' row-divider' : '');
-                        cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')">${cellData}</div>`;
+                for (let day = 0; day < 7; day++) {
+                    const cell = row.insertCell(day);
+                    cell.className = "editable row-divider";
+                    const cellKey = `${meals[subLineIndex - 1]}-${day}`;
+                    const cellData = dietData[cellKey] || "";
+                    cell.innerHTML = `<div class="editable" onclick="enterEditMode(this, '${cellKey}')">${cellData}</div>`;
+                    if (subLineIndex === 6) {
+                        cell.innerHTML += '<div class="subline">Ações</div>';
                     }
                 }
             }
+
+            dietTable.style.display = 'block';
         }
 
         function enterEditMode(cell, cellKey) {
@@ -153,18 +158,6 @@
             dietData[cellKey] = value;
             database.ref(`/diet/${selectedDay}`).set(dietData);
             initDietTable(); // Atualiza a tabela após a edição
-        }
-
-        function loadDiet(day) {
-            selectedDay = day;
-            dietData = {};
-
-            // Carregar dados da dieta para o dia selecionado do banco de dados
-            const dietRef = database.ref(`/diet/${selectedDay}`);
-            dietRef.on('value', (snapshot) => {
-                dietData = snapshot.val() || {};
-                initDietTable();
-            });
         }
 
         initDietTable();
@@ -181,6 +174,5 @@
 </body>
 
 </html>
-
 
 
