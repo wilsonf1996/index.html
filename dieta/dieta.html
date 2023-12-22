@@ -12,6 +12,10 @@
             margin: 20px;
         }
 
+        h1 {
+            color: #333;
+        }
+
         table {
             width: 100%;
             margin: 20px auto;
@@ -23,6 +27,7 @@
             border: 1px solid #ddd;
             padding: 8px;
             text-align: left;
+            white-space: nowrap;
         }
 
         th {
@@ -38,6 +43,7 @@
             min-height: 30px;
             max-width: 200px; /* Ajuste conforme necessário */
             overflow: hidden;
+            white-space: nowrap;
             text-overflow: ellipsis;
             cursor: pointer;
         }
@@ -87,6 +93,8 @@
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
+        let dietData = {};
+
         function initDietTable() {
             const dietTable = document.getElementById('diet-table');
             const dietBody = document.getElementById('diet-body');
@@ -102,19 +110,17 @@
 
             // Conteúdo da tabela
             const meals = ['Refeição 1', 'Refeição 2', 'Refeição 3', 'Refeição 4', 'Refeição 5', 'Refeição 6', 'Refeição 7', 'Refeição 8'];
-            const categories = ['Alimentos', 'Bebidas', 'Quantidade de Alimentos', 'Quantidade de Bebidas', 'Horário da Refeição', 'Ações'];
-
             for (let mealIndex = 0; mealIndex < meals.length; mealIndex++) {
-                for (let categoryIndex = 0; categoryIndex < categories.length; categoryIndex++) {
-                    const row = dietBody.insertRow();
-                    const cellMeal = row.insertCell(0);
-                    const cellData = (categoryIndex === 0) ? meals[mealIndex] : categories[categoryIndex];
-                    cellMeal.innerHTML = `<div class="editable">${cellData}</div>`;
+                const row = dietBody.insertRow();
+                const cellMeal = row.insertCell(0);
+                const mealName = meals[mealIndex];
+                cellMeal.innerHTML = `<div class="editable" onclick="editMealName('${mealName}')">${mealName}</div>`;
 
-                    for (let day = 1; day <= 7; day++) {
+                for (let day = 1; day <= 7; day++) {
+                    for (let i = 0; i < 6; i++) {
                         const cell = row.insertCell(day);
-                        const cellKey = `${meals[mealIndex]}-${weekdays[day - 1]}-${categories[categoryIndex]}`;
-                        const cellData = ""; // Carregar dados do Firebase aqui
+                        const cellKey = `${mealName}-${weekdays[day - 1]}-${i}`;
+                        const cellData = dietData[cellKey] || "";
                         const editableClass = "editable";
                         cell.className = editableClass;
                         cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')">${cellData}</div>`;
@@ -130,9 +136,28 @@
             }
         }
 
+        function editMealName(mealName) {
+            const newName = prompt('Digite o novo nome para a refeição:', mealName);
+            if (newName !== null && newName !== mealName) {
+                updateMealName(mealName, newName);
+            }
+        }
+
+        function updateMealName(oldName, newName) {
+            // Atualiza o nome da refeição
+            const mealIndex = meals.indexOf(oldName);
+            if (mealIndex !== -1) {
+                meals[mealIndex] = newName;
+                dietData[newName] = dietData[oldName];
+                delete dietData[oldName];
+                database.ref('/diet').set(dietData);
+                initDietTable();
+            }
+        }
+
         function updateCellData(cellKey, value) {
-            // Atualizar dados no Firebase
-            database.ref(`/dieta/${cellKey}`).set(value);
+            dietData[cellKey] = value;
+            database.ref(`/diet`).set(dietData);
             initDietTable(); // Atualiza a tabela após a edição
         }
 
@@ -150,4 +175,3 @@
 </body>
 
 </html>
-
