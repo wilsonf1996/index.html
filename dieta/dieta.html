@@ -29,6 +29,7 @@
 
         th {
             background-color: #444; /* Cor diferente para cabeçalho */
+            color: white; /* Texto branco no cabeçalho */
         }
 
         td {
@@ -125,24 +126,30 @@
             const categories = ['Alimentos', 'Bebidas', 'Quantidade de Alimentos', 'Quantidade de Bebidas', 'Horário da Refeição', 'Ações'];
 
             for (let mealIndex = 0; mealIndex < meals.length; mealIndex++) {
-                for (let categoryIndex = 0; categoryIndex < categories.length; categoryIndex++) {
-                    const row = dietBody.insertRow();
-                    const cellMeal = row.insertCell(0);
-                    const cellData = (categoryIndex === 0) ? meals[mealIndex] : categories[categoryIndex];
-                    cellMeal.innerHTML = `<div class="editable" onclick="enterEditMode(this, '${meals[mealIndex]}-${categories[categoryIndex]}')">${cellData}</div>`;
+                const row = dietBody.insertRow();
+                const cellMeal = row.insertCell(0);
+                const mealRowClass = "meal-row";
+                cellMeal.innerHTML = `<div class="${mealRowClass}">${meals[mealIndex]}</div>`;
 
-                    for (let day = 1; day <= 7; day++) {
+                for (let day = 1; day <= 7; day++) {
+                    for (let categoryIndex = 0; categoryIndex < categories.length; categoryIndex++) {
                         const cell = row.insertCell(day);
                         const cellKey = `${meals[mealIndex]}-${weekdays[day - 1]}-${categories[categoryIndex]}`;
                         const editableClass = "editable";
-                        cell.className = editableClass;
-                        cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')"></div>`;
                         
-                        // Buscar dados do Firebase e preencher célula
-                        database.ref(`/dieta/${cellKey}`).once('value').then(snapshot => {
-                            const value = snapshot.val();
-                            cell.firstChild.textContent = value || ""; // Exibir valor ou string vazia se for nulo
-                        });
+                        // A primeira coluna (nome da refeição) não é editável
+                        if (categoryIndex === 0) {
+                            cell.innerHTML = `<div class="${mealRowClass}">${meals[mealIndex]}</div>`;
+                        } else {
+                            cell.className = editableClass;
+                            cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')"></div>`;
+                            
+                            // Buscar dados do Firebase e preencher célula
+                            database.ref(`/dieta/${cellKey}`).once('value').then(snapshot => {
+                                const value = snapshot.val();
+                                cell.firstChild.textContent = value || ""; // Exibir valor ou string vazia se for nulo
+                            });
+                        }
                     }
                 }
             }
@@ -178,5 +185,6 @@
 </body>
 
 </html>
+
 
 
