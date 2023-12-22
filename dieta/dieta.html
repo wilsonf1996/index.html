@@ -1,163 +1,216 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planilha de Dieta</title>
-    <!-- Carregue a biblioteca do Firebase via CDN -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.2/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.2/firebase-analytics.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.2/firebase-database.js"></script>
+    <title>Aplicativo de Dieta</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
             text-align: center;
             margin: 20px;
-            background-color: #2c3e50; /* Fundo escuro */
-            color: #ecf0f1; /* Texto em cor clara */
         }
 
         h1 {
-            color: #ecf0f1;
-        }
-
-        button {
-            background-color: #bdc3c7; /* Cor neutra para botões */
-            color: #2c3e50; /* Texto em cor escura para botões */
-            padding: 10px;
-            border: none;
-            cursor: pointer;
+            color: #333;
         }
 
         table {
             width: 100%;
-            margin-top: 20px;
+            margin: 20px auto;
             border-collapse: collapse;
             overflow-x: auto;
-            border: 1px solid #34495e; /* Borda escura entre células */
         }
 
         th, td {
-            border: 1px solid #34495e; /* Borda escura entre células */
+            border: 1px solid #ddd;
             padding: 8px;
             text-align: left;
             white-space: nowrap;
         }
 
         th {
-            background-color: #95a5a6; /* Cor neutra para cabeçalho */
+            background-color: #f2f2f2;
         }
 
         td {
-            background-color: #bdc3c7; /* Cor neutra para células */
+            background-color: #fff;
+            position: relative;
+        }
+
+        .editable {
+            min-height: 30px;
+            max-width: 120px; /* Ajuste para acomodar até 15 caracteres */
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            cursor: pointer;
+        }
+
+        .editable:hover {
+            background-color: #e0e0e0;
         }
     </style>
+    <!-- Carregue a biblioteca do Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 </head>
+
 <body>
+    <h1>Aplicativo de Dieta</h1>
 
-<h1>Planilha de Dieta</h1>
+    <table id="diet-table">
+        <thead>
+            <tr>
+                <th>&nbsp;</th>
+                <th colspan="8">Refeição 1</th>
+                <th colspan="8">Refeição 2</th>
+                <th colspan="8">Refeição 3</th>
+                <th colspan="8">Refeição 4</th>
+                <th colspan="8">Refeição 5</th>
+                <th colspan="8">Refeição 6</th>
+                <th colspan="8">Refeição 7</th>
+                <th colspan="8">Refeição 8</th>
+            </tr>
+            <tr>
+                <th>Dia</th>
+                <th>Alimentos</th>
+                <th>Bebidas</th>
+                <th>Quantidade Alimentos</th>
+                <th>Quantidade Bebidas</th>
+                <th>Horário Refeição</th>
+                <th>Ações</th>
+                <!-- Repita o padrão para as outras refeições -->
+            </tr>
+        </thead>
+        <tbody id="diet-body"></tbody>
+    </table>
 
-<button onclick="adicionarRefeicao()">Adicionar Refeição</button>
+    <script>
+        // Configuração do Firebase para o Agenda Semanal
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+            measurementId: "G-CVBQ54PERH"
+        };
 
-<h2>Refeições</h2>
-<table id="tabelaRefeicoes">
-    <thead>
-        <tr>
-            <th>Alimentos</th>
-            <th>Bebidas</th>
-            <th>Quantidade Alimentos</th>
-            <th>Quantidade Bebidas</th>
-            <th>Horário Refeição</th>
-            <th>Dia da Semana</th>
-            <th>Ações</th>
-        </tr>
-    </thead>
-    <tbody id="corpoTabelaRefeicoes">
-        <!-- Aqui serão adicionadas as linhas da tabela -->
-    </tbody>
-</table>
+        // Inicialização do Firebase para o Agenda Semanal
+        firebase.initializeApp(firebaseConfig, "agendaApp");
+        const agendaDatabase = firebase.database();
 
-<script type="module">
-    // Configuração do Firebase com os dados específicos fornecidos
-    const firebaseConfig = {
-        apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
-        authDomain: "agenda-6accc.firebaseapp.com",
-        databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com/",
-        projectId: "agenda-6accc",
-        storageBucket: "agenda-6accc.appspot.com",
-        messagingSenderId: "794262176773",
-        appId: "1:794262176773:web:a9fdf09a95aa7022dc086c",
-        measurementId: "G-ZN6E5S9QCL"
-    };
+        // Use as configurações do Firebase do Agenda Semanal
+        const dietFirebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+            measurementId: "G-CVBQ54PERH"
+        };
 
-    // Inicialização do Firebase
-    const app = firebase.initializeApp(firebaseConfig);
-    const analytics = firebase.analytics();
-    const database = firebase.database();
+        // Inicialização do Firebase para o Aplicativo de Dieta
+        const dietApp = firebase.initializeApp(dietFirebaseConfig, "dietApp");
+        const dietDatabase = dietApp.database();
 
-    function adicionarRefeicao() {
-        const alimentos = document.getElementById('alimentos').value;
-        const bebidas = document.getElementById('bebidas').value;
-        const quantidadeAlimentos = document.getElementById('quantidadeAlimentos').value;
-        const quantidadeBebidas = document.getElementById('quantidadeBebidas').value;
-        const horarioRefeicao = document.getElementById('horarioRefeicao').value;
-        const diaSemana = document.getElementById('diaSemana').value;
-
-        // Verificar se já existem 8 refeições para o dia da semana selecionado
-        if (quantidadeRefeicoesExistentes(diaSemana) >= 8) {
-            alert("Já existem 8 refeições para este dia. Limite atingido!");
-            return;
+        // Função para carregar dados da dieta
+        function loadDietData() {
+            // Carregar dados da dieta do banco de dados do Aplicativo de Dieta
+            const dietRef = dietDatabase.ref("/diet");
+            dietRef.on("value", (snapshot) => {
+                const dietData = snapshot.val() || {};
+                renderDietTable(dietData);
+            });
         }
 
-        // Adicionar os dados da refeição à tabela
-        const corpoTabelaRefeicoes = document.getElementById('corpoTabelaRefeicoes');
-        const novaLinha = `
-            <tr>
-                <td contenteditable="true">${alimentos}</td>
-                <td contenteditable="true">${bebidas}</td>
-                <td contenteditable="true">${quantidadeAlimentos}</td>
-                <td contenteditable="true">${quantidadeBebidas}</td>
-                <td contenteditable="true">${horarioRefeicao}</td>
-                <td contenteditable="true">${diaSemana}</td>
-                <td><button onclick="removerRefeicao(this)">Remover</button></td>
-            </tr>
-        `;
-        corpoTabelaRefeicoes.innerHTML += novaLinha;
+        // Função para renderizar a tabela de dieta
+        function renderDietTable(dietData) {
+            const dietTable = document.getElementById("diet-table");
+            const dietBody = document.getElementById("diet-body");
+            dietBody.innerHTML = "";
 
-        // Limpar campos
-        limparCampos();
-    }
+            // Dias da semana
+            const weekdays = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
-    function limparCampos() {
-        document.getElementById('alimentos').value = '';
-        document.getElementById('bebidas').value = '';
-        document.getElementById('quantidadeAlimentos').value = '';
-        document.getElementById('quantidadeBebidas').value = '';
-        document.getElementById('horarioRefeicao').value = '';
-        document.getElementById('diaSemana').value = '';
-    }
+            // Conteúdo da tabela
+            weekdays.forEach((day) => {
+                for (let mealNumber = 1; mealNumber <= 8; mealNumber++) {
+                    const row = dietBody.insertRow();
+                    const cellDay = row.insertCell(0);
+                    cellDay.textContent = day;
 
-    function removerRefeicao(botaoRemover) {
-        const linha = botaoRemover.closest('tr');
-        linha.remove();
-    }
+                    const mealKey = `${day}-${mealNumber}`;
+                    const mealData = dietData[mealKey] || {
+                        alimentos: "",
+                        bebidas: "",
+                        quantidadeAlimentos: "",
+                        quantidadeBebidas: "",
+                        horarioRefeicao: ""
+                    };
 
-    // Função para contar a quantidade de refeições existentes para um dia da semana
-    function quantidadeRefeicoesExistentes(diaSemana) {
-        let quantidade = 0;
+                    // Adicionar células para cada coluna
+                    appendCell(row, mealData.alimentos);
+                    appendCell(row, mealData.bebidas);
+                    appendCell(row, mealData.quantidadeAlimentos);
+                    appendCell(row, mealData.quantidadeBebidas);
+                    appendCell(row, mealData.horarioRefeicao);
+                    appendCell(row, `<button onclick="editMeal('${mealKey}')">Editar</button>`);
+                    // Adicione mais células conforme necessário
+                }
+            });
 
-        // Contar refeições existentes na tabela
-        const corpoTabelaRefeicoes = document.getElementById('corpoTabelaRefeicoes');
-        corpoTabelaRefeicoes.querySelectorAll('tr').forEach((linha) => {
-            const colunaDiaSemana = linha.querySelector('td:last-child');
-            if (colunaDiaSemana.textContent === diaSemana) {
-                quantidade++;
+            dietTable.style.display = 'block';
+        }
+
+        // Função para adicionar célula à linha
+        function appendCell(row, content) {
+            const cell = row.insertCell();
+            cell.innerHTML = `<div class="editable" onclick="enterEditMode(this)">${content}</div>`;
+        }
+
+        // Função para entrar no modo de edição
+        function enterEditMode(cell) {
+            const value = prompt('Digite o conteúdo:', cell.textContent);
+            if (value !== null) {
+                cell.textContent = value;
             }
-        });
+        }
 
-        return quantidade;
-    }
-</script>
+        // Função para editar uma refeição
+        function editMeal(mealKey) {
+            const mealData = promptMealData(mealKey);
+            if (mealData !== null) {
+                dietDatabase.ref(`/diet/${mealKey}`).set(mealData);
+                loadDietData(); // Recarrega os dados após a edição
+            }
+        }
 
+        // Função para solicitar dados da refeição ao usuário
+        function promptMealData(mealKey) {
+            const day = mealKey.split('-')[0];
+            const mealNumber = mealKey.split('-')[1];
+            const mealData = dietDatabase.ref(`/diet/${mealKey}`).once('value').then(snapshot => snapshot.val());
+            const newMealData = {
+                alimentos: prompt(`Digite os alimentos para a Refeição ${mealNumber} na ${day}:`, mealData.alimentos || ""),
+                bebidas: prompt(`Digite as bebidas para a Refeição ${mealNumber} na ${day}:`, mealData.bebidas || ""),
+                quantidadeAlimentos: prompt(`Digite a quantidade de alimentos para a Refeição ${mealNumber} na ${day}:`, mealData.quantidadeAlimentos || ""),
+                quantidadeBebidas: prompt(`Digite a quantidade de bebidas para a Refeição ${mealNumber} na ${day}:`, mealData.quantidadeBebidas || ""),
+                horarioRefeicao: prompt(`Digite o horário da Refeição ${mealNumber} na ${day}:`, mealData.horarioRefeicao || "")
+            };
+
+            return newMealData;
+        }
+
+        loadDietData(); // Carrega os dados da dieta ao carregar a página
+    </script>
 </body>
+
 </html>
+
