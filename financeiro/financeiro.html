@@ -59,6 +59,7 @@
     <!-- Carregue a biblioteca do Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <script src="https://cdn.skypack.dev/pdf-lib"></script>
 </head>
 
 <body>
@@ -77,7 +78,7 @@
         <tbody id="expenses-body"></tbody>
     </table>
 
-    <input type="text" id="expense-description" placeholder="Descrição do Gasto/Receita">
+   <input type="text" id="expense-description" placeholder="Descrição do Gasto/Receita">
     <input type="number" id="expense-amount" placeholder="Valor (R$)">
     <input type="datetime-local" id="expense-date" placeholder="Data do Gasto/Receita">
     <label for="expense-type">Tipo:</label>
@@ -86,7 +87,7 @@
         <option value="income">Receita</option>
     </select>
     <button onclick="createOrUpdateExpense()">Registrar Gasto/Receita</button>
-    <button onclick="loadJS('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js', loadAndGeneratePDF)">Gerar Relatório em PDF</button>
+    <button onclick="generatePDF()">Gerar Relatório em PDF</button>
     <button onclick="generateReport()">Gerar Relatório</button>
     <button onclick="goToHomePage()">Voltar para a Página Principal</button>
 
@@ -267,21 +268,10 @@
             }
         }
 
-        function loadAndGeneratePDF() {
-            // Verificar se a biblioteca jsPDF está definida
-            if (typeof jsPDF !== 'undefined') {
-                // A biblioteca jsPDF está carregada, agora podemos chamar generatePDF
-                generatePDF();
-            } else {
-                // A biblioteca jsPDF não está carregada, talvez haja um problema no carregamento
-                console.error('A biblioteca jsPDF não foi carregada corretamente.');
-            }
-        }
+function generatePDF() {
+            const pdfContent = [];
 
-        function generatePDF() {
-            const pdf = new jsPDF();
-
-            // Adicionar conteúdo da lista de receitas e despesas
+            // Adicione o conteúdo da lista de receitas e despesas
             const expensesData = expenses.map(expense => ({
                 DateTime: new Date(expense.dateTime).toLocaleString('pt-BR'),
                 Description: expense.description,
@@ -289,117 +279,144 @@
                 Amount: `R$ ${expense.amount.toFixed(2)}`
             }));
 
-            pdf.autoTable({
-                head: [['Data e Hora', 'Descrição', 'Tipo', 'Valor (R$)']],
-                body: expensesData
+            pdfContent.push(['Data e Hora', 'Descrição', 'Tipo', 'Valor (R$)']);
+            expensesData.forEach(expense => pdfContent.push(Object.values(expense)));
+
+            // Adicione relatórios
+            generateExpensesReport(pdfContent);
+            generateIncomeReport(pdfContent);
+            generateBalanceReport(pdfContent);
+
+            // Crie um documento PDF usando a API pdf-lib
+            const pdfDoc = PDFLib.PDFDocument.create();
+
+            const page = pdfDoc.addPage();
+            const { width, height } = page.getSize();
+            const fontSize = 12;
+
+            let y = height - 30;
+
+            pdfContent.forEach(row => {
+                row.forEach((cell, index) => {
+                    page.drawText(cell, { x: index * 150, y, fontSize });
+                });
+                y -= fontSize + 5;
             });
 
-            // Adicionar relatórios
-            generateExpensesReport(pdf);
-            generateIncomeReport(pdf);
-            generateBalanceReport(pdf);
+            // Gere o PDF como Blob
+            pdfDoc.save().then(blob => {
+                // Crie um URL para o Blob
+                const pdfUrl = URL.createObjectURL(blob);
 
-            // Gerar o PDF como um Blob
-            const pdfBlob = pdf.output('blob');
+                // Crie um link para download
+                const downloadLink = document.createElement('a');
+                downloadLink.href = pdfUrl;
+                downloadLink.download = 'relatorio.pdf';
+                downloadLink.textContent = 'Baixar Relatório em PDF';
 
-            // Criar um URL para o Blob
-            const pdfUrl = URL.createObjectURL(pdfBlob);
+                // Adicione o link à página
+                document.body.appendChild(downloadLink);
 
-            // Criar um link para download
-            const downloadLink = document.createElement('a');
-            downloadLink.href = pdfUrl;
-            downloadLink.download = 'relatorio.pdf';
-            downloadLink.textContent = 'Baixar Relatório em PDF';
+                // Simule o clique no link para iniciar o download
+                downloadLink.click();
 
-            // Adicionar o link à página
-            document.body.appendChild(downloadLink);
-
-            // Simular o clique no link para iniciar o download
-            downloadLink.click();
-
-            // Remover o link da página
-            document.body.removeChild(downloadLink);
+                // Remova o link da página
+                document.body.removeChild(downloadLink);
+            });
         }
-function generateExpensesReport(pdf) {
-    const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
-    const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
+function generateExpensesReport(pdfContent) {
+            const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
+            const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
 
-    if (startDate && endDate) {
-        const filteredExpenses = expenses.filter(expense => {
-            return expense.type === 'expense' &&
-                new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
-                new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
-        });
+            if (startDate && endDate) {
+                const filteredExpenses = expenses.filter(expense => {
+                    return expense.type === 'expense' &&
+                        new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
+                        new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
+                });
 
-        pdf.text('Relatório de Despesas', 20, 10);
-        pdf.autoTable({
-            head: [['Data e Hora', 'Descrição', 'Tipo', 'Valor (R$)']],
-            body: filteredExpenses.map(expense => [
-                new Date(expense.dateTime).toLocaleString('pt-BR'),
-                expense.description,
-                'Despesa',
-                `R$ ${expense.amount.toFixed(2)}`
-            ])
-        });
-    } else {
-        alert('Período inválido ou não informado.');
-    }
-}
+                pdfContent.push(['Relatório de Despesas']);
+                pdfContent.push(['Data e Hora', 'Descrição', 'Tipo', 'Valor (R$)']);
+                filteredExpenses.forEach(expense => pdfContent.push([
+                    new Date(expense.dateTime).toLocaleString('pt-BR'),
+                    expense.description,
+                    'Despesa',
+                    `R$ ${expense.amount.toFixed(2)}`
+                ]));
+            } else {
+                alert('Período inválido ou não informado.');
+            }
+        }
 
-function generateIncomeReport(pdf) {
-    const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
-    const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
+        function generateIncomeReport(pdfContent) {
+            const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
+            const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
 
-    if (startDate && endDate) {
-        const filteredIncome = expenses.filter(expense => {
-            return expense.type === 'income' &&
-                new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
-                new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
-        });
+            if (startDate && endDate) {
+                const filteredIncome = expenses.filter(expense => {
+                    return expense.type === 'income' &&
+                        new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
+                        new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
+                });
 
-        pdf.text('Relatório de Receitas', 20, 10);
-        pdf.autoTable({
-            head: [['Data e Hora', 'Descrição', 'Tipo', 'Valor (R$)']],
-            body: filteredIncome.map(income => [
-                new Date(income.dateTime).toLocaleString('pt-BR'),
-                income.description,
-                'Receita',
-                `R$ ${income.amount.toFixed(2)}`
-            ])
-        });
-    } else {
-        alert('Período inválido ou não informado.');
-    }
-}
+                pdfContent.push(['Relatório de Receitas']);
+                pdfContent.push(['Data e Hora', 'Descrição', 'Tipo', 'Valor (R$)']);
+                filteredIncome.forEach(income => pdfContent.push([
+                    new Date(income.dateTime).toLocaleString('pt-BR'),
+                    income.description,
+                    'Receita',
+                    `R$ ${income.amount.toFixed(2)}`
+                ]));
+            } else {
+                alert('Período inválido ou não informado.');
+            }
+        }
 
-function generateBalanceReport(pdf) {
-    const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
-    const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
+        function generateBalanceReport(pdfContent) {
+            const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
+            const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
 
-    if (startDate && endDate) {
-        const filteredExpenses = expenses.filter(expense => {
-            return new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
-                new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
-        });
+            if (startDate && endDate) {
+                const filteredExpenses = expenses.filter(expense => {
+                    return new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
+                        new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
+                });
 
-        const totalIncome = filteredExpenses.reduce((sum, expense) => {
-            return expense.type === 'income' ? sum + expense.amount : sum;
-        }, 0);
+                const totalIncome = filteredExpenses.reduce((sum, expense) => {
+                    return expense.type === 'income' ? sum + expense.amount : sum;
+                }, 0);
 
-        const totalExpenses = filteredExpenses.reduce((sum, expense) => {
-            return expense.type === 'expense' ? sum + expense.amount : sum;
-        }, 0);
+                const totalExpenses = filteredExpenses.reduce((sum, expense) => {
+                    return expense.type === 'expense' ? sum + expense.amount : sum;
+                }, 0);
 
-        const balance = totalIncome - totalExpenses;
+                const balance = totalIncome - totalExpenses;
 
-        pdf.text('Relatório de Balanço', 20, 10);
-        pdf.text(`Total de Receitas no Período: R$ ${totalIncome.toFixed(2)}`, 20, 20);
-        pdf.text(`Total de Despesas no Período: R$ ${totalExpenses.toFixed(2)}`, 20, 30);
-        pdf.text(`Balanço: R$ ${balance.toFixed(2)}`, 20, 40);
-    } else {
-        alert('Período inválido ou não informado.');
-    }
-}
+                pdfContent.push(['Relatório de Balanço']);
+                pdfContent.push([`Total de Receitas no Período: R$ ${totalIncome.toFixed(2)}`]);
+                pdfContent.push([`Total de Despesas no Período: R$ ${totalExpenses.toFixed(2)}`]);
+                pdfContent.push([`Balanço: R$ ${balance.toFixed(2)}`]);
+            } else {
+                alert('Período inválido ou não informado.');
+            }
+        }
+
+   function generateReport() {
+            const pdfContent = [];
+
+            // Adiciona relatórios
+            generateExpensesReport(pdfContent);
+            generateIncomeReport(pdfContent);
+            generateBalanceReport(pdfContent);
+
+            // Cria um documento PDF usando a API pdf-lib
+            generatePDF(pdfContent);
+        }
+
+        async function generatePDF(pdfContent) {
+            // Código da função generateReport() continua aqui...
+        }
+    
         
         function generateReport() {
             const reportType = prompt('Informe o tipo de relatório (expenses, income, balance):');
