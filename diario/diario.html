@@ -6,51 +6,75 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meu Diário</title>
     <style>
-       body {
+        body {
             font-family: 'Arial', sans-serif;
             text-align: center;
             margin: 20px;
+            background-color: #333;
+            color: #fff;
         }
 
         h1 {
-            color: #333;
+            color: #fff;
         }
 
         table {
             width: 100%;
-            margin: 20px auto;
+            margin-top: 20px;
             border-collapse: collapse;
             overflow-y: scroll;
             max-height: 400px;
+            background-color: #444;
         }
 
         th,
         td {
-            border: 1px solid #ddd;
+            border: 1px solid #666;
             padding: 8px;
             text-align: left;
+            color: #fff;
         }
 
         th {
-            background-color: #f2f2f2;
+            background-color: #222;
         }
 
-        button {
+        input {
+            width: 80%;
+            margin: 10px 0;
+            padding: 8px;
+        }
+
+        #diary-table {
+            overflow-y: auto;
+        }
+
+        #auth-section {
+            text-align: center;
+            margin-top: 50px;
+        }
+
+        #auth-section label {
+            margin-right: 10px;
+        }
+
+        #auth-section input {
+            padding: 8px;
+            font-size: 14px;
+        }
+
+        #auth-section button {
             padding: 10px;
             font-size: 16px;
-            margin: 0 10px;
+            background-color: #4285f4;
+            color: #fff;
+            border: none;
+            cursor: pointer;
         }
 
-        textarea {
-            width: 80%;
-            height: 300px; /* Aumentar a altura do campo de texto para comportar um diário */
-            margin: 10px 0;
-            resize: vertical;
-        }
-
-        @media (max-width: 600px) {
-            textarea {
-                width: 100%;
+        @media only screen and (max-width: 600px) {
+            body {
+                margin: 10px;
             }
 
             table {
@@ -61,6 +85,37 @@
 </head>
 
 <body>
+    <h1>Meu Diário</h1>
+
+    <!-- Seção de autenticação -->
+    <div id="auth-section">
+        <label for="password">Digite a senha:</label>
+        <input type="password" id="password">
+        <button onclick="authenticate()">Entrar</button>
+    </div>
+
+    <!-- Seção principal -->
+    <div id="main-content">
+        <table id="diary-table">
+            <thead>
+                <tr>
+                    <th>Data e Hora</th>
+                    <th>Página do Diário</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="diary-body"></tbody>
+        </table>
+
+        <input id="diary-input" placeholder="Escreva sua página do diário..." />
+        <button onclick="createOrUpdateDiary()">Criar Nova Página</button>
+        <button onclick="goToHomePage()">Voltar para a Página Principal</button>
+    </div>
+
+    <!-- Firebase JavaScript SDK v8 -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
@@ -81,14 +136,15 @@
         let diaryPages = [];
 
         function authenticate() {
-            const password = prompt('Digite a senha para acessar o diário:');
-            isAuthenticated = password === '2020';
+            const enteredPassword = document.getElementById('password').value;
 
-            if (!isAuthenticated) {
-                alert('Senha incorreta. Acesso negado.');
-                window.location.href = 'https://wilsonf1996.github.io'; // Redireciona para a página principal em caso de senha incorreta
-            } else {
+            if (enteredPassword === "2020") {
+                isAuthenticated = true;
+                document.getElementById('auth-section').style.display = 'none';
+                document.getElementById('main-content').style.display = 'block';
                 initDiaryPages();
+            } else {
+                alert("Senha incorreta. Tente novamente.");
             }
         }
 
@@ -109,19 +165,16 @@
 
             const diaryText = document.getElementById('diary-input').value.trim();
             if (diaryText) {
-                const currentDate = new Date().getTime(); // Timestamp
+                const currentDate = new Date().getTime();
                 const newDiaryPage = { id: currentDate, text: diaryText, date: new Date(currentDate).toLocaleString() };
 
                 const existingPageIndex = findPageIndexById(currentDate);
                 if (existingPageIndex !== -1) {
-                    // If page with the current id exists, update it
                     diaryPages[existingPageIndex] = newDiaryPage;
                 } else {
-                    // Otherwise, create a new page
                     diaryPages.push(newDiaryPage);
                 }
 
-                // Atualiza o banco de dados em tempo real
                 diaryRef.set(diaryPages);
                 document.getElementById('diary-input').value = '';
             }
@@ -141,7 +194,6 @@
             if (editedText !== null) {
                 const existingPageIndex = findPageIndexById(id);
                 diaryPages[existingPageIndex].text = editedText;
-                // Atualiza o banco de dados em tempo real
                 diaryRef.set(diaryPages);
             }
         }
@@ -155,17 +207,11 @@
             const confirmDelete = confirm('Tem certeza que deseja excluir esta página do diário?');
             if (confirmDelete) {
                 diaryPages = diaryPages.filter(page => page.id !== id);
-                // Atualiza o banco de dados em tempo real
                 diaryRef.set(diaryPages);
             }
         }
 
         function updateDiaryTable() {
-            if (!isAuthenticated) {
-                alert('Por favor, faça login primeiro.');
-                return;
-            }
-
             const diaryBody = document.getElementById('diary-body');
             diaryBody.innerHTML = '';
 
@@ -197,14 +243,16 @@
         }
 
         function goToHomePage() {
-            window.location.href = 'https://wilsonf1996.github.io';
+            window.location.href = 'https://wilsonf1996.github.io/index.html';
         }
 
         document.addEventListener('DOMContentLoaded', function () {
+            // A verificação da autenticação agora é feita ao carregar a página
             authenticate();
         });
     </script>
 </body>
 
 </html>
+
 
