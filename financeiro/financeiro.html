@@ -270,62 +270,58 @@
             }
         }
 
-function generatePDF() {
-            const pdfContent = [];
+async function generatePDF() {
+    try {
+        // Crie um documento PDF usando a API pdf-lib
+        const pdfDoc = await PDFLib.PDFDocument.create();
+        const page = pdfDoc.addPage();
+        const { width, height } = page.getSize();
+        const fontSize = 12;
 
-            // Adicione o conteúdo da lista de receitas e despesas
-            const expensesData = expenses.map(expense => ({
-                DateTime: new Date(expense.dateTime).toLocaleString('pt-BR'),
-                Description: expense.description,
-                Type: expense.type === 'expense' ? 'Despesa' : 'Receita',
-                Amount: `R$ ${expense.amount.toFixed(2)}`
-            }));
+        let y = height - 30;
 
-            pdfContent.push(['Data e Hora', 'Descrição', 'Tipo', 'Valor (R$)']);
-            expensesData.forEach(expense => pdfContent.push(Object.values(expense)));
+        // Adicione o conteúdo à página
+        const pdfContent = expenses.map(expense => ({
+            DateTime: new Date(expense.dateTime).toLocaleString('pt-BR'),
+            Description: expense.description,
+            Type: expense.type === 'expense' ? 'Despesa' : 'Receita',
+            Amount: `R$ ${expense.amount.toFixed(2)}`
+        }));
 
-            // Adicione relatórios
-            generateExpensesReport(pdfContent);
-            generateIncomeReport(pdfContent);
-            generateBalanceReport(pdfContent);
+        pdfContent.unshift(['Data e Hora', 'Descrição', 'Tipo', 'Valor (R$)']);
+        pdfContent.forEach(row => {
+            page.drawText(row.join('\t'), { x: 50, y, fontSize });
+            y -= fontSize + 5;
+        });
 
-            // Crie um documento PDF usando a API pdf-lib
-            const pdfDoc = PDFLib.PDFDocument.create();
+        // Gere o PDF como Blob
+        const pdfBytes = await pdfDoc.save();
 
-            const page = pdfDoc.addPage();
-            const { width, height } = page.getSize();
-            const fontSize = 12;
+        // Crie um URL para o Blob
+        const pdfUrl = URL.createObjectURL(new Blob([pdfBytes]));
 
-            let y = height - 30;
+        // Crie um link para download
+        const downloadLink = document.createElement('a');
+        downloadLink.href = pdfUrl;
+        downloadLink.download = 'relatorio.pdf';
+        downloadLink.textContent = 'Baixar Relatório em PDF';
 
-            pdfContent.forEach(row => {
-                row.forEach((cell, index) => {
-                    page.drawText(cell, { x: index * 150, y, fontSize });
-                });
-                y -= fontSize + 5;
-            });
+        // Adicione o link à página
+        document.body.appendChild(downloadLink);
 
-            // Gere o PDF como Blob
-            pdfDoc.save().then(blob => {
-                // Crie um URL para o Blob
-                const pdfUrl = URL.createObjectURL(blob);
+        // Simule o clique no link para iniciar o download
+        downloadLink.click();
 
-                // Crie um link para download
-                const downloadLink = document.createElement('a');
-                downloadLink.href = pdfUrl;
-                downloadLink.download = 'relatorio.pdf';
-                downloadLink.textContent = 'Baixar Relatório em PDF';
+        // Remova o link da página
+        document.body.removeChild(downloadLink);
 
-                // Adicione o link à página
-                document.body.appendChild(downloadLink);
+    } catch (error) {
+        console.error('Erro ao gerar PDF:', error);
+        alert('Erro ao gerar PDF. Consulte o console para obter detalhes.');
+    }
+}
 
-                // Simule o clique no link para iniciar o download
-                downloadLink.click();
-
-                // Remova o link da página
-                document.body.removeChild(downloadLink);
-            });
-        }
+        
 function generateExpensesReport(pdfContent) {
             const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
             const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
