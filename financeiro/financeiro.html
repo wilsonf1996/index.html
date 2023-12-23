@@ -87,20 +87,19 @@
     </select>
     <button onclick="createOrUpdateExpense()">Registrar Gasto/Receita</button>
     <button onclick="loadJS('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js', loadAndGeneratePDF)">Gerar Relatório em PDF</button>
-    <script>
-    function loadJS(url, callback){
-        var script = document.createElement('script');
-        script.type = 'text/javascript';
-        script.src = url;
-        script.onreadystatechange = callback;
-        script.onload = callback;
-        document.head.appendChild(script);
-    }
-    </script>
-    
     <button onclick="generateReport()">Gerar Relatório</button>
     <button onclick="goToHomePage()">Voltar para a Página Principal</button>
-    <button onclick="loadAndGeneratePDF()">Gerar Relatório em PDF</button>
+
+    <script>
+        function loadJS(url, callback) {
+            var script = document.createElement('script');
+            script.type = 'text/javascript';
+            script.src = url;
+            script.onreadystatechange = callback;
+            script.onload = callback;
+            document.head.appendChild(script);
+        }
+    </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
     <script>
@@ -247,7 +246,7 @@
 
         function generatePDF() {
             const pdf = new jsPDF();
-            
+
             // Adicionar conteúdo da lista de receitas e despesas
             const expensesData = expenses.map(expense => ({
                 DateTime: new Date(expense.dateTime).toLocaleString('pt-BR'),
@@ -287,7 +286,86 @@
             // Remover o link da página
             document.body.removeChild(downloadLink);
         }
+function generateExpensesReport(pdf) {
+    const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
+    const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
 
+    if (startDate && endDate) {
+        const filteredExpenses = expenses.filter(expense => {
+            return expense.type === 'expense' &&
+                new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
+                new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
+        });
+
+        pdf.text('Relatório de Despesas', 20, 10);
+        pdf.autoTable({
+            head: [['Data e Hora', 'Descrição', 'Tipo', 'Valor (R$)']],
+            body: filteredExpenses.map(expense => [
+                new Date(expense.dateTime).toLocaleString('pt-BR'),
+                expense.description,
+                'Despesa',
+                `R$ ${expense.amount.toFixed(2)}`
+            ])
+        });
+    } else {
+        alert('Período inválido ou não informado.');
+    }
+}
+
+function generateIncomeReport(pdf) {
+    const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
+    const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
+
+    if (startDate && endDate) {
+        const filteredIncome = expenses.filter(expense => {
+            return expense.type === 'income' &&
+                new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
+                new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
+        });
+
+        pdf.text('Relatório de Receitas', 20, 10);
+        pdf.autoTable({
+            head: [['Data e Hora', 'Descrição', 'Tipo', 'Valor (R$)']],
+            body: filteredIncome.map(income => [
+                new Date(income.dateTime).toLocaleString('pt-BR'),
+                income.description,
+                'Receita',
+                `R$ ${income.amount.toFixed(2)}`
+            ])
+        });
+    } else {
+        alert('Período inválido ou não informado.');
+    }
+}
+
+function generateBalanceReport(pdf) {
+    const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
+    const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
+
+    if (startDate && endDate) {
+        const filteredExpenses = expenses.filter(expense => {
+            return new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
+                new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
+        });
+
+        const totalIncome = filteredExpenses.reduce((sum, expense) => {
+            return expense.type === 'income' ? sum + expense.amount : sum;
+        }, 0);
+
+        const totalExpenses = filteredExpenses.reduce((sum, expense) => {
+            return expense.type === 'expense' ? sum + expense.amount : sum;
+        }, 0);
+
+        const balance = totalIncome - totalExpenses;
+
+        pdf.text('Relatório de Balanço', 20, 10);
+        pdf.text(`Total de Receitas no Período: R$ ${totalIncome.toFixed(2)}`, 20, 20);
+        pdf.text(`Total de Despesas no Período: R$ ${totalExpenses.toFixed(2)}`, 20, 30);
+        pdf.text(`Balanço: R$ ${balance.toFixed(2)}`, 20, 40);
+    } else {
+        alert('Período inválido ou não informado.');
+    }
+}
         
         function generateReport() {
             const reportType = prompt('Informe o tipo de relatório (expenses, income, balance):');
