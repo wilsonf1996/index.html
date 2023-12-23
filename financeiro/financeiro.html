@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
@@ -49,8 +49,14 @@
             overflow-y: auto;
         }
 
-        canvas {
+        #charts-container {
+            display: flex;
+            justify-content: space-around;
             margin-top: 20px;
+        }
+
+        canvas {
+            border: 1px solid #ddd;
         }
     </style>
     <!-- Carregue a biblioteca do Firebase -->
@@ -63,6 +69,7 @@
 <body>
     <h1>Financeiro</h1>
 
+    <!-- Tabela de Despesas/Receitas -->
     <table id="expenses-table">
         <thead>
             <tr>
@@ -76,6 +83,7 @@
         <tbody id="expenses-body"></tbody>
     </table>
 
+    <!-- Formulário para adicionar Despesas/Receitas -->
     <input type="text" id="expense-description" placeholder="Descrição do Gasto/Receita">
     <input type="number" id="expense-amount" placeholder="Valor (R$)">
     <input type="datetime-local" id="expense-date" placeholder="Data do Gasto/Receita">
@@ -88,9 +96,12 @@
     <button onclick="generateReport()">Gerar Relatório</button>
     <button onclick="goToHomePage()">Voltar para a Página Principal</button>
 
-    <canvas id="expense-chart" width="400" height="200"></canvas>
-    <canvas id="income-chart" width="400" height="200"></canvas>
-    <canvas id="balance-chart" width="400" height="200"></canvas>
+    <!-- Gráficos -->
+    <div id="charts-container">
+        <canvas id="expense-chart" width="400" height="200"></canvas>
+        <canvas id="income-chart" width="400" height="200"></canvas>
+        <canvas id="balance-chart" width="400" height="200"></canvas>
+    </div>
 
     <script>
         // Configuração do Firebase
@@ -118,6 +129,9 @@
                 const expensesData = snapshot.val();
                 expenses = expensesData ? Object.values(expensesData) : [];
                 loadExpensesTable(expenses);
+                drawExpenseChart();
+                drawIncomeChart();
+                drawBalanceChart();
             });
         }
 
@@ -172,7 +186,7 @@
 
             if (existingExpenseIndex !== -1) {
                 // Editar despesa ou receita existente
-                const editedType = prompt('Editar Tipo (despesa ou receita):', expenses[existingExpenseIndex].type);
+                const editedType = prompt('Editar Tipo (expense ou income):', expenses[existingExpenseIndex].type);
                 expenses[existingExpenseIndex].description = description;
                 expenses[existingExpenseIndex].amount = amount;
                 expenses[existingExpenseIndex].type = editedType;
@@ -183,115 +197,225 @@
             }
 
             database.ref('/expenses').set(expenses);
-            // Atualiza os gráficos ao criar ou atualizar uma despesa/receita
-            drawExpenseChart();
-            drawIncomeChart();
-            drawBalanceChart();
         }
 
-        // Restante do código...
+        function isValidExpense(description, amount, date) {
+            return description.trim() !== '' && !isNaN(amount) && date !== '';
+        }
 
-        function drawExpenseChart() {
-            const expenseCanvas = document.getElementById('expense-chart');
-            const expenseCtx = expenseCanvas.getContext('2d');
+        function editExpense(index) {
+            const editedDescription = prompt('Editar Descrição:', expenses[index].description);
+            const editedAmount = parseFloat(prompt('Editar Valor (R$):', expenses[index].amount.toFixed(2)));
+            const editedType = prompt('Editar Tipo (expense ou income):', expenses[index].type);
 
-            const expenseData = expenses.filter(expense => expense.type === 'expense');
-            const expenseLabels = expenseData.map(expense => new Date(expense.dateTime).toLocaleDateString('pt-BR'));
-            const expenseAmounts = expenseData.map(expense => expense.amount);
+            if (isValidExpense(editedDescription, editedAmount, expenses[index].dateTime)) {
+                expenses[index].description = editedDescription;
+                expenses[index].amount = editedAmount;
+                expenses[index].type = editedType;
 
-            new Chart(expenseCtx, {
-                type: 'bar',
-                data: {
-                    labels: expenseLabels,
-                    datasets: [{
-                        label: 'Despesas',
-                        data: expenseAmounts,
-                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                        borderColor: 'rgba(255, 99, 132, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
+                database.ref('/expenses').set(expenses);
+            } else {
+                alert('Edição cancelada ou valores inválidos.');
+            }
+        }
+
+        function deleteExpense(dateTime) {
+            const confirmDelete = confirm('Tem certeza que deseja excluir este item?');
+
+            if (confirmDelete) {
+                const indexToDelete = expenses.findIndex(expense => expense.dateTime === dateTime);
+                expenses.splice(indexToDelete, 1);
+
+                database.ref('/expenses').set(expenses);
+            }
+        }
+
+        function generateReport() {
+            const reportType = prompt('Informe o tipo de relatório (expenses, income, balance):');
+
+            switch (reportType) {
+                case 'expenses':
+                    generateExpensesReport();
+                    break;
+                case 'income':
+                    generateIncomeReport();
+                    break;
+                case 'balance':
+                    generateBalanceReport();
+                    break;
+                default:
+                    alert('Tipo de relatório inválido.');
+            }
+        }
+
+        function generateExpensesReport() {
+            const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
+            const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
+
+            if (startDate && endDate) {
+                const filteredExpenses = expenses.filter(expense => {
+                    return expense.type === 'expense' &&
+                        new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
+                        new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
+                });
+
+                const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+                alert(`Total de Despesas no Período: R$ ${totalExpenses.toFixed(2)}`);
+            } else {
+                alert('Período inválido ou não informado.');
+            }
+        }
+
+        function generateIncomeReport() {
+            const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
+            const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
+
+            if (startDate && endDate) {
+                const filteredIncome = expenses.filter(expense => {
+                    return expense.type === 'income' &&
+                        new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
+                        new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
+                });
+
+                const totalIncome = filteredIncome.reduce((sum, income) => sum + income.amount, 0);
+                alert(`Total de Receitas no Período: R$ ${totalIncome.toFixed(2)}`);
+            } else {
+                alert('Período inválido ou não informado.');
+            }
+        }
+
+        function generateBalanceReport() {
+            const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
+            const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
+
+            if (startDate && endDate) {
+                const filteredExpenses = expenses.filter(expense => {
+                    return new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
+                        new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
+                });
+
+                const totalIncome = filteredExpenses.reduce((sum, expense) => {
+                    return expense.type === 'income' ? sum + expense.amount : sum;
+                }, 0);
+
+                const totalExpenses = filteredExpenses.reduce((sum, expense) => {
+                    return expense.type === 'expense' ? sum + expense.amount : sum;
+                }, 0);
+
+                const balance = totalIncome - totalExpenses;
+
+                alert(`Total de Receitas no Período: R$ ${totalIncome.toFixed(2)}\nTotal de Despesas no Período: R$ ${totalExpenses.toFixed(2)}\nBalanço: R$ ${balance.toFixed(2)}`);
+            } else {
+                alert('Período inválido ou não informado.');
+            }
+        }
+
+        function goToHomePage() {
+            // Aqui, você pode redirecionar para a página inicial do seu aplicativo.
+            // window.location.href = 'https://seusite.com';
+            window.location.href = 'https://wilsonf1996.github.io/index.html/';
+            alert('Redirecionamento para a Página Inicial.');
+        }
+
+      // Funções para desenhar os gráficos
+function drawExpenseChart() {
+    const expenseData = expenses.filter(expense => expense.type === 'expense');
+    const expenseLabels = expenseData.map(expense => new Date(expense.dateTime).toLocaleDateString('pt-BR'));
+    const expenseAmounts = expenseData.map(expense => expense.amount);
+
+    const expenseChartContext = document.getElementById('expense-chart').getContext('2d');
+    const expenseChart = new Chart(expenseChartContext, {
+        type: 'bar',
+        data: {
+            labels: expenseLabels,
+            datasets: [{
+                label: 'Despesas',
+                data: expenseAmounts,
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
                 }
-            });
+            }
         }
+    });
+}
 
-        function drawIncomeChart() {
-            const incomeCanvas = document.getElementById('income-chart');
-            const incomeCtx = incomeCanvas.getContext('2d');
+function drawIncomeChart() {
+    const incomeData = expenses.filter(expense => expense.type === 'income');
+    const incomeLabels = incomeData.map(income => new Date(income.dateTime).toLocaleDateString('pt-BR'));
+    const incomeAmounts = incomeData.map(income => income.amount);
 
-            const incomeData = expenses.filter(expense => expense.type === 'income');
-            const incomeLabels = incomeData.map(expense => new Date(expense.dateTime).toLocaleDateString('pt-BR'));
-            const incomeAmounts = incomeData.map(expense => expense.amount);
-
-            new Chart(incomeCtx, {
-                type: 'bar',
-                data: {
-                    labels: incomeLabels,
-                    datasets: [{
-                        label: 'Receitas',
-                        data: incomeAmounts,
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
+    const incomeChartContext = document.getElementById('income-chart').getContext('2d');
+    const incomeChart = new Chart(incomeChartContext, {
+        type: 'bar',
+        data: {
+            labels: incomeLabels,
+            datasets: [{
+                label: 'Receitas',
+                data: incomeAmounts,
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
                 }
-            });
+            }
         }
+    });
+}
 
-        function drawBalanceChart() {
-            const balanceCanvas = document.getElementById('balance-chart');
-            const balanceCtx = balanceCanvas.getContext('2d');
+function drawBalanceChart() {
+    const balanceData = expenses.map(expense => ({
+        date: new Date(expense.dateTime).toLocaleDateString('pt-BR'),
+        amount: expense.type === 'income' ? expense.amount : -expense.amount
+    }));
 
-            const balanceData = expenses.map(expense => {
-                return {
-                    date: new Date(expense.dateTime).toLocaleDateString('pt-BR'),
-                    amount: expense.type === 'income' ? expense.amount : -expense.amount
-                };
-            });
+    const uniqueDates = [...new Set(balanceData.map(item => item.date))];
+    const balanceAmounts = uniqueDates.map(date =>
+        balanceData.filter(item => item.date === date).reduce((sum, item) => sum + item.amount, 0)
+    );
 
-            const uniqueDates = [...new Set(balanceData.map(entry => entry.date))];
-            const balanceAmounts = uniqueDates.map(date => {
-                const entriesOnDate = balanceData.filter(entry => entry.date === date);
-                return entriesOnDate.reduce((sum, entry) => sum + entry.amount, 0);
-            });
-
-            new Chart(balanceCtx, {
-                type: 'line',
-                data: {
-                    labels: uniqueDates,
-                    datasets: [{
-                        label: 'Balanço',
-                        data: balanceAmounts,
-                        fill: false,
-                        borderColor: 'rgba(255, 206, 86, 1)',
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    scales: {
-                        y: {
-                            beginAtZero: false
-                        }
-                    }
+    const balanceChartContext = document.getElementById('balance-chart').getContext('2d');
+    const balanceChart = new Chart(balanceChartContext, {
+        type: 'line',
+        data: {
+            labels: uniqueDates,
+            datasets: [{
+                label: 'Balanço',
+                data: balanceAmounts,
+                fill: false,
+                borderColor: 'rgba(255, 206, 86, 1)',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: false
                 }
-            });
+            }
         }
+    });
+}
+
+
+        document.addEventListener('DOMContentLoaded', function () {
+            initExpenses();
+        });
     </script>
 </body>
 
 </html>
+
 
 
