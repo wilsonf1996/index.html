@@ -52,7 +52,7 @@
             margin: 10px 0;
         }
 
-        #files-table {
+        #folders-table, #files-table {
             overflow-y: auto;
         }
     </style>
@@ -67,6 +67,16 @@
 
 <body>
     <h1>Documentos</h1>
+
+    <table id="folders-table">
+        <thead>
+            <tr>
+                <th>Nome da Pasta</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="folders-body"></tbody>
+    </table>
 
     <table id="files-table">
         <thead>
@@ -83,7 +93,7 @@
     <input type="file" id="file-input">
     <input type="text" id="folder-name" placeholder="Nome da Pasta">
     <button onclick="uploadFile()">Enviar Arquivo</button>
-    <button onclick="goToHomePage()">Voltar para a Página Inicial</button>
+    <button onclick="goToParentFolder()">Voltar para a Pasta Anterior</button>
 
     <script>
         // Configuração do Firebase (usando as configurações do Financeiro)
@@ -103,10 +113,19 @@
         const storage = firebase.storage();
         const database = firebase.database();
 
+        let currentFolder = '/';
+        let folders = [];
         let files = [];
 
-        function initFiles() {
+        function initFoldersAndFiles() {
+            const foldersRef = database.ref('/folders');
             const filesRef = database.ref('/files');
+
+            foldersRef.on('value', (snapshot) => {
+                const foldersData = snapshot.val();
+                folders = foldersData ? Object.values(foldersData) : [];
+                loadFoldersTable(folders);
+            });
 
             filesRef.on('value', (snapshot) => {
                 const filesData = snapshot.val();
@@ -115,13 +134,36 @@
             });
         }
 
+        function loadFoldersTable(folders) {
+            const foldersTableBody = document.getElementById('folders-body');
+            foldersTableBody.innerHTML = "";
+
+            if (Array.isArray(folders)) {
+                folders.forEach((folder, index) => {
+                    const row = foldersTableBody.insertRow();
+                    const cellFolderName = row.insertCell(0);
+                    const cellActions = row.insertCell(1);
+
+                    cellFolderName.textContent = folder.name;
+
+                    const enterFolderButton = document.createElement('button');
+                    enterFolderButton.textContent = 'Entrar na Pasta';
+                    enterFolderButton.onclick = () => enterFolder(folder.name);
+
+                    cellActions.appendChild(enterFolderButton);
+                });
+            } else {
+                console.error("Dados de pastas inválidos:", folders);
+            }
+        }
+
         function loadFilesTable(files) {
-            const tableBody = document.getElementById('files-body');
-            tableBody.innerHTML = "";
+            const filesTableBody = document.getElementById('files-body');
+            filesTableBody.innerHTML = "";
 
             if (Array.isArray(files)) {
                 files.forEach((file, index) => {
-                    const row = tableBody.insertRow();
+                    const row = filesTableBody.insertRow();
                     const cellFileName = row.insertCell(0);
                     const cellFileType = row.insertCell(1);
                     const cellUploadDateTime = row.insertCell(2);
@@ -132,7 +174,7 @@
                     cellUploadDateTime.textContent = new Date(file.uploadDateTime).toLocaleString('pt-BR');
 
                     const downloadButton = document.createElement('button');
-                    downloadButton.textContent = 'Download';
+                    downloadButton.textContent = 'Baixar';
                     downloadButton.onclick = () => downloadFile(file.name);
 
                     const deleteButton = document.createElement('button');
@@ -147,32 +189,61 @@
             }
         }
 
+        function enterFolder(folderName) {
+            // Atualiza a pasta atual e recarrega as tabelas
+            currentFolder = currentFolder === '/' ? `/${folderName}` : `${currentFolder}/${folderName}`;
+            loadFoldersTable(folders.filter(folder => folder.parent === currentFolder));
+            loadFilesTable(files.filter(file => file.folder === currentFolder));
+        }
+
+        function goToParentFolder() {
+            // Volta para a pasta anterior
+            if (currentFolder !== '/') {
+                const parentFolder = currentFolder.split('/').slice(0, -1).join('/');
+                currentFolder = parentFolder === '' ? '/' : parentFolder;
+                loadFoldersTable(folders.filter(folder => folder.parent === currentFolder));
+                loadFilesTable(files.filter(file => file.folder === currentFolder));
+            }
+        }
+
         function uploadFile() {
             const fileInput = document.getElementById('file-input');
             const folderName = document.getElementById('folder-name').value;
 
-            if (!fileInput.files.length || !folderName.trim()) {
-                alert('Por favor, selecione um arquivo e insira o nome da pasta.');
+            // Verifica se um arquivo foi selecionado
+            if (!fileInput.files[0]) {
+                alert('Selecione um arquivo.');
                 return;
             }
 
-            const file = fileInput.files[0];
-            const fileName = file.name;
+            // Verifica se o nome da pasta foi fornecido
+            if (folderName.trim() === '') {
+                alert('Digite um nome de pasta.');
+                return;
+            }
 
-            // Cria um objeto com os detalhes do arquivo
+            // Cria um objeto de detalhes do arquivo
             const fileDetails = {
-                name: fileName,
-                type: file.type,
-                uploadDateTime: new Date().toISOString(),
-                folder: folderName
+                name: fileInput.files[0].name,
+                type: fileInput.files[0].type,
+                folder: currentFolder,
+                uploadDateTime: new Date().toISOString()  // Data e hora do upload
             };
 
-            // Referência do arquivo no Storage (usando o nome do arquivo como caminho)
-            const fileRef = storage.ref(fileName);
+            // Envia o arquivo para o Storage
+            const storageRef = storage.ref(`${currentFolder}/${fileInput.files[0].name}`);
+            storageRef.put(fileInput.files[0]).then(() => {
+                // Adiciona os detalhes do arquivo à lista no banco
 
-            // Upload do arquivo para o Storage
-            fileRef.put(file).then(() => {
-                // Adiciona os detalhes do arquivo ao banco de dados
+                if (folders.findIndex(folder => folder.name === folderName && folder.parent === currentFolder) === -1) {
+                    const folder = {
+                        name: folderName,
+                        parent: currentFolder
+                    };
+                    folders.push(folder);
+                    database.ref('/folders').set(folders);
+                }
+
                 files.push(fileDetails);
                 database.ref('/files').set(files);
 
@@ -181,7 +252,8 @@
                 document.getElementById('folder-name').value = '';
 
                 // Atualiza a tabela
-                loadFilesTable(files);
+                loadFoldersTable(folders.filter(folder => folder.parent === currentFolder));
+                loadFilesTable(files.filter(file => file.folder === currentFolder));
             });
         }
 
@@ -211,7 +283,7 @@
                     database.ref('/files').set(files);
 
                     // Atualiza a tabela
-                    loadFilesTable(files);
+                    loadFilesTable(files.filter(file => file.folder === currentFolder));
                 });
             }
         }
@@ -222,10 +294,9 @@
         }
 
         document.addEventListener('DOMContentLoaded', function () {
-            initFiles();
+            initFoldersAndFiles();
         });
     </script>
-
 </body>
 
 </html>
