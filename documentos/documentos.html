@@ -4,60 +4,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meu Aplicativo de Documentos</title>
+    <title>Documentos</title>
     <style>
+        /* Adicionei alguns estilos para melhorar a aparência */
         body {
             font-family: 'Arial', sans-serif;
             text-align: center;
-            margin: 30px;
+            margin: 20px;
+            background-image: url('https://raw.githubusercontent.com/wilsonf1996/index.html/main/DALL%C2%B7E%202023-12-23%2013.03.50%20-%20mpressionante%20imagem%20de%20fundo%20de%20tela%20para%20aplicativo%20web%20de%20engenheiro%20civil%20fundo%20branco%2C%20hiper-realista%20e%20com%20designer%20moderno.%20A%20imagem%20deve%20ser%20r.png');
+            background-size: cover;
+            background-position: center;
+            -webkit-background-size: cover;
+            -moz-background-size: cover;
+            -o-background-size: cover;
         }
 
         h1 {
             color: #333;
         }
 
-        #main-content {
-            display: none;
-        }
-
-        #auth-section {
-            text-align: center;
-            margin-top: 50px;
-        }
-
-        #auth-section label {
-            margin-right: 10px;
-        }
-
-        #auth-section input {
-            padding: 8px;
-            font-size: 14px;
-        }
-
-        #auth-section button {
-            padding: 10px;
-            font-size: 16px;
-            background-color: #4285f4;
-            color: #fff;
-            border: none;
-            cursor: pointer;
-        }
-
-        #documents-container {
-            margin-top: 20px;
-            text-align: left;
-        }
-
         table {
             width: 100%;
+            margin: 20px auto;
             border-collapse: collapse;
-            margin-top: 20px;
+            overflow-y: scroll;
+            max-height: 400px;
         }
 
         th,
         td {
             border: 1px solid #ddd;
-            padding: 10px;
+            padding: 8px;
             text-align: left;
         }
 
@@ -67,145 +44,189 @@
 
         button {
             padding: 10px;
-            font-size: 14px;
-            background-color: #4285f4;
-            color: #fff;
-            border: none;
-            cursor: pointer;
-        }
-
-        #add-document-form {
-            margin-top: 20px;
-        }
-
-        #add-document-form input {
-            padding: 8px;
-            font-size: 14px;
-        }
-
-        #add-document-form button {
-            padding: 10px;
             font-size: 16px;
-            background-color: #34a853;
-            color: #fff;
-            border: none;
-            cursor: pointer;
+            margin: 0 10px;
+        }
+
+        input {
+            width: 80%;
+            margin: 10px 0;
+        }
+
+        #documents-table {
+            overflow-y: auto;
+        }
+
+        #file-input {
+            display: none;
         }
     </style>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
 </head>
 
 <body>
-    <h1>Meu Aplicativo de Documentos</h1>
+    <h1>Documentos</h1>
 
-    <!-- Seção principal -->
-    <div id="main-content">
-        <div id="documents-container">
-            <h2>Seus Documentos</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Nome do Documento</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="documents-list">
-                    <!-- Aqui serão listados os documentos -->
-                </tbody>
-            </table>
-        </div>
+    <table id="documents-table">
+        <thead>
+            <tr>
+                <th>Data e Hora</th>
+                <th>Descrição</th>
+                <th>Arquivo</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="documents-body"></tbody>
+    </table>
 
-        <div id="add-document-form">
-            <h2>Adicionar Novo Documento</h2>
-            <input type="text" id="document-name" placeholder="Nome do Documento" required>
-            <button onclick="addDocument()">Adicionar Documento</button>
-        </div>
-    </div>
-
-    <!-- Seção de autenticação -->
-    <div id="auth-section">
-        <label for="password">Digite a senha:</label>
-        <input type="password" id="password">
-        <button onclick="authenticate()">Entrar</button>
-    </div>
+    <input type="text" id="document-description" placeholder="Descrição do Documento">
+    <input type="file" id="file-input" accept=".pdf, .doc, .docx, .txt"> <!-- Aceita arquivos PDF, Word e texto -->
+    <button onclick="selectFile()">Selecionar Arquivo</button>
+    <input type="datetime-local" id="document-date" placeholder="Data do Documento">
+    <button onclick="uploadFile()">Enviar Documento</button>
 
     <script>
-        function checkAuthentication() {
-            const isAuthenticated = localStorage.getItem('authenticated');
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+            measurementId: "G-CVBQ54PERH"
+        };
 
-            if (isAuthenticated === 'true') {
-                document.getElementById('main-content').style.display = 'block';
-                document.getElementById('auth-section').style.display = 'none';
-                // Carregar documentos ou fazer outras operações após a autenticação
-                loadDocuments();
-            } else {
-                document.getElementById('main-content').style.display = 'none';
-                document.getElementById('auth-section').style.display = 'block';
-            }
-        }
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const storage = firebase.storage();
 
-        function authenticate() {
-            const enteredPassword = document.getElementById('password').value;
+        let documents = [];
 
-            if (enteredPassword === '2020') { // Senha definida como "2020"
-                localStorage.setItem('authenticated', 'true');
-                document.getElementById('main-content').style.display = 'block';
-                document.getElementById('auth-section').style.display = 'none';
-                loadDocuments();
-            } else {
-                alert('Senha incorreta. Tente novamente.');
-            }
-        }
+        function initDocuments() {
+            const documentsRef = database.ref('/documents');
 
-        function loadDocuments() {
-            // Simulação: Carregar documentos do armazenamento local
-            const documents = JSON.parse(localStorage.getItem('documents')) || [];
-            const documentsList = document.getElementById('documents-list');
-
-            // Limpar a lista antes de adicionar os documentos
-            documentsList.innerHTML = '';
-
-            // Adicionar cada documento à lista
-            documents.forEach((document, index) => {
-                const row = documentsList.insertRow();
-                const cell1 = row.insertCell(0);
-                const cell2 = row.insertCell(1);
-
-                cell1.innerText = document.name;
-                cell2.innerHTML = `<button onclick="deleteDocument(${index})">Excluir</button>`;
+            documentsRef.on('value', (snapshot) => {
+                const documentsData = snapshot.val();
+                documents = documentsData ? Object.values(documentsData) : [];
+                loadDocumentsTable(documents);
             });
         }
 
-        function addDocument() {
-            const documentName = document.getElementById('document-name').value;
+        function loadDocumentsTable(documents) {
+            const tableBody = document.getElementById('documents-body');
+            tableBody.innerHTML = "";
 
-            if (documentName.trim() !== '') {
-                // Simulação: Adicionar documento ao armazenamento local
-                const documents = JSON.parse(localStorage.getItem('documents')) || [];
-                documents.push({ name: documentName });
-                localStorage.setItem('documents', JSON.stringify(documents));
+            if (Array.isArray(documents)) {
+                documents.forEach((document, index) => {
+                    const row = tableBody.insertRow();
+                    const cellDateTime = row.insertCell(0);
+                    const cellDescription = row.insertCell(1);
+                    const cellFile = row.insertCell(2);
+                    const cellActions = row.insertCell(3);
 
-                // Recarregar a lista de documentos
-                loadDocuments();
+                    const formattedDate = new Date(document.dateTime).toLocaleString('pt-BR');
+
+                    cellDateTime.textContent = formattedDate;
+                    cellDescription.textContent = document.description;
+
+                    // Adicionei um link para baixar o arquivo
+                    const downloadLink = document.file ?
+                        `<a href="${document.file}" target="_blank">Download</a>` : 'Nenhum arquivo';
+
+                    cellFile.innerHTML = downloadLink;
+
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Excluir';
+                    deleteButton.onclick = () => deleteDocument(document.dateTime);
+
+                    cellActions.appendChild(deleteButton);
+                });
             } else {
-                alert('O nome do documento não pode estar em branco.');
+                console.error("Dados de documentos inválidos:", documents);
             }
         }
 
-        function deleteDocument(index) {
-            // Simulação: Excluir documento do armazenamento local
-            const documents = JSON.parse(localStorage.getItem('documents')) || [];
-            documents.splice(index, 1);
-            localStorage.setItem('documents', JSON.stringify(documents));
-
-            // Recarregar a lista de documentos
-            loadDocuments();
+        function selectFile() {
+            // Simula o clique no botão de seleção de arquivo
+            document.getElementById('file-input').click();
         }
 
-        // Ao carregar a página, verifica se o usuário já foi autenticado
+        function uploadFile() {
+            const description = document.getElementById('document-description').value;
+            const date = document.getElementById('document-date').value;
+            const fileInput = document.getElementById('file-input');
+
+            if (!isValidDocument(description, date, fileInput.files[0])) {
+                alert('Por favor, preencha todos os campos corretamente e selecione um arquivo.');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const storageRef = storage.ref();
+            const fileRef = storageRef.child(`documents/${date}_${file.name}`);
+            const uploadTask = fileRef.put(file);
+
+            uploadTask.on('state_changed',
+                (snapshot) => {
+                    // Acompanha o progresso do upload
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    console.log(`Progresso do Upload: ${progress}%`);
+                },
+                (error) => {
+                    // Trata erros durante o upload
+                    console.error('Erro ao enviar o arquivo:', error);
+                },
+                () => {
+                    // Upload concluído com sucesso
+                    uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
+                        const newDocument = {
+                            dateTime: date,
+                            description,
+                            file: downloadURL
+                        };
+                        documents.push(newDocument);
+                        database.ref('/documents').set(documents);
+                    });
+                }
+            );
+        }
+
+        function isValidDocument(description, date, file) {
+            return description.trim() !== '' && date !== '' && file;
+        }
+
+        function deleteDocument(dateTime) {
+            const confirmDelete = confirm('Tem certeza que deseja excluir este documento?');
+
+            if (confirmDelete) {
+                const indexToDelete = documents.findIndex(document => document.dateTime === dateTime);
+                const fileToDelete = documents[indexToDelete].file;
+
+                // Excluir o arquivo do Firebase Storage
+                if (fileToDelete) {
+                    const storageRef = storage.refFromURL(fileToDelete);
+                    storageRef.delete().then(() => {
+                        console.log('Arquivo excluído do Storage com sucesso.');
+                    }).catch((error) => {
+                        console.error('Erro ao excluir o arquivo do Storage:', error);
+                    });
+                }
+
+                // Excluir o documento do banco de dados
+                documents.splice(indexToDelete, 1);
+                database.ref('/documents').set(documents);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
-            checkAuthentication();
+            initDocuments();
         });
     </script>
 </body>
+
+</html>
 
 </html>
