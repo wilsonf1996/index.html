@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 
 <head>
     <meta charset="UTF-8">
@@ -48,10 +48,16 @@
         #expenses-table {
             overflow-y: auto;
         }
+
+        canvas {
+            margin-top: 20px;
+        }
     </style>
     <!-- Carregue a biblioteca do Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <!-- Carregue a biblioteca do Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -81,6 +87,10 @@
     <button onclick="createOrUpdateExpense()">Registrar Gasto/Receita</button>
     <button onclick="generateReport()">Gerar Relatório</button>
     <button onclick="goToHomePage()">Voltar para a Página Principal</button>
+
+    <canvas id="expense-chart" width="400" height="200"></canvas>
+    <canvas id="income-chart" width="400" height="200"></canvas>
+    <canvas id="balance-chart" width="400" height="200"></canvas>
 
     <script>
         // Configuração do Firebase
@@ -162,7 +172,7 @@
 
             if (existingExpenseIndex !== -1) {
                 // Editar despesa ou receita existente
-                const editedType = prompt('Editar Tipo (expense ou income):', expenses[existingExpenseIndex].type);
+                const editedType = prompt('Editar Tipo (despesa ou receita):', expenses[existingExpenseIndex].type);
                 expenses[existingExpenseIndex].description = description;
                 expenses[existingExpenseIndex].amount = amount;
                 expenses[existingExpenseIndex].type = editedType;
@@ -173,128 +183,112 @@
             }
 
             database.ref('/expenses').set(expenses);
+            // Atualiza os gráficos ao criar ou atualizar uma despesa/receita
+            drawExpenseChart();
+            drawIncomeChart();
+            drawBalanceChart();
         }
 
-        function isValidExpense(description, amount, date) {
-            return description.trim() !== '' && !isNaN(amount) && date !== '';
+        // Restante do código...
+
+        function drawExpenseChart() {
+            const expenseCanvas = document.getElementById('expense-chart');
+            const expenseCtx = expenseCanvas.getContext('2d');
+
+            const expenseData = expenses.filter(expense => expense.type === 'expense');
+            const expenseLabels = expenseData.map(expense => new Date(expense.dateTime).toLocaleDateString('pt-BR'));
+            const expenseAmounts = expenseData.map(expense => expense.amount);
+
+            new Chart(expenseCtx, {
+                type: 'bar',
+                data: {
+                    labels: expenseLabels,
+                    datasets: [{
+                        label: 'Despesas',
+                        data: expenseAmounts,
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
         }
 
-        function editExpense(index) {
-            const editedDescription = prompt('Editar Descrição:', expenses[index].description);
-            const editedAmount = parseFloat(prompt('Editar Valor (R$):', expenses[index].amount.toFixed(2)));
-            const editedType = prompt('Editar Tipo (expense ou income):', expenses[index].type);
+        function drawIncomeChart() {
+            const incomeCanvas = document.getElementById('income-chart');
+            const incomeCtx = incomeCanvas.getContext('2d');
 
-            if (isValidExpense(editedDescription, editedAmount, expenses[index].dateTime)) {
-                expenses[index].description = editedDescription;
-                expenses[index].amount = editedAmount;
-                expenses[index].type = editedType;
+            const incomeData = expenses.filter(expense => expense.type === 'income');
+            const incomeLabels = incomeData.map(expense => new Date(expense.dateTime).toLocaleDateString('pt-BR'));
+            const incomeAmounts = incomeData.map(expense => expense.amount);
 
-                database.ref('/expenses').set(expenses);
-            } else {
-                alert('Edição cancelada ou valores inválidos.');
-            }
+            new Chart(incomeCtx, {
+                type: 'bar',
+                data: {
+                    labels: incomeLabels,
+                    datasets: [{
+                        label: 'Receitas',
+                        data: incomeAmounts,
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
         }
 
-        function deleteExpense(dateTime) {
-            const confirmDelete = confirm('Tem certeza que deseja excluir este item?');
+        function drawBalanceChart() {
+            const balanceCanvas = document.getElementById('balance-chart');
+            const balanceCtx = balanceCanvas.getContext('2d');
 
-            if (confirmDelete) {
-                const indexToDelete = expenses.findIndex(expense => expense.dateTime === dateTime);
-                expenses.splice(indexToDelete, 1);
+            const balanceData = expenses.map(expense => {
+                return {
+                    date: new Date(expense.dateTime).toLocaleDateString('pt-BR'),
+                    amount: expense.type === 'income' ? expense.amount : -expense.amount
+                };
+            });
 
-                database.ref('/expenses').set(expenses);
-            }
+            const uniqueDates = [...new Set(balanceData.map(entry => entry.date))];
+            const balanceAmounts = uniqueDates.map(date => {
+                const entriesOnDate = balanceData.filter(entry => entry.date === date);
+                return entriesOnDate.reduce((sum, entry) => sum + entry.amount, 0);
+            });
+
+            new Chart(balanceCtx, {
+                type: 'line',
+                data: {
+                    labels: uniqueDates,
+                    datasets: [{
+                        label: 'Balanço',
+                        data: balanceAmounts,
+                        fill: false,
+                        borderColor: 'rgba(255, 206, 86, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: false
+                        }
+                    }
+                }
+            });
         }
-
-        function generateReport() {
-            const reportType = prompt('Informe o tipo de relatório (expenses, income, balance):');
-
-            switch (reportType) {
-                case 'expenses':
-                    generateExpensesReport();
-                    break;
-                case 'income':
-                    generateIncomeReport();
-                    break;
-                case 'balance':
-                    generateBalanceReport();
-                    break;
-                default:
-                    alert('Tipo de relatório inválido.');
-            }
-        }
-
-        function generateExpensesReport() {
-            const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
-            const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
-
-            if (startDate && endDate) {
-                const filteredExpenses = expenses.filter(expense => {
-                    return expense.type === 'expense' &&
-                        new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
-                        new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
-                });
-
-                const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-                alert(`Total de Despesas no Período: R$ ${totalExpenses.toFixed(2)}`);
-            } else {
-                alert('Período inválido ou não informado.');
-            }
-        }
-
-        function generateIncomeReport() {
-            const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
-            const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
-
-            if (startDate && endDate) {
-                const filteredIncome = expenses.filter(expense => {
-                    return expense.type === 'income' &&
-                        new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
-                        new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
-                });
-
-                const totalIncome = filteredIncome.reduce((sum, income) => sum + income.amount, 0);
-                alert(`Total de Receitas no Período: R$ ${totalIncome.toFixed(2)}`);
-            } else {
-                alert('Período inválido ou não informado.');
-            }
-        }
-
-        function generateBalanceReport() {
-            const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
-            const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
-
-            if (startDate && endDate) {
-                const filteredExpenses = expenses.filter(expense => {
-                    return new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
-                        new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
-                });
-
-                const totalIncome = filteredExpenses.reduce((sum, expense) => {
-                    return expense.type === 'income' ? sum + expense.amount : sum;
-                }, 0);
-
-                const totalExpenses = filteredExpenses.reduce((sum, expense) => {
-                    return expense.type === 'expense' ? sum + expense.amount : sum;
-                }, 0);
-
-                const balance = totalIncome - totalExpenses;
-
-                alert(`Total de Receitas no Período: R$ ${totalIncome.toFixed(2)}\nTotal de Despesas no Período: R$ ${totalExpenses.toFixed(2)}\nBalanço: R$ ${balance.toFixed(2)}`);
-            } else {
-                alert('Período inválido ou não informado.');
-            }
-        }
-
-        function goToHomePage() {
-            // Aqui, você pode redirecionar para a página inicial do seu aplicativo.
-            // window.location.href = 'https://seusite.com';
-            alert('Redirecionamento para a Página Inicial.');
-        }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            initExpenses();
-        });
     </script>
 </body>
 
