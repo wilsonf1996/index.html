@@ -1,1 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meus Contatos</title>
+    <style>
+        /* Estilos semelhantes ao seu código anterior permanecem aqui */
+    </style>
+</head>
+
+<body>
+    <h1>Meus Contatos</h1>
+
+    <table id="contacts-table">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Empresa</th>
+                <th>Telefone</th>
+                <th>Rede Social</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="contacts-body"></tbody>
+    </table>
+
+    <div>
+        <label for="contact-name">Nome:</label>
+        <input type="text" id="contact-name" placeholder="Digite o nome...">
+        <label for="contact-email">Email:</label>
+        <input type="text" id="contact-email" placeholder="Digite o email...">
+        <label for="contact-company">Empresa:</label>
+        <input type="text" id="contact-company" placeholder="Digite a empresa...">
+        <label for="contact-phone">Telefone:</label>
+        <input type="text" id="contact-phone" placeholder="Digite o telefone...">
+        <label for="contact-social">Rede Social:</label>
+        <input type="text" id="contact-social" placeholder="Digite a rede social...">
+    </div>
+
+    <button onclick="createOrUpdateContact()">Adicionar Contato</button>
+    <button onclick="goToHomePage()">Voltar para a Página Principal</button>
+
+    <!-- Firebase JavaScript SDK v8 -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:7a1690aa6d89bb07dc086c",
+            measurementId: "G-PBQGHC30M1",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com/"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const contactsRef = database.ref('contacts');
+
+        let contacts = [];
+
+        function initContacts() {
+            contactsRef.on('value', (snapshot) => {
+                contacts = snapshot.val() || [];
+                updateContactsTable();
+            }, (error) => {
+                console.error("Erro ao recuperar contatos:", error);
+            });
+        }
+
+        function createOrUpdateContact() {
+            const name = document.getElementById('contact-name').value.trim();
+            const email = document.getElementById('contact-email').value.trim();
+            const company = document.getElementById('contact-company').value.trim();
+            const phone = document.getElementById('contact-phone').value.trim();
+            const social = document.getElementById('contact-social').value.trim();
+
+            if (name && email && company && phone && social) {
+                const newContact = { name, email, company, phone, social };
+                const existingContactIndex = findContactIndexByName(name);
+
+                if (existingContactIndex !== -1) {
+                    // If contact with the current name exists, update it
+                    contacts[existingContactIndex] = newContact;
+                } else {
+                    // Otherwise, create a new contact
+                    contacts.push(newContact);
+                }
+
+                // Atualiza o banco de dados em tempo real
+                contactsRef.set(contacts);
+                resetContactForm();
+            }
+        }
+
+        function findContactIndexByName(name) {
+            return contacts.findIndex(contact => contact.name === name);
+        }
+
+        function editContact(name) {
+            const existingContact = contacts.find(contact => contact.name === name);
+            document.getElementById('contact-name').value = existingContact.name;
+            document.getElementById('contact-email').value = existingContact.email;
+            document.getElementById('contact-company').value = existingContact.company;
+            document.getElementById('contact-phone').value = existingContact.phone;
+            document.getElementById('contact-social').value = existingContact.social;
+        }
+
+        function deleteContact(name) {
+            const confirmDelete = confirm('Tem certeza que deseja excluir este contato?');
+            if (confirmDelete) {
+                contacts = contacts.filter(contact => contact.name !== name);
+                // Atualiza o banco de dados em tempo real
+                contactsRef.set(contacts);
+                resetContactForm();
+            }
+        }
+
+        function updateContactsTable() {
+            const contactsBody = document.getElementById('contacts-body');
+            contactsBody.innerHTML = '';
+
+            contacts.forEach(contact => {
+                const row = contactsBody.insertRow();
+                const nameCell = row.insertCell(0);
+                const emailCell = row.insertCell(1);
+                const companyCell = row.insertCell(2);
+                const phoneCell = row.insertCell(3);
+                const socialCell = row.insertCell(4);
+                const actionsCell = row.insertCell(5);
+
+                nameCell.textContent = contact.name;
+                emailCell.textContent = contact.email;
+                companyCell.textContent = contact.company;
+                phoneCell.textContent = contact.phone;
+                socialCell.textContent = contact.social;
+
+                const editButton = document.createElement('button');
+                editButton.textContent = 'Editar';
+                editButton.onclick = () => editContact(contact.name);
+
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Excluir';
+                deleteButton.onclick = () => deleteContact(contact.name);
+
+                actionsCell.appendChild(editButton);
+                actionsCell.appendChild(deleteButton);
+            });
+        }
+
+        function resetContactForm() {
+            document.getElementById('contact-name').value = '';
+            document.getElementById('contact-email').value = '';
+            document.getElementById('contact-company').value = '';
+            document.getElementById('contact-phone').value = '';
+            document.getElementById('contact-social').value = '';
+        }
+
+        function goToHomePage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html';
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            initContacts();
+        });
+    </script>
+</body>
+
+</html>
 
