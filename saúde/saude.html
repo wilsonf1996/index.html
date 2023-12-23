@@ -67,17 +67,27 @@
         <thead>
             <tr>
                 <th>Data e Hora</th>
+                <th>Idade</th>
+                <th>Sexo</th>
                 <th>Altura</th>
                 <th>Peso</th>
                 <th>IMC</th>
+                <th>Meta de Peso</th>
                 <th>Ações</th>
             </tr>
         </thead>
         <tbody id="health-data-body"></tbody>
     </table>
 
+    <input id="date-input" type="datetime-local" placeholder="Data e Hora">
+    <input id="age-input" type="number" placeholder="Idade">
+    <select id="gender-select" placeholder="Sexo">
+        <option value="male">Masculino</option>
+        <option value="female">Feminino</option>
+    </select>
     <input id="height-input" type="number" placeholder="Altura (cm)">
     <input id="weight-input" type="number" placeholder="Peso (kg)">
+    <input id="goal-weight-input" type="number" placeholder="Meta de Peso (kg)">
     <button onclick="calculateAndSaveHealthData()">Calcular e Salvar Dados de Saúde</button>
     <button onclick="goToHomePage()">Voltar para a Página Principal</button>
 
@@ -113,34 +123,60 @@
         }
 
         function calculateAndSaveHealthData() {
+            const date = document.getElementById('date-input').value;
+            const age = parseInt(document.getElementById('age-input').value);
+            const gender = document.getElementById('gender-select').value;
             const height = parseFloat(document.getElementById('height-input').value);
             const weight = parseFloat(document.getElementById('weight-input').value);
+            const goalWeight = parseFloat(document.getElementById('goal-weight-input').value);
 
-            if (!isNaN(height) && !isNaN(weight) && height > 0 && weight > 0) {
+            if (!isNaN(age) && !isNaN(height) && !isNaN(weight) && !isNaN(goalWeight) && age > 0 && height > 0 && weight > 0 && goalWeight > 0) {
                 const currentDate = new Date().getTime();
                 const bmi = calculateBMI(height, weight);
+                const status = evaluateWeightStatus(bmi);
                 const newHealthData = {
                     id: currentDate,
+                    date: date,
+                    age: age,
+                    gender: gender,
                     height: height,
                     weight: weight,
                     bmi: bmi,
-                    date: new Date(currentDate).toLocaleString()
+                    goalWeight: goalWeight,
+                    status: status,
+                    dateCreated: new Date(currentDate).toLocaleString()
                 };
 
                 healthData.push(newHealthData);
                 healthDataRef.set(healthData);
 
                 // Limpa os campos de entrada
+                document.getElementById('date-input').value = '';
+                document.getElementById('age-input').value = '';
+                document.getElementById('gender-select').value = 'male';
                 document.getElementById('height-input').value = '';
                 document.getElementById('weight-input').value = '';
+                document.getElementById('goal-weight-input').value = '';
             } else {
-                alert('Por favor, insira valores válidos para altura e peso.');
+                alert('Por favor, insira valores válidos para idade, altura, peso e meta de peso.');
             }
         }
 
         function calculateBMI(height, weight) {
             // Fórmula do Índice de Massa Corporal (IMC)
             return (weight / Math.pow(height / 100, 2)).toFixed(2);
+        }
+
+        function evaluateWeightStatus(bmi) {
+            if (bmi < 18.5) {
+                return 'Abaixo do peso';
+            } else if (bmi >= 18.5 && bmi < 24.9) {
+                return 'Peso normal';
+            } else if (bmi >= 25 && bmi < 29.9) {
+                return 'Sobrepeso';
+            } else {
+                return 'Obesidade';
+            }
         }
 
         function updateHealthDataTable() {
@@ -150,15 +186,23 @@
             healthData.forEach(entry => {
                 const row = healthDataBody.insertRow();
                 const dateCell = row.insertCell(0);
-                const heightCell = row.insertCell(1);
-                const weightCell = row.insertCell(2);
-                const bmiCell = row.insertCell(3);
-                const actionsCell = row.insertCell(4);
+                const ageCell = row.insertCell(1);
+                const genderCell = row.insertCell(2);
+                const heightCell = row.insertCell(3);
+                const weightCell = row.insertCell(4);
+                const bmiCell = row.insertCell(5);
+                const goalWeightCell = row.insertCell(6);
+                const statusCell = row.insertCell(7);
+                const actionsCell = row.insertCell(8);
 
                 dateCell.textContent = entry.date;
+                ageCell.textContent = entry.age;
+                genderCell.textContent = entry.gender;
                 heightCell.textContent = entry.height + ' cm';
                 weightCell.textContent = entry.weight + ' kg';
                 bmiCell.textContent = entry.bmi;
+                goalWeightCell.textContent = entry.goalWeight + ' kg';
+                statusCell.textContent = entry.status;
 
                 const editButton = document.createElement('button');
                 editButton.textContent = 'Editar';
@@ -181,17 +225,26 @@
         function editHealthData(id) {
             const entry = healthData.find(entry => entry.id === id);
             if (entry) {
+                const newDate = prompt('Editar Data e Hora:', entry.date);
+                const newAge = prompt('Editar Idade:', entry.age);
+                const newGender = prompt('Editar Sexo:', entry.gender);
                 const newHeight = prompt('Editar Altura:', entry.height);
                 const newWeight = prompt('Editar Peso:', entry.weight);
+                const newGoalWeight = prompt('Editar Meta de Peso:', entry.goalWeight);
 
-                if (!isNaN(newHeight) && !isNaN(newWeight) && newHeight > 0 && newWeight > 0) {
+                if (!isNaN(newAge) && !isNaN(newHeight) && !isNaN(newWeight) && !isNaN(newGoalWeight) && newAge > 0 && newHeight > 0 && newWeight > 0 && newGoalWeight > 0) {
+                    entry.date = newDate;
+                    entry.age = parseInt(newAge);
+                    entry.gender = newGender;
                     entry.height = parseFloat(newHeight);
                     entry.weight = parseFloat(newWeight);
+                    entry.goalWeight = parseFloat(newGoalWeight);
                     entry.bmi = calculateBMI(entry.height, entry.weight);
+                    entry.status = evaluateWeightStatus(entry.bmi);
 
                     healthDataRef.set(healthData);
                 } else {
-                    alert('Por favor, insira valores válidos para altura e peso.');
+                    alert('Por favor, insira valores válidos para data, idade, altura, peso e meta de peso.');
                 }
             }
         }
@@ -199,9 +252,13 @@
         function viewHealthData(entry) {
             alert(`
                 Data e Hora: ${entry.date}
+                Idade: ${entry.age}
+                Sexo: ${entry.gender}
                 Altura: ${entry.height} cm
                 Peso: ${entry.weight} kg
                 IMC: ${entry.bmi}
+                Meta de Peso: ${entry.goalWeight} kg
+                Status: ${entry.status}
             `);
         }
 
