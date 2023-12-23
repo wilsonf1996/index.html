@@ -52,47 +52,35 @@
             margin: 10px 0;
         }
 
-        #folders-table, #files-table {
+        #files-table {
             overflow-y: auto;
         }
     </style>
-
     <!-- Carregue a biblioteca do Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js" integrity="sha512-S1QFkAqzl6R5z/Z/YHOO2gqMTSFWjA9b7NpGAlfBtGHufBLBgayz9m7D+i9ISn2glTkwSU7M9ArRF5vybPWqHg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 
 <body>
     <h1>Documentos</h1>
 
-    <table id="folders-table">
-        <thead>
-            <tr>
-                <th>Nome da Pasta</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody id="folders-body"></tbody>
-    </table>
-
     <table id="files-table">
         <thead>
             <tr>
                 <th>Nome do Arquivo</th>
-                <th>Tipo</th>
-                <th>Data e Hora do Upload</th>
+                <th>Data e Hora de Upload</th>
                 <th>Ações</th>
             </tr>
         </thead>
         <tbody id="files-body"></tbody>
     </table>
 
-    <input type="file" id="file-input">
-    <input type="text" id="folder-name" placeholder="Nome da Pasta">
-    <button onclick="uploadFile()">Enviar Arquivo</button>
+    <input type="text" id="folder-name" placeholder="Nome da Nova Pasta">
+    <button onclick="createFolder()">Criar Nova Pasta</button>
+    <input type="file" id="file-input" />
+    <button onclick="uploadFile()">Fazer Upload do Arquivo</button>
+    <button onclick="downloadFile()">Baixar Arquivo</button>
+    <button onclick="deleteFile()">Excluir Arquivo</button>
     <button onclick="goToParentFolder()">Voltar para a Pasta Anterior</button>
 
     <script>
@@ -110,23 +98,14 @@
 
         // Inicialização do Firebase
         const app = firebase.initializeApp(firebaseConfig);
-        const storage = firebase.storage();
         const database = firebase.database();
 
+        // Variáveis globais
         let currentFolder = '/';
-        let folders = [];
         let files = [];
 
-        function initFoldersAndFiles() {
-            const foldersRef = database.ref('/folders');
-            const filesRef = database.ref('/files');
-
-            foldersRef.on('value', (snapshot) => {
-                const foldersData = snapshot.val();
-                folders = foldersData ? Object.values(foldersData) : [];
-                loadFoldersTable(folders);
-            });
-
+        function initFiles() {
+            const filesRef = database.ref(`/files${currentFolder}`);
             filesRef.on('value', (snapshot) => {
                 const filesData = snapshot.val();
                 files = filesData ? Object.values(filesData) : [];
@@ -134,52 +113,27 @@
             });
         }
 
-        function loadFoldersTable(folders) {
-            const foldersTableBody = document.getElementById('folders-body');
-            foldersTableBody.innerHTML = "";
-
-            if (Array.isArray(folders)) {
-                folders.forEach((folder, index) => {
-                    const row = foldersTableBody.insertRow();
-                    const cellFolderName = row.insertCell(0);
-                    const cellActions = row.insertCell(1);
-
-                    cellFolderName.textContent = folder.name;
-
-                    const enterFolderButton = document.createElement('button');
-                    enterFolderButton.textContent = 'Entrar na Pasta';
-                    enterFolderButton.onclick = () => enterFolder(folder.name);
-
-                    cellActions.appendChild(enterFolderButton);
-                });
-            } else {
-                console.error("Dados de pastas inválidos:", folders);
-            }
-        }
-
         function loadFilesTable(files) {
-            const filesTableBody = document.getElementById('files-body');
-            filesTableBody.innerHTML = "";
+            const tableBody = document.getElementById('files-body');
+            tableBody.innerHTML = "";
 
             if (Array.isArray(files)) {
-                files.forEach((file, index) => {
-                    const row = filesTableBody.insertRow();
+                files.forEach((file) => {
+                    const row = tableBody.insertRow();
                     const cellFileName = row.insertCell(0);
-                    const cellFileType = row.insertCell(1);
-                    const cellUploadDateTime = row.insertCell(2);
-                    const cellActions = row.insertCell(3);
+                    const cellUploadDateTime = row.insertCell(1);
+                    const cellActions = row.insertCell(2);
 
                     cellFileName.textContent = file.name;
-                    cellFileType.textContent = file.type;
-                    cellUploadDateTime.textContent = new Date(file.uploadDateTime).toLocaleString('pt-BR');
+                    cellUploadDateTime.textContent = file.uploadDateTime;
 
                     const downloadButton = document.createElement('button');
                     downloadButton.textContent = 'Baixar';
-                    downloadButton.onclick = () => downloadFile(file.name);
+                    downloadButton.onclick = () => downloadFile(file);
 
                     const deleteButton = document.createElement('button');
                     deleteButton.textContent = 'Excluir';
-                    deleteButton.onclick = () => deleteFile(file.name);
+                    deleteButton.onclick = () => deleteFile(file);
 
                     cellActions.appendChild(downloadButton);
                     cellActions.appendChild(deleteButton);
@@ -189,115 +143,109 @@
             }
         }
 
-        function enterFolder(folderName) {
-            // Atualiza a pasta atual e recarrega as tabelas
-            currentFolder = currentFolder === '/' ? `/${folderName}` : `${currentFolder}/${folderName}`;
-            loadFoldersTable(folders.filter(folder => folder.parent === currentFolder));
-            loadFilesTable(files.filter(file => file.folder === currentFolder));
-        }
-
-        function goToParentFolder() {
-            // Volta para a pasta anterior
-            if (currentFolder !== '/') {
-                const parentFolder = currentFolder.split('/').slice(0, -1).join('/');
-                currentFolder = parentFolder === '' ? '/' : parentFolder;
-                loadFoldersTable(folders.filter(folder => folder.parent === currentFolder));
-                loadFilesTable(files.filter(file => file.folder === currentFolder));
+        function createFolder() {
+            const folderName = document.getElementById('folder-name').value.trim();
+            if (folderName !== '') {
+                const newFolderPath = `${currentFolder}${folderName}/`;
+                database.ref(`/files${newFolderPath}`).set([]);
+                alert(`Nova pasta "${folderName}" criada com sucesso!`);
+            } else {
+                alert('Por favor, insira um nome válido para a nova pasta.');
             }
         }
 
         function uploadFile() {
             const fileInput = document.getElementById('file-input');
-            const folderName = document.getElementById('folder-name').value;
+            const file = fileInput.files[0];
 
-            // Verifica se um arquivo foi selecionado
-            if (!fileInput.files[0]) {
-                alert('Selecione um arquivo.');
-                return;
-            }
+            if (file) {
+                const uploadDateTime = getCurrentDateTime();
+                const newFilePath = `${currentFolder}${file.name}`;
+                const fileRef = firebase.storage().ref(newFilePath);
 
-            // Verifica se o nome da pasta foi fornecido
-            if (folderName.trim() === '') {
-                alert('Digite um nome de pasta.');
-                return;
-            }
-
-            // Cria um objeto de detalhes do arquivo
-            const fileDetails = {
-                name: fileInput.files[0].name,
-                type: fileInput.files[0].type,
-                folder: currentFolder,
-                uploadDateTime: new Date().toISOString()  // Data e hora do upload
-            };
-
-            // Envia o arquivo para o Storage
-            const storageRef = storage.ref(`${currentFolder}/${fileInput.files[0].name}`);
-            storageRef.put(fileInput.files[0]).then(() => {
-                // Adiciona os detalhes do arquivo à lista no banco
-
-                if (folders.findIndex(folder => folder.name === folderName && folder.parent === currentFolder) === -1) {
-                    const folder = {
-                        name: folderName,
-                        parent: currentFolder
+                fileRef.put(file).then(() => {
+                    // Atualizar dados no Realtime Database
+                    const newFile = {
+                        name: file.name,
+                        uploadDateTime: uploadDateTime
                     };
-                    folders.push(folder);
-                    database.ref('/folders').set(folders);
-                }
+                    const updatedFiles = [...files, newFile];
+                    database.ref(`/files${currentFolder}`).set(updatedFiles);
 
-                files.push(fileDetails);
-                database.ref('/files').set(files);
-
-                // Limpa o input e a área de nome da pasta
-                fileInput.value = '';
-                document.getElementById('folder-name').value = '';
-
-                // Atualiza a tabela
-                loadFoldersTable(folders.filter(folder => folder.parent === currentFolder));
-                loadFilesTable(files.filter(file => file.folder === currentFolder));
-            });
+                    alert(`Arquivo "${file.name}" enviado com sucesso!`);
+                }).catch((error) => {
+                    console.error('Erro ao enviar o arquivo:', error.message);
+                    alert('Erro ao enviar o arquivo. Por favor, tente novamente.');
+                });
+            } else {
+                alert('Por favor, selecione um arquivo para fazer o upload.');
+            }
         }
 
-        function downloadFile(fileName) {
-            const fileRef = storage.ref(fileName);
+        function downloadFile(file) {
+            const filePath = `${currentFolder}${file.name}`;
+            const fileRef = firebase.storage().ref(filePath);
 
-            // Obtém o URL do arquivo no Storage
             fileRef.getDownloadURL().then((url) => {
-                // Cria um link temporário e o aciona para iniciar o download
-                const link = document.createElement('a');
-                link.href = url;
-                link.setAttribute('download', fileName);
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+                window.open(url, '_blank');
+            }).catch((error) => {
+                console.error('Erro ao obter o URL de download:', error.message);
+                alert('Erro ao obter o URL de download. Por favor, tente novamente.');
             });
         }
 
-        function deleteFile(fileName) {
-            const confirmDelete = confirm('Tem certeza que deseja excluir este arquivo?');
+        function deleteFile(file) {
+            const confirmDelete = confirm(`Tem certeza que deseja excluir o arquivo "${file.name}"?`);
 
             if (confirmDelete) {
-                // Exclui o arquivo do Storage
-                storage.ref(fileName).delete().then(() => {
-                    // Remove o arquivo da lista no banco de dados
-                    files = files.filter(file => file.name !== fileName);
-                    database.ref('/files').set(files);
+                const filePath = `${currentFolder}${file.name}`;
+                const fileRef = firebase.storage().ref(filePath);
 
-                    // Atualiza a tabela
-                    loadFilesTable(files.filter(file => file.folder === currentFolder));
+                fileRef.delete().then(() => {
+                    // Atualizar dados no Realtime Database
+                    const updatedFiles = files.filter(f => f.name !== file.name);
+                    database.ref(`/files${currentFolder}`).set(updatedFiles);
+
+                    alert(`Arquivo "${file.name}" excluído com sucesso!`);
+                }).catch((error) => {
+                    console.error('Erro ao excluir o arquivo:', error.message);
+                    alert('Erro ao excluir o arquivo. Por favor, tente novamente.');
                 });
             }
         }
 
-        function goToHomePage() {
-            window.location.href = 'https://wilsonf1996.github.io/index.html/';
-            alert('Redirecionamento para a Página Inicial.');
+        function getCurrentDateTime() {
+            const now = new Date();
+            return now.toLocaleString('pt-BR');
+        }
+
+        function goToParentFolder() {
+            if (currentFolder !== '/') {
+                // Remover a última parte do caminho para voltar à pasta anterior
+                const parts = currentFolder.split('/').filter(part => part !== '');
+                parts.pop();
+                const parentFolder = `/${parts.join('/')}/`;
+
+                // Carregar arquivos da pasta anterior
+                currentFolder = parentFolder;
+                const filesRef = database.ref(`/files${currentFolder}`);
+                filesRef.off(); // Desligar listener para a pasta atual
+                initFiles(); // Iniciar listener para a nova pasta
+
+                alert(`Entrou na pasta "${parts.pop()}"`);
+            } else {
+                alert('Já está na raiz. Não pode voltar mais para trás.');
+            }
         }
 
         document.addEventListener('DOMContentLoaded', function () {
-            initFoldersAndFiles();
+            initFiles();
         });
     </script>
 </body>
+
+</html>
+
 
 </html>
 
