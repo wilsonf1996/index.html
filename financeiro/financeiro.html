@@ -48,20 +48,6 @@
         #expenses-table {
             overflow-y: auto;
         }
-
-        #charts {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-top: 20px;
-        }
-
-        canvas {
-            width: 80%;
-            max-width: 400px;
-            height: auto;
-            margin: 10px 0;
-        }
     </style>
     <!-- Carregue a biblioteca do Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
@@ -71,45 +57,30 @@
 <body>
     <h1>Financeiro</h1>
 
-    <section>
-        <table id="expenses-table">
-            <thead>
-                <tr>
-                    <th>Data e Hora</th>
-                    <th>Descrição</th>
-                    <th>Tipo</th>
-                    <th>Valor (R$)</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody id="expenses-body"></tbody>
-        </table>
+    <table id="expenses-table">
+        <thead>
+            <tr>
+                <th>Data e Hora</th>
+                <th>Descrição</th>
+                <th>Tipo</th>
+                <th>Valor (R$)</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="expenses-body"></tbody>
+    </table>
 
-        <input type="text" id="expense-description" placeholder="Descrição do Gasto/Receita">
-        <input type="number" id="expense-amount" placeholder="Valor (R$)">
-        <input type="datetime-local" id="expense-date" placeholder="Data do Gasto/Receita">
-        <label for="expense-type">Tipo:</label>
-        <select id="expense-type">
-            <option value="expense">Despesa</option>
-            <option value="income">Receita</option>
-        </select>
-        <button onclick="createOrUpdateExpense()">Registrar Gasto/Receita</button>
-        <button onclick="generateReport()">Gerar Relatório</button>
-        <button onclick="goToHomePage()">Voltar para a Página Principal</button>
-    </section>
-
-    <section id="charts">
-        <label for="chart-interval">Selecione o Intervalo de Tempo:</label>
-        <select id="chart-interval" onchange="updateCharts()">
-            <option value="all">Todo o Período</option>
-            <option value="last-week">Última Semana</option>
-            <option value="last-month">Último Mês</option>
-        </select>
-
-        <canvas id="expense-chart"></canvas>
-        <canvas id="income-chart"></canvas>
-        <canvas id="balance-chart"></canvas>
-    </section>
+    <input type="text" id="expense-description" placeholder="Descrição do Gasto/Receita">
+    <input type="number" id="expense-amount" placeholder="Valor (R$)">
+    <input type="datetime-local" id="expense-date" placeholder="Data do Gasto/Receita">
+    <label for="expense-type">Tipo:</label>
+    <select id="expense-type">
+        <option value="expense">Despesa</option>
+        <option value="income">Receita</option>
+    </select>
+    <button onclick="createOrUpdateExpense()">Registrar Gasto/Receita</button>
+    <button onclick="generateReport()">Gerar Relatório</button>
+    <button onclick="goToHomePage()">Voltar para a Página Principal</button>
 
     <script>
         // Configuração do Firebase
@@ -137,9 +108,6 @@
                 const expensesData = snapshot.val();
                 expenses = expensesData ? Object.values(expensesData) : [];
                 loadExpensesTable(expenses);
-                drawExpenseChart();
-                drawIncomeChart();
-                drawBalanceChart();
             });
         }
 
@@ -211,21 +179,24 @@
             return description.trim() !== '' && !isNaN(amount) && date !== '';
         }
 
-        function editExpense(index) {
-            const editedDescription = prompt('Editar Descrição:', expenses[index].description);
-            const editedAmount = parseFloat(prompt('Editar Valor (R$):', expenses[index].amount.toFixed(2)));
-            const editedType = prompt('Editar Tipo (expense ou income):', expenses[index].type);
+       function editExpense(index) {
+        const editedDescription = prompt('Editar Descrição:', expenses[index].description);
+        const editedAmount = parseFloat(prompt('Editar Valor (R$):', expenses[index].amount.toFixed(2)));
+        const editedType = prompt('Editar Tipo (expense ou income):', expenses[index].type);
+        const editedDateTime = prompt('Editar Data e Hora (AAAA-MM-DDTHH:mm):', expenses[index].dateTime);
 
-            if (isValidExpense(editedDescription, editedAmount, expenses[index].dateTime)) {
-                expenses[index].description = editedDescription;
-                expenses[index].amount = editedAmount;
-                expenses[index].type = editedType;
+        if (isValidExpense(editedDescription, editedAmount, editedDateTime)) {
+            expenses[index].description = editedDescription;
+            expenses[index].amount = editedAmount;
+            expenses[index].type = editedType;
+            expenses[index].dateTime = editedDateTime;
 
-                database.ref('/expenses').set(expenses);
-            } else {
-                alert('Edição cancelada ou valores inválidos.');
-            }
+            database.ref('/expenses').set(expenses);
+        } else {
+            alert('Edição cancelada ou valores inválidos.');
         }
+    }
+
 
         function deleteExpense(dateTime) {
             const confirmDelete = confirm('Tem certeza que deseja excluir este item?');
@@ -321,101 +292,8 @@
         function goToHomePage() {
             // Aqui, você pode redirecionar para a página inicial do seu aplicativo.
             // window.location.href = 'https://seusite.com';
-            window.location.href = 'https://wilsonf1996.github.io/index.html/';
             alert('Redirecionamento para a Página Inicial.');
         }
-
-      // Funções para desenhar os gráficos
-function drawExpenseChart() {
-    const expenseData = expenses.filter(expense => expense.type === 'expense');
-    const expenseLabels = expenseData.map(expense => new Date(expense.dateTime).toLocaleDateString('pt-BR'));
-    const expenseAmounts = expenseData.map(expense => expense.amount);
-
-    const expenseChartContext = document.getElementById('expense-chart').getContext('2d');
-    const expenseChart = new Chart(expenseChartContext, {
-        type: 'bar',
-        data: {
-            labels: expenseLabels,
-            datasets: [{
-                label: 'Despesas',
-                data: expenseAmounts,
-                backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                borderColor: 'rgba(255, 99, 132, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-}
-
-function drawIncomeChart() {
-    const incomeData = expenses.filter(expense => expense.type === 'income');
-    const incomeLabels = incomeData.map(income => new Date(income.dateTime).toLocaleDateString('pt-BR'));
-    const incomeAmounts = incomeData.map(income => income.amount);
-
-    const incomeChartContext = document.getElementById('income-chart').getContext('2d');
-    const incomeChart = new Chart(incomeChartContext, {
-        type: 'bar',
-        data: {
-            labels: incomeLabels,
-            datasets: [{
-                label: 'Receitas',
-                data: incomeAmounts,
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-}
-
-function drawBalanceChart() {
-    const balanceData = expenses.map(expense => ({
-        date: new Date(expense.dateTime).toLocaleDateString('pt-BR'),
-        amount: expense.type === 'income' ? expense.amount : -expense.amount
-    }));
-
-    const uniqueDates = [...new Set(balanceData.map(item => item.date))];
-    const balanceAmounts = uniqueDates.map(date =>
-        balanceData.filter(item => item.date === date).reduce((sum, item) => sum + item.amount, 0)
-    );
-
-    const balanceChartContext = document.getElementById('balance-chart').getContext('2d');
-    const balanceChart = new Chart(balanceChartContext, {
-        type: 'line',
-        data: {
-            labels: uniqueDates,
-            datasets: [{
-                label: 'Balanço',
-                data: balanceAmounts,
-                fill: false,
-                borderColor: 'rgba(255, 206, 86, 1)',
-                borderWidth: 2
-            }]
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: false
-                }
-            }
-        }
-    });
-}
-
 
         document.addEventListener('DOMContentLoaded', function () {
             initExpenses();
@@ -424,6 +302,4 @@ function drawBalanceChart() {
 </body>
 
 </html>
-
-
 
