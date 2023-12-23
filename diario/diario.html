@@ -1,1 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Diário</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            overflow-y: scroll;
+            max-height: 400px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        button {
+            padding: 10px;
+            font-size: 16px;
+            margin: 0 10px;
+        }
+
+        textarea {
+            width: 80%;
+            height: 300px; /* Aumentar a altura do campo de texto para comportar um diário */
+            margin: 10px 0;
+            resize: vertical;
+        }
+
+        @media (max-width: 600px) {
+            textarea {
+                width: 100%;
+            }
+
+            table {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Meu Diário</h1>
+
+    <table id="diary-table">
+        <thead>
+            <tr>
+                <th>Data e Hora</th>
+                <th>Página do Diário</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="diary-body"></tbody>
+    </table>
+
+    <textarea id="diary-input" placeholder="Digite sua página do diário..."></textarea>
+    <button onclick="createOrUpdateDiary()">Criar Nova Página</button>
+    <button onclick="goToHomePage()">Voltar para a Página Principal</button>
+
+    <!-- Firebase JavaScript SDK v8 -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:7a1690aa6d89bb07dc086c",
+            measurementId: "G-PBQGHC30M1",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com/"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const diaryRef = database.ref('diary');
+
+        let diaryPages = [];
+
+        function initDiaryPages() {
+            diaryRef.on('value', (snapshot) => {
+                diaryPages = snapshot.val() || [];
+                updateDiaryTable();
+            }, (error) => {
+                console.error("Erro ao recuperar páginas do diário:", error);
+            });
+        }
+
+        function createOrUpdateDiary() {
+            const diaryText = document.getElementById('diary-input').value.trim();
+            if (diaryText) {
+                const currentDate = new Date().getTime(); // Timestamp
+                const newDiaryPage = { id: currentDate, text: diaryText, date: new Date(currentDate).toLocaleString() };
+
+                const existingPageIndex = findPageIndexById(currentDate);
+                if (existingPageIndex !== -1) {
+                    // If page with the current id exists, update it
+                    diaryPages[existingPageIndex] = newDiaryPage;
+                } else {
+                    // Otherwise, create a new page
+                    diaryPages.push(newDiaryPage);
+                }
+
+                // Atualiza o banco de dados em tempo real
+                diaryRef.set(diaryPages);
+                document.getElementById('diary-input').value = '';
+            }
+        }
+
+        function findPageIndexById(id) {
+            return diaryPages.findIndex(page => page.id === id);
+        }
+
+        function editDiaryPage(id) {
+            const editedText = prompt('Editar página do diário:', diaryPages.find(page => page.id === id).text);
+            if (editedText !== null) {
+                const existingPageIndex = findPageIndexById(id);
+                diaryPages[existingPageIndex].text = editedText;
+                // Atualiza o banco de dados em tempo real
+                diaryRef.set(diaryPages);
+            }
+        }
+
+        function deleteDiaryPage(id) {
+            const confirmDelete = confirm('Tem certeza que deseja excluir esta página do diário?');
+            if (confirmDelete) {
+                diaryPages = diaryPages.filter(page => page.id !== id);
+                // Atualiza o banco de dados em tempo real
+                diaryRef.set(diaryPages);
+            }
+        }
+
+        function updateDiaryTable() {
+            const diaryBody = document.getElementById('diary-body');
+            diaryBody.innerHTML = '';
+
+            diaryPages.forEach(page => {
+                const row = diaryBody.insertRow();
+                const dateCell = row.insertCell(0);
+                const textCell = row.insertCell(1);
+                const actionsCell = row.insertCell(2);
+
+                dateCell.textContent = page.date;
+                textCell.textContent = page.text;
+
+                const viewButton = document.createElement('button');
+                viewButton.textContent = 'Ver';
+                viewButton.onclick = () => alert(page.text);
+
+                const editButton = document.createElement('button');
+                editButton.textContent = 'Editar';
+                editButton.onclick = () => editDiaryPage(page.id);
+
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Excluir';
+                deleteButton.onclick = () => deleteDiaryPage(page.id);
+
+                actionsCell.appendChild(viewButton);
+                actionsCell.appendChild(editButton);
+                actionsCell.appendChild(deleteButton);
+            });
+        }
+
+        function goToHomePage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html';
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            initDiaryPages();
+        });
+    </script>
+</body>
+
+</html>
 
