@@ -1,108 +1,228 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Health App</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Minha Saúde</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            overflow-y: scroll;
+            max-height: 400px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        button {
+            padding: 10px;
+            font-size: 16px;
+            margin: 0 10px;
+        }
+
+        input {
+            padding: 8px;
+            font-size: 16px;
+            margin: 10px 0;
+            width: 80%;
+        }
+
+        @media (max-width: 600px) {
+            input {
+                width: 100%;
+            }
+
+            table {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
+
 <body>
-    <div class="container">
-        <h1>Health App</h1>
-        <form id="healthForm">
-            <label for="height">Altura (cm):</label>
-            <input type="number" id="height" required>
+    <h1>Minha Saúde</h1>
 
-            <label for="weight">Peso (kg):</label>
-            <input type="number" id="weight" required>
+    <table id="health-data-table">
+        <thead>
+            <tr>
+                <th>Data e Hora</th>
+                <th>Altura</th>
+                <th>Peso</th>
+                <th>IMC</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="health-data-body"></tbody>
+    </table>
 
-            <label for="age">Idade:</label>
-            <input type="number" id="age" required>
+    <input id="height-input" type="number" placeholder="Altura (cm)">
+    <input id="weight-input" type="number" placeholder="Peso (kg)">
+    <button onclick="calculateAndSaveHealthData()">Calcular e Salvar Dados de Saúde</button>
+    <button onclick="goToHomePage()">Voltar para a Página Principal</button>
 
-            <label for="gender">Sexo:</label>
-            <select id="gender" required>
-                <option value="male">Masculino</option>
-                <option value="female">Feminino</option>
-            </select>
+    <!-- Firebase JavaScript SDK v8 -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
-            <button type="button" onclick="calculateIMC()">Calcular IMC</button>
-
-            <p>Seu IMC é: <span id="resultIMC"></span></p>
-            <p id="imcClassification"></p>
-            <p id="weightInfo"></p>
-        </form>
-    </div>
-
-    <script src="https://www.gstatic.com/firebasejs/9.5.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.5.0/firebase-analytics.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.5.0/firebase-database.js"></script>
     <script>
-        const app = initializeApp({
+        const firebaseConfig = {
             apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
             authDomain: "agenda-6accc.firebaseapp.com",
-            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
             projectId: "agenda-6accc",
             storageBucket: "agenda-6accc.appspot.com",
             messagingSenderId: "794262176773",
-            appId: "1:794262176773:web:a9fdf09a95aa7022dc086c",
-            measurementId: "G-ZN6E5S9QCL"
-        });
+            appId: "1:794262176773:web:7a1690aa6d89bb07dc086c",
+            measurementId: "G-PBQGHC30M1",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com/"
+        };
 
-        const analytics = getAnalytics(app);
-        const database = getDatabase(app);
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const healthDataRef = database.ref('healthData');
 
-        function calculateIMC() {
-            const height = parseFloat(document.getElementById('height').value);
-            const weight = parseFloat(document.getElementById('weight').value);
+        let healthData = [];
 
-            if (!isNaN(height) && !isNaN(weight)) {
-                const imc = weight / ((height / 100) * (height / 100));
-                document.getElementById('resultIMC').innerText = imc.toFixed(2);
+        function initHealthData() {
+            healthDataRef.on('value', (snapshot) => {
+                healthData = snapshot.val() || [];
+                updateHealthDataTable();
+            }, (error) => {
+                console.error("Erro ao recuperar dados de saúde:", error);
+            });
+        }
 
-                const classification = getIMCClassification(imc);
-                document.getElementById('imcClassification').innerText = `Classificação IMC: ${classification}`;
+        function calculateAndSaveHealthData() {
+            const height = parseFloat(document.getElementById('height-input').value);
+            const weight = parseFloat(document.getElementById('weight-input').value);
 
-                const weightInfo = getWeightInfo(height, weight);
-                document.getElementById('weightInfo').innerText = `Informações de Peso: ${weightInfo}`;
+            if (!isNaN(height) && !isNaN(weight) && height > 0 && weight > 0) {
+                const currentDate = new Date().getTime();
+                const bmi = calculateBMI(height, weight);
+                const newHealthData = {
+                    id: currentDate,
+                    height: height,
+                    weight: weight,
+                    bmi: bmi,
+                    date: new Date(currentDate).toLocaleString()
+                };
+
+                healthData.push(newHealthData);
+                healthDataRef.set(healthData);
+
+                // Limpa os campos de entrada
+                document.getElementById('height-input').value = '';
+                document.getElementById('weight-input').value = '';
             } else {
                 alert('Por favor, insira valores válidos para altura e peso.');
             }
         }
 
-        function getIMCClassification(imc) {
-            if (imc < 18.5) {
-                return 'Abaixo do peso. Consulte um profissional de saúde para orientação.';
-            } else if (imc < 24.9) {
-                return 'Peso normal. Continue mantendo hábitos saudáveis.';
-            } else if (imc < 29.9) {
-                return 'Sobrepeso. Considere ajustes na dieta e atividade física.';
-            } else if (imc < 34.9) {
-                return 'Obesidade Grau I. Consulte um profissional de saúde para orientação.';
-            } else if (imc < 39.9) {
-                return 'Obesidade Grau II. Consulte um profissional de saúde para orientação.';
-            } else {
-                return 'Obesidade Grau III. Consulte um profissional de saúde para orientação.';
+        function calculateBMI(height, weight) {
+            // Fórmula do Índice de Massa Corporal (IMC)
+            return (weight / Math.pow(height / 100, 2)).toFixed(2);
+        }
+
+        function updateHealthDataTable() {
+            const healthDataBody = document.getElementById('health-data-body');
+            healthDataBody.innerHTML = '';
+
+            healthData.forEach(entry => {
+                const row = healthDataBody.insertRow();
+                const dateCell = row.insertCell(0);
+                const heightCell = row.insertCell(1);
+                const weightCell = row.insertCell(2);
+                const bmiCell = row.insertCell(3);
+                const actionsCell = row.insertCell(4);
+
+                dateCell.textContent = entry.date;
+                heightCell.textContent = entry.height + ' cm';
+                weightCell.textContent = entry.weight + ' kg';
+                bmiCell.textContent = entry.bmi;
+
+                const editButton = document.createElement('button');
+                editButton.textContent = 'Editar';
+                editButton.onclick = () => editHealthData(entry.id);
+
+                const viewButton = document.createElement('button');
+                viewButton.textContent = 'Ver';
+                viewButton.onclick = () => viewHealthData(entry);
+
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Excluir';
+                deleteButton.onclick = () => deleteHealthData(entry.id);
+
+                actionsCell.appendChild(editButton);
+                actionsCell.appendChild(viewButton);
+                actionsCell.appendChild(deleteButton);
+            });
+        }
+
+        function editHealthData(id) {
+            const entry = healthData.find(entry => entry.id === id);
+            if (entry) {
+                const newHeight = prompt('Editar Altura:', entry.height);
+                const newWeight = prompt('Editar Peso:', entry.weight);
+
+                if (!isNaN(newHeight) && !isNaN(newWeight) && newHeight > 0 && newWeight > 0) {
+                    entry.height = parseFloat(newHeight);
+                    entry.weight = parseFloat(newWeight);
+                    entry.bmi = calculateBMI(entry.height, entry.weight);
+
+                    healthDataRef.set(healthData);
+                } else {
+                    alert('Por favor, insira valores válidos para altura e peso.');
+                }
             }
         }
 
-        function getWeightInfo(height, weight) {
-            const idealWeightMale = (height - 100) - ((height - 150) / 4);
-            const idealWeightFemale = (height - 100) - ((height - 150) / 2);
-            const idealWeight = document.getElementById('gender').value === 'male' ? idealWeightMale : idealWeightFemale;
-
-            const age = parseInt(document.getElementById('age').value);
-
-            let weightInfo = `Peso ideal para sua altura: ${idealWeight.toFixed(2)} kg\n`;
-
-            if (age >= 18) {
-                weightInfo += 'Lembre-se de que padrões de peso podem variar. Consulte um profissional de saúde para orientação específica.';
-            } else {
-                weightInfo += 'Lembre-se de que padrões de peso para jovens podem variar. Consulte um pediatra para orientação específica.';
-            }
-
-            return weightInfo;
+        function viewHealthData(entry) {
+            alert(`
+                Data e Hora: ${entry.date}
+                Altura: ${entry.height} cm
+                Peso: ${entry.weight} kg
+                IMC: ${entry.bmi}
+            `);
         }
+
+        function deleteHealthData(id) {
+            const confirmDelete = confirm('Tem certeza que deseja excluir este registro de saúde?');
+            if (confirmDelete) {
+                healthData = healthData.filter(entry => entry.id !== id);
+                healthDataRef.set(healthData);
+            }
+        }
+
+        function goToHomePage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html';
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            initHealthData();
+        });
     </script>
 </body>
+
 </html>
+
 
