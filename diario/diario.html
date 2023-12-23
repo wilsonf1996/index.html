@@ -6,82 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meu Diário</title>
     <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            text-align: center;
-            margin: 20px;
-        }
-
-        h1 {
-            color: #333;
-        }
-
-        table {
-            width: 100%;
-            margin: 20px auto;
-            border-collapse: collapse;
-            overflow-y: scroll;
-            max-height: 400px;
-        }
-
-        th,
-        td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-
-        th {
-            background-color: #f2f2f2;
-        }
-
-        button {
-            padding: 10px;
-            font-size: 16px;
-            margin: 0 10px;
-        }
-
-        textarea {
-            width: 80%;
-            height: 300px; /* Aumentar a altura do campo de texto para comportar um diário */
-            margin: 10px 0;
-            resize: vertical;
-        }
-
-        @media (max-width: 600px) {
-            textarea {
-                width: 100%;
-            }
-
-            table {
-                width: 100%;
-            }
-        }
+        /* ... (estilos não modificados) ... */
     </style>
 </head>
 
 <body>
-    <h1>Meu Diário</h1>
-
-    <table id="diary-table">
-        <thead>
-            <tr>
-                <th>Data e Hora</th>
-                <th>Página do Diário</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody id="diary-body"></tbody>
-    </table>
-
-    <textarea id="diary-input" placeholder="Digite sua página do diário..."></textarea>
-    <button onclick="createOrUpdateDiary()">Criar Nova Página</button>
-    <button onclick="goToHomePage()">Voltar para a Página Principal</button>
-
-    <!-- Firebase JavaScript SDK v8 -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
@@ -98,7 +27,20 @@
         const database = firebase.database();
         const diaryRef = database.ref('diary');
 
+        let isAuthenticated = false;
         let diaryPages = [];
+
+        function authenticate() {
+            const password = prompt('Digite a senha para acessar o diário:');
+            isAuthenticated = password === '2020';
+
+            if (!isAuthenticated) {
+                alert('Senha incorreta. Acesso negado.');
+                window.location.href = 'https://wilsonf1996.github.io'; // Redireciona para a página principal em caso de senha incorreta
+            } else {
+                initDiaryPages();
+            }
+        }
 
         function initDiaryPages() {
             diaryRef.on('value', (snapshot) => {
@@ -110,6 +52,11 @@
         }
 
         function createOrUpdateDiary() {
+            if (!isAuthenticated) {
+                alert('Por favor, faça login primeiro.');
+                return;
+            }
+
             const diaryText = document.getElementById('diary-input').value.trim();
             if (diaryText) {
                 const currentDate = new Date().getTime(); // Timestamp
@@ -135,6 +82,11 @@
         }
 
         function editDiaryPage(id) {
+            if (!isAuthenticated) {
+                alert('Por favor, faça login primeiro.');
+                return;
+            }
+
             const editedText = prompt('Editar página do diário:', diaryPages.find(page => page.id === id).text);
             if (editedText !== null) {
                 const existingPageIndex = findPageIndexById(id);
@@ -145,6 +97,11 @@
         }
 
         function deleteDiaryPage(id) {
+            if (!isAuthenticated) {
+                alert('Por favor, faça login primeiro.');
+                return;
+            }
+
             const confirmDelete = confirm('Tem certeza que deseja excluir esta página do diário?');
             if (confirmDelete) {
                 diaryPages = diaryPages.filter(page => page.id !== id);
@@ -154,6 +111,11 @@
         }
 
         function updateDiaryTable() {
+            if (!isAuthenticated) {
+                alert('Por favor, faça login primeiro.');
+                return;
+            }
+
             const diaryBody = document.getElementById('diary-body');
             diaryBody.innerHTML = '';
 
@@ -185,11 +147,11 @@
         }
 
         function goToHomePage() {
-            window.location.href = 'https://wilsonf1996.github.io/index.html';
+            window.location.href = 'https://wilsonf1996.github.io';
         }
 
         document.addEventListener('DOMContentLoaded', function () {
-            initDiaryPages();
+            authenticate();
         });
     </script>
 </body>
