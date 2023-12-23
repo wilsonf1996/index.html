@@ -258,29 +258,47 @@
                 database.ref('/expenses').set(expenses);
             }
         }
-
-       async function generatePDF() {
+async function generatePDF() {
     try {
         // Crie um documento PDF usando a API pdf-lib
         const pdfDoc = await PDFLib.PDFDocument.create();
+
+        // Adicione uma página
         const page = pdfDoc.addPage();
         const { width, height } = page.getSize();
         const fontSize = 12;
 
+        // Adicione uma camada retangular preta ao fundo da página
+        page.drawRectangle({
+            x: 0,
+            y: 0,
+            width: width,
+            height: height,
+            color: rgb(0, 0, 0),
+        });
+
+        // Crie uma função para adicionar texto à página com quebra de linha automática
+        function drawTextWithWrap(text, options) {
+            const textWidth = page.getTextWidth(text, { fontSize });
+            const availableWidth = width - options.x - 50; // 50 é uma margem
+
+            if (textWidth > availableWidth) {
+                const lines = page.splitTextToSize(text, { fontSize, maxWidth: availableWidth });
+                lines.forEach((line, index) => {
+                    page.drawText(line, { x: options.x, y: options.y - index * (fontSize + 5), fontSize, color: rgb(255, 255, 255) });
+                });
+            } else {
+                page.drawText(text, { x: options.x, y: options.y, fontSize, color: rgb(255, 255, 255) });
+            }
+        }
+
+        // Adicione a lista de despesas e receitas à página
         let y = height - 30;
+        drawTextWithWrap('Data e Hora\tDescrição\tTipo\tValor (R$)', { x: 50, y, fontSize });
 
-        // Adicione o conteúdo à página
-        const pdfContent = expenses.map(expense => [
-            new Date(expense.dateTime).toLocaleString('pt-BR'),
-            expense.description,
-            expense.type === 'expense' ? 'Despesa' : 'Receita',
-            `R$ ${expense.amount.toFixed(2)}`
-        ]);
-
-        pdfContent.unshift(['Data e Hora', 'Descrição', 'Tipo', 'Valor (R$)']);
-        pdfContent.forEach(row => {
-            page.drawText(row.join('\t'), { x: 50, y, fontSize });
-            y -= fontSize + 5;
+        expenses.forEach(expense => {
+            const formattedExpense = `${new Date(expense.dateTime).toLocaleString('pt-BR')}\t${expense.description}\t${expense.type === 'expense' ? 'Despesa' : 'Receita'}\tR$ ${expense.amount.toFixed(2)}`;
+            drawTextWithWrap(formattedExpense, { x: 50, y, fontSize });
         });
 
         // Gere o PDF como Blob
