@@ -91,10 +91,6 @@
             <tr>
                 <th>Item</th>
                 <th>Quantidade</th>
-                <th>Preço (R$)</th>
-                <th>Total (R$)</th>
-                <th>Descrição da Situação</th>
-                <th>Data de Criação</th>
                 <th>Ações</th>
             </tr>
         </thead>
@@ -106,20 +102,11 @@
     <div>
         <input type="text" id="item-name" placeholder="Nome do Item">
         <input type="number" id="item-quantity" placeholder="Quantidade">
-        <input type="number" id="item-price" placeholder="Preço (R$)">
-        <input type="text" id="item-situation" placeholder="Descrição da Situação">
     </div>
 
     <button onclick="addItem()">Adicionar Item</button>
     <button onclick="saveList()">Salvar Lista</button>
     <button onclick="clearList()">Limpar Lista</button>
-
-    <div>
-        <div>
-            <label for="final-observation">Observação Final:</label>
-        </div>
-        <textarea id="final-observation"></textarea>
-    </div>
 
     <button onclick="goToHomePage()">Voltar para a Página Principal</button>
 
@@ -154,151 +141,94 @@
             shoppingListRef.on('value', (snapshot) => {
                 const shoppingListData = snapshot.val();
                 const shoppingList = shoppingListData ? shoppingListData.items : [];
-                const listCreationDate = shoppingListData ? shoppingListData.creationDate : '';
-                const finalObservation = shoppingListData ? shoppingListData.finalObservation : '';
 
                 // Atualize a tabela e outras partes da interface aqui
-                loadShoppingListTable(shoppingList, listCreationDate);
-                loadFinalObservation(finalObservation);
+                loadShoppingListTable(shoppingList);
             });
         }
 
-        function loadShoppingListTable(shoppingList, listCreationDate) {
+        function loadShoppingListTable(shoppingList) {
             const tableBody = document.getElementById('shopping-body');
             tableBody.innerHTML = "";
 
             if (Array.isArray(shoppingList)) {
-                let totalPrice = 0;
-
                 shoppingList.forEach((item) => {
                     const row = tableBody.insertRow();
                     const cellItem = row.insertCell(0);
                     const cellQuantity = row.insertCell(1);
-                    const cellPrice = row.insertCell(2);
-                    const cellTotal = row.insertCell(3);
-                    const cellSituation = row.insertCell(4);
-                    const cellDate = row.insertCell(5);
-                    const cellActions = row.insertCell(6);
+                    const cellActions = row.insertCell(2);
 
                     cellItem.textContent = item.name;
                     cellQuantity.textContent = item.quantity;
-                    cellPrice.textContent = `R$ ${item.price.toFixed(2)}`;
-                    cellTotal.textContent = `R$ ${(item.quantity * item.price).toFixed(2)}`;
-                    cellSituation.textContent = item.situation;
-                    cellDate.textContent = listCreationDate;
-
-                    totalPrice += item.quantity * item.price;
-
-                    const editButton = document.createElement('button');
-                    editButton.textContent = 'Editar';
-                    editButton.onclick = () => editItem(item);
 
                     const deleteButton = document.createElement('button');
-                    deleteButton.textContent = 'Excluir';
-                    deleteButton.onclick = () => deleteItem(item);
+                    deleteButton.textContent = 'Remover';
+                    deleteButton.onclick = () => removeItem(item.name);
 
-                    cellActions.appendChild(editButton);
                     cellActions.appendChild(deleteButton);
                 });
-
-                // Exibe o preço total no final da tabela
-                const totalRow = tableBody.insertRow();
-                totalRow.insertCell(0).textContent = 'Total:';
-                totalRow.insertCell(1).textContent = ''; // Quantidade
-                totalRow.insertCell(2).textContent = ''; // Preço
-                totalRow.insertCell(3).textContent = `R$ ${totalPrice.toFixed(2)}`;
-                totalRow.insertCell(4).textContent = ''; // Descrição da Situação
-                totalRow.insertCell(5).textContent = ''; // Data de Criação
-                totalRow.insertCell(6).textContent = ''; // Ações
             } else {
                 console.error("Dados da lista de compras inválidos:", shoppingList);
             }
         }
 
-        function loadFinalObservation(finalObservation) {
-            const observationField = document.getElementById('final-observation');
-            observationField.value = finalObservation || '';
-        }
-
         function addItem() {
             const itemName = document.getElementById('item-name').value;
-            const itemQuantity = parseInt(document.getElementById('item-quantity').value);
-            const itemPrice = parseFloat(document.getElementById('item-price').value);
-            const itemSituation = document.getElementById('item-situation').value;
+            const quantity = parseInt(document.getElementById('item-quantity').value);
 
-            if (!isValidItem(itemName, itemQuantity, itemPrice, itemSituation)) {
+            if (!isValidItem(itemName, quantity)) {
                 alert('Por favor, preencha todos os campos corretamente.');
                 return;
             }
 
-            const newItem = { name: itemName, quantity: itemQuantity, price: itemPrice, situation: itemSituation };
-            const shoppingListRef = database.ref(`/${currentList}/items`);
-            shoppingListRef.push(newItem);
-        }
+            const existingItemIndex = shoppingList.findIndex(item => item.name === itemName);
 
-        function isValidItem(name, quantity, price, situation) {
-            return name.trim() !== '' && !isNaN(quantity) && quantity > 0 &&
-                !isNaN(price) && price > 0 && situation.trim() !== '';
-        }
-
-        function editItem(item) {
-            const editedName = prompt('Editar Nome do Item:', item.name);
-            const editedQuantity = parseInt(prompt('Editar Quantidade:', item.quantity));
-            const editedPrice = parseFloat(prompt('Editar Preço (R$):', item.price));
-            const editedSituation = prompt('Editar Descrição da Situação:', item.situation);
-
-            if (isValidItem(editedName, editedQuantity, editedPrice, editedSituation)) {
-                const shoppingListRef = database.ref(`/${currentList}/items`);
-                shoppingListRef.child(item.key).update({
-                    name: editedName,
-                    quantity: editedQuantity,
-                    price: editedPrice,
-                    situation: editedSituation
-                });
+            if (existingItemIndex !== -1) {
+                // Atualizar quantidade do item existente
+                shoppingList[existingItemIndex].quantity += quantity;
             } else {
-                alert('Edição cancelada ou valores inválidos.');
+                // Adicionar novo item à lista
+                const newItem = { name: itemName, quantity };
+                shoppingList.push(newItem);
+            }
+
+            database.ref(`/${currentList}/items`).set(shoppingList);
+        }
+
+        function isValidItem(itemName, quantity) {
+            return itemName.trim() !== '' && !isNaN(quantity) && quantity > 0;
+        }
+
+        function removeItem(itemName) {
+            const confirmRemove = confirm(`Tem certeza que deseja remover "${itemName}" da lista?`);
+
+            if (confirmRemove) {
+                const indexToRemove = shoppingList.findIndex(item => item.name === itemName);
+                shoppingList.splice(indexToRemove, 1);
+
+                database.ref(`/${currentList}/items`).set(shoppingList);
             }
         }
 
-        function deleteItem(item) {
-            const confirmDelete = confirm('Tem certeza que deseja excluir este item?');
+        function clearList() {
+            const confirmClear = confirm('Tem certeza que deseja limpar toda a lista de compras?');
 
-            if (confirmDelete) {
-                const shoppingListRef = database.ref(`/${currentList}/items`);
-                shoppingListRef.child(item.key).remove();
+            if (confirmClear) {
+                shoppingList = [];
+                database.ref(`/${currentList}/items`).set(shoppingList);
             }
         }
 
         function saveList() {
             const shoppingListRef = database.ref(`/${currentList}`);
             const listData = {
-                items: [],
+                items: shoppingList,
                 creationDate: new Date().toLocaleString('pt-BR'),
                 finalObservation: document.getElementById('final-observation').value
             };
 
-            const tableBody = document.getElementById('shopping-body');
-            const rows = tableBody.getElementsByTagName('tr');
-
-            for (let i = 0; i < rows.length - 1; i++) { // Exclui a última linha (total)
-                const cells = rows[i].getElementsByTagName('td');
-                const item = {
-                    name: cells[0].textContent,
-                    quantity: parseInt(cells[1].textContent),
-                    price: parseFloat(cells[2].textContent.replace('R$ ', '')),
-                    situation: cells[4].textContent
-                };
-                listData.items.push(item);
-            }
-
             shoppingListRef.set(listData);
             alert('Lista salva com sucesso!');
-        }
-
-        function clearList() {
-            const shoppingListRef = database.ref(`/${currentList}`);
-            shoppingListRef.remove();
-            alert('Lista limpa com sucesso!');
         }
 
         function editListName() {
@@ -322,5 +252,4 @@
 </body>
 
 </html>
-
 
