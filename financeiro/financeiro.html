@@ -80,7 +80,7 @@
         <tbody id="expenses-body"></tbody>
     </table>
 
-   <input type="text" id="expense-description" placeholder="Descrição do Gasto/Receita">
+    <input type="text" id="expense-description" placeholder="Descrição do Gasto/Receita">
     <input type="number" id="expense-amount" placeholder="Valor (R$)">
     <input type="datetime-local" id="expense-date" placeholder="Data do Gasto/Receita">
     <label for="expense-type">Tipo:</label>
@@ -94,13 +94,11 @@
     <button onclick="goToHomePage()">Voltar para a Página Principal</button>
 
     <script>
-
-           function loadJS(url, callback) {
+        function loadJS(url, callback) {
             var script = document.createElement('script');
             script.type = 'text/javascript';
             script.src = url;
-            script.onreadystatechange = callback;
-            script.onload = callback;
+            script.addEventListener('load', callback);
             document.head.appendChild(script);
         }
 
@@ -110,24 +108,16 @@
         }
 
         // Função para carregar a biblioteca jsPDF
-          function loadJS(url, callback) {
-        var script = document.createElement('script');
-        script.type = 'text/javascript';
-        script.src = url;
-        script.addEventListener('load', callback);
-        document.head.appendChild(script);
-    }
+        function loadAndGeneratePDF() {
+            loadJS('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js', function () {
+                if (typeof jsPDF !== 'undefined') {
+                    generatePDF();
+                } else {
+                    console.error('A biblioteca jsPDF não foi carregada corretamente.');
+                }
+            });
+        }
 
-    function loadAndGeneratePDF() {
-        loadJS('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js', function () {
-            if (typeof jsPDF !== 'undefined') {
-                generatePDF();
-            } else {
-                console.error('A biblioteca jsPDF não foi carregada corretamente.');
-            }
-        });
-    }
-        
         function loadJS(url, callback) {
             var script = document.createElement('script');
             script.type = 'text/javascript';
@@ -203,7 +193,6 @@
                 console.error("Dados de despesas inválidos:", expenses);
             }
         }
-
         function createOrUpdateExpense() {
             const description = document.getElementById('expense-description').value;
             const amount = parseFloat(document.getElementById('expense-amount').value);
@@ -270,59 +259,58 @@
             }
         }
 
-async function generatePDF() {
-    try {
-        // Crie um documento PDF usando a API pdf-lib
-        const pdfDoc = await PDFLib.PDFDocument.create();
-        const page = pdfDoc.addPage();
-        const { width, height } = page.getSize();
-        const fontSize = 12;
+        async function generatePDF() {
+            try {
+                // Crie um documento PDF usando a API pdf-lib
+                const pdfDoc = await PDFLib.PDFDocument.create();
+                const page = pdfDoc.addPage();
+                const { width, height } = page.getSize();
+                const fontSize = 12;
 
-        let y = height - 30;
+                let y = height - 30;
 
-        // Adicione o conteúdo à página
-        const pdfContent = expenses.map(expense => ({
-            DateTime: new Date(expense.dateTime).toLocaleString('pt-BR'),
-            Description: expense.description,
-            Type: expense.type === 'expense' ? 'Despesa' : 'Receita',
-            Amount: `R$ ${expense.amount.toFixed(2)}`
-        }));
+                // Adicione o conteúdo à página
+                const pdfContent = expenses.map(expense => ({
+                    DateTime: new Date(expense.dateTime).toLocaleString('pt-BR'),
+                    Description: expense.description,
+                    Type: expense.type === 'expense' ? 'Despesa' : 'Receita',
+                    Amount: `R$ ${expense.amount.toFixed(2)}`
+                }));
 
-        pdfContent.unshift(['Data e Hora', 'Descrição', 'Tipo', 'Valor (R$)']);
-        pdfContent.forEach(row => {
-            page.drawText(row.join('\t'), { x: 50, y, fontSize });
-            y -= fontSize + 5;
-        });
+                pdfContent.unshift(['Data e Hora', 'Descrição', 'Tipo', 'Valor (R$)']);
+                pdfContent.forEach(row => {
+                    page.drawText(row.join('\t'), { x: 50, y, fontSize });
+                    y -= fontSize + 5;
+                });
 
-        // Gere o PDF como Blob
-        const pdfBytes = await pdfDoc.save();
+                // Gere o PDF como Blob
+                const pdfBytes = await pdfDoc.save();
 
-        // Crie um URL para o Blob
-        const pdfUrl = URL.createObjectURL(new Blob([pdfBytes]));
+                // Crie um URL para o Blob
+                const pdfUrl = URL.createObjectURL(new Blob([pdfBytes]));
 
-        // Crie um link para download
-        const downloadLink = document.createElement('a');
-        downloadLink.href = pdfUrl;
-        downloadLink.download = 'relatorio.pdf';
-        downloadLink.textContent = 'Baixar Relatório em PDF';
+                // Crie um link para download
+                const downloadLink = document.createElement('a');
+                downloadLink.href = pdfUrl;
+                downloadLink.download = 'relatorio.pdf';
+                downloadLink.textContent = 'Baixar Relatório em PDF';
 
-        // Adicione o link à página
-        document.body.appendChild(downloadLink);
+                // Adicione o link à página
+                document.body.appendChild(downloadLink);
 
-        // Simule o clique no link para iniciar o download
-        downloadLink.click();
+                // Simule o clique no link para iniciar o download
+                downloadLink.click();
 
-        // Remova o link da página
-        document.body.removeChild(downloadLink);
+                // Remova o link da página
+                document.body.removeChild(downloadLink);
 
-    } catch (error) {
-        console.error('Erro ao gerar PDF:', error);
-        alert('Erro ao gerar PDF. Consulte o console para obter detalhes.');
-    }
-}
+            } catch (error) {
+                console.error('Erro ao gerar PDF:', error);
+                alert('Erro ao gerar PDF. Consulte o console para obter detalhes.');
+            }
+        }
 
-        
-function generateExpensesReport(pdfContent) {
+        function generateExpensesReport(pdfContent) {
             const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
             const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
 
@@ -391,126 +379,51 @@ function generateExpensesReport(pdfContent) {
                 const balance = totalIncome - totalExpenses;
 
                 pdfContent.push(['Relatório de Balanço']);
-                pdfContent.push([`Total de Receitas no Período: R$ ${totalIncome.toFixed(2)}`]);
-                pdfContent.push([`Total de Despesas no Período: R$ ${totalExpenses.toFixed(2)}`]);
-                pdfContent.push([`Balanço: R$ ${balance.toFixed(2)}`]);
+                pdfContent.push(['Período', 'Total de Receitas (R$)', 'Total de Despesas (R$)', 'Saldo (R$)']);
+                pdfContent.push([`${startDate} a ${endDate}`, totalIncome.toFixed(2), totalExpenses.toFixed(2), balance.toFixed(2)]);
             } else {
                 alert('Período inválido ou não informado.');
             }
         }
 
-   function generateReport() {
+        function generateReport() {
             const pdfContent = [];
-
-            // Adiciona relatórios
             generateExpensesReport(pdfContent);
             generateIncomeReport(pdfContent);
             generateBalanceReport(pdfContent);
 
-            // Cria um documento PDF usando a API pdf-lib
-            generatePDF(pdfContent);
-        }
+            if (pdfContent.length > 0) {
+                // Gere o PDF como Blob
+                const pdfBytes = PDFLib.PDFDocument.create();
 
-        async function generatePDF(pdfContent) {
-            // Código da função generateReport() continua aqui...
-        }
-    
-        
-        function generateReport() {
-            const reportType = prompt('Informe o tipo de relatório (expenses, income, balance):');
+                // Crie um URL para o Blob
+                const pdfUrl = URL.createObjectURL(new Blob([pdfBytes]));
 
-            switch (reportType) {
-                case 'expenses':
-                    generateExpensesReport();
-                    break;
-                case 'income':
-                    generateIncomeReport();
-                    break;
-                case 'balance':
-                    generateBalanceReport();
-                    break;
-                default:
-                    alert('Tipo de relatório inválido.');
-            }
-        }
-         
+                // Crie um link para download
+                const downloadLink = document.createElement('a');
+                downloadLink.href = pdfUrl;
+                downloadLink.download = 'relatorio.pdf';
+                downloadLink.textContent = 'Baixar Relatório em PDF';
 
-        function generateExpensesReport() {
-            const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
-            const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
+                // Adicione o link à página
+                document.body.appendChild(downloadLink);
 
-            if (startDate && endDate) {
-                const filteredExpenses = expenses.filter(expense => {
-                    return expense.type === 'expense' &&
-                        new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
-                        new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
-                });
+                // Simule o clique no link para iniciar o download
+                downloadLink.click();
 
-                const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-                alert(`Total de Despesas no Período: R$ ${totalExpenses.toFixed(2)}`);
-            } else {
-                alert('Período inválido ou não informado.');
-            }
-        }
-
-        function generateIncomeReport() {
-            const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
-            const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
-
-            if (startDate && endDate) {
-                const filteredIncome = expenses.filter(expense => {
-                    return expense.type === 'income' &&
-                        new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
-                        new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
-                });
-
-                const totalIncome = filteredIncome.reduce((sum, income) => sum + income.amount, 0);
-                alert(`Total de Receitas no Período: R$ ${totalIncome.toFixed(2)}`);
-            } else {
-                alert('Período inválido ou não informado.');
-            }
-        }
-
-        function generateBalanceReport() {
-            const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
-            const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
-
-            if (startDate && endDate) {
-                const filteredExpenses = expenses.filter(expense => {
-                    return new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
-                        new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
-                });
-
-                const totalIncome = filteredExpenses.reduce((sum, expense) => {
-                    return expense.type === 'income' ? sum + expense.amount : sum;
-                }, 0);
-
-                const totalExpenses = filteredExpenses.reduce((sum, expense) => {
-                    return expense.type === 'expense' ? sum + expense.amount : sum;
-                }, 0);
-
-                const balance = totalIncome - totalExpenses;
-
-                alert(`Total de Receitas no Período: R$ ${totalIncome.toFixed(2)}\nTotal de Despesas no Período: R$ ${totalExpenses.toFixed(2)}\nBalanço: R$ ${balance.toFixed(2)}`);
-            } else {
-                alert('Período inválido ou não informado.');
+                // Remova o link da página
+                document.body.removeChild(downloadLink);
             }
         }
 
         function goToHomePage() {
-            // Aqui, você pode redirecionar para a página inicial do seu aplicativo.
-            window.location.href = 'https://wilsonf1996.github.io/index.html/';
-            alert('Redirecionamento para a Página Inicial.');
+            window.location.href = 'index.html';
         }
 
-        document.addEventListener('DOMContentLoaded', function () {
-            initExpenses();
-        });
-
-        
+        initExpenses();
     </script>
-     
+
 </body>
-    
+
 </html>
 
