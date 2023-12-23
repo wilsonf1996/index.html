@@ -17,7 +17,7 @@
         }
 
         table {
-            width: 80%;
+            width: 100%;
             margin: 20px auto;
             border-collapse: collapse;
             overflow-y: scroll;
@@ -26,7 +26,7 @@
 
         th, td {
             border: 1px solid #ddd;
-            padding: 12px;
+            padding: 8px;
             text-align: left;
         }
 
@@ -43,22 +43,19 @@
         input {
             width: 80%;
             margin: 10px 0;
-            padding: 8px;
+        }
+
+        #shopping-list {
+            overflow-y: auto;
         }
 
         #total-price {
             font-weight: bold;
-            margin-top: 10px;
         }
 
         #final-observation {
             width: 80%;
             margin: 10px 0;
-            padding: 8px;
-        }
-
-        #select-list {
-            margin-bottom: 10px;
         }
     </style>
     <!-- Carregue a biblioteca do Firebase -->
@@ -82,15 +79,17 @@
         <option value="lista8">Lista 8</option>
         <option value="lista9">Lista 9</option>
         <option value="lista10">Lista 10</option>
+        <!-- Adicione até 10 opções conforme necessário -->
     </select>
 
-    <button onclick="editListName()">Editar Nome da Lista</button>
-
-    <table>
+    <table id="shopping-list">
         <thead>
             <tr>
                 <th>Item</th>
                 <th>Quantidade</th>
+                <th>Preço</th>
+                <th>Preço Total</th>
+                <th>Descrição da Situação</th>
                 <th>Ações</th>
             </tr>
         </thead>
@@ -99,15 +98,11 @@
 
     <div id="total-price">Total: R$ 0.00</div>
 
-    <div>
-        <input type="text" id="item-name" placeholder="Nome do Item">
-        <input type="number" id="item-quantity" placeholder="Quantidade">
-    </div>
+    <input type="text" id="final-observation" placeholder="Observação do Valor Final">
 
     <button onclick="addItem()">Adicionar Item</button>
     <button onclick="saveList()">Salvar Lista</button>
     <button onclick="clearList()">Limpar Lista</button>
-
     <button onclick="goToHomePage()">Voltar para a Página Principal</button>
 
     <script>
@@ -119,19 +114,19 @@
             projectId: "agenda-6accc",
             storageBucket: "agenda-6accc.appspot.com",
             messagingSenderId: "794262176773",
-            appId: "1:794262176773:web:a9fdf09a95aa7022dc086c",
-            measurementId: "G-ZN6E5S9QCL"
+            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+            measurementId: "G-CVBQ54PERH"
         };
 
         // Inicialização do Firebase
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        // Variáveis globais
-        let currentList = "lista1"; // Lista padrão ao carregar a página
+        let currentList = 'lista1'; // Lista padrão
+        let shoppingList = [];
 
         function loadSelectedList() {
-            currentList = document.getElementById("select-list").value;
+            currentList = document.getElementById('select-list').value;
             initShoppingList();
         }
 
@@ -140,9 +135,7 @@
 
             shoppingListRef.on('value', (snapshot) => {
                 const shoppingListData = snapshot.val();
-                const shoppingList = shoppingListData ? shoppingListData.items : [];
-
-                // Atualize a tabela e outras partes da interface aqui
+                shoppingList = shoppingListData ? Object.values(shoppingListData.items) : [];
                 loadShoppingListTable(shoppingList);
             });
         }
@@ -151,32 +144,46 @@
             const tableBody = document.getElementById('shopping-body');
             tableBody.innerHTML = "";
 
-            if (Array.isArray(shoppingList)) {
-                shoppingList.forEach((item) => {
-                    const row = tableBody.insertRow();
-                    const cellItem = row.insertCell(0);
-                    const cellQuantity = row.insertCell(1);
-                    const cellActions = row.insertCell(2);
+            let totalPrice = 0;
 
-                    cellItem.textContent = item.name;
-                    cellQuantity.textContent = item.quantity;
+            if (Array.isArray(shoppingList)) {
+                shoppingList.forEach((item, index) => {
+                    const row = tableBody.insertRow();
+                    const cellItemName = row.insertCell(0);
+                    const cellQuantity = row.insertCell(1);
+                    const cellPrice = row.insertCell(2);
+                    const cellTotalPrice = row.insertCell(3);
+                    const cellSituation = row.insertCell(4);
+                    const cellActions = row.insertCell(5);
+
+                    cellItemName.innerHTML = `<input type="text" value="${item.name}">`;
+                    cellQuantity.innerHTML = `<input type="number" value="${item.quantity}">`;
+                    cellPrice.innerHTML = `<input type="number" value="${item.price}" step="0.01">`;
+                    const totalItemPrice = item.quantity * item.price;
+                    cellTotalPrice.textContent = `R$ ${totalItemPrice.toFixed(2)}`;
+                    totalPrice += totalItemPrice;
+                    cellSituation.innerHTML = `<input type="text" value="${item.situation}">`;
 
                     const deleteButton = document.createElement('button');
                     deleteButton.textContent = 'Remover';
-                    deleteButton.onclick = () => removeItem(item.name);
+                    deleteButton.onclick = () => removeItem(index);
 
                     cellActions.appendChild(deleteButton);
                 });
             } else {
                 console.error("Dados da lista de compras inválidos:", shoppingList);
             }
+
+            document.getElementById('total-price').textContent = `Total: R$ ${totalPrice.toFixed(2)}`;
         }
 
         function addItem() {
-            const itemName = document.getElementById('item-name').value;
-            const quantity = parseInt(document.getElementById('item-quantity').value);
+            const itemName = prompt('Nome do Item:');
+            const quantity = parseFloat(prompt('Quantidade:'));
+            const price = parseFloat(prompt('Preço por unidade:'));
+            const situation = prompt('Descrição da Situação:');
 
-            if (!isValidItem(itemName, quantity)) {
+            if (!isValidItem(itemName, quantity, price, situation)) {
                 alert('Por favor, preencha todos os campos corretamente.');
                 return;
             }
@@ -184,30 +191,42 @@
             const existingItemIndex = shoppingList.findIndex(item => item.name === itemName);
 
             if (existingItemIndex !== -1) {
-                // Atualizar quantidade do item existente
-                shoppingList[existingItemIndex].quantity += quantity;
+                // Atualizar item existente
+                shoppingList[existingItemIndex] = { name: itemName, quantity, price, situation };
             } else {
                 // Adicionar novo item à lista
-                const newItem = { name: itemName, quantity };
-                shoppingList.push(newItem);
+                shoppingList.push({ name: itemName, quantity, price, situation });
             }
 
-            database.ref(`/${currentList}/items`).set(shoppingList);
+            loadShoppingListTable(shoppingList);
         }
 
-        function isValidItem(itemName, quantity) {
-            return itemName.trim() !== '' && !isNaN(quantity) && quantity > 0;
+        function isValidItem(itemName, quantity, price, situation) {
+            return itemName.trim() !== '' && !isNaN(quantity) && quantity > 0 &&
+                !isNaN(price) && price > 0 && situation.trim() !== '';
         }
 
-        function removeItem(itemName) {
-            const confirmRemove = confirm(`Tem certeza que deseja remover "${itemName}" da lista?`);
+        function removeItem(index) {
+            const confirmRemove = confirm('Tem certeza que deseja remover este item da lista?');
 
             if (confirmRemove) {
-                const indexToRemove = shoppingList.findIndex(item => item.name === itemName);
-                shoppingList.splice(indexToRemove, 1);
-
-                database.ref(`/${currentList}/items`).set(shoppingList);
+                shoppingList.splice(index, 1);
+                loadShoppingListTable(shoppingList);
             }
+        }
+
+        function saveList() {
+            const finalObservation = document.getElementById('final-observation').value;
+
+            const shoppingListRef = database.ref(`/${currentList}`);
+            const listData = {
+                items: shoppingList,
+                finalObservation: finalObservation,
+                creationDate: new Date().toLocaleString('pt-BR')
+            };
+
+            shoppingListRef.set(listData);
+            alert('Lista salva com sucesso!');
         }
 
         function clearList() {
@@ -215,38 +234,17 @@
 
             if (confirmClear) {
                 shoppingList = [];
-                database.ref(`/${currentList}/items`).set(shoppingList);
-            }
-        }
-
-        function saveList() {
-            const shoppingListRef = database.ref(`/${currentList}`);
-            const listData = {
-                items: shoppingList,
-                creationDate: new Date().toLocaleString('pt-BR'),
-                finalObservation: document.getElementById('final-observation').value
-            };
-
-            shoppingListRef.set(listData);
-            alert('Lista salva com sucesso!');
-        }
-
-        function editListName() {
-            const newListName = prompt('Digite o novo nome da lista:');
-            if (newListName !== null) {
-                const selectList = document.getElementById('select-list');
-                selectList.options[selectList.selectedIndex].text = newListName;
-                currentList = newListName;
-                initShoppingList();
+                document.getElementById('final-observation').value = '';
+                loadShoppingListTable(shoppingList);
             }
         }
 
         function goToHomePage() {
-            window.location.href = 'https://seu-site.com/index.html';
+            window.location.href = 'https://wilsonf1996.github.io/index.html';
         }
 
         document.addEventListener('DOMContentLoaded', function () {
-            initShoppingList();
+            loadSelectedList();
         });
     </script>
 </body>
