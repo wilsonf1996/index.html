@@ -268,45 +268,31 @@
             y: 0,
             width: width,
             height: height,
-            color: PDFLib.rgb(255, 255, 255),  // Cor branca
+            color: PDFLib.rgb(1, 1, 1),  // Corrigido para valores entre 0 e 1
         });
-
-        // Crie uma função para adicionar texto à página com quebra de linha automática
-        async function drawTextWithWrap(text, options) {
-            const font = await pdfDoc.embedFont(PDFLib.Font.Helvetica);
-            const textWidth = font.widthOfTextAtSize(text, fontSize);
-            const availableWidth = width - options.x - 50; // 50 é uma margem
-
-            if (textWidth > availableWidth) {
-                const lines = page.splitTextToSize(text, { fontSize, maxWidth: availableWidth });
-                lines.forEach((line, index) => {
-                    page.drawText(line, { x: options.x, y: options.y - index * (fontSize + 5), font, fontSize, color: PDFLib.rgb(0, 0, 0) });
-                });
-            } else {
-                page.drawText(text, { x: options.x, y: options.y, font, fontSize, color: PDFLib.rgb(0, 0, 0) });
-            }
-        }
 
         // Adicione a lista de despesas e receitas à página
         let y = height - 30;
-        drawTextWithWrap('Data e Hora\tDescrição\tTipo\tValor (R$)', { x: 50, y });
+        const headerText = 'Data e Hora\tDescrição\tTipo\tValor (R$)';
+        page.drawText(headerText, { x: 50, y, fontSize, font: await pdfDoc.embedFont(PDFLib.Font.Courier), color: PDFLib.rgb(0, 0, 0) });
 
         expenses.forEach(expense => {
+            y -= 15;
             const formattedExpense = `${new Date(expense.dateTime).toLocaleString('pt-BR')}\t${expense.description}\t${expense.type === 'expense' ? 'Despesa' : 'Receita'}\tR$ ${expense.amount.toFixed(2)}`;
-            drawTextWithWrap(formattedExpense, { x: 50, y });
+            page.drawText(formattedExpense, { x: 50, y, fontSize, font: await pdfDoc.embedFont(PDFLib.Font.Courier), color: PDFLib.rgb(0, 0, 0) });
         });
 
         // Adicione os resumos de despesa, receita e balanço
-        const totalExpense = expenses.reduce((total, expense) => total + (expense.type === 'expense' ? expense.amount : 0), 0);
-        const totalRevenue = expenses.reduce((total, expense) => total + (expense.type === 'income' ? expense.amount : 0), 0);
-        const balance = totalRevenue - totalExpense;
-
         y -= 30;
-        drawTextWithWrap(`Total de Despesas: R$ ${totalExpense.toFixed(2)}`, { x: 50, y });
-        y -= 20;
-        drawTextWithWrap(`Total de Receitas: R$ ${totalRevenue.toFixed(2)}`, { x: 50, y });
-        y -= 20;
-        drawTextWithWrap(`Balanço: R$ ${balance.toFixed(2)}`, { x: 50, y });
+        const totalExpenseText = `Total de Despesas: R$ ${expenses.reduce((total, expense) => total + (expense.type === 'expense' ? expense.amount : 0), 0).toFixed(2)}`;
+        const totalRevenueText = `Total de Receitas: R$ ${expenses.reduce((total, expense) => total + (expense.type === 'income' ? expense.amount : 0), 0).toFixed(2)}`;
+        const balanceText = `Balanço: R$ ${(expenses.reduce((total, expense) => total + (expense.type === 'income' ? expense.amount : 0), 0) - expenses.reduce((total, expense) => total + (expense.type === 'expense' ? expense.amount : 0), 0)).toFixed(2)}`;
+
+        page.drawText(totalExpenseText, { x: 50, y, fontSize, font: await pdfDoc.embedFont(PDFLib.Font.Courier), color: PDFLib.rgb(0, 0, 0) });
+        y -= 15;
+        page.drawText(totalRevenueText, { x: 50, y, fontSize, font: await pdfDoc.embedFont(PDFLib.Font.Courier), color: PDFLib.rgb(0, 0, 0) });
+        y -= 15;
+        page.drawText(balanceText, { x: 50, y, fontSize, font: await pdfDoc.embedFont(PDFLib.Font.Courier), color: PDFLib.rgb(0, 0, 0) });
 
         // Gere o PDF como Blob
         const pdfBytes = await pdfDoc.save();
