@@ -88,6 +88,7 @@
     <button onclick="createOrUpdateExpense()">Registrar Gasto/Receita</button>
     <button onclick="generateReport()">Gerar Relatório</button>
     <button onclick="goToHomePage()">Voltar para a Página Principal</button>
+    <button onclick="generatePDF()">Gerar Relatório em PDF</button>
 
     <script>
         // Configuração do Firebase
@@ -295,6 +296,51 @@
                 alert('Período inválido ou não informado.');
             }
         }
+
+        async function generatePDF() {
+    // Crie um novo documento PDF
+    const { PDFDocument } = PDFLib;
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([600, 400]);
+
+    // Adicione conteúdo ao PDF
+    const { font, rgb } = PDFLib;
+
+    // Use a fonte padrão do Google Fonts (substitua 'Roboto' pelo nome da fonte desejada)
+    const customFont = await pdfDoc.embedFont(font.Helvetica);
+
+    const textSize = 12;
+    page.drawText('Lista de Despesas/Receitas', { font: customFont, size: textSize, color: rgb(0, 0, 0), x: 50, y: 350 });
+
+    const tableRows = expenses.map((expense, index) => {
+        return [
+            new Date(expense.dateTime).toLocaleString('pt-BR'),
+            expense.description,
+            expense.type === 'expense' ? 'Despesa' : 'Receita',
+            `R$ ${expense.amount.toFixed(2)}`,
+        ];
+    });
+
+    const table = page.drawTable(tableRows, { font: customFont, fontSize: textSize, y: 300 });
+
+    // Salve o PDF
+    const pdfBytes = await pdfDoc.save();
+    const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+
+    // Crie um link temporário para o Blob
+    const downloadLink = document.createElement('a');
+    downloadLink.href = pdfUrl;
+    downloadLink.download = 'Lista_Despesas_Receitas.pdf';
+
+    // Adicione o link ao DOM e clique automaticamente nele
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+
+    // Remova o link do DOM
+    document.body.removeChild(downloadLink);
+}
+
 
         function goToHomePage() {
             // Aqui, você pode redirecionar para a página inicial do seu aplicativo.
