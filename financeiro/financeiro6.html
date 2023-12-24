@@ -324,76 +324,53 @@
             .reduce((total, expense) => total + expense.amount, 0);
     }
       
-        async function generatePDF() {
-            try {
-                const expensesData = await fetchData();
-                const totalExpenses = calculateTotal(expensesData, 'expense');
-                const totalIncome = calculateTotal(expensesData, 'income');
-                const balance = totalIncome - totalExpenses;
+       async function generatePDF() {
+    try {
+        console.log('Iniciando geração do PDF...');
 
-                // Criação do conteúdo do relatório
-                const content = `
-                    <h2>Relatório Financeiro</h2>
-                    <h3>Despesas</h3>
-                    ${generateTable(expensesData, 'expense')}
-                    
-                    <h3>Receitas</h3>
-                    ${generateTable(expensesData, 'income')}
+        // Obter dados de despesas do Firebase
+        const expensesData = await fetchData();
+        console.log('Dados de despesas obtidos:', expensesData);
 
-                    <h3>Balanço</h3>
-                    <p>Total de Despesas: R$ ${totalExpenses.toFixed(2)}</p>
-                    <p>Total de Receitas: R$ ${totalIncome.toFixed(2)}</p>
-                    <p>Balanço: R$ ${balance.toFixed(2)}</p>
-                `;
+        // Calcular totais
+        const totalExpenses = calculateTotal(expensesData, 'expense');
+        const totalIncome = calculateTotal(expensesData, 'income');
+        const balance = totalIncome - totalExpenses;
 
-                // Define as opções para a geração do PDF
-                const pdfOptions = {
-                    margin: 10,
-                    filename: 'Relatorio_Financeiro.pdf',
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2 },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                };
+        // Criação do conteúdo do relatório
+        const content = `
+            <h2>Relatório Financeiro</h2>
+            <h3>Despesas</h3>
+            ${generateTable(expensesData, 'expense')}
+            
+            <h3>Receitas</h3>
+            ${generateTable(expensesData, 'income')}
 
-                // Usa a biblioteca html2pdf para gerar o PDF
-                html2pdf().from(content).set(pdfOptions).outputPdf();
-            } catch (error) {
-                console.error('Erro ao gerar o PDF:', error);
-                alert('Erro ao gerar o PDF. Verifique o console para mais detalhes.');
-            }
-        }
+            <h3>Balanço</h3>
+            <p>Total de Despesas: R$ ${totalExpenses.toFixed(2)}</p>
+            <p>Total de Receitas: R$ ${totalIncome.toFixed(2)}</p>
+            <p>Balanço: R$ ${balance.toFixed(2)}</p>
+        `;
 
-        // Função auxiliar para gerar a tabela com base no tipo (despesa ou receita)
-        function generateTable(expensesData, type) {
-            const filteredExpenses = expensesData.filter(expense => expense.type === type);
+        // Define as opções para a geração do PDF
+        const pdfOptions = {
+            margin: 10,
+            filename: 'Relatorio_Financeiro.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
 
-            if (filteredExpenses.length === 0) {
-                return '<p>Nenhuma entrada encontrada.</p>';
-            }
+        // Usa a biblioteca html2pdf para gerar o PDF
+        await html2pdf().from(content).set(pdfOptions).outputPdf();
 
-            const tableContent = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Data e Hora</th>
-                            <th>Descrição</th>
-                            <th>Valor (R$)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${filteredExpenses.map(expense => `
-                            <tr>
-                                <td>${new Date(expense.dateTime).toLocaleString('pt-BR')}</td>
-                                <td>${expense.description}</td>
-                                <td>R$ ${expense.amount.toFixed(2)}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
+        console.log('PDF gerado com sucesso!');
+    } catch (error) {
+        console.error('Erro ao gerar o PDF:', error);
+        alert('Erro ao gerar o PDF. Verifique o console para mais detalhes.');
+    }
+}
 
-            return tableContent;
-        }
 
         document.addEventListener('DOMContentLoaded', function () {
             initExpenses();
