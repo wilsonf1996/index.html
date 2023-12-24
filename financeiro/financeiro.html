@@ -326,65 +326,197 @@ function deleteExpense(dateTime) {
             alert('Erro ao criar ou atualizar despesa. Consulte o console para obter detalhes.');
         }
     }
+async function generatePDF() {
+    const pdfDoc = await PDFLib.PDFDocument.create();
+    
+    // Adicionar uma nova página ao documento
+    const page = pdfDoc.addPage();
+    
+    // Configurar a fonte e tamanho do texto
+    const font = await pdfDoc.embedFont(PDFLib.Font.Helvetica);
+    const { width, height } = page.getSize();
+    
+    // Adicionar título à página
+    const title = 'Relatório Financeiro';
+    const titleSize = 18;
+    const titleWidth = font.widthOfTextAtSize(title, titleSize);
+    const titleX = (width - titleWidth) / 2;
+    const titleY = height - 30;
+    page.drawText(title, { x: titleX, y: titleY, font, fontSize: titleSize });
 
-function generateBalanceReport(pdfContent) {
-    const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
-    const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
+    // Adicionar despesas/receitas à página
+    const expensesTitle = 'Despesas/Receitas';
+    const expensesTitleSize = 16;
+    const expensesTitleWidth = font.widthOfTextAtSize(expensesTitle, expensesTitleSize);
+    const expensesTitleX = (width - expensesTitleWidth) / 2;
+    const expensesTitleY = titleY - 20;
+    page.drawText(expensesTitle, { x: expensesTitleX, y: expensesTitleY, font, fontSize: expensesTitleSize });
 
-    if (startDate && endDate) {
-        const filteredExpenses = expenses.filter(expense => {
-            return new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
-                new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
-        });
+    const expensesText = getExpensesText(); // Função a ser definida para obter o texto formatado das despesas/receitas
+    const expensesTextSize = 12;
+    const expensesTextY = expensesTitleY - 20;
+    page.drawText(expensesText, { x: 50, y: expensesTextY, font, fontSize: expensesTextSize });
 
-        const totalIncome = filteredExpenses.reduce((sum, expense) => {
-            return expense.type === 'income' ? sum + expense.amount : sum;
-        }, 0);
+    // Adicionar relatório de despesas à página
+    const expensesReportTitle = 'Relatório de Despesas';
+    const expensesReportTitleSize = 16;
+    const expensesReportTitleWidth = font.widthOfTextAtSize(expensesReportTitle, expensesReportTitleSize);
+    const expensesReportTitleX = (width - expensesReportTitleWidth) / 2;
+    const expensesReportTitleY = expensesTextY - 20;
+    page.drawText(expensesReportTitle, { x: expensesReportTitleX, y: expensesReportTitleY, font, fontSize: expensesReportTitleSize });
 
-        const totalExpenses = filteredExpenses.reduce((sum, expense) => {
-            return expense.type === 'expense' ? sum + expense.amount : sum;
-        }, 0);
+    const expensesReportText = getExpensesReportText(); // Função a ser definida para obter o texto formatado do relatório de despesas
+    const expensesReportTextSize = 12;
+    const expensesReportTextY = expensesReportTitleY - 20;
+    page.drawText(expensesReportText, { x: 50, y: expensesReportTextY, font, fontSize: expensesReportTextSize });
 
-        const balance = totalIncome - totalExpenses;
+    // Adicionar relatório de receitas à página
+    const incomeReportTitle = 'Relatório de Receitas';
+    const incomeReportTitleSize = 16;
+    const incomeReportTitleWidth = font.widthOfTextAtSize(incomeReportTitle, incomeReportTitleSize);
+    const incomeReportTitleX = (width - incomeReportTitleWidth) / 2;
+    const incomeReportTitleY = expensesReportTextY - 20;
+    page.drawText(incomeReportTitle, { x: incomeReportTitleX, y: incomeReportTitleY, font, fontSize: incomeReportTitleSize });
 
-        pdfContent.push(['Relatório de Balanço']);
-        pdfContent.push(['Período', 'Total de Receitas (R$)', 'Total de Despesas (R$)', 'Saldo (R$)']);
-        pdfContent.push([`${startDate} a ${endDate}`, totalIncome.toFixed(2), totalExpenses.toFixed(2), balance.toFixed(2)]);
-    } else {
-        alert('Período inválido ou não informado.');
-    }
+    const incomeReportText = getIncomeReportText(); // Função a ser definida para obter o texto formatado do relatório de receitas
+    const incomeReportTextSize = 12;
+    const incomeReportTextY = incomeReportTitleY - 20;
+    page.drawText(incomeReportText, { x: 50, y: incomeReportTextY, font, fontSize: incomeReportTextSize });
+
+    // Adicionar balanço à página
+    const balanceTitle = 'Balanço';
+    const balanceTitleSize = 16;
+    const balanceTitleWidth = font.widthOfTextAtSize(balanceTitle, balanceTitleSize);
+    const balanceTitleX = (width - balanceTitleWidth) / 2;
+    const balanceTitleY = incomeReportTextY - 20;
+    page.drawText(balanceTitle, { x: balanceTitleX, y: balanceTitleY, font, fontSize: balanceTitleSize });
+
+    const balanceText = getBalanceText(); // Função a ser definida para obter o texto formatado do balanço
+    const balanceTextSize = 12;
+    const balanceTextY = balanceTitleY - 20;
+    page.drawText(balanceText, { x: 50, y: balanceTextY, font, fontSize: balanceTextSize });
+
+    // Salvar o documento como bytes
+    const pdfBytes = await pdfDoc.save();
+    
+    // Criar um URL para o Blob
+    const pdfUrl = URL.createObjectURL(new Blob([pdfBytes]));
+    
+    // Criar um link para download
+    const downloadLink = document.createElement('a');
+    downloadLink.href = pdfUrl;
+    downloadLink.download = 'relatorio.pdf';
+    downloadLink.textContent = 'Baixar Relatório em PDF';
+    
+    // Adicionar o link à página
+    document.body.appendChild(downloadLink);
+    
+    // Simular o clique no link para iniciar o download
+    downloadLink.click();
+    
+    // Remover o link da página
+    document.body.removeChild(downloadLink);
 }
 
-function generateReport() {
+// Função para gerar relatório de despesas
+function generateExpensesReport(pdfContent, expenses) {
+    pdfContent.push(['Relatório de Despesas']);
+    pdfContent.push(['Data e Hora', 'Descrição', 'Valor (R$)']);
+
+    expenses
+        .filter(expense => expense.type === 'expense')
+        .forEach(expense => {
+            pdfContent.push([expense.dateTime, expense.description, `R$ ${expense.amount.toFixed(2)}`]);
+        });
+
+    pdfContent.push([]); // Adicionar linha em branco para separar seções
+}
+
+// Função para gerar relatório de receitas
+function generateIncomeReport(pdfContent, expenses) {
+    pdfContent.push(['Relatório de Receitas']);
+    pdfContent.push(['Data e Hora', 'Descrição', 'Valor (R$)']);
+
+    expenses
+        .filter(expense => expense.type === 'income')
+        .forEach(expense => {
+            pdfContent.push([expense.dateTime, expense.description, `R$ ${expense.amount.toFixed(2)}`]);
+        });
+
+    pdfContent.push([]); // Adicionar linha em branco para separar seções
+}
+
+// Função para gerar relatório de balanço
+function generateBalanceReport(pdfContent, expenses) {
+    pdfContent.push(['Relatório de Balanço']);
+
+    const totalIncome = expenses
+        .filter(expense => expense.type === 'income')
+        .reduce((sum, expense) => sum + expense.amount, 0);
+
+    const totalExpenses = expenses
+        .filter(expense => expense.type === 'expense')
+        .reduce((sum, expense) => sum + expense.amount, 0);
+
+    const balance = totalIncome - totalExpenses;
+
+    pdfContent.push(['Total de Receitas (R$)', 'Total de Despesas (R$)', 'Saldo (R$)']);
+    pdfContent.push([totalIncome.toFixed(2), totalExpenses.toFixed(2), balance.toFixed(2)]);
+    pdfContent.push([]); // Adicionar linha em branco para separar seções
+}
+
+// Função para gerar relatório completo
+async function generateReportPDF(pdfContent) {
+    const pdfDoc = await PDFLib.PDFDocument.create();
+    const page = pdfDoc.addPage();
+
+    const font = await pdfDoc.embedFont(PDFLib.Font.Helvetica);
+    const { width, height } = page.getSize();
+
+    let y = height - 50;
+
+    pdfContent.forEach(row => {
+        if (row.length === 0) {
+            y -= 20; // Espaçamento entre seções
+        } else {
+            row.forEach((cell, index) => {
+                page.drawText(cell, { x: 50 + index * 150, y, font, fontSize: 12 });
+            });
+            y -= 15; // Espaçamento entre linhas
+        }
+    });
+
+    const pdfBytes = await pdfDoc.save();
+    return pdfBytes;
+}
+
+// Função para gerar relatório completo
+async function generateReport() {
     const pdfContent = [];
-    generateExpensesReport(pdfContent);
-    generateIncomeReport(pdfContent);
-    generateBalanceReport(pdfContent);
+
+    generateExpensesReport(pdfContent, expenses);
+    generateIncomeReport(pdfContent, expenses);
+    generateBalanceReport(pdfContent, expenses);
 
     if (pdfContent.length > 0) {
-        // Gere o PDF como Blob
         const pdfBytes = await generateReportPDF(pdfContent);
 
-        // Crie um URL para o Blob
         const pdfUrl = URL.createObjectURL(new Blob([pdfBytes]));
 
-        // Crie um link para download
         const downloadLink = document.createElement('a');
         downloadLink.href = pdfUrl;
         downloadLink.download = 'relatorio.pdf';
         downloadLink.textContent = 'Baixar Relatório em PDF';
 
-        // Adicione o link à página
         document.body.appendChild(downloadLink);
 
-        // Simule o clique no link para iniciar o download
         downloadLink.click();
 
-        // Remova o link da página
         document.body.removeChild(downloadLink);
     }
 }
 
+// Função para voltar para a página principal
 function goToHomePage() {
     window.location.href = 'index.html';
 }
