@@ -56,11 +56,9 @@
             overflow-y: auto;
         }
     </style>
-<!-- Carregue a biblioteca do jsPDF -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
-
-<!-- Carregue a extensão autoTable de outra CDN -->
-<script src="https://unpkg.com/jspdf-autotable@3.5.22"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.70/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.70/vfs_fonts.js"></script>
+</head>
     <!-- Carregue a biblioteca do Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
@@ -312,42 +310,65 @@
             initExpenses();
         });
       async function generatePDF() {
-        const { jsPDF } = window.jspdf;
+    try {
+        // Obter dados de despesas e receitas
+        const expensesData = await fetchData(); // Substitua isso pela lógica real para obter dados do Firebase ou de outra fonte
 
-        try {
-            const pdf = new jsPDF();
+        // Calcular resumos
+        const totalExpenses = calculateTotal(expensesData, 'expense');
+        const totalIncome = calculateTotal(expensesData, 'income');
+        const balance = totalIncome - totalExpenses;
 
-            pdf.text('Lista de Despesas/Receitas', 20, 20);
+        // Defina a estrutura do documento PDF
+        const docDefinition = {
+            content: [
+                { text: 'Relatório Financeiro', style: 'header' },
+                {
+                    table: {
+                        headerRows: 1,
+                        widths: ['auto', 'auto', 'auto', 'auto'],
+                        body: [
+                            ['Data e Hora', 'Descrição', 'Tipo', 'Valor (R$)'],
+                            ...expensesData.map(expense => [
+                                new Date(expense.dateTime).toLocaleString('pt-BR'),
+                                expense.description,
+                                expense.type === 'expense' ? 'Despesa' : 'Receita',
+                                `R$ ${expense.amount.toFixed(2)}`
+                            ])
+                        ]
+                    }
+                },
+                { text: 'Resumos', style: 'subheader' },
+                {
+                    ul: [
+                        `Total de Despesas: R$ ${totalExpenses.toFixed(2)}`,
+                        `Total de Receitas: R$ ${totalIncome.toFixed(2)}`,
+                        `Balanço: R$ ${balance.toFixed(2)}`
+                    ]
+                }
+            ],
+            styles: {
+                header: {
+                    fontSize: 18,
+                    bold: true,
+                    margin: [0, 0, 0, 10]
+                },
+                subheader: {
+                    fontSize: 16,
+                    bold: true,
+                    margin: [0, 10, 0, 5]
+                }
+            }
+        };
 
-            const columns = ["Data e Hora", "Descrição", "Tipo", "Valor (R$)"];
-            const data = expenses.map(expense => [
-                new Date(expense.dateTime).toLocaleString('pt-BR'),
-                expense.description,
-                expense.type === 'expense' ? 'Despesa' : 'Receita',
-                `R$ ${expense.amount.toFixed(2)}`
-            ]);
-
-            pdf.autoTable({
-                head: [columns],
-                body: data,
-                startY: 30,
-            });
-
-            // Adicionar resumo de despesa, receita e balanço
-            const totalExpense = expenses.reduce((sum, expense) => (expense.type === 'expense' ? sum + expense.amount : sum), 0);
-            const totalIncome = expenses.reduce((sum, income) => (income.type === 'income' ? sum + income.amount : sum), 0);
-            const balance = totalIncome - totalExpense;
-
-            pdf.text(`Resumo de Despesa: R$ ${totalExpense.toFixed(2)}`, 20, pdf.autoTable.previous.finalY + 10);
-            pdf.text(`Resumo de Receita: R$ ${totalIncome.toFixed(2)}`, 20, pdf.autoTable.previous.finalY + 20);
-            pdf.text(`Balanço: R$ ${balance.toFixed(2)}`, 20, pdf.autoTable.previous.finalY + 30);
-
-            pdf.save('Lista_Despesas_Receitas.pdf');
-        } catch (error) {
-            console.error('Erro ao gerar o PDF:', error);
-            alert('Erro ao gerar o PDF. Verifique o console para mais detalhes.');
-        }
+        // Gere o PDF
+        pdfmake.createPdf(docDefinition).download('Relatorio_Financeiro.pdf');
+    } catch (error) {
+        console.error('Erro ao gerar o PDF:', error);
+        alert('Erro ao gerar o PDF. Verifique o console para mais detalhes.');
     }
+}
+
     </script>
 </body>
 
