@@ -56,8 +56,8 @@
         }
     </style>
     <!-- Carregue a biblioteca do Firebase -->
-   <script type="module" src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app.js"></script>
-    <script type="module" src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database.js"></script
+     <script type="module" src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.2.0/dist/pdf-lib.js"></script>
 </head>
 <body>
@@ -116,9 +116,13 @@
     measurementId: "G-CVBQ54PERH"
     };
 
-        // Inicialização do Firebase
-      const app = firebase.initializeApp(firebaseConfig);
-      const database = firebase.getDatabase(app);
+    document.addEventListener('DOMContentLoaded', function () {
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database(app);
+        initExpenses();
+    });
+
+        
         // Variável para armazenar despesas e receitas
         let expenses = [];
         // Função principal para inicializar despesas e configurar eventos
@@ -176,13 +180,14 @@
 
         // Funções restantes e chamada para inicializar o aplicativo omitidas para brevidade
         function initExpenses() {
-    const expensesRef = database.ref('/expenses');
+        const expensesRef = database.ref('/expenses');
 
-    expensesRef.on('value', (snapshot) => {
-        const expensesData = snapshot.val();
-        expenses = expensesData ? Object.values(expensesData) : [];
-        loadExpensesTable(expenses);
-    });
+        expensesRef.on('value', (snapshot) => {
+            const expensesData = snapshot.val();
+            expenses = expensesData ? Object.values(expensesData) : [];
+            loadExpensesTable(expensesData); // Corrigindo para passar expensesData
+        });
+    }
 }
 
 function loadExpensesTable(expenses) {
@@ -254,9 +259,12 @@ function createOrUpdateExpense() {
     database.ref('/expenses').set(expenses);
 }
 
-function isValidExpense(description, amount, date) {
-    return description.trim() !== '' && !isNaN(amount) && date !== '';
-}
+ function isValidExpense(description, amount, date) {
+        // Ajustar a validação de data e hora conforme necessário
+        // Pode ser necessário converter o formato para torná-lo compatível
+        return description.trim() !== '' && !isNaN(amount) && date !== '';
+    }
+
 
 function editExpense(index) {
     const editedDescription = prompt('Editar Descrição:', expenses[index].description);
