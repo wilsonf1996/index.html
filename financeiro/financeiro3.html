@@ -310,79 +310,88 @@
             initExpenses();
         });
 
-        async function fetchData() {
-            try {
-                const expensesRef = database.ref('/expenses');
-                const snapshot = await expensesRef.once('value');
-                const expensesData = snapshot.val();
+        
 
-                return expensesData ? Object.values(expensesData) : [];
-            } catch (error) {
-                console.error('Erro ao obter dados:', error);
-                throw error;
-            }
+    // ... (Código posterior)
+
+    async function fetchData() {
+        try {
+            const expensesRef = database.ref('/expenses');
+            const snapshot = await expensesRef.once('value');
+            const expensesData = snapshot.val();
+
+            return expensesData ? Object.values(expensesData) : [];
+        } catch (error) {
+            console.error('Erro ao obter dados:', error);
+            throw error;
         }
+    }
+ function calculateTotal(expensesData, type) {
+        return expensesData
+            .filter(expense => expense.type === type)
+            .reduce((total, expense) => total + expense.amount, 0);
+    }
+    // ... (Código posterior)
 
+    async function generatePDF() {
+        try {
+            // Obter dados de despesas e receitas
+            const expensesData = await fetchData();
 
-        async function generatePDF() {
-    try {
-        // Obter dados de despesas e receitas
-        const expensesData = await fetchData(); // Substitua isso pela lógica real para obter dados do Firebase ou de outra fonte
+            // Calcular resumos
+            const totalExpenses = calculateTotal(expensesData, 'expense');
+            const totalIncome = calculateTotal(expensesData, 'income');
+            const balance = totalIncome - totalExpenses;
 
-        // Calcular resumos
-        const totalExpenses = calculateTotal(expensesData, 'expense');
-        const totalIncome = calculateTotal(expensesData, 'income');
-        const balance = totalIncome - totalExpenses;
-
-        // Defina a estrutura do documento PDF
-        const docDefinition = {
-            content: [
-                { text: 'Relatório Financeiro', style: 'header' },
-                {
-                    table: {
-                        headerRows: 1,
-                        widths: ['auto', 'auto', 'auto', 'auto'],
-                        body: [
-                            ['Data e Hora', 'Descrição', 'Tipo', 'Valor (R$)'],
-                            ...expensesData.map(expense => [
-                                new Date(expense.dateTime).toLocaleString('pt-BR'),
-                                expense.description,
-                                expense.type === 'expense' ? 'Despesa' : 'Receita',
-                                `R$ ${expense.amount.toFixed(2)}`
-                            ])
+            // Defina a estrutura do documento PDF
+            const docDefinition = {
+                content: [
+                    { text: 'Relatório Financeiro', style: 'header' },
+                    {
+                        table: {
+                            headerRows: 1,
+                            widths: ['auto', 'auto', 'auto', 'auto'],
+                            body: [
+                                ['Data e Hora', 'Descrição', 'Tipo', 'Valor (R$)'],
+                                ...expensesData.map(expense => [
+                                    new Date(expense.dateTime).toLocaleString('pt-BR'),
+                                    expense.description,
+                                    expense.type === 'expense' ? 'Despesa' : 'Receita',
+                                    `R$ ${expense.amount.toFixed(2)}`
+                                ])
+                            ]
+                        }
+                    },
+                    { text: 'Resumos', style: 'subheader' },
+                    {
+                        ul: [
+                            `Total de Despesas: R$ ${totalExpenses.toFixed(2)}`,
+                            `Total de Receitas: R$ ${totalIncome.toFixed(2)}`,
+                            `Balanço: R$ ${balance.toFixed(2)}`
                         ]
                     }
-                },
-                { text: 'Resumos', style: 'subheader' },
-                {
-                    ul: [
-                        `Total de Despesas: R$ ${totalExpenses.toFixed(2)}`,
-                        `Total de Receitas: R$ ${totalIncome.toFixed(2)}`,
-                        `Balanço: R$ ${balance.toFixed(2)}`
-                    ]
+                ],
+                styles: {
+                    header: {
+                        fontSize: 18,
+                        bold: true,
+                        margin: [0, 0, 0, 10]
+                    },
+                    subheader: {
+                        fontSize: 16,
+                        bold: true,
+                        margin: [0, 10, 0, 5]
+                    }
                 }
-            ],
-            styles: {
-                header: {
-                    fontSize: 18,
-                    bold: true,
-                    margin: [0, 0, 0, 10]
-                },
-                subheader: {
-                    fontSize: 16,
-                    bold: true,
-                    margin: [0, 10, 0, 5]
-                }
-            }
-        };
+            };
 
-        // Gere o PDF
-        pdfmake.createPdf(docDefinition).download('Relatorio_Financeiro.pdf');
-    } catch (error) {
-        console.error('Erro ao gerar o PDF:', error);
-        alert('Erro ao gerar o PDF. Verifique o console para mais detalhes.');
+            // Gere o PDF
+            pdfmake.createPdf(docDefinition).download('Relatorio_Financeiro.pdf');
+        } catch (error) {
+            console.error('Erro ao gerar o PDF:', error);
+            alert('Erro ao gerar o PDF. Verifique o console para mais detalhes.');
+        }
     }
-}
 
     </script>
 </body>
