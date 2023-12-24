@@ -310,66 +310,54 @@
             initExpenses();
         });
 
-        async function generatePDF() {
-    try {
-        // Obter dados de despesas e receitas
-        const expensesData = await fetchData(); // Substitua isso pela lógica real para obter dados do Firebase ou de outra fonte
+   async function generatePDF() {
+    const { PDFDocument, rgb, font } = PDFLib;
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([600, 400]);
 
-        // Calcular resumos
-        const totalExpenses = calculateTotal(expensesData, 'expense');
-        const totalIncome = calculateTotal(expensesData, 'income');
-        const balance = totalIncome - totalExpenses;
+    const customFont = await pdfDoc.embedFont(font.Helvetica);
 
-        // Defina a estrutura do documento PDF
-        const docDefinition = {
-            content: [
-                { text: 'Relatório Financeiro', style: 'header' },
-                {
-                    table: {
-                        headerRows: 1,
-                        widths: ['auto', 'auto', 'auto', 'auto'],
-                        body: [
-                            ['Data e Hora', 'Descrição', 'Tipo', 'Valor (R$)'],
-                            ...expensesData.map(expense => [
-                                new Date(expense.dateTime).toLocaleString('pt-BR'),
-                                expense.description,
-                                expense.type === 'expense' ? 'Despesa' : 'Receita',
-                                `R$ ${expense.amount.toFixed(2)}`
-                            ])
-                        ]
-                    }
-                },
-                { text: 'Resumos', style: 'subheader' },
-                {
-                    ul: [
-                        `Total de Despesas: R$ ${totalExpenses.toFixed(2)}`,
-                        `Total de Receitas: R$ ${totalIncome.toFixed(2)}`,
-                        `Balanço: R$ ${balance.toFixed(2)}`
-                    ]
-                }
-            ],
-            styles: {
-                header: {
-                    fontSize: 18,
-                    bold: true,
-                    margin: [0, 0, 0, 10]
-                },
-                subheader: {
-                    fontSize: 16,
-                    bold: true,
-                    margin: [0, 10, 0, 5]
-                }
-            }
-        };
+    const textSize = 12;
+    page.drawText('Lista de Despesas/Receitas', { font: customFont, size: textSize, color: rgb(0, 0, 0), x: 50, y: 350 });
 
-        // Gere o PDF
-        pdfmake.createPdf(docDefinition).download('Relatorio_Financeiro.pdf');
-    } catch (error) {
-        console.error('Erro ao gerar o PDF:', error);
-        alert('Erro ao gerar o PDF. Verifique o console para mais detalhes.');
-    }
+    const tableRows = expenses.map((expense, index) => [
+        new Date(expense.dateTime).toLocaleString('pt-BR'),
+        expense.description,
+        expense.type === 'expense' ? 'Despesa' : 'Receita',
+        `R$ ${expense.amount.toFixed(2)}`,
+    ]);
+
+    const yStart = page.getHeight() - 100;
+    const table = page.drawTable(tableRows, {
+        font: customFont,
+        fontSize: textSize,
+        y: yStart,
+    });
+
+    // Salve o PDF
+    const pdfBytes = await pdfDoc.save();
+    const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+
+    const downloadLink = document.createElement('a');
+    downloadLink.href = pdfUrl;
+    downloadLink.download = 'Lista_Despesas_Receitas.pdf';
+
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
 }
 
+
+        function goToHomePage() {
+            // Aqui, você pode redirecionar para a página inicial do seu aplicativo.
+            window.location.href = 'https://wilsonf1996.github.io/index.html/';
+            alert('Redirecionamento para a Página Inicial.');
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            initExpenses();
+        });
 
     </script>
 </body>
