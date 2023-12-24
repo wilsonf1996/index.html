@@ -1,1 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dieta Semanal</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            margin: 20px;
+            background-color: #333; /* Fundo escuro */
+            color: white; /* Texto branco */
+             background-image: url('https://raw.githubusercontent.com/wilsonf1996/index.html/main/DALL%C2%B7E%202023-12-23%2002.59.48%20-%20impressionante%20imagem%20de%20fundo%20para%20aplicativo%20pessoal%20de%20engenheiro%20civil%20fundo%20preto%2C%20hiperrealista%20e%20com%20disgner%20moderno.png'); /* Substitua 'URL_DA_SUA_IMAGEM' pelo caminho da sua imagem */
+             background-size: cover; /* Isso garantirá que a imagem cubra todo o fundo */
+            background-position: center; /* Isso centralizará a imagem no fundo */
+            /* Ajuste a qualidade da imagem */
+            -webkit-background-size: cover;
+            -moz-background-size: cover;
+            -o-background-size: cover;
+        }
+
+        table {
+            width: 100%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            overflow-x: auto;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #444; /* Cor diferente para cabeçalho */
+        }
+
+        td {
+            background-color: #555; /* Cor diferente para células normais */
+            position: relative;
+        }
+
+        .editable {
+            min-height: 30px;
+            max-width: 200px; /* Ajuste conforme necessário */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+        }
+
+        .editable:hover {
+            background-color: #666; /* Cor diferente para hover em células editáveis */
+        }
+
+        .meal-row {
+            background-color: #444 !important; /* Cor diferente para linhas de refeições */
+            color: #fff; /* Texto branco nas linhas de refeições */
+        }
+
+        .meal-name {
+            background-color: #444; /* Cor diferente para linhas de nomes de refeições */
+            color: #fff; /* Texto branco nas linhas de nomes de refeições */
+        }
+
+        button {
+            background-color: #555; /* Cor neutra para botões */
+            color: white; /* Texto branco nos botões */
+            padding: 10px;
+            margin-top: 10px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #aaa; /* Cor diferente para hover em botões */
+        }
+    </style>
+    <!-- Carregue a biblioteca do Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+</head>
+
+<body>
+    <h1>Dieta Semanal</h1>
+
+    <table id="diet-table">
+        <thead>
+            <tr>
+                <th>Refeição / Dia</th>
+                <th>Seg</th>
+                <th>Ter</th>
+                <th>Qua</th>
+                <th>Qui</th>
+                <th>Sex</th>
+                <th>Sáb</th>
+                <th>Dom</th>
+            </tr>
+        </thead>
+        <tbody id="diet-body"></tbody>
+    </table>
+
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+            measurementId: "G-CVBQ54PERH"
+        };
+
+        // Inicialização do Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        function initDietTable() {
+            const dietTable = document.getElementById('diet-table');
+            const dietBody = document.getElementById('diet-body');
+            dietBody.innerHTML = "";
+
+            // Cabeçalho da tabela
+            const tableHeader = dietTable.querySelector('thead tr');
+            tableHeader.innerHTML = "<th>Refeição / Dia</th>";
+            const weekdays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+            for (let i = 0; i < 7; i++) {
+                tableHeader.innerHTML += `<th>${weekdays[i]}</th>`;
+            }
+
+            // Conteúdo da tabela
+            const meals = ['Refeição 1', 'Refeição 2', 'Refeição 3', 'Refeição 4', 'Refeição 5', 'Refeição 6', 'Refeição 7', 'Refeição 8'];
+            const categories = ['Refeição', 'Alimentos', 'Bebidas', 'Detalhes', 'Horário da Refeição', 'Situação'];
+
+            for (let mealIndex = 0; mealIndex < meals.length; mealIndex++) {
+                for (let categoryIndex = 0; categoryIndex < categories.length; categoryIndex++) {
+                    const row = dietBody.insertRow();
+                    const cellMeal = row.insertCell(0);
+                    const cellData = (categoryIndex === 0) ? meals[mealIndex] : categories[categoryIndex];
+                    const cellClass = (categoryIndex === 0) ? 'meal-name' : 'editable';
+                    cellMeal.innerHTML = `<div class="${cellClass}" onclick="enterEditMode(this, '${meals[mealIndex]}-${categories[categoryIndex]}')">${cellData}</div>`;
+
+                    for (let day = 1; day <= 7; day++) {
+                        const cell = row.insertCell(day);
+                        const cellKey = `${meals[mealIndex]}-${weekdays[day - 1]}-${categories[categoryIndex]}`;
+                        const editableClass = 'editable';
+                        cell.className = (categoryIndex === 0) ? 'meal-name' : editableClass;
+
+                        // Buscar dados do Firebase e preencher célula
+                        database.ref(`/dieta/${cellKey}`).once('value').then(snapshot => {
+                            const value = snapshot.val();
+                            const defaultValue = (value !== null && value.trim() !== "") ? value : "N/A"; // Usar valor existente ou "N/A"
+                            const cellClass = (categoryIndex === 0) ? 'meal-name' : 'editable';
+                            cell.innerHTML = `<div class="${cellClass}" onclick="enterEditMode(this, '${cellKey}')">${defaultValue}</div>`;
+                        });
+                    }
+                }
+            }
+        }
+
+        function enterEditMode(cell, cellKey) {
+            let value = prompt('Digite o conteúdo:', cell.textContent);
+            // Tratar nulo ou string vazia
+            value = (value === null || value.trim() === "") ? "N/A" : value.trim();
+            // Atualizar localmente antes de atualizar no Firebase
+            cell.textContent = value;
+            updateCellData(cellKey, value);
+        }
+
+        function updateCellData(cellKey, value) {
+            // Atualizar dados no Firebase
+            database.ref(`/dieta/${cellKey}`).set(value).catch(error => {
+                console.error("Erro ao atualizar dados no Firebase:", error);
+            });
+        }
+
+        initDietTable();
+    </script>
+
+   
+</body>
+
+</html>
 
