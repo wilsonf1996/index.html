@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,9 +10,10 @@
             font-family: 'Arial', sans-serif;
             text-align: center;
             margin: 20px;
-            background-image: url('https://raw.githubusercontent.com/wilsonf1996/index.html/main/DALL%C2%B7E%202023-12-23%2013.03.50%20-%20mpressionante%20imagem%20de%20fundo%20de%20tela%20para%20aplicativo%20web%20de%20engenheiro%20civil%20fundo%20branco%2C%20hiper-realista%20e%20com%20designer%20moderno.%20A%20imagem%20deve%20ser%20r.png');
-            background-size: cover;
-            background-position: center;
+            background-image: url('https://raw.githubusercontent.com/wilsonf1996/index.html/main/DALL%C2%B7E%202023-12-23%2013.03.50%20-%20mpressionante%20imagem%20de%20fundo%20de%20tela%20para%20aplicativo%20web%20de%20engenheiro%20civil%20fundo%20branco%2C%20hiper-realista%20e%20com%20designer%20moderno.%20A%20imagem%20deve%20ser%20r.png'); /* Substitua 'URL_DA_SUA_IMAGEM' pelo caminho da sua imagem */
+             background-size: cover; /* Isso garantirá que a imagem cubra todo o fundo */
+            background-position: center; /* Isso centralizará a imagem no fundo */
+            /* Ajuste a qualidade da imagem */
             -webkit-background-size: cover;
             -moz-background-size: cover;
             -o-background-size: cover;
@@ -29,8 +31,7 @@
             max-height: 400px;
         }
 
-        th,
-        td {
+        th, td {
             border: 1px solid #ddd;
             padding: 8px;
             text-align: left;
@@ -56,10 +57,10 @@
         }
     </style>
     <!-- Carregue a biblioteca do Firebase -->
-     <script type="module" src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
-    <script type="module" src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.2.0/dist/pdf-lib.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
 </head>
+
 <body>
     <h1>Financeiro</h1>
 
@@ -75,6 +76,7 @@
         </thead>
         <tbody id="expenses-body"></tbody>
     </table>
+
     <input type="text" id="expense-description" placeholder="Descrição do Gasto/Receita">
     <input type="number" id="expense-amount" placeholder="Valor (R$)">
     <input type="datetime-local" id="expense-date" placeholder="Data do Gasto/Receita">
@@ -83,18 +85,11 @@
         <option value="expense">Despesa</option>
         <option value="income">Receita</option>
     </select>
-  <button id="createOrUpdateExpenseBtn">Registrar Gasto/Receita</button>
-    <button id="generatePDFBtn">Gerar Relatório em PDF</button>
-    <button id="generateReportBtn">Gerar Relatório</button>
-    <button id="goToHomePageBtn">Voltar para a Página Principal</button>
+    <button onclick="createOrUpdateExpense()">Registrar Gasto/Receita</button>
+    <button onclick="generateReport()">Gerar Relatório</button>
+    <button onclick="goToHomePage()">Voltar para a Página Principal</button>
 
     <script>
-        // Função para verificar se a biblioteca jsPDF está carregada
-        
-
-        // Função para carregar a biblioteca jsPDF
-        
-document.addEventListener('DOMContentLoaded', function () {
         // Configuração do Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
@@ -111,183 +106,55 @@ document.addEventListener('DOMContentLoaded', function () {
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        // Chamar a função de inicialização após a configuração do Firebase
-        initializeApp();
+        let expenses = [];
 
-        function initializeApp() {
-            initExpenses();
-            setupEventListeners();
-        }
-    });
+        function initExpenses() {
+            const expensesRef = database.ref('/expenses');
 
-        // Função para configurar os ouvintes de eventos nos botões
-         function setupEventListeners() {
-            document.getElementById('createOrUpdateExpenseBtn').addEventListener('click', handleCreateOrUpdateExpense);
-            document.getElementById('generatePDFBtn').addEventListener('click', handleGeneratePDF);
-            document.getElementById('generateReportBtn').addEventListener('click', handleGenerateReport);
-            document.getElementById('goToHomePageBtn').addEventListener('click', handleGoToHomePage);
+            expensesRef.on('value', (snapshot) => {
+                const expensesData = snapshot.val();
+                expenses = expensesData ? Object.values(expensesData) : [];
+                loadExpensesTable(expenses);
+            });
         }
 
-        
+        function loadExpensesTable(expenses) {
+            const tableBody = document.getElementById('expenses-body');
+            tableBody.innerHTML = "";
 
-        // Função para lidar com a criação ou atualização de despesas
-        async function handleCreateOrUpdateExpense() {
-            try {
-                const description = document.getElementById('expense-description').value;
-                const amount = parseFloat(document.getElementById('expense-amount').value);
-                const date = document.getElementById('expense-date').value;
-                const type = document.getElementById('expense-type').value;
+            if (Array.isArray(expenses)) {
+                expenses.forEach((expense, index) => {
+                    const row = tableBody.insertRow();
+                    const cellDateTime = row.insertCell(0);
+                    const cellDescription = row.insertCell(1);
+                    const cellType = row.insertCell(2);
+                    const cellAmount = row.insertCell(3);
+                    const cellActions = row.insertCell(4);
 
-                if (!isValidExpense(description, amount, date)) {
-                    alert('Por favor, preencha todos os campos corretamente.');
-                    return;
-                }
+                    const formattedDate = new Date(expense.dateTime).toLocaleString('pt-BR');
 
-                const existingExpenseIndex = expenses.findIndex(expense => expense.dateTime === date && expense.type === type);
+                    cellDateTime.textContent = formattedDate;
+                    cellDescription.textContent = expense.description;
+                    cellType.textContent = expense.type === 'expense' ? 'Despesa' : 'Receita';
+                    cellAmount.textContent = `R$ ${expense.amount.toFixed(2)}`;
 
-                if (existingExpenseIndex !== -1) {
-                    // Editar despesa ou receita existente
-                    const editedType = prompt('Editar Tipo (expense ou income):', expenses[existingExpenseIndex].type);
-                    expenses[existingExpenseIndex].description = description;
-                    expenses[existingExpenseIndex].amount = amount;
-                    expenses[existingExpenseIndex].type = editedType;
-                } else {
-                    // Adicionar nova despesa ou receita
-                    const newExpense = {
-                        dateTime: date,
-                        description,
-                        amount,
-                        type
-                    };
-                    expenses.push(newExpense);
-                }
+                    const editButton = document.createElement('button');
+                    editButton.textContent = 'Editar';
+                    editButton.onclick = () => editExpense(index);
 
-                await database.ref('/expenses').set(expenses);
-            } catch (error) {
-                console.error('Erro ao criar ou atualizar despesa:', error);
-                alert('Erro ao criar ou atualizar despesa. Consulte o console para obter detalhes.');
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Excluir';
+                    deleteButton.onclick = () => deleteExpense(expense.dateTime);
+
+                    cellActions.appendChild(editButton);
+                    cellActions.appendChild(deleteButton);
+                });
+            } else {
+                console.error("Dados de despesas inválidos:", expenses);
             }
         }
 
-        // Funções restantes e chamada para inicializar o aplicativo omitidas para brevidade
-        function initExpenses() {
-        const expensesRef = database.ref('/expenses');
-
-        expensesRef.on('value', (snapshot) => {
-            const expensesData = snapshot.val();
-            expenses = expensesData ? Object.values(expensesData) : [];
-            loadExpensesTable(expensesData);
-        });
-    }
-
-function loadExpensesTable(expenses) {
-    const tableBody = document.getElementById('expenses-body');
-    tableBody.innerHTML = "";
-
-    if (Array.isArray(expenses)) {
-        expenses.forEach((expense, index) => {
-            const row = tableBody.insertRow();
-            const cellDateTime = row.insertCell(0);
-            const cellDescription = row.insertCell(1);
-            const cellType = row.insertCell(2);
-            const cellAmount = row.insertCell(3);
-            const cellActions = row.insertCell(4);
-
-            const formattedDate = new Date(expense.dateTime).toLocaleString('pt-BR');
-
-            cellDateTime.textContent = formattedDate;
-            cellDescription.textContent = expense.description;
-            cellType.textContent = expense.type === 'expense' ? 'Despesa' : 'Receita';
-            cellAmount.textContent = `R$ ${expense.amount.toFixed(2)}`;
-
-            const editButton = document.createElement('button');
-            editButton.textContent = 'Editar';
-            editButton.onclick = () => editExpense(index);
-
-            const deleteButton = document.createElement('button');
-            deleteButton.textContent = 'Excluir';
-            deleteButton.onclick = () => deleteExpense(expense.dateTime);
-
-            cellActions.appendChild(editButton);
-            cellActions.appendChild(deleteButton);
-        });
-    } else {
-        console.error("Dados de despesas inválidos:", expenses);
-    }
-}
-
-function createOrUpdateExpense() {
-    const description = document.getElementById('expense-description').value;
-    const amount = parseFloat(document.getElementById('expense-amount').value);
-    const date = document.getElementById('expense-date').value;
-    const type = document.getElementById('expense-type').value;
-
-    if (!isValidExpense(description, amount, date)) {
-        alert('Por favor, preencha todos os campos corretamente.');
-        return;
-    }
-
-    const existingExpenseIndex = expenses.findIndex(expense => expense.dateTime === date && expense.type === type);
-
-    if (existingExpenseIndex !== -1) {
-        // Editar despesa ou receita existente
-        const editedType = prompt('Editar Tipo (expense ou income):', expenses[existingExpenseIndex].type);
-        expenses[existingExpenseIndex].description = description;
-        expenses[existingExpenseIndex].amount = amount;
-        expenses[existingExpenseIndex].type = editedType;
-    } else {
-        // Adicionar nova despesa ou receita
-        const newExpense = {
-            dateTime: date,
-            description,
-            amount,
-            type
-        };
-        expenses.push(newExpense);
-    }
-
-    database.ref('/expenses').set(expenses);
-}
-
-function isValidExpense(description, amount, date) {
-        // Ajustar a validação de data e hora conforme necessário
-        // Pode ser necessário converter o formato para torná-lo compatível
-        return description.trim() !== '' && !isNaN(amount) && date !== '';
-    }
-
-
-function editExpense(index) {
-    const editedDescription = prompt('Editar Descrição:', expenses[index].description);
-    const editedAmount = parseFloat(prompt('Editar Valor (R$):', expenses[index].amount.toFixed(2)));
-    const editedType = prompt('Editar Tipo (expense ou income):', expenses[index].type);
-    const editedDateTime = prompt('Editar Data e Hora (AAAA-MM-DDTHH:mm):', expenses[index].dateTime);
-
-    if (isValidExpense(editedDescription, editedAmount, editedDateTime)) {
-        expenses[index].description = editedDescription;
-        expenses[index].amount = editedAmount;
-        expenses[index].type = editedType;
-        expenses[index].dateTime = editedDateTime;
-
-        database.ref('/expenses').set(expenses);
-    } else {
-        alert('Edição cancelada ou valores inválidos.');
-    }
-}
-
-function deleteExpense(dateTime) {
-    const confirmDelete = confirm('Tem certeza que deseja excluir este item?');
-
-    if (confirmDelete) {
-        const indexToDelete = expenses.findIndex(expense => expense.dateTime === dateTime);
-        expenses.splice(indexToDelete, 1);
-
-        database.ref('/expenses').set(expenses);
-    }
-}
-
-    // Função para lidar com a criação ou atualização de despesas
-    async function handleCreateOrUpdateExpense() {
-        try {
+        function createOrUpdateExpense() {
             const description = document.getElementById('expense-description').value;
             const amount = parseFloat(document.getElementById('expense-amount').value);
             const date = document.getElementById('expense-date').value;
@@ -308,225 +175,138 @@ function deleteExpense(dateTime) {
                 expenses[existingExpenseIndex].type = editedType;
             } else {
                 // Adicionar nova despesa ou receita
-                const newExpense = {
-                    dateTime: date,
-                    description,
-                    amount,
-                    type
-                };
+                const newExpense = { dateTime: date, description, amount, type };
                 expenses.push(newExpense);
             }
 
-            await database.ref('/expenses').set(expenses);
-        } catch (error) {
-            console.error('Erro ao criar ou atualizar despesa:', error);
-            alert('Erro ao criar ou atualizar despesa. Consulte o console para obter detalhes.');
+            database.ref('/expenses').set(expenses);
         }
-    }
-async function generatePDF() {
-    const pdfDoc = await PDFLib.PDFDocument.create();
-    
-    // Adicionar uma nova página ao documento
-    const page = pdfDoc.addPage();
-    
-    // Configurar a fonte e tamanho do texto
-    const font = await pdfDoc.embedFont(PDFLib.Font.Helvetica);
-    const { width, height } = page.getSize();
-    
-    // Adicionar título à página
-    const title = 'Relatório Financeiro';
-    const titleSize = 18;
-    const titleWidth = font.widthOfTextAtSize(title, titleSize);
-    const titleX = (width - titleWidth) / 2;
-    const titleY = height - 30;
-    page.drawText(title, { x: titleX, y: titleY, font, fontSize: titleSize });
 
-    // Adicionar despesas/receitas à página
-    const expensesTitle = 'Despesas/Receitas';
-    const expensesTitleSize = 16;
-    const expensesTitleWidth = font.widthOfTextAtSize(expensesTitle, expensesTitleSize);
-    const expensesTitleX = (width - expensesTitleWidth) / 2;
-    const expensesTitleY = titleY - 20;
-    page.drawText(expensesTitle, { x: expensesTitleX, y: expensesTitleY, font, fontSize: expensesTitleSize });
+        function isValidExpense(description, amount, date) {
+            return description.trim() !== '' && !isNaN(amount) && date !== '';
+        }
 
-    const expensesText = getExpensesText(); // Função a ser definida para obter o texto formatado das despesas/receitas
-    const expensesTextSize = 12;
-    const expensesTextY = expensesTitleY - 20;
-    page.drawText(expensesText, { x: 50, y: expensesTextY, font, fontSize: expensesTextSize });
+       function editExpense(index) {
+        const editedDescription = prompt('Editar Descrição:', expenses[index].description);
+        const editedAmount = parseFloat(prompt('Editar Valor (R$):', expenses[index].amount.toFixed(2)));
+        const editedType = prompt('Editar Tipo (expense ou income):', expenses[index].type);
+        const editedDateTime = prompt('Editar Data e Hora (AAAA-MM-DDTHH:mm):', expenses[index].dateTime);
 
-    // Adicionar relatório de despesas à página
-    const expensesReportTitle = 'Relatório de Despesas';
-    const expensesReportTitleSize = 16;
-    const expensesReportTitleWidth = font.widthOfTextAtSize(expensesReportTitle, expensesReportTitleSize);
-    const expensesReportTitleX = (width - expensesReportTitleWidth) / 2;
-    const expensesReportTitleY = expensesTextY - 20;
-    page.drawText(expensesReportTitle, { x: expensesReportTitleX, y: expensesReportTitleY, font, fontSize: expensesReportTitleSize });
+        if (isValidExpense(editedDescription, editedAmount, editedDateTime)) {
+            expenses[index].description = editedDescription;
+            expenses[index].amount = editedAmount;
+            expenses[index].type = editedType;
+            expenses[index].dateTime = editedDateTime;
 
-    const expensesReportText = getExpensesReportText(); // Função a ser definida para obter o texto formatado do relatório de despesas
-    const expensesReportTextSize = 12;
-    const expensesReportTextY = expensesReportTitleY - 20;
-    page.drawText(expensesReportText, { x: 50, y: expensesReportTextY, font, fontSize: expensesReportTextSize });
-
-    // Adicionar relatório de receitas à página
-    const incomeReportTitle = 'Relatório de Receitas';
-    const incomeReportTitleSize = 16;
-    const incomeReportTitleWidth = font.widthOfTextAtSize(incomeReportTitle, incomeReportTitleSize);
-    const incomeReportTitleX = (width - incomeReportTitleWidth) / 2;
-    const incomeReportTitleY = expensesReportTextY - 20;
-    page.drawText(incomeReportTitle, { x: incomeReportTitleX, y: incomeReportTitleY, font, fontSize: incomeReportTitleSize });
-
-    const incomeReportText = getIncomeReportText(); // Função a ser definida para obter o texto formatado do relatório de receitas
-    const incomeReportTextSize = 12;
-    const incomeReportTextY = incomeReportTitleY - 20;
-    page.drawText(incomeReportText, { x: 50, y: incomeReportTextY, font, fontSize: incomeReportTextSize });
-
-    // Adicionar balanço à página
-    const balanceTitle = 'Balanço';
-    const balanceTitleSize = 16;
-    const balanceTitleWidth = font.widthOfTextAtSize(balanceTitle, balanceTitleSize);
-    const balanceTitleX = (width - balanceTitleWidth) / 2;
-    const balanceTitleY = incomeReportTextY - 20;
-    page.drawText(balanceTitle, { x: balanceTitleX, y: balanceTitleY, font, fontSize: balanceTitleSize });
-
-    const balanceText = getBalanceText(); // Função a ser definida para obter o texto formatado do balanço
-    const balanceTextSize = 12;
-    const balanceTextY = balanceTitleY - 20;
-    page.drawText(balanceText, { x: 50, y: balanceTextY, font, fontSize: balanceTextSize });
-
-    // Salvar o documento como bytes
-    const pdfBytes = await pdfDoc.save();
-    
-    // Criar um URL para o Blob
-    const pdfUrl = URL.createObjectURL(new Blob([pdfBytes]));
-    
-    // Criar um link para download
-    const downloadLink = document.createElement('a');
-    downloadLink.href = pdfUrl;
-    downloadLink.download = 'relatorio.pdf';
-    downloadLink.textContent = 'Baixar Relatório em PDF';
-    
-    // Adicionar o link à página
-    document.body.appendChild(downloadLink);
-    
-    // Simular o clique no link para iniciar o download
-    downloadLink.click();
-    
-    // Remover o link da página
-    document.body.removeChild(downloadLink);
-}
-
-// Função para gerar relatório de despesas
-function generateExpensesReport(pdfContent, expenses) {
-    pdfContent.push(['Relatório de Despesas']);
-    pdfContent.push(['Data e Hora', 'Descrição', 'Valor (R$)']);
-
-    expenses
-        .filter(expense => expense.type === 'expense')
-        .forEach(expense => {
-            pdfContent.push([expense.dateTime, expense.description, `R$ ${expense.amount.toFixed(2)}`]);
-        });
-
-    pdfContent.push([]); // Adicionar linha em branco para separar seções
-}
-
-// Função para gerar relatório de receitas
-function generateIncomeReport(pdfContent, expenses) {
-    pdfContent.push(['Relatório de Receitas']);
-    pdfContent.push(['Data e Hora', 'Descrição', 'Valor (R$)']);
-
-    expenses
-        .filter(expense => expense.type === 'income')
-        .forEach(expense => {
-            pdfContent.push([expense.dateTime, expense.description, `R$ ${expense.amount.toFixed(2)}`]);
-        });
-
-    pdfContent.push([]); // Adicionar linha em branco para separar seções
-}
-
-// Função para gerar relatório de balanço
-function generateBalanceReport(pdfContent, expenses) {
-    pdfContent.push(['Relatório de Balanço']);
-
-    const totalIncome = expenses
-        .filter(expense => expense.type === 'income')
-        .reduce((sum, expense) => sum + expense.amount, 0);
-
-    const totalExpenses = expenses
-        .filter(expense => expense.type === 'expense')
-        .reduce((sum, expense) => sum + expense.amount, 0);
-
-    const balance = totalIncome - totalExpenses;
-
-    pdfContent.push(['Total de Receitas (R$)', 'Total de Despesas (R$)', 'Saldo (R$)']);
-    pdfContent.push([totalIncome.toFixed(2), totalExpenses.toFixed(2), balance.toFixed(2)]);
-    pdfContent.push([]); // Adicionar linha em branco para separar seções
-}
-
-// Função para gerar relatório completo
-async function generateReportPDF(pdfContent) {
-    const pdfDoc = await PDFLib.PDFDocument.create();
-    const page = pdfDoc.addPage();
-
-    const font = await pdfDoc.embedFont(PDFLib.Font.Helvetica);
-    const { width, height } = page.getSize();
-
-    let y = height - 50;
-
-    pdfContent.forEach(row => {
-        if (row.length === 0) {
-            y -= 20; // Espaçamento entre seções
+            database.ref('/expenses').set(expenses);
         } else {
-            row.forEach((cell, index) => {
-                page.drawText(cell, { x: 50 + index * 150, y, font, fontSize: 12 });
-            });
-            y -= 15; // Espaçamento entre linhas
+            alert('Edição cancelada ou valores inválidos.');
         }
-    });
-
-    const pdfBytes = await pdfDoc.save();
-    return pdfBytes;
-}
-
-// Função para gerar relatório completo
-async function generateReport() {
-    const pdfContent = [];
-
-    generateExpensesReport(pdfContent, expenses);
-    generateIncomeReport(pdfContent, expenses);
-    generateBalanceReport(pdfContent, expenses);
-
-    if (pdfContent.length > 0) {
-        const pdfBytes = await generateReportPDF(pdfContent);
-
-        const pdfUrl = URL.createObjectURL(new Blob([pdfBytes]));
-
-        const downloadLink = document.createElement('a');
-        downloadLink.href = pdfUrl;
-        downloadLink.download = 'relatorio.pdf';
-        downloadLink.textContent = 'Baixar Relatório em PDF';
-
-        document.body.appendChild(downloadLink);
-
-        downloadLink.click();
-
-        document.body.removeChild(downloadLink);
     }
-}
-
-// Função para voltar para a página principal
-function goToHomePage() {
-    window.location.href = 'index.html';
-}
 
 
-         function initializeApp() {
-        initExpenses();
-        setupEventListeners();
-    }
-        
+        function deleteExpense(dateTime) {
+            const confirmDelete = confirm('Tem certeza que deseja excluir este item?');
+
+            if (confirmDelete) {
+                const indexToDelete = expenses.findIndex(expense => expense.dateTime === dateTime);
+                expenses.splice(indexToDelete, 1);
+
+                database.ref('/expenses').set(expenses);
+            }
+        }
+
+        function generateReport() {
+            const reportType = prompt('Informe o tipo de relatório (expenses, income, balance):');
+
+            switch (reportType) {
+                case 'expenses':
+                    generateExpensesReport();
+                    break;
+                case 'income':
+                    generateIncomeReport();
+                    break;
+                case 'balance':
+                    generateBalanceReport();
+                    break;
+                default:
+                    alert('Tipo de relatório inválido.');
+            }
+        }
+
+        function generateExpensesReport() {
+            const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
+            const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
+
+            if (startDate && endDate) {
+                const filteredExpenses = expenses.filter(expense => {
+                    return expense.type === 'expense' &&
+                        new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
+                        new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
+                });
+
+                const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+                alert(`Total de Despesas no Período: R$ ${totalExpenses.toFixed(2)}`);
+            } else {
+                alert('Período inválido ou não informado.');
+            }
+        }
+
+        function generateIncomeReport() {
+            const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
+            const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
+
+            if (startDate && endDate) {
+                const filteredIncome = expenses.filter(expense => {
+                    return expense.type === 'income' &&
+                        new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
+                        new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
+                });
+
+                const totalIncome = filteredIncome.reduce((sum, income) => sum + income.amount, 0);
+                alert(`Total de Receitas no Período: R$ ${totalIncome.toFixed(2)}`);
+            } else {
+                alert('Período inválido ou não informado.');
+            }
+        }
+
+        function generateBalanceReport() {
+            const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
+            const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
+
+            if (startDate && endDate) {
+                const filteredExpenses = expenses.filter(expense => {
+                    return new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
+                        new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
+                });
+
+                const totalIncome = filteredExpenses.reduce((sum, expense) => {
+                    return expense.type === 'income' ? sum + expense.amount : sum;
+                }, 0);
+
+                const totalExpenses = filteredExpenses.reduce((sum, expense) => {
+                    return expense.type === 'expense' ? sum + expense.amount : sum;
+                }, 0);
+
+                const balance = totalIncome - totalExpenses;
+
+                alert(`Total de Receitas no Período: R$ ${totalIncome.toFixed(2)}\nTotal de Despesas no Período: R$ ${totalExpenses.toFixed(2)}\nBalanço: R$ ${balance.toFixed(2)}`);
+            } else {
+                alert('Período inválido ou não informado.');
+            }
+        }
+
+        function goToHomePage() {
+            // Aqui, você pode redirecionar para a página inicial do seu aplicativo.
+            window.location.href = 'https://wilsonf1996.github.io/index.html/';
+            alert('Redirecionamento para a Página Inicial.');
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            initExpenses();
+        });
     </script>
 </body>
-    
-</html>
 
+</html>
 
