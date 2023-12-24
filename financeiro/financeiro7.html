@@ -358,65 +358,51 @@ function generateTable(expensesData, type) {
 }
 
 
- document.addEventListener('DOMContentLoaded', function () {
-        initExpenses();
+ async function generatePDF() {
+            try {
+                console.log('Iniciando geração do PDF...');
 
-        // Aguarde o carregamento do jsPDF
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js';
-        script.onload = function () {
-            console.log('jsPDF carregado com sucesso!');
-            // Agora, você pode chamar generatePDF
-            async function generatePDF() {
-        try {
-            console.log('Iniciando geração do PDF...');
+                // Obter dados de despesas do Firebase
+                const expensesData = await fetchData();
+                console.log('Dados de despesas obtidos:', expensesData);
 
-            // Obter dados de despesas do Firebase
-            const expensesData = await fetchData();
-            console.log('Dados de despesas obtidos:', expensesData);
+                // Calcular totais
+                const totalExpenses = calculateTotal(expensesData, 'expense');
+                const totalIncome = calculateTotal(expensesData, 'income');
+                const balance = totalIncome - totalExpenses;
 
-            // Calcular totais
-            const totalExpenses = calculateTotal(expensesData, 'expense');
-            const totalIncome = calculateTotal(expensesData, 'income');
-            const balance = totalIncome - totalExpenses;
+                // Criação do conteúdo do relatório
+                const content = `
+                    <h2>Relatório Financeiro</h2>
+                    <h3>Despesas</h3>
+                    ${generateTable(expensesData, 'expense')}
+                    
+                    <h3>Receitas</h3>
+                    ${generateTable(expensesData, 'income')}
 
-            // Criação do conteúdo do relatório
-            const content = `
-                <h2>Relatório Financeiro</h2>
-                <h3>Despesas</h3>
-                ${generateTable(expensesData, 'expense')}
-                
-                <h3>Receitas</h3>
-                ${generateTable(expensesData, 'income')}
+                    <h3>Balanço</h3>
+                    <p>Total de Despesas: R$ ${totalExpenses.toFixed(2)}</p>
+                    <p>Total de Receitas: R$ ${totalIncome.toFixed(2)}</p>
+                    <p>Balanço: R$ ${balance.toFixed(2)}</p>
+                `;
 
-                <h3>Balanço</h3>
-                <p>Total de Despesas: R$ ${totalExpenses.toFixed(2)}</p>
-                <p>Total de Receitas: R$ ${totalIncome.toFixed(2)}</p>
-                <p>Balanço: R$ ${balance.toFixed(2)}</p>
-            `;
+                // Inicializa o objeto jsPDF
+                const pdf = new jsPDF();
 
-            // Inicializa o objeto jsPDF
-            const pdf = new jsPDF();
+                // Adiciona o conteúdo ao PDF
+                pdf.fromHTML(content);
 
-            // Adiciona o conteúdo ao PDF
-            pdf.fromHTML(content);
+                // Salva o PDF
+                pdf.save('Relatorio_Financeiro.pdf');
 
-            // Salva o PDF
-            pdf.save('Relatorio_Financeiro.pdf');
-
-            console.log('PDF gerado com sucesso!');
-        } catch (error) {
-            console.error('Erro ao gerar o PDF:', error);
-            alert('Erro ao gerar o PDF. Verifique o console para mais detalhes.');
+                console.log('PDF gerado com sucesso!');
+            } catch (error) {
+                console.error('Erro ao gerar o PDF:', error);
+                alert('Erro ao gerar o PDF. Verifique o console para mais detalhes.');
+            }
         }
-    }
-        };
-        document.head.appendChild(script);
-    });
 
-        document.addEventListener('DOMContentLoaded', function () {
-            initExpenses();
-        });
+        
     </script>
 </body>
 
