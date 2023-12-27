@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -58,7 +57,6 @@
         }
     </style>
     <!-- Carregue a biblioteca do Firebase -->
-    <script src="https://rawgit.com/eKoopmans/html2pdf/master/dist/html2pdf.bundle.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
 </head>
@@ -77,6 +75,25 @@
             </tr>
         </thead>
         <tbody id="expenses-body"></tbody>
+    <table id="expenses-table">
+        <thead>
+            <tr>
+                <th>Data e Hora</th>
+                <th>Descrição</th>
+                <th>Tipo</th>
+                <th>Valor (R$)</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="expenses-body"></tbody>
+        <!-- Nova linha para exibir o balanço -->
+        <tfoot>
+            <tr>
+                <td colspan="3"></td>
+                <td>Total Balanço:</td>
+                <td id="balance-cell">R$ 0.00</td>
+            </tr>
+        </tfoot>
     </table>
 
     <input type="text" id="expense-description" placeholder="Descrição do Gasto/Receita">
@@ -90,7 +107,7 @@
     <button onclick="createOrUpdateExpense()">Registrar Gasto/Receita</button>
     <button onclick="generateReport()">Gerar Relatório</button>
     <button onclick="goToHomePage()">Voltar para a Página Principal</button>
-    <button onclick="generatePDF()">Gerar PDF</button>
+
 
     <script>
         // Configuração do Firebase
@@ -305,109 +322,42 @@
             alert('Redirecionamento para a Página Inicial.');
         }
 
-        
-    async function fetchData() {
-        try {
-            const expensesRef = database.ref('/expenses');
-            const snapshot = await expensesRef.once('value');
-            const expensesData = snapshot.val();
-
-            return expensesData ? Object.values(expensesData) : [];
-        } catch (error) {
-            console.error('Erro ao obter dados:', error);
-            throw error;
-        }
-    }
-function calculateTotal(expensesData, type) {
-    return expensesData
-        .filter(expense => expense.type === type)
-        .reduce((total, expense) => total + expense.amount, 0);
-}
-
-function generateTable(expensesData, type) {
-    const filteredExpenses = expensesData.filter(expense => expense.type === type);
-
-    if (filteredExpenses.length === 0) {
-        return '<p>Nenhum registro encontrado.</p>';
-    }
-
-    const tableContent = `
-        <table>
-            <thead>
-                <tr>
-                    <th>Data e Hora</th>
-                    <th>Descrição</th>
-                    <th>Tipo</th>
-                    <th>Valor (R$)</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${filteredExpenses.map(expense => `
-                    <tr>
-                        <td>${new Date(expense.dateTime).toLocaleString('pt-BR')}</td>
-                        <td>${expense.description}</td>
-                        <td>${expense.type === 'expense' ? 'Despesa' : 'Receita'}</td>
-                        <td>R$ ${expense.amount.toFixed(2)}</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
-
-    return tableContent;
-}
-
-async function generatePDF() {
-    try {
-        console.log('Iniciando geração do PDF...');
-
-        // Obter dados de despesas do Firebase
-        const expensesData = await fetchData();
-        console.log('Dados de despesas obtidos:', expensesData);
-
-        // Calcular totais
-        const totalExpenses = calculateTotal(expensesData, 'expense');
-        const totalIncome = calculateTotal(expensesData, 'income');
-        const balance = totalIncome - totalExpenses;
-
-        // Criação do conteúdo do relatório
-        const content = `
-            <h2>Relatório Financeiro</h2>
-            <h3>Despesas</h3>
-            ${generateTable(expensesData, 'expense')}
-            
-            <h3>Receitas</h3>
-            ${generateTable(expensesData, 'income')}
-
-            <h3>Balanço</h3>
-            <p>Total de Despesas: R$ ${totalExpenses.toFixed(2)}</p>
-            <p>Total de Receitas: R$ ${totalIncome.toFixed(2)}</p>
-            <p>Balanço: R$ ${balance.toFixed(2)}</p>
-        `;
-
-        // Define as opções para a geração do PDF
-        const pdfOptions = {
-            margin: 10,
-            filename: 'Relatorio_Financeiro.pdf',
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2 },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-
-        // Usa a biblioteca html2pdf para gerar o PDF
-        await html2pdf().from(content).set(pdfOptions).outputPdf();
-
-        console.log('PDF gerado com sucesso!');
-    } catch (error) {
-        console.error('Erro ao gerar o PDF:', error);
-        alert('Erro ao gerar o PDF. Verifique o console para mais detalhes.');
-    }
-}
-
-
         document.addEventListener('DOMContentLoaded', function () {
             initExpenses();
         });
+
+        
+        function loadExpensesTable(expenses) {
+            const tableBody = document.getElementById('expenses-body');
+            tableBody.innerHTML = "";
+
+            if (Array.isArray(expenses)) {
+                expenses.forEach((expense, index) => {
+                    // ... (código existente) ...
+                });
+
+                // Atualiza o balanço ao carregar a tabela
+                updateBalance();
+            } else {
+                console.error("Dados de despesas inválidos:", expenses);
+            }
+        }
+
+        function updateBalance() {
+            const totalIncome = expenses.reduce((sum, expense) => {
+                return expense.type === 'income' ? sum + expense.amount : sum;
+            }, 0);
+
+            const totalExpenses = expenses.reduce((sum, expense) => {
+                return expense.type === 'expense' ? sum + expense.amount : sum;
+            }, 0);
+
+            const balance = totalIncome - totalExpenses;
+
+            const balanceCell = document.getElementById('balance-cell');
+            balanceCell.textContent = `R$ ${balance.toFixed(2)}`;
+        }
+        
     </script>
 </body>
 
