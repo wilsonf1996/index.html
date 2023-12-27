@@ -63,22 +63,24 @@
 <body>
     <h1>Financeiro</h1>
 
-    <label for="lista-financeira">Lista Financeira:</label>
-    <input type="text" id="lista-financeira" placeholder="Nome da Lista">
-     <label for="select-month">Selecione o Mês:</label>
-    <select id="select-month">
-        <option value="01">Janeiro</option>
-        <option value="02">Fevereiro</option>
-        <option value="03">Março</option>
-        <option value="04">Abril</option>
-        <option value="05">Maio</option>
-        <option value="06">Junho</option>
-        <option value="07">Julho</option>
-        <option value="08">Agosto</option>
-        <option value="09">Setembro</option>
-        <option value="10">Outubro</option>
-        <option value="11">Novembro</option>
-        <option value="12">Dezembro</option>
+   <label for="lista-financeira">Lista Financeira:</label>
+<input type="text" id="lista-financeira" placeholder="Nome da Lista">
+
+<label for="select-month">Selecione o Mês:</label>
+<select id="select-month">
+    <option value="01">Janeiro</option>
+    <option value="02">Fevereiro</option>
+    <option value="03">Março</option>
+    <option value="04">Abril</option>
+    <option value="05">Maio</option>
+    <option value="06">Junho</option>
+    <option value="07">Julho</option>
+    <option value="08">Agosto</option>
+    <option value="09">Setembro</option>
+    <option value="10">Outubro</option>
+    <option value="11">Novembro</option>
+    <option value="12">Dezembro</option>
+</select>
     </select>
 
     <table id="expenses-table">
@@ -134,7 +136,7 @@
 
         let expenses = [];
 
-      function initExpenses() {
+    function initExpenses() {
     const selectedMonth = document.getElementById('select-month').value;
     const expensesRef = database.ref(`/expenses/${selectedMonth}`);
 
@@ -143,6 +145,7 @@
         expenses = expensesData ? Object.values(expensesData) : [];
         loadExpensesTable(expenses);
     });
+}
 }
 
         function loadExpensesTable(expenses) {
@@ -192,19 +195,23 @@
         }
 
         function updateBalance() {
-            const totalIncome = expenses.reduce((sum, expense) => {
-                return expense.type === 'income' ? sum + expense.amount : sum;
-            }, 0);
+    const selectedMonth = document.getElementById('select-month').value;
+    const expensesOfMonth = expenses[selectedMonth] || [];
 
-            const totalExpenses = expenses.reduce((sum, expense) => {
-                return expense.type === 'expense' ? sum + expense.amount : sum;
-            }, 0);
+    const totalIncome = expensesOfMonth.reduce((sum, expense) => {
+        return expense.type === 'income' ? sum + expense.amount : sum;
+    }, 0);
 
-            const balance = totalIncome - totalExpenses;
+    const totalExpenses = expensesOfMonth.reduce((sum, expense) => {
+        return expense.type === 'expense' ? sum + expense.amount : sum;
+    }, 0);
 
-            const balanceCell = document.getElementById('balance-cell');
-            balanceCell.textContent = `R$ ${balance.toFixed(2)}`;
-        }
+    const balance = totalIncome - totalExpenses;
+
+    const balanceCell = document.getElementById('balance-cell');
+    balanceCell.textContent = `R$ ${balance.toFixed(2)}`;
+}
+
 
     function createOrUpdateExpense() {
     const selectedMonth = document.getElementById('select-month').value;
@@ -221,13 +228,11 @@
     const existingExpenseIndex = expenses.findIndex(expense => expense.dateTime === date && expense.type === type);
 
     if (existingExpenseIndex !== -1) {
-        // Editar despesa ou receita existente
         const editedType = prompt('Editar Tipo (expense ou income):', expenses[existingExpenseIndex].type);
         expenses[existingExpenseIndex].description = description;
         expenses[existingExpenseIndex].amount = amount;
         expenses[existingExpenseIndex].type = editedType;
     } else {
-        // Adicionar nova despesa ou receita
         const newExpense = { dateTime: date, description, amount, type };
         if (!expenses[selectedMonth]) {
             expenses[selectedMonth] = [];
@@ -237,6 +242,7 @@
 
     database.ref(`/expenses/${selectedMonth}`).set(expenses[selectedMonth]);
 }
+
        
         function isValidExpense(description, amount, date) {
             return description.trim() !== '' && !isNaN(amount) && date !== '';
@@ -260,16 +266,18 @@
             }
         }
 
-        function deleteExpense(dateTime) {
-            const confirmDelete = confirm('Tem certeza que deseja excluir este item?');
+       function deleteExpense(dateTime) {
+    const selectedMonth = document.getElementById('select-month').value;
+    const confirmDelete = confirm('Tem certeza que deseja excluir este item?');
 
-            if (confirmDelete) {
-                const indexToDelete = expenses.findIndex(expense => expense.dateTime === dateTime);
-                expenses.splice(indexToDelete, 1);
+    if (confirmDelete) {
+        const indexToDelete = expenses[selectedMonth].findIndex(expense => expense.dateTime === dateTime);
+        expenses[selectedMonth].splice(indexToDelete, 1);
 
-                database.ref('/expenses').set(expenses);
-            }
-        }
+        database.ref(`/expenses/${selectedMonth}`).set(expenses[selectedMonth]);
+    }
+}
+
 
         function generateReport() {
             const reportType = prompt('Informe o tipo de relatório (expenses, income, balance):');
