@@ -71,23 +71,43 @@
     <h1>Financeiro</h1>
 
    <label for="lista-financeira">Lista Financeira:</label>
-<input type="text" id="lista-financeira" placeholder="Nome da Lista">
+    <input type="text" id="lista-financeira" placeholder="Nome da Lista">
 
-<label for="select-month">Selecione o Mês:</label>
-<select id="select-month">
-    <option value="01">Lista 01</option>
-    <option value="02">Lista 02</option>
-    <option value="03">Lista 03</option>
-    <option value="04">Lista 04</option>
-    <option value="05">Lista 05</option>
-    <option value="06">Lista 06</option>
-    <option value="07">Lista 07</option>
-    <option value="08">Lista 08</option>
-    <option value="09">Lista 09</option>
-    <option value="10">Lista 10</option>
-    <option value="11">Lista 11</option>
-    <option value="12">Lista 12</option>
-</select>
+ <label for="list-1">Nome da Lista 1:</label>
+    <input type="text" id="list-1" placeholder="Nome da Lista 1" onchange="loadListOptions()">
+
+    <label for="list-2">Nome da Lista 2:</label>
+    <input type="text" id="list-2" placeholder="Nome da Lista 2" onchange="loadListOptions()">
+    <label for="list-1">Nome da Lista 3:</label>
+    <input type="text" id="list-1" placeholder="Nome da Lista 3" onchange="loadListOptions()">
+
+    <label for="list-2">Nome da Lista 4:</label>
+    <input type="text" id="list-2" placeholder="Nome da Lista 4" onchange="loadListOptions()">
+    <label for="list-1">Nome da Lista 5:</label>
+    <input type="text" id="list-1" placeholder="Nome da Lista 5" onchange="loadListOptions()">
+
+    <label for="list-2">Nome da Lista 6:</label>
+    <input type="text" id="list-2" placeholder="Nome da Lista 6" onchange="loadListOptions()">
+    <label for="list-1">Nome da Lista 7:</label>
+    <input type="text" id="list-1" placeholder="Nome da Lista 7" onchange="loadListOptions()">
+
+    <label for="list-2">Nome da Lista 8:</label>
+    <input type="text" id="list-2" placeholder="Nome da Lista 8" onchange="loadListOptions()">
+    <label for="list-1">Nome da Lista 9:</label>
+    <input type="text" id="list-1" placeholder="Nome da Lista 9" onchange="loadListOptions()">
+
+    <label for="list-2">Nome da Lista 10:</label>
+    <input type="text" id="list-2" placeholder="Nome da Lista 10" onchange="loadListOptions()">
+    <label for="list-1">Nome da Lista 11:</label>
+    <input type="text" id="list-1" placeholder="Nome da Lista 11" onchange="loadListOptions()">
+
+    <label for="list-2">Nome da Lista 12:</label>
+    <input type="text" id="list-2" placeholder="Nome da Lista 12" onchange="loadListOptions()">
+    <!-- Repita o padrão para listas 3 a 12 -->
+
+    <label for="select-list">Selecione a Lista Financeira:</label>
+    <select id="select-list" onchange="loadSelectedList()">
+    
     </select>
 
     <table id="expenses-table">
@@ -143,9 +163,38 @@
 
         let expenses = [];
 
-    function initExpenses() {
+function initExpenses() {
+    // Carregue as opções do select de lista financeira
+    loadListOptions();
+
+    // Adicione um ouvinte para detectar mudanças na lista selecionada
+    const selectList = document.getElementById('select-list');
+    selectList.addEventListener('change', loadSelectedList);
+
+    // Inicialize os dados para a lista financeira padrão (pode ser a primeira da lista)
+    loadSelectedList();
+}
+
+   function loadListOptions() {
+    // Limpe as opções existentes
+    const selectList = document.getElementById('select-list');
+    selectList.innerHTML = '';
+
+    // Preencha dinamicamente as opções do select
+    for (let i = 1; i <= 12; i++) {
+        const listName = document.getElementById(`list-${i}`).value;
+        const option = document.createElement('option');
+        option.value = `list-${i}`;
+        option.textContent = listName || `Lista ${i}`;
+        selectList.appendChild(option);
+    }
+}
+
+
+        function loadSelectedList() {
+    const selectedList = document.getElementById('select-list').value;
     const selectedMonth = document.getElementById('select-month').value;
-    const expensesRef = database.ref(`/expenses/${selectedMonth}`);
+    const expensesRef = database.ref(`/expenses/${selectedList}/${selectedMonth}`);
 
     expensesRef.on('value', (snapshot) => {
         const expensesData = snapshot.val();
@@ -153,6 +202,8 @@
         loadExpensesTable(expenses);
     });
 
+    // Atualize o balanço ao carregar a lista selecionada
+    updateBalance();
 }
 
         function loadExpensesTable(expenses) {
@@ -201,6 +252,8 @@
             }
         }
 
+     
+
         function updateBalance() {
     const selectedMonth = document.getElementById('select-month').value;
     const expensesOfMonth = expenses[selectedMonth] || [];
@@ -220,7 +273,8 @@
 }
 
 
-    function createOrUpdateExpense() {
+   function createOrUpdateExpense() {
+    const selectedList = document.getElementById('select-list').value;
     const selectedMonth = document.getElementById('select-month').value;
     const description = document.getElementById('expense-description').value;
     const amount = parseFloat(document.getElementById('expense-amount').value);
@@ -241,13 +295,33 @@
         expenses[existingExpenseIndex].type = editedType;
     } else {
         const newExpense = { dateTime: date, description, amount, type };
-        if (!expenses[selectedMonth]) {
-            expenses[selectedMonth] = [];
+        if (!expenses[selectedList]) {
+            expenses[selectedList] = {};
         }
-        expenses[selectedMonth].push(newExpense);
+        if (!expenses[selectedList][selectedMonth]) {
+            expenses[selectedList][selectedMonth] = [];
+        }
+        expenses[selectedList][selectedMonth].push(newExpense);
     }
 
-    database.ref(`/expenses/${selectedMonth}`).set(expenses[selectedMonth]);
+    database.ref(`/expenses/${selectedList}/${selectedMonth}`).set(expenses[selectedList][selectedMonth]);
+    // Atualize a interface
+    initExpenses();
+}
+
+function deleteExpense(dateTime) {
+    const selectedList = document.getElementById('select-list').value;
+    const selectedMonth = document.getElementById('select-month').value;
+    const confirmDelete = confirm('Tem certeza que deseja excluir este item?');
+
+    if (confirmDelete) {
+        const indexToDelete = expenses[selectedList][selectedMonth].findIndex(expense => expense.dateTime === dateTime);
+        expenses[selectedList][selectedMonth].splice(indexToDelete, 1);
+
+        database.ref(`/expenses/${selectedList}/${selectedMonth}`).set(expenses[selectedList][selectedMonth]);
+        // Atualize a interface
+        initExpenses();
+    }
 }
 
        
@@ -273,19 +347,7 @@
             }
         }
 
-       function deleteExpense(dateTime) {
-    const selectedMonth = document.getElementById('select-month').value;
-    const confirmDelete = confirm('Tem certeza que deseja excluir este item?');
-
-    if (confirmDelete) {
-        const indexToDelete = expenses[selectedMonth].findIndex(expense => expense.dateTime === dateTime);
-        expenses[selectedMonth].splice(indexToDelete, 1);
-
-        database.ref(`/expenses/${selectedMonth}`).set(expenses[selectedMonth]);
-    }
-}
-
-
+      
         function generateReport() {
             const reportType = prompt('Informe o tipo de relatório (expenses, income, balance):');
 
