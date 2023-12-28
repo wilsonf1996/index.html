@@ -1,1 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financeiro</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            margin: 20px;
+            background-image: url('https://raw.githubusercontent.com/wilsonf1996/index.html/main/DALL%C2%B7E%202023-12-23%2013.03.50%20-%20mpressionante%20imagem%20de%20fundo%20de%20tela%20para%20aplicativo%20web%20de%20engenheiro%20civil%20fundo%20branco%2C%20hiper-realista%20e%20com%20designer%20moderno.%20A%20imagem%20deve%20ser%20r.png'); /* Substitua 'URL_DA_SUA_IMAGEM' pelo caminho da sua imagem */
+             background-size: cover; /* Isso garantirá que a imagem cubra todo o fundo */
+            background-position: center; /* Isso centralizará a imagem no fundo */
+            /* Ajuste a qualidade da imagem */
+            -webkit-background-size: cover;
+            -moz-background-size: cover;
+            -o-background-size: cover;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            overflow-y: scroll;
+            max-height: 400px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        button {
+            padding: 10px;
+            font-size: 16px;
+            margin: 0 10px;
+        }
+
+        input {
+            width: 80%;
+            margin: 10px 0;
+        }
+
+        #expenses-table {
+            overflow-y: auto;
+        }
+    </style>
+    <!-- Carregue a biblioteca do Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+</head>
+
+<body>
+    <h1>Financeiro</h1>
+
+    <table id="expenses-table">
+        <thead>
+            <tr>
+                <th>Data e Hora</th>
+                <th>Descrição</th>
+                <th>Tipo</th>
+                <th>Valor (R$)</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="expenses-body"></tbody>
+        
+        
+    </table>
+
+    <input type="text" id="expense-description" placeholder="Descrição do Gasto/Receita">
+    <input type="number" id="expense-amount" placeholder="Valor (R$)">
+    <input type="datetime-local" id="expense-date" placeholder="Data do Gasto/Receita">
+    <label for="expense-type">Tipo:</label>
+    <select id="expense-type">
+        <option value="expense">Despesa</option>
+        <option value="income">Receita</option>
+    </select>
+    <button onclick="createOrUpdateExpense()">Registrar Gasto/Receita</button>
+    <button onclick="generateReport()">Gerar Relatório</button>
+    <button onclick="goToHomePage()">Voltar para a Página Principal</button>
+    <button onclick="generatePDF()">Gerar PDF</button>
+
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+            measurementId: "G-CVBQ54PERH"
+        };
+
+        // Inicialização do Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        let expenses = [];
+
+function initExpenses() {
+    const expensesRef = database.ref('/expenses');
+
+    expensesRef.on('value', (snapshot) => {
+        const expensesData = snapshot.val();
+        expenses = expensesData ? Object.values(expensesData) : [];
+        loadExpensesTable(expenses); // Adicione esta linha para atualizar a tabela
+    });
+}
+   function loadExpensesTable(expenses) {
+    const tableBody = document.getElementById('expenses-body');
+    tableBody.innerHTML = "";
+
+    if (Array.isArray(expenses) && expenses.length > 0) {
+        expenses.forEach((expense, index) => {
+            const row = tableBody.insertRow();
+            const cellDateTime = row.insertCell(0);
+            const cellDescription = row.insertCell(1);
+            const cellType = row.insertCell(2);
+            const cellAmount = row.insertCell(3);
+            const cellActions = row.insertCell(4);
+
+            const formattedDate = new Date(expense.dateTime).toLocaleString('pt-BR');
+
+            cellDateTime.textContent = formattedDate;
+            cellDescription.textContent = expense.description;
+            cellType.textContent = expense.type === 'expense' ? 'Despesa' : 'Receita';
+
+            // Verifique se a propriedade amount está definida antes de formatar
+            if (typeof expense.amount !== 'undefined') {
+                cellAmount.textContent = `R$ ${expense.amount.toFixed(2)}`;
+            } else {
+                cellAmount.textContent = 'N/D'; // ou qualquer valor padrão que preferir
+            }
+
+            const editButton = document.createElement('button');
+            editButton.textContent = 'Editar';
+            editButton.onclick = () => editExpense(index);
+
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = 'Excluir';
+            deleteButton.onclick = () => deleteExpense(expense.dateTime);
+
+            cellActions.appendChild(editButton);
+            cellActions.appendChild(deleteButton);
+        });
+
+        // Adicione a linha para exibir o total no final da tabela
+        const totalRow = tableBody.insertRow();
+        const totalLabelCell = totalRow.insertCell(0);
+        const totalValueCell = totalRow.insertCell(1);
+
+        totalLabelCell.textContent = 'Total:';
+        totalLabelCell.colSpan = 3; // Define a largura da célula para abranger três colunas (Data e Hora, Descrição, Tipo)
+
+        // Calcule o total corretamente e formate o valor
+        const totalBalance = calculateTotalBalance(expenses);
+        totalValueCell.textContent = `R$ ${totalBalance.toFixed(2)}`;
+        totalValueCell.style.fontWeight = 'bold';
+    } else {
+        console.error("Dados de despesas inválidos ou vazios:", expenses);
+    }
+}
+
+        function createOrUpdateExpense() {
+            const description = document.getElementById('expense-description').value;
+            const amount = parseFloat(document.getElementById('expense-amount').value);
+            const date = document.getElementById('expense-date').value;
+            const type = document.getElementById('expense-type').value;
+
+            if (!isValidExpense(description, amount, date)) {
+                alert('Por favor, preencha todos os campos corretamente.');
+                return;
+            }
+
+            const existingExpenseIndex = expenses.findIndex(expense => expense.dateTime === date && expense.type === type);
+
+            if (existingExpenseIndex !== -1) {
+                // Editar despesa ou receita existente
+                const editedType = prompt('Editar Tipo (expense ou income):', expenses[existingExpenseIndex].type);
+                expenses[existingExpenseIndex].description = description;
+                expenses[existingExpenseIndex].amount = amount;
+                expenses[existingExpenseIndex].type = editedType;
+            } else {
+                // Adicionar nova despesa ou receita
+                const newExpense = { dateTime: date, description, amount, type };
+                expenses.push(newExpense);
+            }
+
+            database.ref('/expenses').set(expenses);
+        }
+
+        function isValidExpense(description, amount, date) {
+            return description.trim() !== '' && !isNaN(amount) && date !== '';
+        }
+
+       function editExpense(index) {
+        const editedDescription = prompt('Editar Descrição:', expenses[index].description);
+        const editedAmount = parseFloat(prompt('Editar Valor (R$):', expenses[index].amount.toFixed(2)));
+        const editedType = prompt('Editar Tipo (expense ou income):', expenses[index].type);
+        const editedDateTime = prompt('Editar Data e Hora (AAAA-MM-DDTHH:mm):', expenses[index].dateTime);
+
+        if (isValidExpense(editedDescription, editedAmount, editedDateTime)) {
+            expenses[index].description = editedDescription;
+            expenses[index].amount = editedAmount;
+            expenses[index].type = editedType;
+            expenses[index].dateTime = editedDateTime;
+
+            database.ref('/expenses').set(expenses);
+        } else {
+            alert('Edição cancelada ou valores inválidos.');
+        }
+    }
+
+
+        function deleteExpense(dateTime) {
+            const confirmDelete = confirm('Tem certeza que deseja excluir este item?');
+
+            if (confirmDelete) {
+                const indexToDelete = expenses.findIndex(expense => expense.dateTime === dateTime);
+                expenses.splice(indexToDelete, 1);
+
+                database.ref('/expenses').set(expenses);
+            }
+        }
+
+        function calculateTotalBalance(expenses) {
+    const totalIncome = expenses.reduce((sum, expense) => {
+        return expense.type === 'income' ? sum + expense.amount : sum;
+    }, 0);
+
+    const totalExpenses = expenses.reduce((sum, expense) => {
+        return expense.type === 'expense' ? sum + expense.amount : sum;
+    }, 0);
+
+    const totalBalance = totalIncome - totalExpenses;
+
+    return totalBalance;
+}
+        function generateReport() {
+            const reportType = prompt('Informe o tipo de relatório (expenses, income, balance):');
+
+            switch (reportType) {
+                case 'expenses':
+                    generateExpensesReport();
+                    break;
+                case 'income':
+                    generateIncomeReport();
+                    break;
+                case 'balance':
+                    generateBalanceReport();
+                    break;
+                default:
+                    alert('Tipo de relatório inválido.');
+            }
+        }
+
+        function generateExpensesReport() {
+            const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
+            const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
+
+            if (startDate && endDate) {
+                const filteredExpenses = expenses.filter(expense => {
+                    return expense.type === 'expense' &&
+                        new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
+                        new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
+                });
+
+                const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+                alert(`Total de Despesas no Período: R$ ${totalExpenses.toFixed(2)}`);
+            } else {
+                alert('Período inválido ou não informado.');
+            }
+        }
+
+        function generateIncomeReport() {
+            const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
+            const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
+
+            if (startDate && endDate) {
+                const filteredIncome = expenses.filter(expense => {
+                    return expense.type === 'income' &&
+                        new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
+                        new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
+                });
+
+                const totalIncome = filteredIncome.reduce((sum, income) => sum + income.amount, 0);
+                alert(`Total de Receitas no Período: R$ ${totalIncome.toFixed(2)}`);
+            } else {
+                alert('Período inválido ou não informado.');
+            }
+        }
+
+        function generateBalanceReport() {
+            const startDate = prompt('Informe a data de início (DD/MM/AAAA):');
+            const endDate = prompt('Informe a data de fim (DD/MM/AAAA):');
+
+            if (startDate && endDate) {
+                const filteredExpenses = expenses.filter(expense => {
+                    return new Date(expense.dateTime).toLocaleDateString('pt-BR') >= startDate &&
+                        new Date(expense.dateTime).toLocaleDateString('pt-BR') <= endDate;
+                });
+
+                const totalIncome = filteredExpenses.reduce((sum, expense) => {
+                    return expense.type === 'income' ? sum + expense.amount : sum;
+                }, 0);
+
+                const totalExpenses = filteredExpenses.reduce((sum, expense) => {
+                    return expense.type === 'expense' ? sum + expense.amount : sum;
+                }, 0);
+
+                const balance = totalIncome - totalExpenses;
+
+                alert(`Total de Receitas no Período: R$ ${totalIncome.toFixed(2)}\nTotal de Despesas no Período: R$ ${totalExpenses.toFixed(2)}\nBalanço: R$ ${balance.toFixed(2)}`);
+            } else {
+                alert('Período inválido ou não informado.');
+            }
+        }
+
+        
+
+        function goToHomePage() {
+            // Aqui, você pode redirecionar para a página inicial do seu aplicativo.
+            window.location.href = 'https://wilsonf1996.github.io/index.html/';
+            alert('Redirecionamento para a Página Inicial.');
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            initExpenses();
+        });
+        function generatePDF() {
+    // Abre a janela de impressão
+    window.print();
+}
+    </script>
+</body>
+
+</html>
