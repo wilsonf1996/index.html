@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Financeiro Janeiro</title>
+    <title>Financeiro</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -94,7 +94,7 @@
 
     <script>
         // Configuração do Firebase
-        const firebaseConfig1 = {
+        const firebaseConfig = {
             apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
             authDomain: "agenda-6accc.firebaseapp.com",
             databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
@@ -105,26 +105,21 @@
             measurementId: "G-CVBQ54PERH"
         };
 
-        const app1 = firebase.initializeApp(firebaseConfig1);
-        const database1 = firebase.database();
-
-        // Gerar um sufixo numérico para criar caminhos diferentes
-        const copyNumber = 1; // Altere para cada cópia (1 a 12)
-        const expensesPath = `/expenses_copia${copyNumber}`; // Altere aqui para incluir o sufixo
-
+        // Inicialização do Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
 
         let expenses = [];
 
-     function initExpenses1() {
-            console.log('initExpenses chamado');
-            const expensesRef1 = database1.ref(expensesPath);
+function initExpenses() {
+    const expensesRef = database.ref('/expenses');
 
-            expensesRef1.on('value', (snapshot) => {
-                const expensesData = snapshot.val();
-                expenses = expensesData ? Object.values(expensesData) : [];
-                loadExpensesTable(expenses);
-            });
-        }
+    expensesRef.on('value', (snapshot) => {
+        const expensesData = snapshot.val();
+        expenses = expensesData ? Object.values(expensesData) : [];
+        loadExpensesTable(expenses); // Adicione esta linha para atualizar a tabela
+    });
+}
    function loadExpensesTable(expenses) {
     const tableBody = document.getElementById('expenses-body');
     tableBody.innerHTML = "";
@@ -180,43 +175,37 @@
     }
 }
 
-       
-            function createOrUpdateExpense() {
-    // Obtenha os dados do usuário (pode ser de um formulário)
-    const description = prompt('Informe a descrição do gasto/receita:');
-    const amount = parseFloat(prompt('Informe o valor (R$):'));
-    const date = prompt('Informe a data do gasto/receita (AAAA-MM-DDTHH:mm):');
-    const type = prompt('Informe o tipo (expense ou income):');
+        function createOrUpdateExpense() {
+            const description = document.getElementById('expense-description').value;
+            const amount = parseFloat(document.getElementById('expense-amount').value);
+            const date = document.getElementById('expense-date').value;
+            const type = document.getElementById('expense-type').value;
 
-    if (!isValidExpense1(description, amount, date)) {
-        alert('Por favor, preencha todos os campos corretamente.');
-        return;
-    }
+            if (!isValidExpense(description, amount, date)) {
+                alert('Por favor, preencha todos os campos corretamente.');
+                return;
+            }
 
-    const existingExpenseIndex = expenses.findIndex(expense => expense.dateTime === date && expense.type === type);
+            const existingExpenseIndex = expenses.findIndex(expense => expense.dateTime === date && expense.type === type);
 
-    if (existingExpenseIndex !== -1) {
-        // Editar despesa ou receita existente
-        const editedDescription = prompt('Editar Descrição:', expenses[existingExpenseIndex].description);
-        const editedAmount = parseFloat(prompt('Editar Valor (R$):', expenses[existingExpenseIndex].amount.toFixed(2)));
-        const editedType = prompt('Editar Tipo (expense ou income):', expenses[existingExpenseIndex].type);
+            if (existingExpenseIndex !== -1) {
+                // Editar despesa ou receita existente
+                const editedType = prompt('Editar Tipo (expense ou income):', expenses[existingExpenseIndex].type);
+                expenses[existingExpenseIndex].description = description;
+                expenses[existingExpenseIndex].amount = amount;
+                expenses[existingExpenseIndex].type = editedType;
+            } else {
+                // Adicionar nova despesa ou receita
+                const newExpense = { dateTime: date, description, amount, type };
+                expenses.push(newExpense);
+            }
 
-        if (isValidExpense1(editedDescription, editedAmount, date)) {
-            expenses[existingExpenseIndex].description = editedDescription;
-            expenses[existingExpenseIndex].amount = editedAmount;
-            expenses[existingExpenseIndex].type = editedType;
-        } else {
-            alert('Edição cancelada ou valores inválidos.');
+            database.ref('/expenses').set(expenses);
         }
-    } else {
-        // Adicionar nova despesa ou receita
-        const newExpense = { dateTime: date, description, amount, type };
-        expenses.push(newExpense);
-    }
 
-    database1.ref(expensesPath).set(expenses);
-}
-
+        function isValidExpense(description, amount, date) {
+            return description.trim() !== '' && !isNaN(amount) && date !== '';
+        }
 
        function editExpense(index) {
         const editedDescription = prompt('Editar Descrição:', expenses[index].description);
@@ -224,7 +213,7 @@
         const editedType = prompt('Editar Tipo (expense ou income):', expenses[index].type);
         const editedDateTime = prompt('Editar Data e Hora (AAAA-MM-DDTHH:mm):', expenses[index].dateTime);
 
-        if (isValidExpense1(editedDescription, editedAmount, editedDateTime)) {
+        if (isValidExpense(editedDescription, editedAmount, editedDateTime)) {
             expenses[index].description = editedDescription;
             expenses[index].amount = editedAmount;
             expenses[index].type = editedType;
@@ -350,7 +339,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', function () {
-            initExpenses1();
+            initExpenses();
         });
         function generatePDF() {
     // Abre a janela de impressão
@@ -360,4 +349,3 @@
 </body>
 
 </html>
-
