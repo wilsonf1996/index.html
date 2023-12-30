@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jogo de Charadas</title>
     <style>
-        /* Seu código CSS aqui */
         body {
             background-color: #1c1c1e;
             color: #ffffff;
             font-family: 'Helvetica', sans-serif;
             text-align: center;
             margin: 0;
-            padding: 10px; /* Adicionado espaçamento para dispositivos móveis */
+            padding: 10px;
         }
 
         #iphone-frame {
@@ -40,7 +40,7 @@
         }
 
         input {
-            width: calc(100% - 20px); /* Adicionado ajuste para o espaçamento da borda */
+            width: calc(100% - 20px);
             padding: 10px;
             margin-top: 5px;
             box-sizing: border-box;
@@ -77,8 +77,20 @@
         #record {
             margin-top: 20px;
         }
+
+        #timer-info {
+            margin-top: 20px;
+            color: #aaaaaa;
+        }
+
+        #round-timer {
+            color: #ffffff;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
     </style>
 </head>
+
 <body>
     <div id="iphone-frame">
         <h1>Jogo de Charadas</h1>
@@ -90,20 +102,27 @@
                 <label for="player2">Jogador 2:</label>
                 <input type="text" id="player2" placeholder="Nome do Jogador 2">
             </div>
+
+            <!-- Adição do botão Recomeçar Jogo -->
+            <button onclick="restartGame()">Recomeçar Jogo</button>
+
             <p id="riddle">Pressione "Iniciar Jogo" para começar!</p>
+            <!-- Adição do cronômetro da rodada -->
+            <p id="timer-info">Cronômetro: <span id="round-timer"></span></p>
             <p id="turn"></p>
             <button onclick="startGame()">Iniciar Jogo</button>
             <input type="text" id="answer" placeholder="Sua resposta">
             <button onclick="checkAnswer()">Verificar Resposta</button>
             <p id="result"></p>
             <p id="answer-display"><strong>Resposta:</strong> <span id="answer-text"></span></p>
-            <p id="score">Placar: Jogador 1 - <span id="player1-score">0</span> | Jogador 2 - <span id="player2-score">0</span></p>
+            <p id="score">Placar: Jogador 1 - <span id="player1-score">0</span> | Jogador 2 - <span
+                    id="player2-score">0</span></p>
             <p id="record"></p>
             <button onclick="newRound()">Nova Rodada</button>
         </div>
     </div>
+
     <script>
-        // Seu código JavaScript aqui
         var player1Name, player2Name, currentPlayer, currentRound, totalRiddles, currentRiddleIndex, correctAnswer, timer;
 
         var riddles = [
@@ -121,14 +140,14 @@
             player1Name = document.getElementById('player1').value;
             player2Name = document.getElementById('player2').value;
             currentRound = 1;
-            totalRiddles = 5; // Número total de rodadas
+            totalRiddles = 10; // Ajuste para 10 rodadas
             document.getElementById('turn').innerHTML = player1Name + ', é a sua vez!';
             newRound();
         }
 
         function newRound() {
             if (currentRound <= totalRiddles) {
-                clearInterval(timer); // Limpa o cronômetro
+                clearInterval(timer);
                 timer = startTimer();
                 currentRiddleIndex = Math.floor(Math.random() * riddles.length);
                 var currentRiddle = riddles[currentRiddleIndex];
@@ -137,18 +156,19 @@
                 document.getElementById('answer').value = '';
                 document.getElementById('answer-display').style.display = 'none';
                 currentPlayer = (currentRound % 2 === 1) ? player1Name : player2Name;
-                document.getElementById('turn').innerHTML = currentPlayer + ', é a sua vez!';
+                document.getElementById('turn').innerHTML = `${currentPlayer}, é a sua vez! Rodada: ${currentRound}`;
             } else {
                 endGame();
             }
         }
 
         function startTimer() {
-            var seconds = 10; // Defina o tempo da charada em segundos
-            var timerElement = document.getElementById('timer');
+            var seconds = 3600; // Tempo ajustado para uma hora (3600 segundos)
+            var timerElement = document.getElementById('round-timer');
 
             function updateTimer() {
-                timerElement.textContent = seconds;
+                timerElement.textContent = formatTime(seconds);
+
                 if (seconds === 0) {
                     clearInterval(timer);
                     document.getElementById('result').innerHTML = 'Tempo esgotado! Próxima rodada.';
@@ -157,27 +177,36 @@
                 seconds--;
             }
 
-            updateTimer(); // Chama a função para exibir o primeiro segundo
+            updateTimer();
             return setInterval(updateTimer, 1000);
         }
 
         function checkAnswer() {
-            clearInterval(timer); // Pára o cronômetro
+            clearInterval(timer);
             var playerAnswer = document.getElementById('answer').value.toLowerCase();
+
             if (playerAnswer === correctAnswer) {
                 document.getElementById('result').innerHTML = 'Resposta correta!';
                 updateScore();
             } else {
-                document.getElementById('result').innerHTML = 'Resposta incorreta. Tente novamente!';
+                document.getElementById('result').innerHTML = '';
+                document.getElementById('error-message').innerHTML = 'Você errou a charada. Tente novamente!';
             }
-            document.getElementById('answer-text').innerHTML = correctAnswer;
+
+            document.getElementById('answer-text').innerHTML = 'Resposta: ' + correctAnswer;
             document.getElementById('answer-display').style.display = 'block';
             currentRound++;
             newRound();
         }
 
         function updateScore() {
-            var currentPlayerScore = document.getElementById(currentPlayer.toLowerCase() + '-score');
+            var currentPlayerScore;
+            if (currentRound % 2 === 1) {
+                currentPlayerScore = document.getElementById('player1-score');
+            } else {
+                currentPlayerScore = document.getElementById('player2-score');
+            }
+
             var currentScore = parseInt(currentPlayerScore.textContent);
             currentPlayerScore.textContent = currentScore + 1;
         }
@@ -186,47 +215,41 @@
             var player1Score = parseInt(document.getElementById('player1-score').textContent);
             var player2Score = parseInt(document.getElementById('player2-score').textContent);
             var winner = player1Score > player2Score ? player1Name : (player2Score > player1Score ? player2Name : 'Empate');
-            document.getElementById('record').innerHTML = 'Placar final: ' + player1Name + ' - ' + player1Score + ' | ' + player2Name + ' - ' + player2Score + '<br> Vencedor: ' + winner;
+            document.getElementById('record').innerHTML = 'Placar final: ' + player1Name + ' - ' + player1Score +
+                ' | ' + player2Name + ' - ' + player2Score + '<br> Vencedor: ' + winner;
         }
 
-        function newRound() {
-            if (currentRound <= totalRiddles) {
-                clearInterval(timer); // Limpa o cronômetro
-                timer = startTimer();
-                currentRiddleIndex = Math.floor(Math.random() * riddles.length);
-                var currentRiddle = riddles[currentRiddleIndex];
-                document.getElementById('riddle').innerHTML = currentRiddle.question;
-                correctAnswer = currentRiddle.answer.toLowerCase();
-                document.getElementById('answer').value = '';
-                document.getElementById('answer-display').style.display = 'none';
-                currentPlayer = (currentRound % 2 === 1) ? player1Name : player2Name;
-                document.getElementById('turn').innerHTML = currentPlayer + ', é a sua vez!';
-            } else {
-                endGame();
-            }
-        }
-
-        function newGame() {
+        function restartGame() {
             document.getElementById('player1').value = '';
             document.getElementById('player2').value = '';
-            document.getElementById('riddle').innerHTML = 'Pressione "Iniciar Jogo" para começar!';
-            document.getElementById('turn').innerHTML = '';
+            document.getElementById('error-message').innerHTML = '';
             document.getElementById('result').innerHTML = '';
-            document.getElementById('answer-text').innerHTML = '';
             document.getElementById('answer-display').style.display = 'none';
-            document.getElementById('player1-score').textContent = '0';
-            document.getElementById('player2-score').textContent = '0';
-            document.getElementById('record').innerHTML = '';
+            document.getElementById('answer-text').innerHTML = '';
+            document.getElementById('round-info').innerHTML = '';
+            document.getElementById('answer').value = '';
+            document.getElementById('round-timer').textContent = '';
+
             player1Name = '';
             player2Name = '';
             currentPlayer = '';
             currentRound = 1;
-            totalRiddles = 0;
-            currentRiddleIndex = 0;
-            correctAnswer = '';
-            clearInterval(timer);
+
+            startGame();
+        }
+
+        function formatTime(seconds) {
+            var hours = Math.floor(seconds / 3600);
+            var minutes = Math.floor((seconds % 3600) / 60);
+            var remainingSeconds = seconds % 60;
+
+            return `${formatTwoDigits(hours)}:${formatTwoDigits(minutes)}:${formatTwoDigits(remainingSeconds)}`;
+        }
+
+        function formatTwoDigits(value) {
+            return value < 10 ? '0' + value : value;
         }
     </script>
 </body>
-</html>
 
+</html>
