@@ -1,1 +1,421 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo de Tradução - Dia a Dia</title>
+    <style>
+        body {
+            background-color: #1c1c1e;
+            color: #ffffff;
+            font-family: 'Helvetica', sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 10px;
+        }
+
+        #iphone-frame {
+            background-color: #1c1c1e;
+            padding: 20px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        h1 {
+            color: #ffffff;
+        }
+
+        #game-container {
+            background-color: #2c2c2e;
+            border-radius: 20px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            color: #aaaaaa;
+        }
+
+        input {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-top: 5px;
+            box-sizing: border-box;
+            background-color: #2c2c2e;
+            border: 1px solid #3c3c3e;
+            color: #ffffff;
+            border-radius: 5px;
+        }
+
+        button {
+            background-color: #4c4c4e;
+            color: #ffffff;
+            padding: 10px 20px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #5c5c5e;
+        }
+
+        p {
+            margin-top: 10px;
+            color: #aaaaaa;
+        }
+
+        #answer-display {
+            display: none;
+            margin-top: 20px;
+        }
+
+        #record {
+            margin-top: 20px;
+        }
+
+        #timer-info {
+            margin-top: 20px;
+            color: #aaaaaa;
+        }
+
+        #round-timer {
+            color: #ffffff;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="iphone-frame">
+        <h1>Jogo de Tradução - BIM e Obras</h1>
+
+        <div id="game-container">
+            <div id="player-names">
+                <label for="player1">Jogador 1:</label>
+                <input type="text" id="player1" placeholder="Nome do Jogador 1">
+                <label for="player2">Jogador 2:</label>
+                <input type="text" id="player2" placeholder="Nome do Jogador 2">
+            </div>
+
+            <button onclick="game.restart()">Recomeçar Jogo</button>
+
+            <p id="riddle">Pressione "Iniciar Jogo" para começar!</p>
+            <p id="timer-info">Cronômetro: <span id="round-timer"></span></p>
+            <p id="turn"></p>
+            <button onclick="game.start()">Iniciar Jogo</button>
+            <input type="text" id="answer" placeholder="Sua resposta">
+            <button onclick="game.checkAnswer()">Verificar Resposta</button>
+            <p id="result"></p>
+            <p id="error-message"></p>
+            <p id="answer-display"><strong>Resposta:</strong> <span id="answer-text"></span></p>
+            <p id="score">Placar: Jogador 1 - <span id="player1-score">0</span> | Jogador 2 - <span
+                    id="player2-score">0</span></p>
+            <p id="record"></p>
+            <button onclick="game.newRound()">Nova Rodada</button>
+        </div>
+    </div>
+
+    <script>
+        var game = {
+            player1Name: "",
+            player2Name: "",
+            currentPlayer: "",
+            currentRound: 1,
+            totalRiddles: 200,
+            currentRiddleIndex: 0,
+            correctAnswer: "",
+            timer: null,
+
+            riddles: [
+            { question: 'Qual a Tradução - Engenharia Civil da palavra "Foundation" em inglês?', answer: 'Fundações' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Earthworks" em inglês?', answer: 'Terraplanagem' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Surveying" em inglês?', answer: 'Topografia' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Blueprint" em inglês?', answer: 'Planta Baixa' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Reinforcement" em inglês?', answer: 'Armamento' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Infrastructure" em inglês?', answer: 'Infraestrutura' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Retaining Wall" em inglês?', answer: 'Muro de Contenção' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Scaffolding" em inglês?', answer: 'Andaime' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Culvert" em inglês?', answer: 'Bueiro' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Erosion Control" em inglês?', answer: 'Controle de Erosão' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Tender" em inglês?', answer: 'Edital' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Facade" em inglês?', answer: 'Fachada' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Geotechnical" em inglês?', answer: 'Geotécnica' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Landscape Architecture" em inglês?', answer: 'Arquitetura Paisagística' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Caisson" em inglês?', answer: 'Caisson' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Seismic Design" em inglês?', answer: 'Projeto Sísmico' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Utility Lines" em inglês?', answer: 'Redes de Utilidades' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Estimate" em inglês?', answer: 'Orçamento' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Crane" em inglês?', answer: 'Guindaste' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Prefab" em inglês?', answer: 'Pré-fabricado' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Retaining Wall" em inglês?', answer: 'Muro de Contenção' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Shear Force" em inglês?', answer: 'Força Cortante' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Abutment" em inglês?', answer: 'Apoio' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Grouting" em inglês?', answer: 'Grouteamento' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Pile Foundation" em inglês?', answer: 'Fundação de Estacas' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Preliminary Design" em inglês?', answer: 'Projeto Preliminar' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Precast Concrete" em inglês?', answer: 'Concreto Pré-moldado' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Tensile Strength" em inglês?', answer: 'Resistência à Tração' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Land Development" em inglês?', answer: 'Desenvolvimento de Terrenos' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Gravel" em inglês?', answer: 'Brita' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Slope Stability" em inglês?', answer: 'Estabilidade de Taludes' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Stormwater Management" em inglês?', answer: 'Gestão de Águas Pluviais' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Crack" em inglês?', answer: 'Trinca' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Culvert" em inglês?', answer: 'Bueiro' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Shoring" em inglês?', answer: 'Escoramento' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Sewer System" em inglês?', answer: 'Rede de Esgoto' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Geotextile" em inglês?', answer: 'Geotêxtil' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Dewatering" em inglês?', answer: 'Deságue' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Traffic Engineering" em inglês?', answer: 'Engenharia de Tráfego' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Caisson" em inglês?', answer: 'Caisson' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Footing" em inglês?', answer: 'Sapata' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Erosion" em inglês?', answer: 'Erosão' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Gabion" em inglês?', answer: 'Gabião' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Scaffolding" em inglês?', answer: 'Andaime' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Formwork" em inglês?', answer: 'Fôrma' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Retrofit" em inglês?', answer: 'Retrofit' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Geotechnical Engineering" em inglês?', answer: 'Engenharia Geotécnica' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Steel Frame" em inglês?', answer: 'Estrutura Metálica' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Percolation" em inglês?', answer: 'Percolação' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Embankment" em inglês?', answer: 'Aterro' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Culvert" em inglês?', answer: 'Bueiro' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Urban Planning" em inglês?', answer: 'Planejamento Urbano' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Slurry Wall" em inglês?', answer: 'Parede de Lodo' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Bearing Capacity" em inglês?', answer: 'Capacidade de Carga' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Asphalt" em inglês?', answer: 'Asfalto' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Aggregate" em inglês?', answer: 'Agregado' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Dowel" em inglês?', answer: 'Pino de Ligação' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Vibration Isolation" em inglês?', answer: 'Isolamento de Vibração' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Land Surveying" em inglês?', answer: 'Topografia' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Seismic Design" em inglês?', answer: 'Projeto Sísmico' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Ductility" em inglês?', answer: 'Ductilidade' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Prefabrication" em inglês?', answer: 'Pré-fabricação' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Rebar" em inglês?', answer: 'Arame de Aço' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Slope Stability" em inglês?', answer: 'Estabilidade de Taludes' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Camber" em inglês?', answer: 'Cambar' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Earthquake Resistant" em inglês?', answer: 'Resistente a Terremotos' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Curing" em inglês?', answer: 'Cura' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Pile Foundation" em inglês?', answer: 'Fundações de Estacas' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Retaining Wall" em inglês?', answer: 'Muro de Contenção' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Tensile Strength" em inglês?', answer: 'Resistência à Tração' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Formwork" em inglês?', answer: 'Fôrma' },  // Repetida
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Urban Planning" em inglês?', answer: 'Planejamento Urbano' },  // Repetida
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Culvert" em inglês?', answer: 'Bueiro' },  // Repetida
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Slurry Wall" em inglês?', answer: 'Parede de Lodo' },  // Repetida
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Bearing Capacity" em inglês?', answer: 'Capacidade de Carga' },  // Repetida
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Asphalt" em inglês?', answer: 'Asfalto' },  // Repetida
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Aggregate" em inglês?', answer: 'Agregado' },  // Repetida
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Dowel" em inglês?', answer: 'Pino de Ligação' },  // Repetida
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Vibration Isolation" em inglês?', answer: 'Isolamento de Vibração' },  // Repetida
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Land Surveying" em inglês?', answer: 'Topografia' },  // Repetida
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Scaffolding" em inglês?', answer: 'Andaime' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Turbidity" em inglês?', answer: 'Turvidez' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Facade" em inglês?', answer: 'Fachada' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Retrofitting" em inglês?', answer: 'Modernização' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Prestressed Concrete" em inglês?', answer: 'Concreto Protendido' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Stormwater Management" em inglês?', answer: 'Gestão de Águas Pluviais' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Geotextile" em inglês?', answer: 'Geotêxtil' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Culvert" em inglês?', answer: 'Tubulação de Drenagem' },  // Repetida
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Gabion" em inglês?', answer: 'Gabião' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Shear Strength" em inglês?', answer: 'Resistência ao Cisalhamento' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Deep Foundation" em inglês?', answer: 'Fundação Profunda' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Reinforcement" em inglês?', answer: 'Armadura' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Earthwork" em inglês?', answer: 'Terraplanagem' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Subgrade" em inglês?', answer: 'Subleito' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Paver" em inglês?', answer: 'Pavimentadora' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Abutment" em inglês?', answer: 'Estribo' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Veneer" em inglês?', answer: 'Revestimento' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Compaction" em inglês?', answer: 'Compactação' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Erosion Control" em inglês?', answer: 'Controle de Erosão' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Tender" em inglês?', answer: 'Licitação' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Crane" em inglês?', answer: 'Guindaste' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Shoring" em inglês?', answer: 'Escoramento' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Surveying" em inglês?', answer: 'Topografia' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Ductility" em inglês?', answer: 'Dutibilidade' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Expansion Joint" em inglês?', answer: 'Junta de Dilatação' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Bearing Capacity" em inglês?', answer: 'Capacidade de Carga' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Grading" em inglês?', answer: 'Nivelamento' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Precast Concrete" em inglês?', answer: 'Concreto Pré-moldado' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Roughness" em inglês?', answer: 'Rugosidade' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Joist" em inglês?', answer: 'Viga de Apoio' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Tender Document" em inglês?', answer: 'Edital de Licitação' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Seismic" em inglês?', answer: 'Sísmico' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Concrete Pump" em inglês?', answer: 'Bomba de Concreto' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Retaining Wall" em inglês?', answer: 'Muro de Contenção' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Camber" em inglês?', answer: 'Flecha' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Rebar" em inglês?', answer: 'Aço de Construção' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Dowel" em inglês?', answer: 'Pino Metálico' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Pile Cap" em inglês?', answer: 'Cabeça de Estaca' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Piling" em inglês?', answer: 'Estacamento' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Plumb Bob" em inglês?', answer: 'Prumo de Pedreiro' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Torsion" em inglês?', answer: 'Torção' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Culvert" em inglês?', answer: 'Tubulação' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Abutment" em inglês?', answer: 'Apoio de Ponte' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Skylight" em inglês?', answer: 'Claraboia' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Aggregate" em inglês?', answer: 'Agregado' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Culvert" em inglês?', answer: 'Tubulação' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Facade" em inglês?', answer: 'Fachada' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Scaffolding" em inglês?', answer: 'Andaime' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Wind Load" em inglês?', answer: 'Carga de Vento' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Precast" em inglês?', answer: 'Pré-fabricado' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Vibration" em inglês?', answer: 'Vibração' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Retaining Wall" em inglês?', answer: 'Muro de Contenção' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Excavation" em inglês?', answer: 'Escavação' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Arch" em inglês?', answer: 'Arco' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Shear Force" em inglês?', answer: 'Força Cortante' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Facade" em inglês?', answer: 'Fachada' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Grout" em inglês?', answer: 'Rejunte' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Elevation" em inglês?', answer: 'Elevação' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Sealant" em inglês?', answer: 'Selante' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Load-Bearing Wall" em inglês?', answer: 'Parede de Sustentação' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Dowel" em inglês?', answer: 'Tarugo' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Underpinning" em inglês?', answer: 'Reforço de Fundação' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Joist" em inglês?', answer: 'Viga de Apoio' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Abutment" em inglês?', answer: 'Apoio de Ponte' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Coping" em inglês?', answer: 'Cobertura' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Footings" em inglês?', answer: 'Fundações' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Flange" em inglês?', answer: 'Flange' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Rebar" em inglês?', answer: 'Aço de Reforço' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Pile" em inglês?', answer: 'Estaca' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Girder" em inglês?', answer: 'Viga Longitudinal' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Culvert" em inglês?', answer: 'Tubulação' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Junction Box" em inglês?', answer: 'Caixa de Passagem' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Camber" em inglês?', answer: 'Cambar' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Sheathing" em inglês?', answer: 'Revestimento' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Haunch" em inglês?', answer: 'Coxim' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Truss" em inglês?', answer: 'Treliça' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Bolt" em inglês?', answer: 'Parafuso' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Cavity Wall" em inglês?', answer: 'Parede Dupla' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Masonry" em inglês?', answer: 'Alvenaria' },
+    { question: 'Qual a Tradução - Engenharia Civil da palavra "Stiffener" em inglês?', answer: 'Rigidez' },
+
+            ],
+
+            start: function () {
+                this.player1Name = document.getElementById('player1').value;
+                this.player2Name = document.getElementById('player2').value;
+                this.currentRound = 1;
+                document.getElementById('turn').innerHTML = this.player1Name + ', é a sua vez!';
+                this.newRound();
+            },
+
+            newRound: function () {
+                if (this.currentRound <= this.totalRiddles) {
+                    clearInterval(this.timer);
+                    this.timer = this.startTimer();
+                    this.currentRiddleIndex = Math.floor(Math.random() * this.riddles.length);
+                    var currentRiddle = this.riddles[this.currentRiddleIndex];
+                    document.getElementById('riddle').innerHTML = currentRiddle.question;
+                    this.correctAnswer = currentRiddle.answer.toLowerCase();
+                    document.getElementById('answer').value = '';
+                    document.getElementById('answer-display').style.display = 'none';
+                    this.currentPlayer = (this.currentRound % 2 === 1) ? this.player1Name : this.player2Name;
+                    document.getElementById('turn').innerHTML = `${this.currentPlayer}, é a sua vez! Rodada: ${this.currentRound}`;
+                } else {
+                    this.endGame();
+                }
+            },
+
+            startTimer: function () {
+                var seconds = 3600; // Tempo ajustado para uma hora (3600 segundos)
+                var timerElement = document.getElementById('round-timer');
+
+                function updateTimer() {
+                    timerElement.textContent = formatTime(seconds);
+
+                    if (seconds === 0) {
+                        clearInterval(game.timer);
+                        document.getElementById('result').innerHTML = 'Tempo esgotado! Próxima rodada.';
+                        game.newRound();
+                    }
+                    seconds--;
+                }
+
+                updateTimer();
+                return setInterval(updateTimer, 1000);
+            },
+
+            checkAnswer: function () {
+                clearInterval(this.timer);
+                var playerAnswer = document.getElementById('answer').value.toLowerCase();
+
+                if (playerAnswer === this.correctAnswer) {
+                    document.getElementById('result').innerHTML = 'Resposta correta!';
+                    this.updateScore();
+                } else {
+                    document.getElementById('result').innerHTML = 'Resposta incorreta. Tente novamente!';
+                    document.getElementById('error-message').innerHTML = `Resposta correta: ${this.correctAnswer}`;
+                }
+
+                document.getElementById('answer-text').innerHTML = 'Resposta: ' + this.correctAnswer;
+                document.getElementById('answer-display').style.display = 'block';
+                this.currentRound++;
+                this.newRound();
+            },
+
+            updateScore: function () {
+                var currentPlayerScore;
+                if (this.currentRound % 2 === 1) {
+                    currentPlayerScore = document.getElementById('player1-score');
+                } else {
+                    currentPlayerScore = document.getElementById('player2-score');
+                }
+
+                var currentScore = parseInt(currentPlayerScore.textContent);
+                currentPlayerScore.textContent = currentScore + 1;
+            },
+
+           endGame: function () {
+    var player1Score = parseInt(document.getElementById('player1-score').textContent);
+    var player2Score = parseInt(document.getElementById('player2-score').textContent);
+
+    if (this.currentRound <= this.totalRiddles) {
+        this.newRound();
+    } else {
+        var winner = player1Score > player2Score ? this.player1Name : (player2Score > player1Score ? this.player2Name : 'Empate');
+        document.getElementById('record').innerHTML = 'Placar final: ' + this.player1Name + ' - ' + player1Score +
+            ' | ' + this.player2Name + ' - ' + player2Score + '<br> Vencedor: ' + winner;
+    }
+},
+
+            restart: function () {
+                document.getElementById('player1').value = '';
+                document.getElementById('player2').value = '';
+                document.getElementById('error-message').innerHTML = '';
+                document.getElementById('result').innerHTML = '';
+                document.getElementById('answer-display').style.display = 'none';
+                document.getElementById('answer-text').innerHTML = '';
+                document.getElementById('round-info').innerHTML = '';
+                document.getElementById('answer').value = '';
+                document.getElementById('round-timer').textContent = '';
+
+                this.player1Name = '';
+                this.player2Name = '';
+                this.currentPlayer = '';
+                this.currentRound = 1;
+
+                this.start();
+            }
+        };
+
+        function formatTime(seconds) {
+            var hours = Math.floor(seconds / 3600);
+            var minutes = Math.floor((seconds % 3600) / 60);
+            var remainingSeconds = seconds % 60;
+
+            return `${formatTwoDigits(hours)}:${formatTwoDigits(minutes)}:${formatTwoDigits(remainingSeconds)}`;
+        }
+
+        function formatTwoDigits(value) {
+            return value < 10 ? '0' + value : value;
+        }
+    </script>
+</body>
+
+</html>
 
