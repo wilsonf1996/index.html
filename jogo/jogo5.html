@@ -6,72 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Jogo de Charadas</title>
   <style>
-    body {
-      text-align: center;
-      font-family: Arial, sans-serif;
-      background-color: #333;
-      color: #fff;
-      margin: 0;
-      padding: 0;
-    }
-
-    #iphone-frame {
-      max-width: 400px;
-      margin: 0 auto;
-      border: 10px solid #aaa;
-      border-radius: 20px;
-      background: #444;
-      padding: 20px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    }
-
-    #game-container {
-      margin-top: 20px;
-    }
-
-    #player-names,
-    #riddle,
-    #result,
-    #answer-display,
-    #answer-text,
-    #score,
-    #record,
-    #turn,
-    #timer {
-      color: #fff;
-    }
-
-    #player-names label {
-      color: #bbb;
-    }
-
-    input[type="text"],
-    #answer,
-    button {
-      background-color: #888;
-      color: #fff;
-      border: none;
-      padding: 10px;
-      margin-top: 10px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background-color: #666;
-    }
-
-    #score,
-    #record,
-    #turn,
-    #timer {
-      font-size: 18px;
-      margin-top: 10px;
-    }
-
-    #record {
-      color: #aaff55;
-    }
+    /* Adicione estilos conforme necessário */
   </style>
 </head>
 
@@ -87,10 +22,9 @@
         <label for="player2">Jogador 2:</label>
         <input type="text" id="player2" placeholder="Nome do Jogador 2">
       </div>
-      <p id="riddle">Pressione "Iniciar Jogo" para começar!</p>
+      <p id="riddle">Pressione "Nova Rodada" para começar!</p>
       <p id="turn"></p>
-      <p id="timer"></p>
-      <button onclick="startGame()">Iniciar Jogo</button>
+      <button onclick="startGame()">Nova Rodada</button>
       <input type="text" id="answer" placeholder="Sua resposta">
       <button onclick="checkAnswer()">Verificar Resposta</button>
       <p id="result"></p>
@@ -102,12 +36,157 @@
   </div>
 
   <script>
-    var player1Name, player2Name, player1Score, player2Score, currentRound, currentPlayer, correctAnswer;
-    var recordScore = 0;
-    var recordHolder = '';
+    var player1Name, player2Name, currentRound, totalRiddles, currentRiddleIndex, correctAnswer;
 
-    var totalRiddles = 10; // Número total de charadas
-    var currentRiddleIndex;
+var riddles = [
+            { question: 'O que é, o que é: tem raiz e não é planta?', answer: 'dente' },
+  { question: 'O que é, o que é: quanto mais alto, mais baixo você senta?', answer: 'vaso sanitário' },
+  { question: 'O que é, o que é: tem chaves mas não abre portas?', answer: 'piano' },
+  { question: 'O que é, o que é: tem escamas mas não é peixe?', answer: 'papel' },
+  { question: 'O que é, o que é: começa o dia e termina a noite?', answer: 'a letra "D"' },
+  { question: 'O que é, o que é: possui dentes mas não morde?', answer: 'alho' },
+  { question: 'O que é, o que é: quanto mais seca, mais molhada fica?', answer: 'toalha' },
+  { question: 'O que é, o que é: tem coroa mas não é rei?', answer: 'abacaxi' },
+  { question: 'O que é, o que é: vai e volta mas nunca se move?', answer: 'caminho' },
+  { question: 'O que é, o que é: sempre em cima, nunca por baixo, o que é?', answer: 'um chapéu' },
+  { question: 'O que é, o que é: tem folhas sem ser planta?', answer: 'livro' },
+  { question: 'O que é, o que é: quanto mais você tira, mais ele cresce?', answer: 'buraco' },
+  { question: 'O que é, o que é: voa sem ter asas?', answer: 'tempo' },
+  { question: 'O que é, o que é: é redondo como uma bola, mas não é uma bola?', answer: 'sol' },
+  { question: 'O que é, o que é: quanto mais se tira, mais fica?', answer: 'buraco' },
+  { question: 'O que é, o que é: tem dentes mas não come?', answer: 'pente' },
+  { question: 'O que é, o que é: quanto mais você perde, mais ganha?', answer: 'peso' },
+  { question: 'O que é, o que é: tem olhos mas não enxerga?', answer: 'furadeira' },
+  { question: 'O que é, o que é: sobe e desce sem sair do lugar?', answer: 'escada' },
+  { question: 'O que é, o que é: é feito para caminhar, mas não tem pernas?', answer: 'carro' },
+  { question: 'O que é, o que é: tem botões mas não é uma camisa?', answer: 'telefone' },
+  { question: 'O que é, o que é: todos querem bater nela, mas ninguém quer que ela bata de volta?', answer: 'porta' },
+  { question: 'O que é, o que é: tem agulha mas não costura?', answer: 'bússola' },
+  { question: 'O que é, o que é: sempre está na frente, mas nunca pode ser visto?', answer: 'futuro' },
+  { question: 'O que é, o que é: quanto mais você tira, mais pesado ele fica?', answer: 'buraco' },
+  { question: 'O que é, o que é: tem muitos dentes mas não pode mastigar?', answer: 'pente' },
+  { question: 'O que é, o que é: quanto mais seca, mais molhada fica?', answer: 'toalha' },
+  { question: 'O que é, o que é: tem coroa mas não é rei?', answer: 'abacaxi' },
+  { question: 'O que é, o que é: vai e volta mas nunca se move?', answer: 'caminho' },
+  { question: 'O que é, o que é: sempre em cima, nunca por baixo, o que é?', answer: 'um chapéu' },
+  { question: 'O que é, o que é: tem folhas sem ser planta?', answer: 'livro' },
+  { question: 'O que é, o que é: quanto mais você tira, mais ele cresce?', answer: 'buraco' },
+  { question: 'O que é, o que é: voa sem ter asas?', answer: 'tempo' },
+  { question: 'O que é, o que é: é redondo como uma bola, mas não é uma bola?', answer: 'sol' },
+  { question: 'O que é, o que é: quanto mais se tira, mais fica?', answer: 'buraco' },
+  { question: 'O que é, o que é: tem dentes mas não come?', answer: 'pente' },
+  { question: 'O que é, o que é: quanto mais você perde, mais ganha?', answer: 'peso' },
+  { question: 'O que é, o que é: tem olhos mas não enxerga?', answer: 'furadeira' },
+  { question: 'O que é, o que é: sobe e desce sem sair do lugar?', answer: 'escada' },
+  { question: 'O que é, o que é: é feito para caminhar, mas não tem pernas?', answer: 'carro' },
+  { question: 'O que é, o que é: sempre está no fim mas nunca chega lá?', answer: 'horizonte' },
+  { question: 'O que é, o que é: é cheio de buracos mas ainda segura água?', answer: 'esponja' },
+  { question: 'O que é, o que é: não pode ser tocado mas pode ser sentido?', answer: 'vento' },
+  { question: 'O que é, o que é: tem dentes e não come, tem boca e não fala?', answer: 'alho' },
+  { question: 'O que é, o que é: quanto mais você tira, mais ele cresce?', answer: 'buraco' },
+  { question: 'O que é, o que é: começa o dia e termina a noite?', answer: 'a letra "D"' },
+  { question: 'O que é, o que é: pode ser comprido ou curto, e às vezes é peludo?', answer: 'palavra' },
+  { question: 'O que é, o que é: tem sempre um lado que está certo?', answer: 'espelho' },
+  { question: 'O que é, o que é: é preto e branco e vermelho por dentro?', answer: 'panda com um machucado' },
+  { question: 'O que é, o que é: tem ponteiros mas não é relógio?', answer: 'bússola' },
+  { question: 'O que é, o que é: entra na água e não molha?', answer: 'sombra' },
+  { question: 'O que é, o que é: quanto mais você toma, mais sede você sente?', answer: 'banho' },
+  { question: 'O que é, o que é: tem muitas chaves mas não abre nenhuma porta?', answer: 'teclado' },
+  { question: 'O que é, o que é: está sempre no fim mas nunca chega lá?', answer: 'horizonte' },
+  { question: 'O que é, o que é: é cheio de buracos mas ainda segura água?', answer: 'esponja' },
+  { question: 'O que é, o que é: não pode ser tocado mas pode ser sentido?', answer: 'vento' },
+  { question: 'O que é, o que é: tem dentes e não come, tem boca e não fala?', answer: 'alho' },
+  { question: 'O que é, o que é: quanto mais você tira, mais ele cresce?', answer: 'buraco' },
+  { question: 'O que é, o que é: começa o dia e termina a noite?', answer: 'a letra "D"' },
+  { question: 'O que é, o que é: pode ser comprido ou curto, e às vezes é peludo?', answer: 'palavra' },
+  { question: 'O que é, o que é: tem sempre um lado que está certo?', answer: 'espelho' },
+  { question: 'O que é, o que é: é preto e branco e vermelho por dentro?', answer: 'panda com um machucado' },
+  { question: 'O que é, o que é: tem ponteiros mas não é relógio?', answer: 'bússola' },
+  { question: 'O que é, o que é: entra na água e não molha?', answer: 'sombra' },
+  { question: 'O que é, o que é: quanto mais você toma, mais sede você sente?', answer: 'banho' },
+  { question: 'O que é, o que é: tem muitas chaves mas não abre nenhuma porta?', answer: 'teclado' },
+  { question: 'O que é, o que é: está sempre no fim mas nunca chega lá?', answer: 'horizonte' },
+  { question: 'O que é, o que é: é cheio de buracos mas ainda segura água?', answer: 'esponja' },
+  { question: 'O que é, o que é: não pode ser tocado mas pode ser sentido?', answer: 'vento' },
+  { question: 'O que é, o que é: tem dentes e não come, tem boca e não fala?', answer: 'alho' },
+  { question: 'O que é, o que é: quanto mais você tira, mais ele cresce?', answer: 'buraco' },
+  { question: 'O que é, o que é: começa o dia e termina a noite?', answer: 'a letra "D"' },
+  { question: 'O que é, o que é: pode ser comprido ou curto, e às vezes é peludo?', answer: 'palavra' },
+  { question: 'O que é, o que é: tem sempre um lado que está certo?', answer: 'espelho' },
+  { question: 'O que é, o que é: é preto e branco e vermelho por dentro?', answer: 'panda com um machucado' },
+  { question: 'O que é, o que é: tem ponteiros mas não é relógio?', answer: 'bússola' },
+  { question: 'O que é, o que é: entra na água e não molha?', answer: 'sombra' },
+  { question: 'O que é, o que é: quanto mais você toma, mais sede você sente?', answer: 'banho' },
+  { question: 'O que é, o que é: tem muitas chaves mas não abre nenhuma porta?', answer: 'teclado' },
+  { question: 'O que é, o que é: está sempre no fim mas nunca chega lá?', answer: 'horizonte' },
+  { question: 'O que é, o que é: é cheio de buracos mas ainda segura água?', answer: 'esponja' },
+  { question: 'O que é, o que é: não pode ser tocado mas pode ser sentido?', answer: 'vento' },
+  { question: 'O que é, o que é: tem dentes e não come, tem boca e não fala?', answer: 'alho' },
+  { question: 'O que é, o que é: quanto mais você tira, mais ele cresce?', answer: 'buraco' },
+  { question: 'O que é, o que é: começa o dia e termina a noite?', answer: 'a letra "D"' },
+   { question: 'O que é, o que é: tem dentes e não come, tem boca e não fala?', answer: 'pente' },
+  { question: 'O que é, o que é: quanto mais você tira, mais ele cresce?', answer: 'buraco' },
+  { question: 'O que é, o que é: começa o dia e termina a noite?', answer: 'a letra "D"' },
+  { question: 'O que é, o que é: pode ser comprido ou curto, e às vezes é peludo?', answer: 'palavra' },
+  { question: 'O que é, o que é: tem sempre um lado que está certo?', answer: 'espelho' },
+  { question: 'O que é, o que é: é preto e branco e vermelho por dentro?', answer: 'panda com um machucado' },
+  { question: 'O que é, o que é: tem ponteiros mas não é relógio?', answer: 'bússola' },
+  { question: 'O que é, o que é: entra na água e não molha?', answer: 'sombra' },
+  { question: 'O que é, o que é: quanto mais você toma, mais sede você sente?', answer: 'banho' },
+  { question: 'O que é, o que é: tem muitas chaves mas não abre nenhuma porta?', answer: 'teclado' },
+  { question: 'O que é, o que é: está sempre no fim mas nunca chega lá?', answer: 'horizonte' },
+  { question: 'O que é, o que é: é cheio de buracos mas ainda segura água?', answer: 'esponja' },
+  { question: 'O que é, o que é: não pode ser tocado mas pode ser sentido?', answer: 'vento' },
+  { question: 'O que é, o que é: tem dentes e não come, tem boca e não fala?', answer: 'alho' },
+  { question: 'O que é, o que é: quanto mais você tira, mais ele cresce?', answer: 'buraco' },
+  { question: 'O que é, o que é: começa o dia e termina a noite?', answer: 'a letra "D"' },
+  { question: 'O que é, o que é: pode ser comprido ou curto, e às vezes é peludo?', answer: 'palavra' },
+  { question: 'O que é, o que é: tem sempre um lado que está certo?', answer: 'espelho' },
+  { question: 'O que é, o que é: é preto e branco e vermelho por dentro?', answer: 'panda com um machucado' },
+  { question: 'O que é, o que é: tem ponteiros mas não é relógio?', answer: 'bússola' },
+  { question: 'O que é, o que é: entra na água e não molha?', answer: 'sombra' },
+  { question: 'O que é, o que é: quanto mais você toma, mais sede você sente?', answer: 'banho' },
+  { question: 'O que é, o que é: tem muitas chaves mas não abre nenhuma porta?', answer: 'teclado' },
+  { question: 'O que é, o que é: está sempre no fim mas nunca chega lá?', answer: 'horizonte' },
+  { question: 'O que é, o que é: é cheio de buracos mas ainda segura água?', answer: 'esponja' },
+  { question: 'O que é, o que é: não pode ser tocado mas pode ser sentido?', answer: 'vento' },
+  { question: 'O que é, o que é: tem dentes e não come, tem boca e não fala?', answer: 'alho' },
+  { question: 'O que é, o que é: quanto mais você tira, mais ele cresce?', answer: 'buraco' },
+  { question: 'O que é, o que é: começa o dia e termina a noite?', answer: 'a letra "D"' },
+  { question: 'O que é, o que é: pode ser comprido ou curto, e às vezes é peludo?', answer: 'palavra' },
+  { question: 'O que é, o que é: tem sempre um lado que está certo?', answer: 'espelho' },
+  { question: 'O que é, o que é: é preto e branco e vermelho por dentro?', answer: 'panda com um machucado' },
+  { question: 'O que é, o que é: tem ponteiros mas não é relógio?', answer: 'bússola' },
+  { question: 'O que é, o que é: entra na água e não molha?', answer: 'sombra' },
+  { question: 'O que é, o que é: quanto mais você toma, mais sede você sente?', answer: 'banho' },
+  { question: 'O que é, o que é: tem muitas chaves mas não abre nenhuma porta?', answer: 'teclado' },
+  { question: 'O que é, o que é: está sempre no fim mas nunca chega lá?', answer: 'horizonte' },
+  { question: 'O que é, o que é: é cheio de buracos mas ainda segura água?', answer: 'esponja' },
+  { question: 'O que é, o que é: não pode ser tocado mas pode ser sentido?', answer: 'vento' },
+  { question: 'O que é, o que é: tem dentes e não come, tem boca e não fala?', answer: 'alho' },
+  { question: 'O que é, o que é: quanto mais você tira, mais ele cresce?', answer: 'buraco' },
+  { question: 'O que é, o que é: começa o dia e termina a noite?', answer: 'a letra "D"' },
+  { question: 'O que é, o que é: pode ser comprido ou curto, e às vezes é peludo?', answer: 'palavra' },
+  { question: 'O que é, o que é: tem sempre um lado que está certo?', answer: 'espelho' },
+  { question: 'O que é, o que é: é preto e branco e vermelho por dentro?', answer: 'panda com um machucado' },
+  { question: 'O que é, o que é: tem ponteiros mas não é relógio?', answer: 'bússola' },
+  { question: 'O que é, o que é: entra na água e não molha?', answer: 'sombra' },
+  { question: 'O que é, o que é: quanto mais você toma, mais sede você sente?', answer: 'banho' },
+  { question: 'O que é, o que é: tem muitas chaves mas não abre nenhuma porta?', answer: 'teclado' },
+  { question: 'O que é, o que é: está sempre no fim mas nunca chega lá?', answer: 'horizonte' },
+  { question: 'O que é, o que é: é cheio de buracos mas ainda segura água?', answer: 'esponja' },
+  { question: 'O que é, o que é: não pode ser tocado mas pode ser sentido?', answer: 'vento' },
+  { question: 'O que é, o que é: tem dentes e não come, tem boca e não fala?', answer: 'alho' },
+  { question: 'O que é, o que é: quanto mais você tira, mais ele cresce?', answer: 'buraco' },
+  { question: 'O que é, o que é: começa o dia e termina a noite?', answer: 'a letra "D"' },
+        ];
+
+        if (currentRiddleIndex < riddles.length) {
+            document.getElementById('current-riddle').innerText = riddles[currentRiddleIndex];
+        } else {
+            endGame();
+        }
+    }
     var riddles = [
       { question: 'O que é, o que é: tem raiz e não é planta?', answer: 'dente' },
   { question: 'O que é, o que é: quanto mais alto, mais baixo você senta?', answer: 'vaso sanitário' },
@@ -250,156 +329,77 @@
   { question: 'O que é, o que é: quanto mais você tira, mais ele cresce?', answer: 'buraco' },
   { question: 'O que é, o que é: começa o dia e termina a noite?', answer: 'a letra "D"' },
     ];
-var countdown;
-
-    function startGame() {
-      player1Name = document.getElementById('player1').value || 'Jogador 1';
-      player2Name = document.getElementById('player2').value || 'Jogador 2';
-      currentRound = 0;
-      player1Score = 0;
-      player2Score = 0;
-      currentPlayer = 1; // Inicia com o Jogador 1
-      updateTurn();
+function startGame() {
+      player1Name = document.getElementById('player1').value;
+      player2Name = document.getElementById('player2').value;
+      currentRound = 1;
+      totalRiddles = 10; // Número total de rodadas
+      document.getElementById('turn').innerHTML = player1Name + ', é a sua vez!';
       nextRiddle();
-      startTimer();
-    }
-
-    function startTimer() {
-      var timeLeft = 20; // Tempo em segundos
-      updateTimer(timeLeft);
-
-      countdown = setInterval(function () {
-        timeLeft--;
-        updateTimer(timeLeft);
-
-        if (timeLeft <= 0) {
-          clearInterval(countdown);
-          switchPlayer();
-          nextRiddle();
-          startTimer();
-        }
-      }, 1000); // Atualiza a cada segundo
-    }
-
-    function updateTimer(timeLeft) {
-      document.getElementById('timer').innerHTML = `Tempo: ${timeLeft}s`;
-    }
-
-    function stopTimer() {
-      clearInterval(countdown);
-    }
-
-    function updateTurn() {
-      document.getElementById('turn').innerHTML = `Turno: ${currentRound + 1} - Vez de: ${currentPlayer === 1 ? player1Name : player2Name}`;
-    }
-
-    function switchPlayer() {
-      currentPlayer = 3 - currentPlayer; // Alterna entre 1 e 2
-      updateTurn();
     }
 
     function nextRiddle() {
-      if (currentRound < totalRiddles) {
-        currentRiddleIndex = currentRound;
+      if (currentRound <= totalRiddles) {
+        currentRiddleIndex = Math.floor(Math.random() * riddles.length);
         var currentRiddle = riddles[currentRiddleIndex];
         document.getElementById('riddle').innerHTML = currentRiddle.question;
         correctAnswer = currentRiddle.answer.toLowerCase();
-        currentRound++;
+        document.getElementById('answer').value = '';
+        document.getElementById('answer-display').style.display = 'none';
+        document.getElementById('turn').innerHTML = getCurrentPlayer() + ', é a sua vez!';
       } else {
-        // Fim do jogo
-        stopTimer();
         endGame();
       }
     }
 
+    function getCurrentPlayer() {
+      return (currentRound % 2 === 1) ? player1Name : player2Name;
+    }
+
     function checkAnswer() {
-      var userAnswer = document.getElementById('answer').value.toLowerCase();
-      var resultMessage = '';
-
-      if (userAnswer === correctAnswer) {
-        resultMessage = 'Resposta correta!';
-        if (currentPlayer === 1) {
-          player1Score++;
-        } else {
-          player2Score++;
-        }
+      var playerAnswer = document.getElementById('answer').value.toLowerCase();
+      if (playerAnswer === correctAnswer) {
+        document.getElementById('result').innerHTML = 'Resposta correta!';
+        updateScore();
       } else {
-        resultMessage = 'Resposta incorreta!';
+        document.getElementById('result').innerHTML = 'Resposta incorreta. Tente novamente!';
       }
-
-      document.getElementById('result').innerHTML = resultMessage;
       document.getElementById('answer-text').innerHTML = correctAnswer;
       document.getElementById('answer-display').style.display = 'block';
-
-      switchPlayer();
+      currentRound++;
       nextRiddle();
-      startTimer();
+    }
+
+    function updateScore() {
+      var currentPlayer = getCurrentPlayer();
+      var scoreElement = document.getElementById('score');
+      var playerScoreElement = currentPlayer === player1Name ? scoreElement.childNodes[0] : scoreElement.childNodes[2];
+      var currentScore = parseInt(playerScoreElement.textContent);
+      playerScoreElement.textContent = currentScore + 1;
     }
 
     function endGame() {
-      var winner = player1Score > player2Score ? player1Name : player2Name;
-      var scoreMessage = `Fim do Jogo! Placar final: ${player1Name} - ${player1Score} | ${player2Name} - ${player2Score}`;
-      var recordMessage = '';
-
-      if (player1Score > recordScore || player2Score > recordScore) {
-        recordScore = Math.max(player1Score, player2Score);
-        recordHolder = winner;
-        recordMessage = `Novo recorde! ${winner} é o vencedor com ${recordScore} pontos!`;
-      }
-
-      document.getElementById('score').innerHTML = scoreMessage;
-      document.getElementById('record').innerHTML = recordMessage;
-
-      if (recordMessage !== '') {
-        document.getElementById('record').style.color = '#aaff55';
-      }
-
-      // Limpa os campos e reinicia o jogo
-      document.getElementById('player1').value = '';
-      document.getElementById('player2').value = '';
-      document.getElementById('answer').value = '';
-      document.getElementById('result').innerHTML = '';
-      document.getElementById('answer-text').innerHTML = '';
-      document.getElementById('answer-display').style.display = 'none';
-
-      // Exibe o botão "Iniciar Jogo" novamente
-      document.getElementById('game-container').innerHTML += '<button onclick="startGame()">Iniciar Jogo</button>';
+      var scoreElement = document.getElementById('score');
+      var player1Score = parseInt(scoreElement.childNodes[0].textContent);
+      var player2Score = parseInt(scoreElement.childNodes[2].textContent);
+      var winner = player1Score > player2Score ? player1Name : (player2Score > player1Score ? player2Name : 'Empate');
+      document.getElementById('record').innerHTML = 'Placar final: ' + player1Name + ' - ' + player1Score + ' | ' + player2Name + ' - ' + player2Score + '<br> Vencedor: ' + winner;
     }
 
     function newGame() {
-      // Reinicia os valores
-      player1Name = '';
-      player2Name = '';
-      player1Score = 0;
-      player2Score = 0;
-      currentRound = 0;
-      currentPlayer = 1;
-      correctAnswer = '';
-      recordScore = 0;
-      recordHolder = '';
-      currentRiddleIndex = 0;
-
-      // Limpa os campos e reinicia o jogo
       document.getElementById('player1').value = '';
       document.getElementById('player2').value = '';
+      document.getElementById('riddle').innerHTML = 'Pressione "Nova Rodada" para começar!';
+      document.getElementById('turn').innerHTML = '';
       document.getElementById('answer').value = '';
       document.getElementById('result').innerHTML = '';
-      document.getElementById('answer-text').innerHTML = '';
       document.getElementById('answer-display').style.display = 'none';
-
-      // Exibe o botão "Iniciar Jogo"
-      document.getElementById('game-container').innerHTML += '<button onclick="startGame()">Iniciar Jogo</button>';
-
-      // Limpa mensagens de pontuação
-      document.getElementById('score').innerHTML = '';
+      document.getElementById('score').innerHTML = 'Placar: Jogador 1 - 0 | Jogador 2 - 0';
       document.getElementById('record').innerHTML = '';
-      document.getElementById('record').style.color = '';
-      document.getElementById('turn').innerHTML = '';
-      document.getElementById('timer').innerHTML = '';
+      currentRound = 1;
     }
   </script>
 
 </body>
 
-  
 </html>
