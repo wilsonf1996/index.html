@@ -35,14 +35,14 @@
     #answer-display,
     #answer-text,
     #score,
-    #record {
+    #record,
+    #turn,
+    #timer {
       color: #fff;
     }
 
     #player-names label {
       color: #bbb;
-      display: block;
-      margin: 10px 0;
     }
 
     input[type="text"],
@@ -62,7 +62,9 @@
     }
 
     #score,
-    #record {
+    #record,
+    #turn,
+    #timer {
       font-size: 18px;
       margin-top: 10px;
     }
@@ -86,16 +88,26 @@
         <input type="text" id="player2" placeholder="Nome do Jogador 2">
       </div>
       <p id="riddle">Pressione "Iniciar Jogo" para começar!</p>
+      <p id="turn"></p>
+      <p id="timer"></p>
       <button onclick="startGame()">Iniciar Jogo</button>
       <input type="text" id="answer" placeholder="Sua resposta">
       <button onclick="checkAnswer()">Verificar Resposta</button>
       <p id="result"></p>
       <p id="answer-display" style="display: none;"><strong>Resposta:</strong> <span id="answer-text"></span></p>
-      <p id="score">Vez de: <span id="current-player"></span> | Placar: ${player1Name} - 0 | ${player2Name} - 0</p>
+      <p id="score">Placar: Jogador 1 - 0 | Jogador 2 - 0</p>
       <p id="record"></p>
+      <button onclick="newGame()">Novo Jogo</button>
     </div>
   </div>
 
+  <script>
+    var player1Name, player2Name, player1Score, player2Score, currentRound, currentPlayer, correctAnswer;
+    var recordScore = 0;
+    var recordHolder = '';
+
+    var totalRiddles = 10; // Número total de charadas
+    var currentRiddleIndex;
   <script>
     var riddles = [
       { question: 'O que é, o que é: tem raiz e não é planta?', answer: 'dente' },
@@ -240,17 +252,7 @@
   { question: 'O que é, o que é: começa o dia e termina a noite?', answer: 'a letra "D"' },
     ];
 
- var currentRiddleIndex;
-    var correctAnswer;
-    var currentPlayer = 1;
-    var player1Score = 0;
-    var player2Score = 0;
-    var totalRiddles = 10;
-    var currentRound = 0;
-    var player1Name = '';
-    var player2Name = '';
-    var recordScore = 0;
-    var recordHolder = '';
+var countdown;
 
     function startGame() {
       player1Name = document.getElementById('player1').value || 'Jogador 1';
@@ -258,13 +260,44 @@
       currentRound = 0;
       player1Score = 0;
       player2Score = 0;
-      currentPlayer = 1; // Adicionei essa linha para garantir que o jogador 1 comece
-      switchPlayer();
+      currentPlayer = 1; // Inicia com o Jogador 1
+      updateTurn();
       nextRiddle();
+      startTimer();
+    }
+
+    function startTimer() {
+      var timeLeft = 20; // Tempo em segundos
+      updateTimer(timeLeft);
+
+      countdown = setInterval(function () {
+        timeLeft--;
+        updateTimer(timeLeft);
+
+        if (timeLeft <= 0) {
+          clearInterval(countdown);
+          switchPlayer();
+          nextRiddle();
+          startTimer();
+        }
+      }, 1000); // Atualiza a cada segundo
+    }
+
+    function updateTimer(timeLeft) {
+      document.getElementById('timer').innerHTML = `Tempo: ${timeLeft}s`;
+    }
+
+    function stopTimer() {
+      clearInterval(countdown);
+    }
+
+    function updateTurn() {
+      document.getElementById('turn').innerHTML = `Turno: ${currentRound + 1} - Vez de: ${currentPlayer === 1 ? player1Name : player2Name}`;
     }
 
     function switchPlayer() {
-      document.getElementById('current-player').innerHTML = currentPlayer === 1 ? player1Name : player2Name;
+      currentPlayer = currentPlayer === 1 ? 2 : 1;
+      updateTurn();
     }
 
     function nextRiddle() {
@@ -282,6 +315,7 @@
     }
 
     function endGame() {
+      stopTimer();
       var winner = player1Score > player2Score ? player1Name : player2Name;
       document.getElementById('riddle').innerHTML = `Fim do jogo! ${winner} venceu!`;
       document.getElementById('answer').style.display = 'none';
@@ -291,6 +325,7 @@
     }
 
     function checkAnswer() {
+      stopTimer();
       var userAnswer = document.getElementById('answer').value.toLowerCase();
       if (userAnswer === '') {
         alert('Por favor, insira uma resposta.');
@@ -303,15 +338,10 @@
       if (userAnswer === correctAnswer) {
         document.getElementById('result').innerHTML = 'Parabéns! Você acertou.';
         updateScore(true); // true indica que a resposta está correta
-        currentRound++;
       } else {
-        document.getElementById('result').innerHTML = 'Ops! Tente novamente.';
+        document.getElementById('result').innerHTML = 'Resposta incorreta. Tente novamente na próxima rodada.';
         updateScore(false); // false indica que a resposta está incorreta
-        switchPlayer();
-        currentRound++;
       }
-
-      setTimeout(nextRiddle, 2000); // Aguarda 2 segundos antes de apresentar a próxima charada
     }
 
     function updateScore(isCorrect) {
@@ -322,7 +352,15 @@
           player2Score++;
         }
       }
-      document.getElementById('score').innerHTML = `Vez de: <span id="current-player">${currentPlayer === 1 ? player1Name : player2Name}</span> | Placar: ${player1Name} - ${player1Score} | ${player2Name} - ${player2Score}`;
+      switchPlayer();
+      currentRound++;
+      updateScoreDisplay();
+      nextRiddle();
+      startTimer();
+    }
+
+    function updateScoreDisplay() {
+      document.getElementById('score').innerHTML = `${player1Name} - ${player1Score} | ${player2Name} - ${player2Score}`;
     }
 
     function updateRecord() {
@@ -335,6 +373,15 @@
         recordHolder = player2Name;
       }
       document.getElementById('record').innerHTML = `Recorde: ${recordHolder} - ${recordScore}`;
+    }
+
+    function newGame() {
+      clearInterval(countdown);
+      document.getElementById('answer').style.display = 'block';
+      document.getElementById('answer').value = '';
+      document.getElementById('result').innerHTML = '';
+      document.getElementById('answer-display').style.display = 'none';
+      startGame();
     }
   </script>
 
