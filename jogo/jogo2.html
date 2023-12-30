@@ -1,1 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jogo de Xadrez</title>
+  <style>
+    #board {
+      width: 400px;
+    }
+
+    .in-check {
+      background-color: #f00;
+    }
+
+    #move-history {
+      margin-top: 10px;
+      max-height: 100px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <div id="board"></div>
+  <div id="move-history"></div>
+
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+  <script src="https://unpkg.com/chess.js"></script>
+  <script>
+    $(document).ready(function () {
+      var board,
+        game = new Chess();
+
+      var onDragStart = function (source, piece, position, orientation) {
+        if (game.in_checkmate() === true || game.in_draw() === true ||
+          piece.search(/^b/) !== -1) {
+          return false;
+        }
+      };
+
+      var makeBestMove = function () {
+        var bestMove = getBestMove(game);
+        game.ugly_move(bestMove);
+        board.position(game.fen());
+        renderMoveHistory(game.history());
+        if (game.game_over()) {
+          alert('Fim do jogo');
+        }
+      };
+
+      var renderMoveHistory = function (moves) {
+        var historyElement = $('#move-history').empty();
+        for (var i = 0; i < moves.length; i = i + 2) {
+          historyElement.append('<span>' + moves[i] + ' ' + ( moves[i + 1] ? moves[i + 1] : ' ') + '</span><br>');
+        }
+        historyElement.scrollTop(historyElement[0].scrollHeight);
+      };
+
+      var getBestMove = function (game) {
+        if (game.game_over()) {
+          alert('O jogo já terminou');
+        }
+
+        // Lógica para obter o melhor movimento (pode ser integrado com um motor de xadrez)
+        // Neste exemplo, escolhe um movimento aleatório entre os legais
+        var legalMoves = game.ugly_moves();
+        var randomIndex = Math.floor(Math.random() * legalMoves.length);
+        return legalMoves[randomIndex];
+      };
+
+      var renderSquareColor = function (square) {
+        var squareEl = $('#board .square-' + square);
+        var isDarkSquare = (square.charCodeAt(0) - 'a'.charCodeAt(0) + parseInt(square[1])) % 2 === 1;
+
+        squareEl.css('background', isDarkSquare ? '#d18b47' : '#ffce9e');
+      };
+
+      var renderMove = function (source, target) {
+        removeGreySquares();
+        renderSquareColor(source);
+        renderSquareColor(target);
+        var move = game.ugly_move({ from: source, to: target, promotion: 'q' });
+        if (move === null) {
+          return 'snapback';
+        }
+
+        renderMoveHistory(game.history());
+        window.setTimeout(makeBestMove, 250);
+      };
+
+      var removeGreySquares = function() {
+        $('#board .square-55d63').css('background', '');
+      };
+
+      var onMouseoverSquare = function(square, piece) {
+        var moves = game.legal_moves({
+          square: square,
+          verbose: true
+        });
+
+        if (moves.length === 0) return;
+
+        renderSquareColor(square);
+
+        for (var i = 0; i < moves.length; i++) {
+          renderSquareColor(moves[i].to);
+        }
+      };
+
+      var onMouseoutSquare = function(square, piece) {
+        removeGreySquares();
+      };
+
+      var onSnapEnd = function () {
+        board.position(game.fen());
+      };
+
+      var cfg = {
+        draggable: true,
+        position: 'start',
+        onDragStart: onDragStart,
+        onDrop: renderMove,
+        onMouseoutSquare: onMouseoutSquare,
+        onMouseoverSquare: onMouseoverSquare,
+        onSnapEnd: onSnapEnd
+      };
+
+      board = Chessboard('board', cfg);
+
+      $('#startBtn').on('click', function () {
+        game.reset();
+        board.start();
+        removeGreySquares();
+        renderMoveHistory(game.history());
+      });
+
+      $('#undoBtn').on('click', function () {
+        game.undo();
+        board.position(game.fen());
+        removeGreySquares();
+        renderMoveHistory(game.history());
+      });
+
+      $('#makeBestMoveBtn').on('click', function () {
+        makeBestMove();
+      });
+    });
+  </script>
+</body>
+</html>
 
