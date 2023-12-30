@@ -6,71 +6,74 @@
     <title>Jogo de Charadas</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #001f3f; /* Azul Marinho */
+            background-color: #1c1c1e;
             color: #ffffff;
+            font-family: 'Helvetica', sans-serif;
             text-align: center;
-            height: 100vh;
-            overflow: hidden;
+            margin: 0;
+        }
+
+        #iphone-frame {
+            background-color: #1c1c1e;
+            padding: 20px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        h1 {
+            color: #ffffff;
         }
 
         #game-container {
-            background-color: #ffffff; /* Cor de fundo dentro do jogo */
+            background-color: #2c2c2e;
+            border-radius: 20px;
             padding: 20px;
-            border-radius: 10px;
-            margin: 20px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-        }
-
-        #player-names {
-            margin-bottom: 20px;
-        }
-
-        #riddle {
-            font-size: 24px;
-            margin-bottom: 20px;
-        }
-
-        #turn {
-            font-size: 18px;
-            margin-bottom: 20px;
-        }
-
-        #answer {
-            font-size: 18px;
-            margin-bottom: 20px;
-        }
-
-        #result {
-            font-size: 18px;
-            margin-bottom: 20px;
-        }
-
-        #answer-display {
-            font-size: 18px;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        #score {
-            font-size: 18px;
             margin-top: 20px;
         }
 
-        button {
-            font-size: 16px;
-            padding: 10px 20px;
-            background-color: #4CAF50;
+        label {
+            display: block;
+            margin-top: 10px;
+            color: #aaaaaa;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            box-sizing: border-box;
+            background-color: #2c2c2e;
+            border: 1px solid #3c3c3e;
             color: #ffffff;
+            border-radius: 5px;
+        }
+
+        button {
+            background-color: #4c4c4e;
+            color: #ffffff;
+            padding: 10px 20px;
+            margin-top: 10px;
             border: none;
             border-radius: 5px;
             cursor: pointer;
         }
 
         button:hover {
-            background-color: #45a049;
+            background-color: #5c5c5e;
+        }
+
+        p {
+            margin-top: 10px;
+            color: #aaaaaa;
+        }
+
+        #answer-display {
+            display: none;
+            margin-top: 20px;
+        }
+
+        #record {
+            margin-top: 20px;
         }
     </style>
 </head>
@@ -85,22 +88,22 @@
                 <label for="player2">Jogador 2:</label>
                 <input type="text" id="player2" placeholder="Nome do Jogador 2">
             </div>
-            <p id="riddle">Pressione "Nova Rodada" para começar!</p>
+            <p id="riddle">Pressione "Iniciar Jogo" para começar!</p>
             <p id="turn"></p>
-            <button onclick="startGame()">Nova Rodada</button>
+            <button onclick="startGame()">Iniciar Jogo</button>
             <input type="text" id="answer" placeholder="Sua resposta">
             <button onclick="checkAnswer()">Verificar Resposta</button>
             <p id="result"></p>
             <p id="answer-display"><strong>Resposta:</strong> <span id="answer-text"></span></p>
             <p id="score">Placar: Jogador 1 - 0 | Jogador 2 - 0</p>
             <p id="record"></p>
-            <button onclick="newGame()">Novo Jogo</button>
+            <button onclick="newRound()">Nova Rodada</button>
         </div>
     </div>
-  <script>
-  var player1Name, player2Name, currentRound, totalRiddles, currentRiddleIndex, correctAnswer;
+    <script>
+        var player1Name, player2Name, currentPlayer, currentRound, totalRiddles, currentRiddleIndex, correctAnswer, timer;
 
-  var riddles = [
+        var riddles = [
             { question: 'O que é, o que é: tem raiz e não é planta?', answer: 'dente' },
   { question: 'O que é, o que é: quanto mais alto, mais baixo você senta?', answer: 'vaso sanitário' },
   { question: 'O que é, o que é: tem chaves mas não abre portas?', answer: 'piano' },
@@ -242,78 +245,98 @@
   { question: 'O que é, o que é: quanto mais você tira, mais ele cresce?', answer: 'buraco' },
   { question: 'O que é, o que é: começa o dia e termina a noite?', answer: 'a letra "D"' },
         ];
-    
- function startGame() {
-      player1Name = document.getElementById('player1').value;
-      player2Name = document.getElementById('player2').value;
-      currentRound = 1;
-      totalRiddles = 10; // Número total de rodadas
-      document.getElementById('turn').innerHTML = player1Name + ', é a sua vez!';
-      nextRiddle();
-    }
+function startGame() {
+            player1Name = document.getElementById('player1').value;
+            player2Name = document.getElementById('player2').value;
+            currentRound = 1;
+            totalRiddles = 5; // Número total de rodadas
+            document.getElementById('turn').innerHTML = player1Name + ', é a sua vez!';
+            newRound();
+        }
 
-    function nextRiddle() {
-      if (currentRound <= totalRiddles) {
-        currentRiddleIndex = Math.floor(Math.random() * riddles.length);
-        var currentRiddle = riddles[currentRiddleIndex];
-        document.getElementById('riddle').innerHTML = currentRiddle.question;
-        correctAnswer = currentRiddle.answer.toLowerCase();
-        document.getElementById('answer').value = '';
-        document.getElementById('answer-display').style.display = 'none';
-        document.getElementById('turn').innerHTML = getCurrentPlayer() + ', é a sua vez!';
-      } else {
-        endGame();
-      }
-    }
+        function newRound() {
+            if (currentRound <= totalRiddles) {
+                clearInterval(timer); // Limpa o cronômetro
+                timer = startTimer();
+                currentRiddleIndex = Math.floor(Math.random() * riddles.length);
+                var currentRiddle = riddles[currentRiddleIndex];
+                document.getElementById('riddle').innerHTML = currentRiddle.question;
+                correctAnswer = currentRiddle.answer.toLowerCase();
+                document.getElementById('answer').value = '';
+                document.getElementById('answer-display').style.display = 'none';
+                currentPlayer = (currentRound % 2 === 1) ? player1Name : player2Name;
+                document.getElementById('turn').innerHTML = currentPlayer + ', é a sua vez!';
+            } else {
+                endGame();
+            }
+        }
 
-    function getCurrentPlayer() {
-      return (currentRound % 2 === 1) ? player1Name : player2Name;
-    }
+        function startTimer() {
+            var seconds = 10; // Defina o tempo da charada em segundos
+            var timerElement = document.getElementById('timer');
 
-    function checkAnswer() {
-      var playerAnswer = document.getElementById('answer').value.toLowerCase();
-      if (playerAnswer === correctAnswer) {
-        document.getElementById('result').innerHTML = 'Resposta correta!';
-        updateScore();
-      } else {
-        document.getElementById('result').innerHTML = 'Resposta incorreta. Tente novamente!';
-      }
-      document.getElementById('answer-text').innerHTML = correctAnswer;
-      document.getElementById('answer-display').style.display = 'block';
-      currentRound++;
-      nextRiddle();
-    }
+            function updateTimer() {
+                timerElement.textContent = seconds;
+                if (seconds === 0) {
+                    clearInterval(timer);
+                    document.getElementById('result').innerHTML = 'Tempo esgotado! Próxima rodada.';
+                    newRound();
+                }
+                seconds--;
+            }
 
-    function updateScore() {
-      var currentPlayer = getCurrentPlayer();
-      var scoreElement = document.getElementById('score');
-      var playerScoreElement = currentPlayer === player1Name ? scoreElement.childNodes[0] : scoreElement.childNodes[2];
-      var currentScore = parseInt(playerScoreElement.textContent);
-      playerScoreElement.textContent = currentScore + 1;
-    }
+            updateTimer(); // Chama a função para exibir o primeiro segundo
+            return setInterval(updateTimer, 1000);
+        }
 
-    function endGame() {
-      var scoreElement = document.getElementById('score');
-      var player1Score = parseInt(scoreElement.childNodes[0].textContent);
-      var player2Score = parseInt(scoreElement.childNodes[2].textContent);
-      var winner = player1Score > player2Score ? player1Name : (player2Score > player1Score ? player2Name : 'Empate');
-      document.getElementById('record').innerHTML = 'Placar final: ' + player1Name + ' - ' + player1Score + ' | ' + player2Name + ' - ' + player2Score + '<br> Vencedor: ' + winner;
-    }
+        function checkAnswer() {
+            clearInterval(timer); // Pára o cronômetro
+            var playerAnswer = document.getElementById('answer').value.toLowerCase();
+            if (playerAnswer === correctAnswer) {
+                document.getElementById('result').innerHTML = 'Resposta correta!';
+                updateScore();
+            } else {
+                document.getElementById('result').innerHTML = 'Resposta incorreta. Tente novamente!';
+            }
+            document.getElementById('answer-text').innerHTML = correctAnswer;
+            document.getElementById('answer-display').style.display = 'block';
+            currentRound++;
+            newRound();
+        }
 
-    function newGame() {
-      document.getElementById('player1').value = '';
-      document.getElementById('player2').value = '';
-      document.getElementById('riddle').innerHTML = 'Pressione "Nova Rodada" para começar!';
-      document.getElementById('turn').innerHTML = '';
-      document.getElementById('answer').value = '';
-      document.getElementById('result').innerHTML = '';
-      document.getElementById('answer-display').style.display = 'none';
-      document.getElementById('score').innerHTML = 'Placar: Jogador 1 - 0 | Jogador 2 - 0';
-      document.getElementById('record').innerHTML = '';
-      currentRound = 1;
-    }
-  </script>
+        function updateScore() {
+            var currentPlayerScore = document.getElementById(currentPlayer.toLowerCase() + '-score');
+            var currentScore = parseInt(currentPlayerScore.textContent);
+            currentPlayerScore.textContent = currentScore + 1;
+        }
 
+        function endGame() {
+            var player1Score = parseInt(document.getElementById('player1-score').textContent);
+            var player2Score = parseInt(document.getElementById('player2-score').textContent);
+            var winner = player1Score > player2Score ? player1Name : (player2Score > player1Score ? player2Name : 'Empate');
+            document.getElementById('record').innerHTML = 'Placar final: ' + player1Name + ' - ' + player1Score + ' | ' + player2Name + ' - ' + player2Score + '<br> Vencedor: ' + winner;
+        }
+
+        function newGame() {
+            document.getElementById('player1').value = '';
+            document.getElementById('player2').value = '';
+            document.getElementById('riddle').innerHTML = 'Pressione "Iniciar Jogo" para começar!';
+            document.getElementById('turn').innerHTML = '';
+            document.getElementById('result').innerHTML = '';
+            document.getElementById('answer-text').innerHTML = '';
+            document.getElementById('answer-display').style.display = 'none';
+            document.getElementById('player1-score').textContent = '0';
+            document.getElementById('player2-score').textContent = '0';
+            document.getElementById('record').innerHTML = '';
+            player1Name = '';
+            player2Name = '';
+            currentPlayer = '';
+            currentRound = 1;
+            totalRiddles = 0;
+            currentRiddleIndex = 0;
+            correctAnswer = '';
+            clearInterval(timer);
+        }
+    </script>
 </body>
-
 </html>
