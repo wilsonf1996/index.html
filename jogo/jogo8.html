@@ -103,12 +103,11 @@
                 <input type="text" id="player2" placeholder="Nome do Jogador 2">
             </div>
 
-            <button onclick="game.restart()">Recomeçar Jogo</button>
+            <button onclick="game.start()">Iniciar Jogo</button>
 
             <p id="riddle">Pressione "Iniciar Jogo" para começar!</p>
             <p id="timer-info">Cronômetro: <span id="round-timer"></span></p>
             <p id="turn"></p>
-            <button onclick="game.start()">Iniciar Jogo</button>
             <button onclick="speakEnglishWord()">Ouvir Palavra em Inglês</button>
             <input type="text" id="answer" placeholder="Sua resposta">
             <button onclick="game.checkAnswer()">Verificar Resposta</button>
@@ -296,9 +295,7 @@
     { question: 'Qual a Tradução - Engenharia Civil da palavra "Masonry" em inglês?', answer: 'Alvenaria' },
     { question: 'Qual a Tradução - Engenharia Civil da palavra "Stiffener" em inglês?', answer: 'Rigidez' },
 
-            ],
-
-            start: function () {
+    start: function () {
                 this.player1Name = document.getElementById('player1').value;
                 this.player2Name = document.getElementById('player2').value;
                 this.currentRound = 1;
@@ -306,23 +303,19 @@
                 this.newRound();
             },
 
-          function speakEnglishWord() {
-    var englishWord = game.riddles[game.currentRiddleIndex].answer;
-    
-    // Verifique se a funcionalidade Text-to-Speech é suportada no navegador
-    if ('speechSynthesis' in window) {
-        var synthesis = window.speechSynthesis;
-        var utterance = new SpeechSynthesisUtterance(englishWord);
-        
-        // Configure o idioma para inglês (EUA)
-        utterance.lang = 'en-US';
+            speakEnglishWord: function () {
+                var englishWord = game.riddles[game.currentRiddleIndex].answer;
 
-        // Inicie a síntese de fala
-        synthesis.speak(utterance);
-    } else {
-        alert("Desculpe, o recurso de Text-to-Speech não é suportado neste navegador.");
-    }
-}
+                if ('speechSynthesis' in window) {
+                    var synthesis = window.speechSynthesis;
+                    var utterance = new SpeechSynthesisUtterance(englishWord);
+
+                    utterance.lang = 'en-US';
+                    synthesis.speak(utterance);
+                } else {
+                    alert("Desculpe, o recurso de Text-to-Speech não é suportado neste navegador.");
+                }
+            },
 
             newRound: function () {
                 if (this.currentRound <= this.totalRiddles) {
@@ -342,7 +335,7 @@
             },
 
             startTimer: function () {
-                var seconds = 3600; // Tempo ajustado para uma hora (3600 segundos)
+                var seconds = 3600;
                 var timerElement = document.getElementById('round-timer');
 
                 function updateTimer() {
@@ -350,92 +343,72 @@
 
                     if (seconds === 0) {
                         clearInterval(game.timer);
-                        document.getElementById('result').innerHTML = 'Tempo esgotado! Próxima rodada.';
-                        game.newRound();
+                        document.getElementById('result').innerHTML = 'Tempo esgotado!';
+                        game.showAnswer();
                     }
+
                     seconds--;
                 }
 
-                updateTimer();
+                updateTimer(); // Initial call to display full time immediately
+
                 return setInterval(updateTimer, 1000);
+
+                function formatTime(seconds) {
+                    var minutes = Math.floor(seconds / 60);
+                    var remainingSeconds = seconds % 60;
+                    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+                }
             },
 
             checkAnswer: function () {
-                clearInterval(this.timer);
                 var playerAnswer = document.getElementById('answer').value.toLowerCase();
-
                 if (playerAnswer === this.correctAnswer) {
                     document.getElementById('result').innerHTML = 'Resposta correta!';
                     this.updateScore();
                 } else {
-                    document.getElementById('result').innerHTML = 'Resposta incorreta. Tente novamente!';
-                    document.getElementById('error-message').innerHTML = `Resposta correta: ${this.correctAnswer}`;
+                    document.getElementById('result').innerHTML = 'Resposta incorreta!';
+                    this.showAnswer();
+                }
+            },
+
+            showAnswer: function () {
+                clearInterval(this.timer);
+                document.getElementById('answer-display').style.display = 'block';
+                document.getElementById('answer-text').innerHTML = this.correctAnswer;
+            },
+
+            updateScore: function () {
+                if (this.currentRound % 2 === 1) {
+                    var player1Score = parseInt(document.getElementById('player1-score').textContent);
+                    player1Score++;
+                    document.getElementById('player1-score').textContent = player1Score;
+                } else {
+                    var player2Score = parseInt(document.getElementById('player2-score').textContent);
+                    player2Score++;
+                    document.getElementById('player2-score').textContent = player2Score;
                 }
 
-                document.getElementById('answer-text').innerHTML = 'Resposta: ' + this.correctAnswer;
-                document.getElementById('answer-display').style.display = 'block';
                 this.currentRound++;
                 this.newRound();
             },
 
-            updateScore: function () {
-                var currentPlayerScore;
-                if (this.currentRound % 2 === 1) {
-                    currentPlayerScore = document.getElementById('player1-score');
-                } else {
-                    currentPlayerScore = document.getElementById('player2-score');
-                }
-
-                var currentScore = parseInt(currentPlayerScore.textContent);
-                currentPlayerScore.textContent = currentScore + 1;
-            },
-
-           endGame: function () {
-    var player1Score = parseInt(document.getElementById('player1-score').textContent);
-    var player2Score = parseInt(document.getElementById('player2-score').textContent);
-
-    if (this.currentRound <= this.totalRiddles) {
-        this.newRound();
-    } else {
-        var winner = player1Score > player2Score ? this.player1Name : (player2Score > player1Score ? this.player2Name : 'Empate');
-        document.getElementById('record').innerHTML = 'Placar final: ' + this.player1Name + ' - ' + player1Score +
-            ' | ' + this.player2Name + ' - ' + player2Score + '<br> Vencedor: ' + winner;
-    }
-},
-
-            restart: function () {
-                document.getElementById('player1').value = '';
-                document.getElementById('player2').value = '';
-                document.getElementById('error-message').innerHTML = '';
-                document.getElementById('result').innerHTML = '';
-                document.getElementById('answer-display').style.display = 'none';
-                document.getElementById('answer-text').innerHTML = '';
-                document.getElementById('round-info').innerHTML = '';
-                document.getElementById('answer').value = '';
-                document.getElementById('round-timer').textContent = '';
-
-                this.player1Name = '';
-                this.player2Name = '';
-                this.currentPlayer = '';
-                this.currentRound = 1;
-
-                this.start();
+            endGame: function () {
+                clearInterval(this.timer);
+                document.getElementById('result').innerHTML = 'Fim do jogo!';
+                document.getElementById('turn').innerHTML = '';
+                document.getElementById('timer-info').style.display = 'none';
+                document.getElementById('answer').style.display = 'none';
+                document.getElementById('score').style.display = 'none';
+                document.getElementById('record').innerHTML = `Placar final: ${this.player1Name} - ${document.getElementById('player1-score').textContent} | ${this.player2Name} - ${document.getElementById('player2-score').textContent}`;
+                document.getElementById('new-round').style.display = 'none';
             }
         };
 
-        function formatTime(seconds) {
-            var hours = Math.floor(seconds / 3600);
-            var minutes = Math.floor((seconds % 3600) / 60);
-            var remainingSeconds = seconds % 60;
-
-            return `${formatTwoDigits(hours)}:${formatTwoDigits(minutes)}:${formatTwoDigits(remainingSeconds)}`;
-        }
-
-        function formatTwoDigits(value) {
-            return value < 10 ? '0' + value : value;
+        function abrirPagina(url) {
+            window.open(url, "_self");
         }
     </script>
 </body>
 
 </html>
-
