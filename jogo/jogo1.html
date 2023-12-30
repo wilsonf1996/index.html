@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Jogo de Xadrez</title>
   <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+  <style>
+    .in-check {
+      background-color: #f00; /* Adicione um estilo para destacar casas em xeque */
+    }
+  </style>
 </head>
 <body>
   <div id="board1" style="width: 400px"></div>
@@ -37,12 +42,10 @@
 
       var renderMoveHistory = function (moves) {
         var historyElement = $('#move-history').empty();
-        historyElement.empty();
         for (var i = 0; i < moves.length; i = i + 2) {
-          historyElement.append('<span>' + moves[i] + ' ' + ( moves[i + 1] ? moves[i + 1] : ' ') + '</span><br>')
+          historyElement.append('<span>' + moves[i] + ' ' + ( moves[i + 1] ? moves[i + 1] : ' ') + '</span><br>');
         }
         historyElement.scrollTop(historyElement[0].scrollHeight);
-
       };
 
       var getBestMove = function (game) {
@@ -55,28 +58,12 @@
       };
 
       var getStockfishMove = function (fen) {
+        // Lógica para obter o melhor movimento do Stockfish
+        // Substitua isso com a integração adequada do Stockfish
         return 'e2e4';
       };
 
-      var renderBestMove = function (bestMove) {
-        if (bestMove !== null) {
-          game.ugly_move(bestMove.from + bestMove.to, {sloppy: true});
-          board.position(game.fen());
-          renderMoveHistory(game.history());
-          if (game.game_over()) {
-            alert('Jogo terminado');
-          }
-        }
-      };
-
-      var takeBackMove = function () {
-        game.undo();
-        board.position(game.fen());
-        renderMoveHistory(game.history());
-      };
-
       var onDrop = function (source, target) {
-
         var move = game.ugly_move({from: source, to: target, promotion: 'q'});
 
         removeGreySquares();
@@ -90,20 +77,11 @@
 
       var renderSquare = function (square) {
         var element = $('#board1 .square-' + square);
+        var moveColor = game.turn() === 'b' ? 'black' : 'white';
 
-        var moveColor = 'white';
-        if (game.turn() === 'b') {
-          moveColor = 'black';
-        }
-
-        if (square === 'e8' || square === 'e1') {
+        if (square === 'e8' || square === 'e1' || square === 'h8' || square === 'h1') {
           var castlingIcon = game.in_checkmate() ? '&#x2658;' : '&#x25A1;';
-          element.html('<span style="font-size: 2em;">' + castlingIcon + '</span>');
-        }
-
-        if (square === 'h8' || square === 'h1') {
-          var castlingIcon = game.in_checkmate() ? '&#x2656;' : '&#x25A1;';
-          element.html('<span style="font-size: 2em;">' + castlingIcon + '</span>');
+          element.html('<span style="font-size: 2em; color: ' + moveColor + ';">' + castlingIcon + '</span>');
         }
 
         if (game.in_check() === true && game.square_color(square) === moveColor) {
@@ -114,10 +92,7 @@
       };
 
       var onMouseoverSquare = function(square, piece) {
-        var moves = game.legal_moves({
-          square: square,
-          verbose: true
-        });
+        var moves = game.legal_moves({ square: square, verbose: true });
 
         if (moves.length === 0) return;
 
@@ -138,12 +113,7 @@
 
       var greySquare = function(square) {
         var squareEl = $('#board1 .square-' + square);
-
-        var background = '#a9a9a9';
-        if (squareEl.hasClass('black-3c85d') === true) {
-          background = '#696969';
-        }
-
+        var background = squareEl.hasClass('black-3c85d') ? '#696969' : '#a9a9a9';
         squareEl.css('background', background);
       };
 
@@ -160,6 +130,7 @@
         onMouseoverSquare: onMouseoverSquare,
         onSnapEnd: onSnapEnd
       };
+
       board = Chessboard('board1', cfg);
     });
   </script>
