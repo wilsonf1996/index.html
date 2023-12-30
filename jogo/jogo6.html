@@ -1,10 +1,26 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-br">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Jogo de Caça-Palavras</title>
   <style>
+    body {
+      background-color: #1e1e1e;
+      color: #ffffff;
+      font-family: 'Helvetica Neue', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    h1 {
+      color: #4CAF50;
+    }
+
     table {
       border-collapse: collapse;
       margin: 20px;
@@ -16,10 +32,32 @@
       border: 1px solid #000;
       text-align: center;
       font-size: 16px;
+      background-color: #2c2c2c;
+      color: #ffffff;
     }
 
     .highlight {
       background-color: yellow;
+    }
+
+    select {
+      background-color: #2c2c2c;
+      color: #ffffff;
+      padding: 5px;
+      margin-bottom: 10px;
+    }
+
+    #timer {
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+
+    #hints {
+      margin-bottom: 20px;
+    }
+
+    .hint {
+      margin-bottom: 5px;
     }
   </style>
 </head>
@@ -36,21 +74,46 @@
     <option value="4">Caça-Palavras 5</option>
   </select>
 
+  <div id="hints">
+    <h2>Dicas:</h2>
+    <div id="hintList"></div>
+  </div>
+
+  <div id="timer">Tempo restante: <span id="time">0:00</span></div>
+
   <table id="puzzle">
     <!-- A tabela será preenchida dinamicamente com JavaScript -->
   </table>
 
   <script>
     const puzzles = [
-      ['javascript', 'html', 'css', 'developer', 'coding'],
-      ['apple', 'banana', 'orange', 'grape', 'kiwi'],
-      ['elephant', 'lion', 'giraffe', 'zebra', 'monkey'],
-      ['ocean', 'beach', 'sun', 'sand', 'wave'],
-      ['mountain', 'forest', 'river', 'lake', 'tree']
+      {
+        words: ['PROGRAMAÇÃO', 'DESENVOLVIMENTO', 'HTML', 'CSS', 'JAVASCRIPT'],
+        hints: ['Atividade de criar programas de computador.', 'Construção de software.', 'Linguagem de marcação para construir páginas web.', 'Estilo para páginas web.', 'Linguagem de programação para páginas web.']
+      },
+      {
+        words: ['GATO', 'CACHORRO', 'PASSARINHO', 'PEIXE', 'TARTARUGA'],
+        hints: ['Animal doméstico com pelo.', 'Animal doméstico com quatro patas.', 'Animal que voa.', 'Animal aquático.', 'Réptil aquático.']
+      },
+      {
+        words: ['CARRO', 'MOTO', 'BICICLETA', 'ÔNIBUS', 'CAMINHÃO'],
+        hints: ['Meio de transporte com quatro rodas.', 'Meio de transporte com duas rodas.', 'Meio de transporte com pedais.', 'Meio de transporte público terrestre.', 'Meio de transporte de carga terrestre.']
+      },
+      {
+        words: ['SOL', 'LUA', 'ESTRELA', 'NUVEM', 'ARCO-ÍRIS'],
+        hints: ['Estrela que ilumina o dia.', 'Corpo celeste que ilumina a noite.', 'Corpo celeste luminoso no céu.', 'Agrupamento de gotículas de água.', 'Fenômeno óptico e meteorológico.']
+      },
+      {
+        words: ['LIVRO', 'CANETA', 'PAPEL', 'LÁPIS', 'BORRACHA'],
+        hints: ['Objeto para leitura.', 'Instrumento de escrita.', 'Material para escrever.', 'Instrumento de escrita com grafite.', 'Usado para apagar escrita a lápis.']
+      }
     ];
 
     const gridSize = 10;
     let puzzle = [];
+    let currentPuzzle = 0;
+    let wordsFound = 0;
+    let timer;
 
     // Função para preencher a grade com letras aleatórias
     function fillGrid() {
@@ -66,7 +129,9 @@
 
     // Função para adicionar palavras à grade
     function addWordsToGrid(selectedPuzzle) {
-      const words = puzzles[selectedPuzzle];
+      currentPuzzle = selectedPuzzle;
+      wordsFound = 0;
+      const words = puzzles[selectedPuzzle].words;
       words.forEach(word => {
         const direction = Math.random() > 0.5 ? 'horizontal' : 'vertical';
         const startX = Math.floor(Math.random() * gridSize);
@@ -84,9 +149,22 @@
       });
     }
 
+    // Função para iniciar o temporizador
+    function startTimer() {
+      let seconds = 0;
+      timer = setInterval(() => {
+        seconds++;
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        document.getElementById('time').textContent = `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+      }, 1000);
+    }
+
     // Função para renderizar a grade na tabela HTML
     function renderGrid() {
       const table = document.getElementById('puzzle');
+      table.innerHTML = ''; // Limpa a tabela
+
       for (let i = 0; i < gridSize; i++) {
         const row = document.createElement('tr');
         for (let j = 0; j < gridSize; j++) {
@@ -98,34 +176,79 @@
       }
     }
 
+    // Função para exibir dicas
+    function renderHints() {
+      const hints = puzzles[currentPuzzle].hints;
+      const hintList = document.getElementById('hintList');
+      hintList.innerHTML = '';
+
+      hints.forEach((hint, index) => {
+        const hintElement = document.createElement('div');
+        hintElement.classList.add('hint');
+        hintElement.textContent = `${index + 1}. ${hint}`;
+        hintList.appendChild(hintElement);
+      });
+    }
+
     // Event listener para destacar as palavras ao clicar
     document.getElementById('puzzle').addEventListener('click', function(event) {
       const clickedCell = event.target;
       if (clickedCell.tagName === 'TD') {
         clickedCell.classList.toggle('highlight');
+        checkWord();
       }
     });
 
     // Event listener para mudar o caça-palavras selecionado
     document.getElementById('puzzleSelect').addEventListener('change', function(event) {
+      clearInterval(timer); // Limpa o temporizador se estiver em execução
       const selectedPuzzle = event.target.value;
       resetGame();
       addWordsToGrid(selectedPuzzle);
       renderGrid();
+      renderHints();
+      startTimer();
     });
 
     // Função para redefinir o jogo
     function resetGame() {
+      clearInterval(timer); // Limpa o temporizador se estiver em execução
       puzzle = [];
+      wordsFound = 0;
       document.getElementById('puzzle').innerHTML = ''; // Limpa a tabela
+      document.getElementById('time').textContent = '0:00'; // Reinicia o contador de tempo
+      document.querySelectorAll('.highlight').forEach(cell => cell.classList.remove('highlight')); // Limpa destaque de células
+    }
+
+    // Função para verificar se uma palavra foi encontrada
+    function checkWord() {
+      const words = puzzles[currentPuzzle].words;
+      const highlightedCells = document.querySelectorAll('.highlight');
+      const highlightedWord = Array.from(highlightedCells).map(cell => cell.textContent).join('');
+
+      for (const word of words) {
+        if (highlightedWord === word) {
+          wordsFound++;
+          if (wordsFound === words.length) {
+            alert('Parabéns! Você encontrou todas as palavras.');
+            resetGame();
+            addWordsToGrid(currentPuzzle);
+            renderGrid();
+            renderHints();
+            startTimer();
+          }
+          return;
+        }
+      }
     }
 
     // Inicialização do jogo
     fillGrid();
     addWordsToGrid(0); // Preencher com o primeiro caça-palavras por padrão
     renderGrid();
+    renderHints();
+    startTimer();
   </script>
 
 </body>
 </html>
-
