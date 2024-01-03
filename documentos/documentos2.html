@@ -1,175 +1,190 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Meus Documentos</title>
-  <!-- Importe as bibliotecas do Firebase -->
-  <link rel="stylesheet" href="styles.css">
-  <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app.esm.js" type="module"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-analytics.esm.js" type="module"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-storage.esm.js" type="module"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Docs</title>
+    <!-- Importe as bibliotecas do Firebase -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app.esm.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-analytics.esm.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-storage.esm.js" type="module"></script>
+    <!-- Adicione estilos CSS no cabeçalho -->
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #282c34;
+            color: white;
+        }
 
-  <!-- Adicione estilos CSS no cabeçalho -->
-  <style>
-    body {
-      font-family: 'Arial', sans-serif;
-      margin: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      background-color: #282c34;
-      color: white;
-    }
+        #app-container {
+            text-align: center;
+        }
 
-    #app-container {
-      text-align: center;
-    }
+        h1, h2 {
+            color: #61dafb;
+        }
 
-    h1, h2 {
-      color: #61dafb;
-    }
+        input, button {
+            margin-top: 10px;
+            background-color: #5bc0de;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
 
-    input, button {
-      margin-top: 10px;
-      background-color: #5bc0de;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      cursor: pointer;
-    }
+        button:hover {
+            background-color: #4cae4c;
+        }
 
-    button:hover {
-      background-color: #4cae4c;
-    }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
 
-    ul {
-      list-style-type: none;
-      padding: 0;
-    }
+        li {
+            margin-bottom: 10px;
+        }
 
-    li {
-      margin-bottom: 10px;
-    }
+        .success {
+            color: #5cb85c;
+        }
 
-    .success {
-      color: #5cb85c;
-    }
-
-    .error {
-      color: #d9534f;
-    }
-  </style>
+        .error {
+            color: #d9534f;
+        }
+    </style>
 </head>
+
 <body>
-  <div id="app-container">
-    <h1>Firebase Storage App</h1>
+    <div id="app-container">
+        <h1>My Docs Storage App</h1>
+        <input type="file" id="fileInput" />
+        <button id="uploadButton">Upload</button>
+        <h2>Meus Documentos:</h2>
+        <ul id="fileList"></ul>
+        <div id="feedback" class="success"></div>
+    </div>
 
-    <!-- Input para seleção de arquivo -->
-    <input type="file" id="fileInput" />
-    <button onclick="uploadFile()">Upload</button>
+    <!-- Script JavaScript -->
+    <script type="module">
+        // Sua configuração do Firebase
+        import { initializeApp, getAnalytics } from "firebase/app";
+        import { getStorage, ref, uploadBytes, listAll, getDownloadURL } from "firebase/storage";
 
-    <!-- Lista de arquivos no Firebase Storage -->
-    <h2>Meus Documentos:</h2>
-    <ul id="fileList"></ul>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyDxMWPu_CnXV-u4-vlDFd-IZ8fzlyKJHng",
+            authDomain: "financeiro-5.firebaseapp.com",
+            projectId: "financeiro-5",
+            storageBucket: "financeiro-5.appspot.com",
+            messagingSenderId: "686639785223",
+            appId: "1:686639785223:web:0314689c82c6dd1c2951a2",
+            measurementId: "G-Q5REWML5DX"
+        };
 
-    <!-- Mensagens de feedback -->
-    <div id="feedback" class="success"></div>
-  </div>
+        // Inicialize o Firebase
+        let app;
+        try {
+            app = initializeApp(firebaseConfig);
+        } catch (error) {
+            console.error('Erro ao inicializar o Firebase:', error.message);
+        }
 
-  <!-- Script JavaScript -->
-  <script type="module">
-    // Sua configuração do Firebase
-    import { initializeApp, getAnalytics } from "firebase/app";
-    import { getStorage, ref, uploadBytes, listAll, getDownloadURL } from "firebase/storage";
+        if (app) {
+            const analytics = getAnalytics(app);
+            const storage = getStorage(app);
+            const storageRef = ref(storage);
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDxMWPu_CnXV-u4-vlDFd-IZ8fzlyKJHng",
-      authDomain: "financeiro-5.firebaseapp.com",
-      projectId: "financeiro-5",
-      storageBucket: "financeiro-5.appspot.com",
-      messagingSenderId: "686639785223",
-      appId: "1:686639785223:web:0314689c82c6dd1c2951a2",
-      measurementId: "G-Q5REWML5DX"
-    };
+            document.getElementById('uploadButton').addEventListener('click', uploadFile);
 
-    // Inicialize o Firebase
-    const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
-    const storage = getStorage(app);
-    const storageRef = ref(storage);
+            // Função para fazer upload de arquivo
+            function uploadFile() {
+                const fileInput = document.getElementById('fileInput');
+                const file = fileInput.files[0];
 
-    // Função para fazer upload de arquivo
-    function uploadFile() {
-      const fileInput = document.getElementById('fileInput');
-      const file = fileInput.files[0];
+                if (!file) {
+                    showFeedback('Selecione um arquivo para fazer upload.', 'error');
+                    return;
+                }
 
-      // Crie uma referência para o arquivo no Firebase Storage
-      const fileRef = ref(storage, file.name);
+                // Crie uma referência para o arquivo no Firebase Storage
+                const fileRef = ref(storage, file.name);
 
-      // Faça o upload do arquivo
-      uploadBytes(fileRef, file).then(() => {
-        showFeedback('Arquivo enviado com sucesso!', 'success');
-        listFiles();
-      }).catch(error => {
-        showFeedback(`Erro ao enviar o arquivo: ${error.message}`, 'error');
-      });
-    }
+                // Faça o upload do arquivo
+                uploadBytes(fileRef, file).then(() => {
+                    showFeedback('Arquivo enviado com sucesso!', 'success');
+                    listFiles();
+                }).catch(error => {
+                    showFeedback(`Erro ao enviar o arquivo: ${error.message}`, 'error');
+                });
+            }
 
-    // Função para listar os arquivos no Firebase Storage
-    function listFiles() {
-      const fileList = document.getElementById('fileList');
+            // Função para listar os arquivos no Firebase Storage
+            function listFiles() {
+                const fileList = document.getElementById('fileList');
 
-      // Limpe a lista
-      fileList.innerHTML = '';
+                // Limpe a lista
+                fileList.innerHTML = '';
 
-      // Liste os arquivos
-      listAll(storageRef).then(result => {
-        result.items.forEach(item => {
-          // Adicione cada arquivo à lista
-          const li = document.createElement('li');
-          li.textContent = item.name;
+                // Liste os arquivos
+                listAll(storageRef).then(result => {
+                    result.items.forEach(item => {
+                        // Adicione cada arquivo à lista
+                        const li = document.createElement('li');
+                        li.textContent = item.name;
 
-          // Adicione um link para baixar o arquivo
-          const downloadLink = document.createElement('a');
-          downloadLink.href = '#';
-          downloadLink.textContent = 'Baixar';
-          downloadLink.onclick = () => downloadFile(item);
+                        // Adicione um link para baixar o arquivo
+                        const downloadLink = document.createElement('a');
+                        downloadLink.href = '#';
+                        downloadLink.textContent = 'Baixar';
+                        downloadLink.onclick = () => downloadFile(item);
 
-          li.appendChild(downloadLink);
-          fileList.appendChild(li);
-        });
-      }).catch(error => {
-        showFeedback(`Erro ao listar os arquivos: ${error.message}`, 'error');
-      });
-    }
+                        li.appendChild(downloadLink);
+                        fileList.appendChild(li);
+                    });
+                }).catch(error => {
+                    showFeedback(`Erro ao listar os arquivos: ${error.message}`, 'error');
+                });
+            }
 
-    // Função para baixar um arquivo
-    function downloadFile(fileRef) {
-      // Obtenha o URL de download do arquivo
-      getDownloadURL(fileRef).then(url => {
-        // Crie um link temporário e acione o clique para iniciar o download
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', fileRef.name);
-        link.click();
-      }).catch(error => {
-        showFeedback(`Erro ao obter o URL de download: ${error.message}`, 'error');
-      });
-    }
+            // Função para baixar um arquivo
+            function downloadFile(fileRef) {
+                // Obtenha o URL de download do arquivo
+                getDownloadURL(fileRef).then(url => {
+                    // Crie um link temporário e acione o clique para iniciar o download
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.setAttribute('download', fileRef.name);
+                    link.click();
+                }).catch(error => {
+                    showFeedback(`Erro ao obter o URL de download: ${error.message}`, 'error');
+                });
+            }
 
-    // Função para exibir mensagens de feedback
-    function showFeedback(message, type) {
-      const feedback = document.getElementById('feedback');
-      feedback.textContent = message;
-      feedback.className = type;
-    }
+            // Função para exibir mensagens de feedback
+            function showFeedback(message, type) {
+                const feedback = document.getElementById('feedback');
+                feedback.textContent = message;
+                feedback.className = type;
+            }
 
-    // Liste os arquivos quando a página carregar
-    listFiles();
-  </script>
+            // Liste os arquivos quando a página carregar
+            listFiles();
+        } else {
+            // Tratamento para caso o Firebase não seja inicializado corretamente
+            console.error('O Firebase não foi inicializado corretamente. Verifique as configurações.');
+        }
+    </script>
 </body>
+
 </html>
 
 
