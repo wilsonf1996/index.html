@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-<!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Alarme</title>
     <!-- Adicione as bibliotecas do Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
@@ -63,7 +62,7 @@
         button {
             background-color: #555;
             color: white;
-            padding: 10px;
+            padding: 12px;
             margin-top: 10px;
             cursor: pointer;
             border: none;
@@ -72,6 +71,12 @@
 
         button:hover {
             background-color: #aaa;
+        }
+
+        @media only screen and (max-width: 600px) {
+            body {
+                font-size: 14px;
+            }
         }
     </style>
 </head>
@@ -144,24 +149,11 @@
                 // Definir alertas sonoros para o horário atual
                 const currentTime = new Date();
                 const alarmTime = new Date(currentTime.toDateString() + ' ' + alarm.time);
-
                 if (currentTime < alarmTime) {
-                    // Reproduzir o áudio que repete o título do alarme a cada 10 segundos
-                    const audio = new Audio();
-                    audio.src = `https://translate.google.com.br/translate_tts?ie=UTF-8&q=${encodeURIComponent(alarm.action)}&tl=pt-BR`;
-                    audio.loop = true;
-
-                    // Exibir um alerta como indicação visual
                     setTimeout(() => {
-                        audio.play();
                         alert(`É hora para: ${alarm.action}`);
+                        // Adicione aqui a lógica para reproduzir o som do alarme
                     }, alarmTime - currentTime);
-
-                    // Parar o áudio após 10 segundos
-                    setTimeout(() => {
-                        audio.pause();
-                        audio.currentTime = 0;
-                    }, 10000);
                 }
             }
         }
@@ -185,13 +177,38 @@
         }
 
         function editAlarm(id) {
-            alert(`Editar alarme com ID: ${id}`);
-            // Implemente a lógica de edição aqui
+            // Recupera o alarme pelo ID do Firebase
+            const alarmRef = database.ref(`/alarms/${id}`);
+            alarmRef.once('value').then(snapshot => {
+                const alarm = snapshot.val();
+                if (alarm) {
+                    // Preenche os campos de edição com os valores atuais
+                    const editedTime = prompt('Editar Horário:', alarm.time);
+                    const editedAction = prompt('Editar Ação:', alarm.action);
+
+                    if (editedTime !== null && editedAction !== null) {
+                        // Atualiza os valores no Firebase
+                        alarmRef.update({
+                            time: editedTime,
+                            action: editedAction
+                        });
+
+                        initAlarmTable();
+                    }
+                }
+            });
         }
 
         function deleteAlarm(id) {
-            alert(`Excluir alarme com ID: ${id}`);
-            // Implemente a lógica de exclusão aqui
+            // Pergunta ao usuário se realmente deseja excluir o alarme
+            const confirmDelete = confirm('Tem certeza que deseja excluir este alarme?');
+            if (confirmDelete) {
+                // Exclui o alarme do Firebase e recarrega a tabela
+                const alarmRef = database.ref(`/alarms/${id}`);
+                alarmRef.remove().then(() => {
+                    initAlarmTable();
+                });
+            }
         }
 
         initAlarmTable();
