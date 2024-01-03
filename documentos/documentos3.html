@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
     <!-- Adicione estilos CSS no cabeçalho -->
     <style>
         body {
@@ -59,8 +58,10 @@
             border-radius: 5px;
         }
 
-        .download-btn, .delete-btn, .folder-btn, .move-btn {
-            background-color: #5bc0de;
+        .download-btn,
+        .delete-btn,
+        .open-folder-btn,
+        .create-file-btn {
             padding: 5px 10px;
             border: none;
             border-radius: 3px;
@@ -70,24 +71,37 @@
             margin-right: 5px;
         }
 
+        .download-btn {
+            background-color: #5bc0de;
+        }
+
         .download-btn:hover {
             background-color: #4cae4c;
         }
 
-        .delete-btn:hover {
+        .delete-btn {
             background-color: #d9534f;
+            color: white;
         }
 
-        .folder-btn:hover {
+        .delete-btn:hover {
+            background-color: #c9302c;
+        }
+
+        .open-folder-btn {
             background-color: #f0ad4e;
         }
 
-        .move-btn:hover {
-            background-color: #337ab7;
+        .open-folder-btn:hover {
+            background-color: #ec971f;
         }
 
-        input[type="file"] {
-            display: none;
+        .create-file-btn {
+            background-color: #5bc0de;
+        }
+
+        .create-file-btn:hover {
+            background-color: #46b8da;
         }
     </style>
 </head>
@@ -95,11 +109,10 @@
 <body>
     <div id="app-container">
         <h1>My Docs Storage App</h1>
-        <label for="fileInput" class="upload-btn">SELECIONAR ARQUIVOS</label>
         <input type="file" id="fileInput" multiple />
         <button id="uploadButton">UPLOAD</button>
-        <button id="createFolderButton">Criar Pasta</button>
-        <h2>Meus Documentos:</h2>
+        <button id="createFolderButton" class="create-file-btn">Criar Pasta</button>
+        <h2 id="currentPath"></h2>
         <ul id="fileList"></ul>
     </div>
 
@@ -120,6 +133,7 @@
         firebase.initializeApp(firebaseConfig);
         const storage = firebase.storage();
         const storageRef = storage.ref();
+        let currentPath = '';
 
         document.getElementById('uploadButton').addEventListener('click', uploadFiles);
         document.getElementById('createFolderButton').addEventListener('click', createFolder);
@@ -134,52 +148,46 @@
             }
 
             Array.from(files).forEach(file => {
-                const fileRef = storageRef.child(file.name);
+                const fileRef = storageRef.child(`${currentPath}/${file.name}`);
                 fileRef.put(file).then(() => {
-                    listFiles();
+                    listFiles(currentPath);
                 }).catch(error => {
                     alert(`Erro ao enviar o arquivo ${file.name}: ${error.message}`);
                 });
             });
         }
 
-        function createFolder() {
-            const folderName = prompt('Digite o nome da nova pasta:');
-
-            if (folderName) {
-                const folderRef = storageRef.child(`${folderName}/`);
-                folderRef.put(null).then(() => {
-                    listFiles();
-                }).catch(error => {
-                    alert(`Erro ao criar a pasta ${folderName}: ${error.message}`);
-                });
-            }
-        }
-
-        function listFiles() {
+        function listFiles(path) {
+            currentPath = path || '';
             const fileList = document.getElementById('fileList');
             fileList.innerHTML = '';
+            document.getElementById('currentPath').textContent = `Caminho Atual: ${currentPath}`;
 
-            storageRef.listAll().then(result => {
-                result.prefixes.forEach(folderRef => {
-                    const li = document.createElement('li');
-                    li.textContent = folderRef.name;
-                    const folderButton = createButton('folder-btn', 'Abrir Pasta', () => listFiles(folderRef));
-                    li.appendChild(folderButton);
-                    fileList.appendChild(li);
-                });
-
+            storageRef.child(currentPath).listAll().then(result => {
                 result.items.forEach(item => {
                     const li = document.createElement('li');
                     li.textContent = item.name;
 
-                    const downloadButton = createButton('download-btn', 'Baixar', () => downloadFile(item));
-                    const deleteButton = createButton('delete-btn', 'Excluir', () => deleteFile(item));
-                    const moveButton = createButton('move-btn', 'Mover', () => moveFile(item));
+                    const downloadLink = document.createElement('button');
+                    downloadLink.className = 'download-btn';
+                    downloadLink.textContent = 'Baixar';
+                    downloadLink.onclick = () => downloadFile(item);
 
-                    li.appendChild(downloadButton);
+                    const deleteButton = document.createElement('button');
+                    deleteButton.className = 'delete-btn';
+                    deleteButton.textContent = 'Excluir';
+                    deleteButton.onclick = () => deleteFile(item);
+
+                    if (item.isDirectory) {
+                        const openFolderButton = document.createElement('button');
+                        openFolderButton.className = 'open-folder-btn';
+                        openFolderButton.textContent = 'Abrir Pasta';
+                        openFolderButton.onclick = () => listFiles(item.fullPath);
+                        li.appendChild(openFolderButton);
+                    }
+
+                    li.appendChild(downloadLink);
                     li.appendChild(deleteButton);
-                    li.appendChild(moveButton);
                     fileList.appendChild(li);
                 });
             }).catch(error => {
@@ -201,31 +209,23 @@
         function deleteFile(fileRef) {
             if (confirm(`Tem certeza de que deseja excluir ${fileRef.name}?`)) {
                 fileRef.delete().then(() => {
-                    listFiles();
+                    listFiles(currentPath);
                 }).catch(error => {
                     alert(`Erro ao excluir o arquivo ${fileRef.name}: ${error.message}`);
                 });
             }
         }
 
-        function moveFile(fileRef) {
-            const targetFolder = prompt('Digite o nome da pasta de destino:');
-            if (targetFolder) {
-                const destinationRef = storageRef.child(`${targetFolder}/${fileRef.name}`);
-                fileRef.move(destinationRef).then(() => {
-                    listFiles();
+        function createFolder() {
+            const folderName = prompt('Digite o nome da nova pasta:');
+            if (folderName) {
+                const folderRef = storageRef.child(`${currentPath}/${folderName}`);
+                folderRef.put(null).then(() => {
+                    listFiles(currentPath);
                 }).catch(error => {
-                    alert(`Erro ao mover o arquivo ${fileRef.name}: ${error.message}`);
+                    alert(`Erro ao criar a pasta ${folderName}: ${error.message}`);
                 });
             }
-        }
-
-        function createButton(className, text, onClick) {
-            const button = document.createElement('button');
-            button.className = className;
-            button.textContent = text;
-            button.onclick = onClick;
-            return button;
         }
 
         listFiles();
@@ -233,4 +233,3 @@
 </body>
 
 </html>
-
