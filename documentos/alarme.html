@@ -9,67 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
     <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            text-align: center;
-            margin: 20px;
-            background-color: #333;
-            color: white;
-            background-image: url('https://raw.githubusercontent.com/wilsonf1996/index.html/main/DALL%C2%B7E%202023-12-23%2002.59.48%20-%20impressionante%20imagem%20de%20fundo%20para%20aplicativo%20pessoal%20de%20engenheiro%20civil%20fundo%20preto%2C%20hiperrealista%20e%20com%20disgner%20moderno.png');
-            background-size: cover;
-            background-position: center;
-            -webkit-background-size: cover;
-            -moz-background-size: cover;
-            -o-background-size: cover;
-        }
-
-        table {
-            width: 100%;
-            margin: 20px auto;
-            border-collapse: collapse;
-            overflow-x: auto;
-        }
-
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-
-        th {
-            background-color: #444;
-        }
-
-        td {
-            background-color: #555;
-            position: relative;
-        }
-
-        .editable {
-            min-height: 30px;
-            max-width: 200px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            cursor: pointer;
-        }
-
-        .editable:hover {
-            background-color: #666;
-        }
-
-        button {
-            background-color: #555;
-            color: white;
-            padding: 10px;
-            margin-top: 10px;
-            cursor: pointer;
-            border: none;
-            border-radius: 5px;
-        }
-
-        button:hover {
-            background-color: #aaa;
-        }
+        /* Seus estilos aqui... */
     </style>
 </head>
 
@@ -81,10 +21,19 @@
             <tr>
                 <th>Horário</th>
                 <th>Ação</th>
+                <th>Ações</th>
             </tr>
         </thead>
         <tbody id="alarm-body"></tbody>
     </table>
+
+    <div>
+        <label for="newTime">Novo Horário:</label>
+        <input type="time" id="newTime">
+        <label for="newAction">Nova Ação:</label>
+        <input type="text" id="newAction">
+        <button onclick="addAlarm()">Adicionar Alarme</button>
+    </div>
 
     <script>
         // Configuração do Firebase
@@ -110,12 +59,12 @@
 
             // Cabeçalho da tabela
             const tableHeader = alarmTable.querySelector('thead tr');
-            tableHeader.innerHTML = "<th>Horário</th><th>Ação</th>";
+            tableHeader.innerHTML = "<th>Horário</th><th>Ação</th><th>Ações</th>";
 
             // Conteúdo da tabela
             const alarms = [
-                { time: '08:00', action: 'Tomar Medicamento' },
-                { time: '12:30', action: 'Almoço' },
+                { id: 1, time: '08:00', action: 'Tomar Medicamento' },
+                { id: 2, time: '12:30', action: 'Almoço' },
                 // Adicione mais alarmes conforme necessário
             ];
 
@@ -123,10 +72,50 @@
                 const row = alarmBody.insertRow();
                 const cellTime = row.insertCell(0);
                 const cellAction = row.insertCell(1);
+                const cellActions = row.insertCell(2);
 
                 cellTime.textContent = alarm.time;
                 cellAction.textContent = alarm.action;
+                cellActions.innerHTML = `<button onclick="editAlarm(${alarm.id})">Editar</button> <button onclick="deleteAlarm(${alarm.id})">Excluir</button>`;
+
+                // Definir alertas sonoros para o horário atual
+                const currentTime = new Date();
+                const alarmTime = new Date(currentTime.toDateString() + ' ' + alarm.time);
+                if (currentTime < alarmTime) {
+                    setTimeout(() => {
+                        alert(`É hora para: ${alarm.action}`);
+                        // Adicione aqui a lógica para reproduzir o som do alarme
+                    }, alarmTime - currentTime);
+                }
             }
+        }
+
+        function addAlarm() {
+            const newTime = document.getElementById('newTime').value;
+            const newAction = document.getElementById('newAction').value;
+
+            if (newTime && newAction) {
+                // Adicione o novo alarme ao Firebase e recarregue a tabela
+                const newAlarmRef = database.ref('/alarms').push();
+                newAlarmRef.set({
+                    time: newTime,
+                    action: newAction
+                });
+
+                initAlarmTable();
+            } else {
+                alert('Preencha todos os campos para adicionar um novo alarme.');
+            }
+        }
+
+        function editAlarm(id) {
+            // Implemente a lógica de edição aqui
+            alert(`Editar alarme com ID: ${id}`);
+        }
+
+        function deleteAlarm(id) {
+            // Implemente a lógica de exclusão aqui
+            alert(`Excluir alarme com ID: ${id}`);
         }
 
         initAlarmTable();
