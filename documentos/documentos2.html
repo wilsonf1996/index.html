@@ -8,7 +8,7 @@
     <!-- Importe as bibliotecas do Firebase -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
     <!-- Adicione estilos CSS no cabeçalho -->
     <style>
         body {
@@ -64,12 +64,8 @@
     </div>
 
     <!-- Script JavaScript -->
-    <script type="module">
+    <script>
         // Sua configuração do Firebase
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js";
-        import { getStorage, ref, uploadBytes, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-storage.js";
-
-        // Configuração do Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyDxMWPu_CnXV-u4-vlDFd-IZ8fzlyKJHng",
             authDomain: "financeiro-5.firebaseapp.com",
@@ -81,70 +77,64 @@
         };
 
         // Inicialize o Firebase
-        let app;
+        firebase.initializeApp(firebaseConfig);
+        const storage = firebase.storage();
+        const storageRef = storage.ref();
 
-        try {
-            app = initializeApp(firebaseConfig);
-            const storage = getStorage(app);
-            const storageRef = ref(storage);
+        document.getElementById('uploadButton').addEventListener('click', uploadFile);
 
-            document.getElementById('uploadButton').addEventListener('click', uploadFile);
+        function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
 
-            function uploadFile() {
-                const fileInput = document.getElementById('fileInput');
-                const file = fileInput.files[0];
-
-                if (!file) {
-                    alert('Selecione um arquivo para fazer upload.');
-                    return;
-                }
-
-                const fileRef = ref(storage, file.name);
-
-                uploadBytes(fileRef, file).then(() => {
-                    listFiles();
-                }).catch(error => {
-                    alert(`Erro ao enviar o arquivo: ${error.message}`);
-                });
+            if (!file) {
+                alert('Selecione um arquivo para fazer upload.');
+                return;
             }
 
-            function listFiles() {
-                const fileList = document.getElementById('fileList');
-                fileList.innerHTML = '';
+            const fileRef = storageRef.child(file.name);
 
-                listAll(storageRef).then(result => {
-                    result.items.forEach(item => {
-                        const li = document.createElement('li');
-                        li.textContent = item.name;
-
-                        const downloadLink = document.createElement('a');
-                        downloadLink.href = '#';
-                        downloadLink.textContent = 'Baixar';
-                        downloadLink.onclick = () => downloadFile(item);
-
-                        li.appendChild(downloadLink);
-                        fileList.appendChild(li);
-                    });
-                }).catch(error => {
-                    alert(`Erro ao listar os arquivos: ${error.message}`);
-                });
-            }
-
-            function downloadFile(fileRef) {
-                getDownloadURL(fileRef).then(url => {
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.setAttribute('download', fileRef.name);
-                    link.click();
-                }).catch(error => {
-                    alert(`Erro ao obter o URL de download: ${error.message}`);
-                });
-            }
-
-            listFiles();
-        } catch (error) {
-            console.error('O Firebase não foi inicializado corretamente. Verifique as configurações.', error.message);
+            fileRef.put(file).then(() => {
+                listFiles();
+            }).catch(error => {
+                alert(`Erro ao enviar o arquivo: ${error.message}`);
+            });
         }
+
+        function listFiles() {
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '';
+
+            storageRef.listAll().then(result => {
+                result.items.forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = item.name;
+
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = '#';
+                    downloadLink.textContent = 'Baixar';
+                    downloadLink.onclick = () => downloadFile(item);
+
+                    li.appendChild(downloadLink);
+                    fileList.appendChild(li);
+                });
+            }).catch(error => {
+                alert(`Erro ao listar os arquivos: ${error.message}`);
+            });
+        }
+
+        function downloadFile(fileRef) {
+            fileRef.getDownloadURL().then(url => {
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', fileRef.name);
+                link.click();
+            }).catch(error => {
+                alert(`Erro ao obter o URL de download: ${error.message}`);
+            });
+        }
+
+        listFiles();
     </script>
 </body>
 
