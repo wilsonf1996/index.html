@@ -1,1 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Docs</title>
+    <!-- Importe as bibliotecas do Firebase -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <!-- Adicione estilos CSS no cabeçalho -->
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #282c34;
+            color: white;
+        }
+
+        #app-container {
+            text-align: center;
+        }
+
+        h1, h2 {
+            color: #61dafb;
+        }
+
+        input, button {
+            margin-top: 10px;
+            background-color: #5bc0de;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #4cae4c;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            background-color: #444;
+            border-radius: 5px;
+        }
+
+        .download-btn, .delete-btn, .folder-btn, .move-btn {
+            background-color: #5bc0de;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .download-btn:hover {
+            background-color: #4cae4c;
+        }
+
+        .delete-btn:hover {
+            background-color: #d9534f;
+        }
+
+        .folder-btn:hover {
+            background-color: #f0ad4e;
+        }
+
+        .move-btn:hover {
+            background-color: #337ab7;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app-container">
+        <h1>My Docs Storage App</h1>
+        <label for="fileInput" class="upload-btn">SELECIONAR ARQUIVOS</label>
+        <input type="file" id="fileInput" multiple />
+        <button id="uploadButton">UPLOAD</button>
+        <button id="createFolderButton">Criar Pasta</button>
+        <h2>Meus Documentos:</h2>
+        <ul id="fileList"></ul>
+    </div>
+
+    <!-- Script JavaScript -->
+    <script>
+        // Sua configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyDxMWPu_CnXV-u4-vlDFd-IZ8fzlyKJHng",
+            authDomain: "financeiro-5.firebaseapp.com",
+            projectId: "financeiro-5",
+            storageBucket: "financeiro-5.appspot.com",
+            messagingSenderId: "686639785223",
+            appId: "1:686639785223:web:0314689c82c6dd1c2951a2",
+            measurementId: "G-Q5REWML5DX"
+        };
+
+        // Inicialize o Firebase
+        firebase.initializeApp(firebaseConfig);
+        const storage = firebase.storage();
+        const storageRef = storage.ref();
+
+        document.getElementById('uploadButton').addEventListener('click', uploadFiles);
+        document.getElementById('createFolderButton').addEventListener('click', createFolder);
+
+        function uploadFiles() {
+            const fileInput = document.getElementById('fileInput');
+            const files = fileInput.files;
+
+            if (files.length === 0) {
+                alert('Selecione um ou mais arquivos para fazer upload.');
+                return;
+            }
+
+            Array.from(files).forEach(file => {
+                const fileRef = storageRef.child(file.name);
+                fileRef.put(file).then(() => {
+                    listFiles();
+                }).catch(error => {
+                    alert(`Erro ao enviar o arquivo ${file.name}: ${error.message}`);
+                });
+            });
+        }
+
+        function createFolder() {
+            const folderName = prompt('Digite o nome da nova pasta:');
+
+            if (folderName) {
+                const folderRef = storageRef.child(`${folderName}/`);
+                folderRef.put(null).then(() => {
+                    listFiles();
+                }).catch(error => {
+                    alert(`Erro ao criar a pasta ${folderName}: ${error.message}`);
+                });
+            }
+        }
+
+        function listFiles() {
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '';
+
+            storageRef.listAll().then(result => {
+                result.prefixes.forEach(folderRef => {
+                    const li = document.createElement('li');
+                    li.textContent = folderRef.name;
+                    const folderButton = createButton('folder-btn', 'Abrir Pasta', () => listFiles(folderRef));
+                    li.appendChild(folderButton);
+                    fileList.appendChild(li);
+                });
+
+                result.items.forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = item.name;
+
+                    const downloadButton = createButton('download-btn', 'Baixar', () => downloadFile(item));
+                    const deleteButton = createButton('delete-btn', 'Excluir', () => deleteFile(item));
+                    const moveButton = createButton('move-btn', 'Mover', () => moveFile(item));
+
+                    li.appendChild(downloadButton);
+                    li.appendChild(deleteButton);
+                    li.appendChild(moveButton);
+                    fileList.appendChild(li);
+                });
+            }).catch(error => {
+                alert(`Erro ao listar os arquivos: ${error.message}`);
+            });
+        }
+
+        function downloadFile(fileRef) {
+            fileRef.getDownloadURL().then(url => {
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', fileRef.name);
+                link.click();
+            }).catch(error => {
+                alert(`Erro ao obter o URL de download: ${error.message}`);
+            });
+        }
+
+        function deleteFile(fileRef) {
+            if (confirm(`Tem certeza de que deseja excluir ${fileRef.name}?`)) {
+                fileRef.delete().then(() => {
+                    listFiles();
+                }).catch(error => {
+                    alert(`Erro ao excluir o arquivo ${fileRef.name}: ${error.message}`);
+                });
+            }
+        }
+
+        function moveFile(fileRef) {
+            const targetFolder = prompt('Digite o nome da pasta de destino:');
+            if (targetFolder) {
+                const destinationRef = storageRef.child(`${targetFolder}/${fileRef.name}`);
+                fileRef.move(destinationRef).then(() => {
+                    listFiles();
+                }).catch(error => {
+                    alert(`Erro ao mover o arquivo ${fileRef.name}: ${error.message}`);
+                });
+            }
+        }
+
+        function createButton(className, text, onClick) {
+            const button = document.createElement('button');
+            button.className = className;
+            button.textContent = text;
+            button.onclick = onClick;
+            return button;
+        }
+
+        listFiles();
+    </script>
+</body>
+
+</html>
 
