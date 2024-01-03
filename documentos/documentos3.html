@@ -10,10 +10,9 @@
             font-family: 'Arial', sans-serif;
             margin: 0;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+            height: 100vh;
             background-color: #282c34;
             color: white;
         }
@@ -54,7 +53,7 @@
             border-radius: 5px;
         }
 
-        .download-btn, .delete-btn, .create-file-btn, .open-folder-btn, .move-btn {
+        .download-btn, .delete-btn, .create-file-btn, .open-folder-btn {
             padding: 5px 10px;
             border: none;
             border-radius: 3px;
@@ -96,18 +95,6 @@
         .open-folder-btn:hover {
             background-color: #4cae4c;
         }
-
-        .move-btn {
-            background-color: #f0ad4e;
-        }
-
-        .move-btn:hover {
-            background-color: #ec971f;
-        }
-
-        #backButton {
-            margin-top: 20px;
-        }
     </style>
 </head>
 
@@ -117,10 +104,9 @@
         <input type="file" id="fileInput" multiple />
         <button id="uploadButton">UPLOAD</button>
         <button id="createFolderButton" class="create-file-btn">Criar Pasta</button>
-        <button id="moveFilesButton" class="move-btn">Mover Arquivos</button>
+        <button id="goToRootButton" class="open-folder-btn">Voltar à Pasta Principal</button>
         <h2 id="currentPath"></h2>
         <ul id="fileList"></ul>
-        <button id="backButton">Voltar à Página Principal</button>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
@@ -143,10 +129,7 @@
 
         document.getElementById('uploadButton').addEventListener('click', uploadFiles);
         document.getElementById('createFolderButton').addEventListener('click', createFolder);
-        document.getElementById('moveFilesButton').addEventListener('click', moveFiles);
-        document.getElementById('backButton').addEventListener('click', () => {
-            window.location.href = 'https://wilsonf1996.github.io/index.html/documentos/documentos3.html#';
-        });
+        document.getElementById('goToRootButton').addEventListener('click', goToRoot);
 
         let currentPath = "";
 
@@ -176,15 +159,7 @@
             storageRef.child(currentPath).listAll().then(result => {
                 result.items.forEach(item => {
                     const li = document.createElement('li');
-                    
-                    // Adiciona uma caixa de seleção
-                    const checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.setAttribute('data-filename', item.name);
-                    
-                    li.appendChild(checkbox);
-                    
-                    li.appendChild(document.createTextNode(item.name));
+                    li.textContent = item.name;
 
                     const downloadButton = createButton('Baixar', 'download-btn', () => downloadFile(item));
                     const deleteButton = createButton('Excluir', 'delete-btn', () => deleteFile(item));
@@ -247,40 +222,10 @@
             return button;
         }
 
-        function moveFiles() {
-            const selectedFiles = getSelectedFiles();
-            
-            if (selectedFiles.length === 0) {
-                alert('Selecione os arquivos que deseja mover.');
-                return;
-            }
-
-            const destinationFolder = prompt('Digite o nome da pasta de destino:');
-            
-            if (destinationFolder) {
-                const destinationPath = currentPath + destinationFolder + '/';
-                
-                selectedFiles.forEach(file => {
-                    const sourcePath = currentPath + file.name;
-                    const destinationPathWithFile = destinationPath + file.name;
-                    
-                    storageRef.child(sourcePath).moveTo(storageRef.child(destinationPathWithFile)).then(() => {
-                        listFiles();
-                    }).catch(error => {
-                        alert(`Erro ao mover o arquivo ${file.name}: ${error.message}`);
-                    });
-                });
-            }
-        }
-
-        function getSelectedFiles() {
-            const fileList = document.getElementById('fileList');
-            const checkboxes = fileList.querySelectorAll('input[type="checkbox"]:checked');
-            
-            return Array.from(checkboxes).map(checkbox => {
-                const fileName = checkbox.getAttribute('data-filename');
-                return { name: fileName };
-            });
+        function goToRoot() {
+            currentPath = "";
+            document.getElementById('currentPath').textContent = "Pasta Atual: Pasta Principal";
+            listFiles();
         }
 
         listFiles();
