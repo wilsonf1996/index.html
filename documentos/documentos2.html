@@ -17,7 +17,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             background-color: #282c34;
             color: white;
         }
@@ -32,20 +32,29 @@
 
         input, button {
             margin-top: 10px;
-            background-color: #5bc0de;
-            color: white;
             border: none;
             padding: 8px 12px;
             cursor: pointer;
+            font-size: 14px;
         }
 
-        button:hover {
+        #fileInput {
+            display: none;
+        }
+
+        #uploadButton {
+            background-color: #5bc0de;
+            color: white;
+        }
+
+        #uploadButton:hover {
             background-color: #4cae4c;
         }
 
         ul {
             list-style-type: none;
             padding: 0;
+            margin: 20px;
         }
 
         li {
@@ -58,15 +67,18 @@
             border-radius: 5px;
         }
 
-        .download-btn {
+        .download-btn,
+        .delete-btn {
             background-color: #5bc0de;
-            padding: 5px 10px;
+            color: white;
             border: none;
-            border-radius: 3px;
+            padding: 5px 10px;
             cursor: pointer;
             text-transform: uppercase;
             font-weight: bold;
+            border-radius: 3px;
             margin-right: 5px;
+            font-size: 12px;
         }
 
         .download-btn:hover {
@@ -75,13 +87,6 @@
 
         .delete-btn {
             background-color: #d9534f;
-            padding: 5px 10px;
-            border: none;
-            border-radius: 3px;
-            cursor: pointer;
-            text-transform: uppercase;
-            font-weight: bold;
-            color: white;
         }
 
         .delete-btn:hover {
@@ -93,8 +98,8 @@
 <body>
     <div id="app-container">
         <h1>My Docs Storage App</h1>
+        <label for="fileInput" id="uploadButton">Selecionar Arquivo</label>
         <input type="file" id="fileInput" />
-        <button id="uploadButton">Upload</button>
         <h2>Meus Documentos:</h2>
         <ul id="fileList"></ul>
     </div>
@@ -117,10 +122,10 @@
         const storage = firebase.storage();
         const storageRef = storage.ref();
 
-        document.getElementById('uploadButton').addEventListener('click', uploadFile);
+        document.getElementById('fileInput').addEventListener('change', uploadFile);
 
-        function uploadFile() {
-            const fileInput = document.getElementById('fileInput');
+        function uploadFile(event) {
+            const fileInput = event.target;
             const file = fileInput.files[0];
 
             if (!file) {
@@ -135,6 +140,9 @@
             }).catch(error => {
                 alert(`Erro ao enviar o arquivo: ${error.message}`);
             });
+
+            // Limpa o valor do input para que o mesmo arquivo possa ser selecionado novamente
+            fileInput.value = '';
         }
 
         function listFiles() {
@@ -146,17 +154,10 @@
                     const li = document.createElement('li');
                     li.textContent = item.name;
 
-                    const downloadLink = document.createElement('button');
-                    downloadLink.className = 'download-btn';
-                    downloadLink.textContent = 'Baixar';
-                    downloadLink.onclick = () => downloadFile(item);
+                    const downloadButton = createButton('download-btn', 'Baixar', () => downloadFile(item));
+                    const deleteButton = createButton('delete-btn', 'Excluir', () => deleteFile(item));
 
-                    const deleteButton = document.createElement('button');
-                    deleteButton.className = 'delete-btn';
-                    deleteButton.textContent = 'Excluir';
-                    deleteButton.onclick = () => deleteFile(item);
-
-                    li.appendChild(downloadLink);
+                    li.appendChild(downloadButton);
                     li.appendChild(deleteButton);
                     fileList.appendChild(li);
                 });
@@ -187,6 +188,14 @@
         }
 
         listFiles();
+
+        function createButton(className, text, onClick) {
+            const button = document.createElement('button');
+            button.className = className;
+            button.textContent = text;
+            button.onclick = onClick;
+            return button;
+        }
     </script>
 </body>
 
