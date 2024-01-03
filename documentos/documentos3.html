@@ -5,11 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Docs</title>
-    <!-- Importe as bibliotecas do Firebase -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
-    <!-- Adicione estilos CSS no cabeçalho -->
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -58,10 +53,7 @@
             border-radius: 5px;
         }
 
-        .download-btn,
-        .delete-btn,
-        .open-folder-btn,
-        .create-file-btn {
+        .download-btn, .delete-btn, .create-file-btn, .open-folder-btn {
             padding: 5px 10px;
             border: none;
             border-radius: 3px;
@@ -88,20 +80,20 @@
             background-color: #c9302c;
         }
 
-        .open-folder-btn {
-            background-color: #f0ad4e;
-        }
-
-        .open-folder-btn:hover {
-            background-color: #ec971f;
-        }
-
         .create-file-btn {
             background-color: #5bc0de;
         }
 
         .create-file-btn:hover {
-            background-color: #46b8da;
+            background-color: #4cae4c;
+        }
+
+        .open-folder-btn {
+            background-color: #5bc0de;
+        }
+
+        .open-folder-btn:hover {
+            background-color: #4cae4c;
         }
     </style>
 </head>
@@ -116,27 +108,28 @@
         <ul id="fileList"></ul>
     </div>
 
-    <!-- Script JavaScript -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+
     <script>
-        // Sua configuração do Firebase
         const firebaseConfig = {
-            apiKey: "AIzaSyDxMWPu_CnXV-u4-vlDFd-IZ8fzlyKJHng",
-            authDomain: "financeiro-5.firebaseapp.com",
-            projectId: "financeiro-5",
-            storageBucket: "financeiro-5.appspot.com",
-            messagingSenderId: "686639785223",
-            appId: "1:686639785223:web:0314689c82c6dd1c2951a2",
-            measurementId: "G-Q5REWML5DX"
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID",
+            measurementId: "YOUR_MEASUREMENT_ID"
         };
 
-        // Inicialize o Firebase
         firebase.initializeApp(firebaseConfig);
         const storage = firebase.storage();
         const storageRef = storage.ref();
-        let currentPath = '';
 
         document.getElementById('uploadButton').addEventListener('click', uploadFiles);
         document.getElementById('createFolderButton').addEventListener('click', createFolder);
+
+        let currentPath = "";
 
         function uploadFiles() {
             const fileInput = document.getElementById('fileInput');
@@ -148,46 +141,31 @@
             }
 
             Array.from(files).forEach(file => {
-                const fileRef = storageRef.child(`${currentPath}/${file.name}`);
+                const fileRef = storageRef.child(currentPath + file.name);
                 fileRef.put(file).then(() => {
-                    listFiles(currentPath);
+                    listFiles();
                 }).catch(error => {
                     alert(`Erro ao enviar o arquivo ${file.name}: ${error.message}`);
                 });
             });
         }
 
-        function listFiles(path) {
-            currentPath = path || '';
+        function listFiles() {
             const fileList = document.getElementById('fileList');
             fileList.innerHTML = '';
-            document.getElementById('currentPath').textContent = `Caminho Atual: ${currentPath}`;
 
             storageRef.child(currentPath).listAll().then(result => {
                 result.items.forEach(item => {
                     const li = document.createElement('li');
                     li.textContent = item.name;
 
-                    const downloadLink = document.createElement('button');
-                    downloadLink.className = 'download-btn';
-                    downloadLink.textContent = 'Baixar';
-                    downloadLink.onclick = () => downloadFile(item);
+                    const downloadButton = createButton('Baixar', 'download-btn', () => downloadFile(item));
+                    const deleteButton = createButton('Excluir', 'delete-btn', () => deleteFile(item));
+                    const openFolderButton = createButton('Abrir Pasta', 'open-folder-btn', () => openFolder(item));
 
-                    const deleteButton = document.createElement('button');
-                    deleteButton.className = 'delete-btn';
-                    deleteButton.textContent = 'Excluir';
-                    deleteButton.onclick = () => deleteFile(item);
-
-                    if (item.isDirectory) {
-                        const openFolderButton = document.createElement('button');
-                        openFolderButton.className = 'open-folder-btn';
-                        openFolderButton.textContent = 'Abrir Pasta';
-                        openFolderButton.onclick = () => listFiles(item.fullPath);
-                        li.appendChild(openFolderButton);
-                    }
-
-                    li.appendChild(downloadLink);
+                    li.appendChild(downloadButton);
                     li.appendChild(deleteButton);
+                    li.appendChild(openFolderButton);
                     fileList.appendChild(li);
                 });
             }).catch(error => {
@@ -209,7 +187,7 @@
         function deleteFile(fileRef) {
             if (confirm(`Tem certeza de que deseja excluir ${fileRef.name}?`)) {
                 fileRef.delete().then(() => {
-                    listFiles(currentPath);
+                    listFiles();
                 }).catch(error => {
                     alert(`Erro ao excluir o arquivo ${fileRef.name}: ${error.message}`);
                 });
@@ -217,15 +195,29 @@
         }
 
         function createFolder() {
-            const folderName = prompt('Digite o nome da nova pasta:');
+            const folderName = prompt('Digite o nome da pasta:');
             if (folderName) {
-                const folderRef = storageRef.child(`${currentPath}/${folderName}`);
+                const folderRef = storageRef.child(currentPath + folderName + '/');
                 folderRef.put(null).then(() => {
-                    listFiles(currentPath);
+                    listFiles();
                 }).catch(error => {
                     alert(`Erro ao criar a pasta ${folderName}: ${error.message}`);
                 });
             }
+        }
+
+        function openFolder(folderRef) {
+            currentPath = folderRef.fullPath + '/';
+            document.getElementById('currentPath').textContent = `Pasta Atual: ${currentPath}`;
+            listFiles();
+        }
+
+        function createButton(text, className, onClick) {
+            const button = document.createElement('button');
+            button.textContent = text;
+            button.className = className;
+            button.onclick = onClick;
+            return button;
         }
 
         listFiles();
