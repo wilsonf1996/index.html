@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tradutor - BIM e Obras</title>
+    <style>
+        body {
+            background-color: #1c1c1e;
+            color: #ffffff;
+            font-family: 'Helvetica', sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 10px;
+        }
+
+        #iphone-frame {
+            background-color: #1c1c1e;
+            padding: 20px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        h1 {
+            color: #ffffff;
+        }
+
+        #game-container {
+            background-color: #2c2c2e;
+            border-radius: 20px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            color: #aaaaaa;
+        }
+
+        input {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-top: 5px;
+            box-sizing: border-box;
+            background-color: #2c2c2e;
+            border: 1px solid #3c3c3e;
+            color: #ffffff;
+            border-radius: 5px;
+        }
+
+        button {
+            background-color: #4c4c4e;
+            color: #ffffff;
+            padding: 10px 20px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #5c5c5e;
+        }
+
+        p {
+            margin-top: 10px;
+            color: #aaaaaa;
+        }
+
+        #answer-display {
+            display: none;
+            margin-top: 20px;
+        }
+
+        #record {
+            margin-top: 20px;
+        }
+
+        #timer-info {
+            margin-top: 20px;
+            color: #aaaaaa;
+        }
+
+        #round-timer {
+            color: #ffffff;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="iphone-frame">
+        <h1>Tradutor - BIM e Obras</h1>
+
+        <div id="game-container">
+            <div id="player-names">
+                <label for="player1">Jogador:</label>
+                <input type="text" id="player1" placeholder="Seu Nome">
+            </div>
+
+            <button onclick="game.restart()">Recomeçar Tradutor</button>
+
+            <p id="riddle">Pressione "Iniciar Tradutor" para começar!</p>
+            <p id="timer-info">Cronômetro: <span id="round-timer"></span></p>
+            <p id="turn"></p>
+            <strong>Resposta:</strong> <span id="answer-text"></span>
+            <button onclick="game.start()">Iniciar Tradutor</button>
+            <button onclick="startListening()">Ouvir</button>
+            <div id="answer-display">
+                <strong>Resposta:</strong> <span id="answer-text"></span>
+                <button onclick="startListening()">Ouvir</button>
+            </div>
+
+            <input type="text" id="answer" placeholder="Sua resposta">
+            <button onclick="game.checkAnswer()">Verificar Resposta</button>
+            <p id="result"></p>
+            <p id="error-message"></p>
+            <p id="answer-display"><strong>Resposta:</strong> <span id="answer-text"></span></p>
+            <p id="score">Placar: Jogador 1 - <span id="player1-score">0</span></p>
+            <p id="record"></p>
+            <button onclick="game.newRound()">Nova Palavra</button>
+        </div>
+    </div>
+
+    <script>
+        var game = {
+            player1Name: "",
+            currentPlayer: "",
+            currentRound: 1,
+            totalRiddles: 200,
+            currentRiddleIndex: 0,
+            correctAnswer: "",
+            timer: null,
+
+            riddles: [
+                { question: 'Qual a Tradução - Engenharia Civil da palavra "Foundation" em inglês?', answer: 'Fundações' },
+                { question: 'Qual a Tradução - Engenharia Civil da palavra "Earthworks" em inglês?', answer: 'Terraplanagem' },
+                { question: 'Qual a Tradução - Engenharia Civil da palavra "Surveying" em inglês?', answer: 'Topografia' },
+            ],
+
+            start: function () {
+                this.player1Name = document.getElementById('player1').value;
+                this.currentRound = 1;
+                document.getElementById('turn').innerHTML = this.player1Name + ', é a sua vez!';
+                this.newRound();
+            },
+
+            newRound: function () {
+                if (this.currentRound <= this.totalRiddles) {
+                    clearInterval(this.timer);
+                    this.timer = this.startTimer();
+                    this.currentRiddleIndex = Math.floor(Math.random() * this.riddles.length);
+                    var currentRiddle = this.riddles[this.currentRiddleIndex];
+                    document.getElementById('riddle').innerHTML = currentRiddle.question;
+                    this.correctAnswer = currentRiddle.answer.toLowerCase();
+                    document.getElementById('answer').value = '';
+                    document.getElementById('answer-display').style.display = 'none';
+                    this.currentPlayer = this.player1Name;
+                    document.getElementById('turn').innerHTML = `${this.currentPlayer}, é a sua vez! Palavra: ${this.currentRound}`;
+                } else {
+                    this.endGame();
+                }
+            },
+
+            startTimer: function () {
+                var seconds = 3600; // Tempo ajustado para uma hora (3600 segundos)
+                var timerElement = document.getElementById('round-timer');
+
+                function updateTimer() {
+                    timerElement.textContent = formatTime(seconds);
+
+                    if (seconds === 0) {
+                        clearInterval(game.timer);
+                        document.getElementById('result').innerHTML = 'Tempo esgotado! Próxima Palavra.';
+                        game.newRound();
+                    }
+                    seconds--;
+                }
+
+                updateTimer();
+                return setInterval(updateTimer, 1000);
+            },
+
+            checkAnswer: function () {
+                clearInterval(this.timer);
+                var playerAnswer = document.getElementById('answer').value.toLowerCase();
+
+                if (playerAnswer === this.correctAnswer) {
+                    document.getElementById('result').innerHTML = 'Resposta correta!';
+                    this.updateScore();
+                } else {
+                    document.getElementById('result').innerHTML = 'Resposta incorreta. Tente novamente!';
+                    document.getElementById('error-message').innerHTML = `Resposta correta: ${this.correctAnswer}`;
+                }
+
+                document.getElementById('answer-text').innerHTML = 'Resposta: ' + this.correctAnswer;
+                document.getElementById('answer-display').style.display = 'block';
+                this.currentRound++;
+                this.newRound();
+            },
+
+            updateScore: function () {
+                var currentPlayerScore = document.getElementById('player1-score');
+                var currentScore = parseInt(currentPlayerScore.textContent);
+                currentPlayerScore.textContent = currentScore + 1;
+            },
+
+            endGame: function () {
+                var player1Score = parseInt(document.getElementById('player1-score').textContent);
+
+                if (this.currentRound <= this.totalRiddles) {
+                    this.newRound();
+                } else {
+                    document.getElementById('record').innerHTML = 'Placar final: ' + this.player1Name + ' - ' + player1Score +
+                        '<br> Vencedor: ' + this.player1Name;
+                }
+            },
+
+            restart: function () {
+                document.getElementById('player1').value = '';
+                document.getElementById('error-message').innerHTML = '';
+                document.getElementById('result').innerHTML = '';
+                document.getElementById('answer-display').style.display = 'none';
+                document.getElementById('answer-text').innerHTML = '';
+                document.getElementById('round-info').innerHTML = '';
+                document.getElementById('answer').value = '';
+                document.getElementById('round-timer').textContent = '';
+
+                this.player1Name = '';
+                this.currentPlayer = '';
+                this.currentRound = 1;
+
+                this.start();
+            }
+        };
+
+        function formatTime(seconds) {
+            var hours = Math.floor(seconds / 3600);
+            var minutes = Math.floor((seconds % 3600) / 60);
+            var remainingSeconds = seconds % 60;
+
+            return `${formatTwoDigits(hours)}:${formatTwoDigits(minutes)}:${formatTwoDigits(remainingSeconds)}`;
+        }
+
+        function formatTwoDigits(value) {
+            return value < 10 ? '0' + value : value;
+        }
+
+        function startListening() {
+            var currentRiddle = game.riddles[game.currentRiddleIndex];
+            var englishWord = currentRiddle.question; // Pergunta em inglês
+
+            var synthesis = window.speechSynthesis;
+            var utterance = new SpeechSynthesisUtterance();
+            utterance.lang = 'en-US'; // Configura o idioma para inglês (EUA)
+            utterance.text = englishWord;
+
+            synthesis.speak(utterance);
+
+            document.getElementById('answer-text').innerText = englishWord;
+        }
+    </script>
+</body>
+
+</html>
