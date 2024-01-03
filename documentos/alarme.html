@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -124,29 +125,45 @@
             tableHeader.innerHTML = "<th>Horário</th><th>Ação</th><th>Ações</th>";
 
             // Conteúdo da tabela
-            database.ref('/alarms').once('value').then(snapshot => {
-                const alarms = snapshot.val();
-                for (const id in alarms) {
-                    const row = alarmBody.insertRow();
-                    const cellTime = row.insertCell(0);
-                    const cellAction = row.insertCell(1);
-                    const cellActions = row.insertCell(2);
+            const alarms = [
+                { id: 1, time: '08:00', action: 'Tomar Medicamento' },
+                { id: 2, time: '12:30', action: 'Almoço' },
+                // Adicione mais alarmes conforme necessário
+            ];
 
-                    cellTime.textContent = alarms[id].time;
-                    cellAction.textContent = alarms[id].action;
-                    cellActions.innerHTML = `<button onclick="editAlarm('${id}')">Editar</button> <button onclick="deleteAlarm('${id}')">Excluir</button>`;
-                    
-                    // Definir alertas sonoros para o horário atual
-                    const currentTime = new Date();
-                    const alarmTime = new Date(currentTime.toDateString() + ' ' + alarms[id].time);
-                    if (currentTime < alarmTime) {
-                        setTimeout(() => {
-                            alert(`É hora para: ${alarms[id].action}`);
-                            // Adicione aqui a lógica para reproduzir o som do alarme
-                        }, alarmTime - currentTime);
-                    }
+            for (const alarm of alarms) {
+                const row = alarmBody.insertRow();
+                const cellTime = row.insertCell(0);
+                const cellAction = row.insertCell(1);
+                const cellActions = row.insertCell(2);
+
+                cellTime.textContent = alarm.time;
+                cellAction.textContent = alarm.action;
+                cellActions.innerHTML = `<button onclick="editAlarm(${alarm.id})">Editar</button> <button onclick="deleteAlarm(${alarm.id})">Excluir</button>`;
+
+                // Definir alertas sonoros para o horário atual
+                const currentTime = new Date();
+                const alarmTime = new Date(currentTime.toDateString() + ' ' + alarm.time);
+
+                if (currentTime < alarmTime) {
+                    // Reproduzir o áudio que repete o título do alarme a cada 10 segundos
+                    const audio = new Audio();
+                    audio.src = `https://translate.google.com.br/translate_tts?ie=UTF-8&q=${encodeURIComponent(alarm.action)}&tl=pt-BR`;
+                    audio.loop = true;
+
+                    // Exibir um alerta como indicação visual
+                    setTimeout(() => {
+                        audio.play();
+                        alert(`É hora para: ${alarm.action}`);
+                    }, alarmTime - currentTime);
+
+                    // Parar o áudio após 10 segundos
+                    setTimeout(() => {
+                        audio.pause();
+                        audio.currentTime = 0;
+                    }, 10000);
                 }
-            });
+            }
         }
 
         function addAlarm() {
@@ -154,6 +171,7 @@
             const newAction = document.getElementById('newAction').value;
 
             if (newTime && newAction) {
+                // Adicione o novo alarme ao Firebase e recarregue a tabela
                 const newAlarmRef = database.ref('/alarms').push();
                 newAlarmRef.set({
                     time: newTime,
@@ -167,28 +185,13 @@
         }
 
         function editAlarm(id) {
-            const newTime = prompt('Digite o novo horário:', '');
-            const newAction = prompt('Digite a nova ação:', '');
-
-            if (newTime !== null && newAction !== null) {
-                // Atualizar os dados no Firebase
-                database.ref(`/alarms/${id}`).update({
-                    time: newTime,
-                    action: newAction
-                });
-
-                initAlarmTable();
-            }
+            alert(`Editar alarme com ID: ${id}`);
+            // Implemente a lógica de edição aqui
         }
 
         function deleteAlarm(id) {
-            const confirmDelete = confirm('Tem certeza que deseja excluir este alarme?');
-
-            if (confirmDelete) {
-                // Excluir o alarme do Firebase
-                database.ref(`/alarms/${id}`).remove();
-                initAlarmTable();
-            }
+            alert(`Excluir alarme com ID: ${id}`);
+            // Implemente a lógica de exclusão aqui
         }
 
         initAlarmTable();
