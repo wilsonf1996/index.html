@@ -124,6 +124,14 @@
     <script>
         const firebaseConfig = {
             // Configurações do Firebase
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+            measurementId: "G-CVBQ54PERH"
         };
 
         const app = firebase.initializeApp(firebaseConfig);
@@ -144,16 +152,50 @@
         }
 
         function renderAgendaTable() {
-            // Renderização da tabela aqui
-        }
+    const agendaTable = document.getElementById('agenda-table');
+    const agendaBody = document.getElementById('agenda-body');
+    agendaBody.innerHTML = "";
 
-        function enterEditMode(cell, cellKey) {
-            // Entrar no modo de edição aqui
-        }
+    // Cabeçalho da tabela
+    const tableHeader = agendaTable.querySelector('thead tr');
+    tableHeader.innerHTML = "<th>Hora</th>";
+    const weekdays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+    for (let i = 0; i < 7; i++) {
+        tableHeader.innerHTML += `<th>${weekdays[i]}</th>`;
+    }
 
-        function updateCellData(cellKey, value) {
-            // Atualizar os dados da célula aqui
+    // Conteúdo da tabela
+    for (let hour = 0; hour < 24; hour++) {
+        const row = agendaBody.insertRow();
+        const cellHour = row.insertCell(0);
+        cellHour.textContent = `${hour}:00`;
+
+        for (let day = 1; day <= 7; day++) {
+            const cell = row.insertCell(day);
+            const cellKey = `${hour}-${day}`;
+            const cellData = agendaData[cellKey] || "";
+            const editableClass = "editable";
+            cell.className = editableClass;
+            cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')">${cellData}</div>`;
         }
+    }
+
+    agendaTable.style.display = 'block';
+}
+
+function enterEditMode(cell, cellKey) {
+    const value = prompt('Digite o conteúdo:', cell.textContent);
+    if (value !== null) {
+        updateCellData(cellKey, value);
+    }
+}
+
+function updateCellData(cellKey, value) {
+    agendaData[cellKey] = value;
+    database.ref(`/agenda/${selectedWeek}`).set(agendaData);
+    renderAgendaTable(); // Atualiza a tabela após a edição
+}
+
 
         function populateWeeks() {
             const weekSelector = document.getElementById('week-selector');
