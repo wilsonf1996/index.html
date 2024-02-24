@@ -7,21 +7,79 @@
     <style>
         body {
             font-family: 'Arial', sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f8f9fa;
+            text-align: center;
+            margin: 20px;
+            background-image: url('https://raw.githubusercontent.com/wilsonf1996/index.html/main/DALL%C2%B7E%202023-12-23%2013.03.50%20-%20mpressionante%20imagem%20de%20fundo%20de%20tela%20para%20aplicativo%20web%20de%20engenheiro%20civil%20fundo%20branco%2C%20hiper-realista%20e%20com%20designer%20moderno.%20A%20imagem%20deve%20ser%20r.png');
+            background-size: cover;
+            background-position: center;
+            -webkit-background-size: cover;
+            -moz-background-size: cover;
+            -o-background-size: cover;
         }
 
         h1 {
             color: #333;
-            margin-top: 20px;
-            font-weight: bold;
         }
 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
+        ul {
+            list-style: none;
+            padding: 0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            margin-bottom: 20px;
+        }
+
+        li {
+            width: calc(25% - 8px);
+            margin: 4px;
+            text-align: center;
+            cursor: pointer;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background-color: #f0f0f0;
+        }
+
+        li:hover {
+            background-color: #e0e0e0;
+        }
+
+        table {
+            width: 100%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            overflow-x: auto;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        td {
+            background-color: #fff;
+            position: relative;
+        }
+
+        .editable {
+            min-height: 100px;
+            min-width: 200px;
+            max-width: 400px;
+            overflow: hidden;
+            white-space: break-all;
+            text-overflow: ellipsis;
+            word-wrap: break-word;
+            cursor: pointer;
+        }
+
+        .editable:hover {
+            background-color: #e0e0e0;
         }
 
         select {
@@ -33,38 +91,6 @@
             margin-bottom: 20px;
             width: 100%;
             max-width: 300px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        th, td {
-            border: 1px solid #ddd;
-            padding: 12px;
-            text-align: center;
-        }
-
-        th {
-            background-color: #f2f2f2;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-
-        td {
-            background-color: #fff;
-            font-size: 14px;
-            color: #333;
-        }
-
-        .editable {
-            cursor: pointer;
-        }
-
-        .editable:hover {
-            background-color: #e0e0e0;
         }
 
         button {
@@ -82,26 +108,35 @@
             background-color: #0056b3;
         }
 
+        /* Estilos para telas menores, como iPhones */
         @media only screen and (max-width: 600px) {
-            select {
-                font-size: 14px;
+            body {
+                margin: 10px;
             }
 
             table {
                 font-size: 12px;
             }
+
+            select {
+                font-size: 14px;
+            }
         }
     </style>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
 </head>
 
 <body>
-    <div class="container">
-        <h1>Agenda Semanal</h1>
+    <h1>Agenda Semanal</h1>
 
-        <select id="week-selector" onchange="loadAgenda(this.value)">
-            <!-- Opções da caixa de seleção serão preenchidas dinamicamente -->
-        </select>
+    <select id="week-selector" onchange="loadAgenda(this.value)">
+        <!-- Opções da caixa de seleção serão preenchidas dinamicamente -->
+    </select>
 
+    <ul id="calendar"></ul>
+
+    <div>
         <table id="agenda-table">
             <thead>
                 <tr>
@@ -117,6 +152,10 @@
             </thead>
             <tbody id="agenda-body"></tbody>
         </table>
+    </div>
+
+    <button onclick="goToHomePage()">Voltar para a Página Principal</button>
+
     <script>
         const firebaseConfig = {
             // Configurações do Firebase
@@ -148,88 +187,77 @@
         }
 
         function renderAgendaTable() {
-    const agendaTable = document.getElementById('agenda-table');
-    const agendaBody = document.getElementById('agenda-body');
-    agendaBody.innerHTML = "";
+            const agendaBody = document.getElementById('agenda-body');
+            agendaBody.innerHTML = "";
 
-    // Cabeçalho da tabela
-    const tableHeader = agendaTable.querySelector('thead tr');
-    tableHeader.innerHTML = "<th>Hora</th>";
-    const weekdays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
-    for (let i = 0; i < 7; i++) {
-        tableHeader.innerHTML += `<th>${weekdays[i]}</th>`;
-    }
+            // Cabeçalho da tabela
+            const tableHeader = document.getElementById('agenda-table').querySelector('thead tr');
+            tableHeader.innerHTML = "<th>Hora</th>";
+            const weekdays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+            for (let i = 0; i < 7; i++) {
+                tableHeader.innerHTML += `<th>${weekdays[i]}</th>`;
+            }
 
-    // Conteúdo da tabela
-    for (let hour = 0; hour < 24; hour++) {
-        const row = agendaBody.insertRow();
-        const cellHour = row.insertCell(0);
-        cellHour.textContent = `${hour}:00`;
+            // Conteúdo da tabela
+            for (let hour = 0; hour < 24; hour++) {
+                const row = agendaBody.insertRow();
+                const cellHour = row.insertCell(0);
+                cellHour.textContent = `${hour}:00`;
 
-        for (let day = 1; day <= 7; day++) {
-            const cell = row.insertCell(day);
-            const cellKey = `${hour}-${day}`;
-            const cellData = agendaData[cellKey] || "";
-            const editableClass = "editable";
-            cell.className = editableClass;
-            cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')">${cellData}</div>`;
+                for (let day = 1; day <= 7; day++) {
+                    const cell = row.insertCell(day);
+                    const cellKey = `${hour}-${day}`;
+                    const cellData = agendaData[cellKey] || "";
+                    const editableClass = "editable";
+                    cell.className = editableClass;
+                    cell.innerHTML = `<div class="${editableClass}" onclick="enterEditMode(this, '${cellKey}')">${cellData}</div>`;
+                }
+            }
         }
-    }
 
-    agendaTable.style.display = 'block';
-}
+        function enterEditMode(cell, cellKey) {
+            const value = prompt('Digite o conteúdo:', cell.textContent);
+            if (value !== null) {
+                updateCellData(cellKey, value);
+            }
+        }
 
-function enterEditMode(cell, cellKey) {
-    const value = prompt('Digite o conteúdo:', cell.textContent);
-    if (value !== null) {
-        updateCellData(cellKey, value);
-    }
-}
+        function updateCellData(cellKey, value) {
+            agendaData[cellKey] = value;
+            database.ref(`/agenda/${selectedWeek}`).set(agendaData);
+            renderAgendaTable(); // Atualiza a tabela após a edição
+        }
 
-function updateCellData(cellKey, value) {
-    agendaData[cellKey] = value;
-    database.ref(`/agenda/${selectedWeek}`).set(agendaData);
-    renderAgendaTable(); // Atualiza a tabela após a edição
-}
+        function populateWeeks() {
+            const weekSelector = document.getElementById('week-selector');
 
-function populateWeeks() {
-    const weekSelector = document.getElementById('week-selector');
+            // Definir a data de início como 1 de janeiro de 2024
+            const firstDayOfYear = new Date(2024, 0, 1);
+            const lastDayOfYear = new Date(2026, 11, 31);
 
-    // Definir a data de início como 1 de janeiro de 2024
-    const firstDayOfYear = new Date(2024, 0, 1);
-    const lastDayOfYear = new Date(2026, 11, 31);
+            // Iterar até o final de 2026
+            while (firstDayOfYear <= lastDayOfYear) {
+                const weekStart = new Date(firstDayOfYear);
+                const weekEnd = new Date(firstDayOfYear);
+                weekEnd.setDate(weekEnd.getDate() + 6);
 
-    // Iterar até o final de 2026
-    while (firstDayOfYear <= lastDayOfYear) {
-        const weekStart = new Date(firstDayOfYear);
-        const weekEnd = new Date(firstDayOfYear);
-        weekEnd.setDate(weekEnd.getDate() + 6);
+                // Adicionar a opção à caixa de seleção
+                const option = document.createElement('option');
+                option.value = weekStart.toISOString().slice(0, 10); // Define o valor como a data ISO
+                option.textContent = `${weekStart.toLocaleDateString()} - ${weekEnd.toLocaleDateString()}`;
+                weekSelector.appendChild(option);
 
-        // Adicionar a opção à caixa de seleção
-        const option = document.createElement('option');
-        option.value = weekStart.toISOString().slice(0, 10); // Define o valor como a data ISO
-        option.textContent = `${weekStart.toLocaleDateString()} - ${weekEnd.toLocaleDateString()}`;
-        weekSelector.appendChild(option);
+                // Avançar para a próxima semana
+                firstDayOfYear.setDate(firstDayOfYear.getDate() + 7);
+            }
+        }
 
-        // Avançar para a próxima semana
-        firstDayOfYear.setDate(firstDayOfYear.getDate() + 7);
-    }
-}
-
+        function goToHomePage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html';
+        }
 
         populateWeeks();
         loadAgenda(selectedWeek);
     </script>
-
-    <button onclick="goToHomePage()">Voltar para a Página Principal</button>
-
-    <script>
-        function goToHomePage() {
-            window.location.href = 'https://wilsonf1996.github.io/index.html';
-        }
-    </script>
-    
 </body>
 </html>
-
-
