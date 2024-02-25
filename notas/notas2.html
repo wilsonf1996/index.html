@@ -1,1 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minhas Notas</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            margin: 20px;
+            background-image: url('https://raw.githubusercontent.com/wilsonf1996/index.html/main/DALL%C2%B7E%202023-12-23%2013.03.50%20-%20mpressionante%20imagem%20de%20fundo%20de%20tela%20para%20aplicativo%20web%20de%20engenheiro%20civil%20fundo%20branco%2C%20hiper-realista%20e%20com%20designer%20moderno.%20A%20imagem%20deve%20ser%20r.png'); /* Substitua 'URL_DA_SUA_IMAGEM' pelo caminho da sua imagem */
+             background-size: cover; /* Isso garantirá que a imagem cubra todo o fundo */
+            background-position: center; /* Isso centralizará a imagem no fundo */
+            /* Ajuste a qualidade da imagem */
+            -webkit-background-size: cover;
+            -moz-background-size: cover;
+            -o-background-size: cover;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            overflow-y: scroll;
+            max-height: 400px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        button {
+            padding: 10px;
+            font-size: 16px;
+            margin: 0 10px;
+        }
+
+        textarea {
+            width: 80%;
+            height: 100px;
+            margin: 10px 0;
+            resize: vertical;
+        }
+
+        @media (max-width: 600px) {
+            textarea {
+                width: 100%;
+            }
+
+            table {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Minhas Notas</h1>
+
+    <table id="notes-table">
+        <thead>
+            <tr>
+                <th>Data e Hora</th>
+                <th>Nota</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="notes-body"></tbody>
+    </table>
+
+    <textarea id="note-input" placeholder="Digite sua nota..."></textarea>
+    <button onclick="createOrUpdateNote()">Criar Nova Nota</button>
+    <button onclick="goToHomePage()">Voltar para a Página Principal</button>
+
+    <!-- Firebase JavaScript SDK v8 -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:7a1690aa6d89bb07dc086c",
+            measurementId: "G-PBQGHC30M1",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com/"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const notesRef = database.ref('notes');
+
+        let notes = [];
+
+        function initNotes() {
+            notesRef.on('value', (snapshot) => {
+                notes = snapshot.val() || [];
+                updateNotesTable();
+            }, (error) => {
+                console.error("Erro ao recuperar notas:", error);
+            });
+        }
+
+        function createOrUpdateNote() {
+            const noteText = document.getElementById('note-input').value.trim();
+            if (noteText) {
+                const currentDate = new Date().getTime(); // Timestamp
+                const newNote = { id: currentDate, text: noteText, date: new Date(currentDate).toLocaleString() };
+
+                const existingNoteIndex = findNoteIndexById(currentDate);
+                if (existingNoteIndex !== -1) {
+                    // If note with the current id exists, update it
+                    notes[existingNoteIndex] = newNote;
+                } else {
+                    // Otherwise, create a new note
+                    notes.push(newNote);
+                }
+
+                // Atualiza o banco de dados em tempo real
+                notesRef.set(notes);
+                document.getElementById('note-input').value = '';
+            }
+        }
+
+        function findNoteIndexById(id) {
+            return notes.findIndex(note => note.id === id);
+        }
+
+        function editNote(id) {
+            const editedText = prompt('Editar nota:', notes.find(note => note.id === id).text);
+            if (editedText !== null) {
+                const existingNoteIndex = findNoteIndexById(id);
+                notes[existingNoteIndex].text = editedText;
+                // Atualiza o banco de dados em tempo real
+                notesRef.set(notes);
+            }
+        }
+
+        function deleteNote(id) {
+            const confirmDelete = confirm('Tem certeza que deseja excluir esta nota?');
+            if (confirmDelete) {
+                notes = notes.filter(note => note.id !== id);
+                // Atualiza o banco de dados em tempo real
+                notesRef.set(notes);
+            }
+        }
+
+       function updateNotesTable() {
+    const notesBody = document.getElementById('notes-body');
+    notesBody.innerHTML = '';
+
+    notes.forEach(note => {
+        const row = notesBody.insertRow();
+        const dateCell = row.insertCell(0);
+        const textCell = row.insertCell(1);
+        const actionsCell = row.insertCell(2);
+
+        dateCell.textContent = note.date;
+        textCell.textContent = note.text;
+
+        const viewButton = document.createElement('button');
+        viewButton.textContent = 'Ver';
+        viewButton.onclick = () => alert(note.text);
+
+        const editButton = document.createElement('button');
+        editButton.textContent = 'Editar';
+        editButton.onclick = () => editNote(note.id);
+
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Excluir';
+        deleteButton.onclick = () => deleteNote(note.id);
+
+        const downloadButton = document.createElement('button');
+        downloadButton.textContent = 'Baixar';
+        downloadButton.onclick = () => downloadSingleNote(note);
+
+        actionsCell.appendChild(viewButton);
+        actionsCell.appendChild(editButton);
+        actionsCell.appendChild(deleteButton);
+        actionsCell.appendChild(downloadButton);
+    });
+}
+
+function downloadSingleNote(note) {
+    const noteText = `${note.date}: ${note.text}`;
+    const blob = new Blob([noteText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nota_${note.id}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+            });
+        }
+
+        function goToHomePage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html';
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            initNotes();
+        });
+    </script>
+</body>
+
+</html>
+
 
