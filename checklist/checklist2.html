@@ -6,58 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Checklist</title>
     <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            text-align: center;
-            margin: 20px;
-            background-color: #333;
-            color: #fff;
-        }
-
-        h1 {
-            color: #fff;
-        }
-
-        table {
-            width: 100%;
-            margin: 20px auto;
-            border-collapse: collapse;
-            background-color: #444;
-            color: #fff;
-        }
-
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-
-        th {
-            background-color: #555;
-        }
-
-        button {
-            padding: 10px;
-            font-size: 16px;
-            margin: 0 10px;
-            background-color: #ddd;
-            color: #333;
-            border: none;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background-color: #ccc;
-        }
-
-        input {
-            width: 80%;
-            margin: 10px 0;
-            padding: 8px;
-            box-sizing: border-box;
-        }
+        /* Estilos CSS aqui */
     </style>
-    <!-- Carregue a biblioteca do Firebase -->
+    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
 </head>
@@ -65,29 +16,35 @@
 <body>
     <h1>Checklist</h1>
 
+    <!-- Interface para criar um novo checklist -->
     <label for="checklist-name">Nome do Checklist:</label>
     <input type="text" id="checklist-name">
     <button onclick="createChecklist()">Criar Checklist</button>
 
+    <!-- Seletor para escolher um checklist existente -->
     <select id="checklist-selector" onchange="loadSelectedChecklist()">
         <option value="-1">Selecione um Checklist</option>
     </select>
 
+    <!-- Tabela para exibir as atividades do checklist selecionado -->
     <table id="checklist">
         <thead>
             <tr>
                 <th>Descrição da Atividade</th>
                 <th>Situação</th>
+                <th>Data de Alteração</th>
                 <th>Ações</th>
             </tr>
         </thead>
         <tbody id="checklist-body"></tbody>
     </table>
 
+    <!-- Botões para adicionar, salvar e limpar atividades -->
     <button onclick="addItem()">Adicionar Atividade</button>
     <button onclick="saveList()">Salvar Checklist</button>
     <button onclick="clearList()">Limpar Checklist</button>
 
+    <!-- JavaScript -->
     <script>
         // Configuração do Firebase
         const firebaseConfig = {
@@ -141,101 +98,90 @@
             });
         }
 
-        let checklistItems = [];
-
-        function loadChecklist() {
-            const checklistRef = database.ref('/checklist');
-
-            checklistRef.on('value', (snapshot) => {
-                const checklistData = snapshot.val();
-                checklistItems = checklistData ? Object.values(checklistData.items) : [];
-                loadChecklistTable(checklistItems);
-            });
-        }
-
+        // Função para carregar a tabela com as atividades do checklist selecionado
         function loadChecklistTable(checklistItems) {
             const tableBody = document.getElementById('checklist-body');
             tableBody.innerHTML = "";
 
-            if (Array.isArray(checklistItems)) {
-                checklistItems.forEach((item, index) => {
-                    const row = tableBody.insertRow();
-                    const cellDescription = row.insertCell(0);
-                    const cellSituation = row.insertCell(1);
-                    const cellActions = row.insertCell(2);
+            checklistItems.forEach((item, index) => {
+                const row = tableBody.insertRow();
+                const cellDescription = row.insertCell(0);
+                const cellSituation = row.insertCell(1);
+                const cellDate = row.insertCell(2);
+                const cellActions = row.insertCell(3);
 
-                    cellDescription.innerHTML = `<input type="text" value="${item.description}" id="item-description-${index}">`;
-                    cellSituation.innerHTML = `
-                        <select id="item-situation-${index}">
-                            <option value="Não Iniciada" ${item.situation === 'Não Iniciada' ? 'selected' : ''}>Não Iniciada</option>
-                            <option value="Em Andamento" ${item.situation === 'Em Andamento' ? 'selected' : ''}>Em Andamento</option>
-                            <option value="Concluída" ${item.situation === 'Concluída' ? 'selected' : ''}>Concluída</option>
-                        </select>`;
-                    const deleteButton = document.createElement('button');
-                    deleteButton.textContent = 'Remover';
-                    deleteButton.onclick = () => removeItem(index);
+                cellDescription.innerHTML = `<input type="text" value="${item.description}" id="item-description-${index}">`;
+                cellSituation.innerHTML = `
+                    <select id="item-situation-${index}">
+                        <option value="Não Iniciada" ${item.situation === 'Não Iniciada' ? 'selected' : ''}>Não Iniciada</option>
+                        <option value="Em Andamento" ${item.situation === 'Em Andamento' ? 'selected' : ''}>Em Andamento</option>
+                        <option value="Concluída" ${item.situation === 'Concluída' ? 'selected' : ''}>Concluída</option>
+                    </select>`;
+                cellDate.textContent = item.date || "N/A";
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Remover';
+                deleteButton.onclick = () => removeItem(index);
 
-                    cellActions.appendChild(deleteButton);
-                });
-            } else {
-                console.error("Dados da checklist inválidos:", checklistItems);
-            }
+                cellActions.appendChild(deleteButton);
+            });
         }
 
+        // Função para adicionar uma nova atividade ao checklist
         function addItem() {
             const description = prompt('Descrição da Atividade:');
+            if (!description) return;
+
             const situation = 'Não Iniciada';
+            const date = new Date().toLocaleString();
 
-            if (!isValidItem(description)) {
-                alert('Por favor, preencha a descrição corretamente.');
-                return;
+            const checklistName = document.getElementById('checklist-selector').value;
+            if (checklistName in checklists) {
+                checklists[checklistName].push({ description, situation, date });
+                loadChecklistTable(checklists[checklistName]);
             }
-
-            checklistItems.push({ description, situation });
-            loadChecklistTable(checklistItems);
         }
 
-        function isValidItem(description) {
-            return description.trim() !== '';
-        }
-
+        // Função para remover uma atividade do checklist
         function removeItem(index) {
-            const confirmRemove = confirm('Tem certeza que deseja remover esta atividade da checklist?');
-
-            if (confirmRemove) {
-                checklistItems.splice(index, 1);
-                loadChecklistTable(checklistItems);
+            const checklistName = document.getElementById('checklist-selector').value;
+            if (checklistName in checklists) {
+                checklists[checklistName].splice(index, 1);
+                loadChecklistTable(checklists[checklistName]);
             }
         }
 
+        // Função para salvar as atividades do checklist no Firebase
         function saveList() {
-            checklistItems.forEach((item, index) => {
-                item.description = document.getElementById(`item-description-${index}`).value;
-                item.situation = document.getElementById(`item-situation-${index}`).value;
-            });
-
-            const checklistRef = database.ref('/checklist');
-            const checklistData = {
-                items: checklistItems
-            };
-
-            checklistRef.set(checklistData);
-            alert('Checklist salva com sucesso!');
-        }
-
-        function clearList() {
-            const confirmClear = confirm('Tem certeza que deseja limpar toda a checklist?');
-
-            if (confirmClear) {
-                checklistItems = [];
-                loadChecklistTable(checklistItems);
+            const checklistName = document.getElementById('checklist-selector').value;
+            if (checklistName in checklists) {
+                const checklistRef = database.ref(`/checklists/${checklistName}`);
+                checklistRef.set(checklists[checklistName]);
+                alert('Checklist salva com sucesso!');
             }
         }
 
+        // Função para limpar as atividades do checklist
+        function clearList() {
+            const checklistName = document.getElementById('checklist-selector').value;
+            if (checklistName in checklists) {
+                checklists[checklistName] = [];
+                loadChecklistTable(checklists[checklistName]);
+            }
+        }
+
+        // Carregar checklists salvos ao carregar a página
         document.addEventListener('DOMContentLoaded', function () {
-            loadChecklist();
+            const checklistRef = database.ref('/checklists');
+            checklistRef.on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    checklists = data;
+                    populateChecklistSelector();
+                }
+            });
         });
     </script>
 </body>
 
 </html>
+
