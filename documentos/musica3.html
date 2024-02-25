@@ -1,1 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Music Player</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #1f1f1f;
+            color: #fff;
+        }
+
+        #app-container {
+            padding: 20px;
+        }
+
+        h1 {
+            color: #61dafb;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        input[type="file"] {
+            display: block;
+            margin: 0 auto 20px;
+            padding: 10px;
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            background-color: #333;
+            font-size: 16px;
+            color: #fff;
+            width: calc(100% - 24px);
+            max-width: 400px;
+        }
+
+        button {
+            background-color: #5bc0de;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #4cae4c;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        li {
+            background-color: #333;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        select {
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid #5bc0de;
+            background-color: #333;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        audio {
+            width: 100%;
+            display: block;
+            margin-top: 10px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            display: block;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app-container">
+        <h1>My Music Player</h1>
+        <input type="file" id="fileInput" multiple>
+        <button id="uploadButton">Upload</button>
+        <button id="createFolderButton">Create Folder</button>
+        <button id="goToRootButton">Go to Root</button>
+        <button onclick="goToHomePage()">Back to Homepage</button>
+        <h2 id="currentPath"></h2>
+        <ul id="fileList"></ul>
+        <audio id="audioPlayer" controls></audio>
+        <input type="range" id="volumeControl" min="0" max="1" step="0.1" value="0.5">
+        <button id="playPauseButton">Play/Pause</button>
+        <button id="stopButton">Stop</button>
+        <button id="prevButton">Previous</button>
+        <button id="nextButton">Next</button>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID",
+            measurementId: "YOUR_MEASUREMENT_ID"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const storage = firebase.storage();
+        const storageRef = storage.ref();
+
+        document.getElementById('uploadButton').addEventListener('click', uploadFiles);
+        document.getElementById('createFolderButton').addEventListener('click', createFolder);
+        document.getElementById('goToRootButton').addEventListener('click', goToRoot);
+
+        let currentPath = "";
+        let currentMusicIndex = 0;
+        let audioPlayer = document.getElementById('audioPlayer');
+        let volumeControl = document.getElementById('volumeControl');
+
+        document.getElementById('playPauseButton').addEventListener('click', togglePlayPause);
+        document.getElementById('stopButton').addEventListener('click', stopMusic);
+        document.getElementById('prevButton').addEventListener('click', playPreviousMusic);
+        document.getElementById('nextButton').addEventListener('click', playNextMusic);
+        volumeControl.addEventListener('input', adjustVolume);
+        audioPlayer.addEventListener('ended', playNextMusic);
+
+        function uploadFiles() {
+            const fileInput = document.getElementById('fileInput');
+            const files = fileInput.files;
+
+            if (files.length === 0) {
+                alert('Selecione um ou mais arquivos para fazer upload.');
+                return;
+            }
+
+            Array.from(files).forEach(file => {
+                const fileRef = storageRef.child(currentPath + file.name);
+                fileRef.put(file).then(() => {
+                    listFiles();
+                }).catch(error => {
+                    alert(`Erro ao enviar o arquivo ${file.name}: ${error.message}`);
+                });
+            });
+        }
+
+        function createFolder() {
+            const folderName = prompt('Digite o nome da pasta:');
+            if (folderName) {
+                const folderRef = storageRef.child(currentPath + folderName + '/');
+                folderRef.put(null).then(() => {
+                    listFiles();
+                }).catch(error => {
+                    alert(`Erro ao criar a pasta ${folderName}: ${error.message}`);
+                });
+            }
+        }
+
+        function goToRoot() {
+            currentPath = "";
+            document.getElementById('currentPath').textContent = "Pasta Atual: Pasta Principal";
+            listFiles();
+        }
+
+        function togglePlayPause() {
+            if (audioPlayer.paused) {
+                audioPlayer.play();
+                document.getElementById('playPauseButton').textContent = 'Pause';
+            } else {
+                audioPlayer.pause();
+                document.getElementById('playPauseButton').textContent = 'Play';
+            }
+        }
+
+        function stopMusic() {
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
+            document.getElementById('playPauseButton').textContent = 'Play';
+        }
+
+        function playNextMusic() {
+            currentMusicIndex++;
+            if (currentMusicIndex >= audioPlayer.src.length) {
+                currentMusicIndex = 0;
+            }
+            audioPlayer.src = audioPlayer.src[currentMusicIndex];
+            audioPlayer.play();
+        }
+
+        function playPreviousMusic() {
+            currentMusicIndex--;
+            if (currentMusicIndex < 0) {
+                currentMusicIndex = audioPlayer.src.length - 1;
+            }
+            audioPlayer.src = audioPlayer.src[currentMusicIndex];
+            audioPlayer.play();
+        }
+
+        function adjustVolume() {
+            audioPlayer.volume = volumeControl.value;
+        }
+
+        function playSelectedMusic(index) {
+            currentMusicIndex = index;
+            audioPlayer.src = audioPlayer.src[index];
+            audioPlayer.play();
+        }
+
+        function createButton(text, className, onClick) {
+            const button = document.createElement('button');
+            button.textContent = text;
+            button.className = className;
+            button.onclick = onClick;
+            return button;
+        }
+
+        function createMusicListItem(item, index) {
+            const li = document.createElement('li');
+            li.textContent = item.name;
+
+            const playButton = createButton('Play', 'play-btn', () => playSelectedMusic(index));
+            const optionsDropdown = createOptionsDropdown(item);
+
+            li.appendChild(playButton);
+            li.appendChild(optionsDropdown);
+            document.getElementById('fileList').appendChild(li);
+        }
+
+        function createOptionsDropdown(item) {
+            const dropdown = document.createElement('select');
+
+            const downloadOption = document.createElement('option');
+            downloadOption.value = 'download';
+            downloadOption.text = 'Baixar';
+            dropdown.appendChild(downloadOption);
+
+            const deleteOption = document.createElement('option');
+            deleteOption.value = 'delete';
+            deleteOption.text = 'Excluir';
+            dropdown.appendChild(deleteOption);
+
+            const openFolderOption = document.createElement('option');
+            openFolderOption.value = 'openFolder';
+            openFolderOption.text = 'Abrir Pasta';
+            dropdown.appendChild(openFolderOption);
+
+            dropdown.addEventListener('change', function () {
+                const selectedOption = this.value;
+                if (selectedOption === 'delete') {
+                    if (confirm(`Tem certeza de que deseja excluir ${item.name}?`)) {
+                        deleteFile(item);
+                    }
+                } else if (selectedOption === 'openFolder') {
+                    openFolder(item);
+                }
+                // Limpar a seleção após a ação
+                this.selectedIndex = 0;
+            });
+
+            return dropdown;
+        }
+
+        function deleteFile(fileRef) {
+            fileRef.delete().then(() => {
+                listFiles();
+            }).catch(error => {
+                alert(`Erro ao excluir o arquivo ${fileRef.name}: ${error.message}`);
+            });
+        }
+
+        function listFiles() {
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '';
+
+            storageRef.child(currentPath).listAll().then(result => {
+                result.items.forEach(item => {
+                    createMusicListItem(item, result.items.indexOf(item));
+                });
+            }).catch(error => {
+                alert(`Erro ao listar os arquivos: ${error.message}`);
+            });
+        }
+
+        function goToHomePage() {
+            // Aqui, você pode redirecionar para a página inicial do seu aplicativo.
+            window.location.href = 'https://wilsonf1996.github.io/index.html/';
+            alert('Redirecionamento para a Página Inicial.');
+        }
+    </script>
+</body>
+
+</html>
 
