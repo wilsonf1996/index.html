@@ -1,1 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Listas de Compras</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            margin: 20px;
+            background-color: #333;
+            color: #fff;
+            background-image: url('https://raw.githubusercontent.com/wilsonf1996/index.html/main/DALL%C2%B7E%202023-12-23%2002.59.48%20-%20impressionante%20imagem%20de%20fundo%20para%20aplicativo%20pessoal%20de%20engenheiro%20civil%20fundo%20preto%2C%20hiperrealista%20e%20com%20disgner%20moderno.png'); /* Substitua 'URL_DA_SUA_IMAGEM' pelo caminho da sua imagem */
+             background-size: cover; /* Isso garantirá que a imagem cubra todo o fundo */
+            background-position: center; /* Isso centralizará a imagem no fundo */
+            /* Ajuste a qualidade da imagem */
+            -webkit-background-size: cover;
+            -moz-background-size: cover;
+            -o-background-size: cover;
+        }
+
+        h1 {
+            color: #fff;
+        }
+
+        table {
+            width: 100%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            overflow-y: scroll;
+            max-height: 400px;
+            background-color: #444;
+            color: #fff;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #555;
+        }
+
+        button {
+            padding: 10px;
+            font-size: 16px;
+            margin: 0 10px;
+            background-color: #ddd;
+            color: #333;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #ccc;
+        }
+
+        input {
+            width: 80%;
+            margin: 10px 0;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+
+        #shopping-list {
+            overflow-y: auto;
+        }
+
+        #total-price {
+            font-weight: bold;
+            color: #fff;
+        }
+
+        #final-observation,
+        #list-date {
+            width: 80%;
+            margin: 10px 0;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+    </style>
+    <!-- Carregue a biblioteca do Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+</head>
+
+<body>
+    <h1>Listas de Compras</h1>
+
+    <label for="select-list" style="color: #fff;">Escolha a Lista:</label>
+    <select id="select-list" onchange="loadSelectedList()">
+        <!-- Opções para até 10 listas -->
+        <option value="lista1">Lista 1</option>
+        <option value="lista2">Lista 2</option>
+        <option value="lista3">Lista 3</option>
+        <option value="lista4">Lista 4</option>
+        <option value="lista5">Lista 5</option>
+        <option value="lista6">Lista 6</option>
+        <option value="lista7">Lista 7</option>
+        <option value="lista8">Lista 8</option>
+        <option value="lista9">Lista 9</option>
+        <option value="lista10">Lista 10</option>
+        <!-- Adicione até 10 opções conforme necessário -->
+    </select>
+
+    <table id="shopping-list">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Quantidade</th>
+                <th>Preço</th>
+                <th>Preço Total</th>
+                <th>Descrição da Situação</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="shopping-body"></tbody>
+    </table>
+
+    <div id="total-price">Total: R$ 0.00</div>
+
+    <input type="text" id="final-observation" placeholder="Observação do Valor Final">
+    <input type="text" id="list-date" placeholder="Data da Lista">
+
+    <button onclick="addItem()">Adicionar Item</button>
+    <button onclick="saveList()">Salvar Lista</button>
+    <button onclick="clearList()">Limpar Lista</button>
+    <button onclick="goToHomePage()">Voltar para a Página Principal</button>
+
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+            measurementId: "G-CVBQ54PERH"
+        };
+
+        // Inicialização do Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        let currentList = 'lista1'; // Lista padrão
+        let shoppingList = [];
+
+        function loadSelectedList() {
+            currentList = document.getElementById('select-list').value;
+            initShoppingList();
+        }
+
+        function initShoppingList() {
+            const shoppingListRef = database.ref(`/${currentList}`);
+
+            shoppingListRef.on('value', (snapshot) => {
+                const shoppingListData = snapshot.val();
+                shoppingList = shoppingListData ? Object.values(shoppingListData.items) : [];
+                loadShoppingListTable(shoppingList);
+
+                // Define a data da lista e observação do valor final
+                document.getElementById('list-date').value = shoppingListData ? shoppingListData.creationDate : '';
+                document.getElementById('final-observation').value = shoppingListData ? shoppingListData.finalObservation : '';
+            });
+        }
+
+        function loadShoppingListTable(shoppingList) {
+            const tableBody = document.getElementById('shopping-body');
+            tableBody.innerHTML = "";
+
+            let totalPrice = 0;
+
+            if (Array.isArray(shoppingList)) {
+                shoppingList.forEach((item, index) => {
+                    const row = tableBody.insertRow();
+                    const cellItemName = row.insertCell(0);
+                    const cellQuantity = row.insertCell(1);
+                    const cellPrice = row.insertCell(2);
+                    const cellTotalPrice = row.insertCell(3);
+                    const cellSituation = row.insertCell(4);
+                    const cellActions = row.insertCell(5);
+
+                    cellItemName.innerHTML = `<input type="text" value="${item.name}" id="item-name-${index}">`;
+                    cellQuantity.innerHTML = `<input type="number" value="${item.quantity}" step="1" id="item-quantity-${index}">`;
+                    cellPrice.innerHTML = `<input type="number" value="${item.price}" step="0.01" id="item-price-${index}">`;
+                    const totalItemPrice = item.quantity * item.price;
+                    cellTotalPrice.textContent = `R$ ${totalItemPrice.toFixed(2)}`;
+                    totalPrice += totalItemPrice;
+                    cellSituation.innerHTML = `<input type="text" value="${item.situation}" id="item-situation-${index}">`;
+
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Remover';
+                    deleteButton.onclick = () => removeItem(index);
+
+                    cellActions.appendChild(deleteButton);
+                });
+            } else {
+                console.error("Dados da lista de compras inválidos:", shoppingList);
+            }
+
+            document.getElementById('total-price').textContent = `Total: R$ ${totalPrice.toFixed(2)}`;
+        }
+
+        function addItem() {
+            const itemName = prompt('Nome do Item:');
+            const quantity = parseFloat(prompt('Quantidade:'));
+            const price = parseFloat(prompt('Preço por unidade:'));
+            const situation = prompt('Descrição da Situação:');
+
+            if (!isValidItem(itemName, quantity, price, situation)) {
+                alert('Por favor, preencha todos os campos corretamente.');
+                return;
+            }
+
+            const existingItemIndex = shoppingList.findIndex(item => item.name === itemName);
+
+            if (existingItemIndex !== -1) {
+                // Atualizar item existente
+                shoppingList[existingItemIndex] = { name: itemName, quantity, price, situation };
+            } else {
+                // Adicionar novo item à lista
+                shoppingList.push({ name: itemName, quantity, price, situation });
+            }
+
+            loadShoppingListTable(shoppingList);
+        }
+
+        function isValidItem(itemName, quantity, price, situation) {
+            return itemName.trim() !== '' && !isNaN(quantity) && quantity > 0 &&
+                !isNaN(price) && price > 0 && situation.trim() !== '';
+        }
+
+        function removeItem(index) {
+            const confirmRemove = confirm('Tem certeza que deseja remover este item da lista?');
+
+            if (confirmRemove) {
+                shoppingList.splice(index, 1);
+                loadShoppingListTable(shoppingList);
+            }
+        }
+
+        function saveList() {
+            const finalObservation = document.getElementById('final-observation').value;
+            const listDate = document.getElementById('list-date').value;
+
+            shoppingList.forEach((item, index) => {
+                item.name = document.getElementById(`item-name-${index}`).value;
+                item.quantity = parseFloat(document.getElementById(`item-quantity-${index}`).value);
+                item.price = parseFloat(document.getElementById(`item-price-${index}`).value);
+                item.situation = document.getElementById(`item-situation-${index}`).value;
+            });
+
+            const shoppingListRef = database.ref(`/${currentList}`);
+            const listData = {
+                items: shoppingList,
+                finalObservation: finalObservation,
+                creationDate: listDate || new Date().toLocaleString('pt-BR')
+            };
+
+            shoppingListRef.set(listData);
+            alert('Lista salva com sucesso!');
+        }
+
+        function clearList() {
+            const confirmClear = confirm('Tem certeza que deseja limpar toda a lista de compras?');
+
+            if (confirmClear) {
+                shoppingList = [];
+                document.getElementById('final-observation').value = '';
+                document.getElementById('list-date').value = '';
+                loadShoppingListTable(shoppingList);
+            }
+        }
+
+        function goToHomePage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html';
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            loadSelectedList();
+            initShoppingList();
+        });
+    </script>
+</body>
+
+</html>
+
 
