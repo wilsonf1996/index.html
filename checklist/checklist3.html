@@ -162,9 +162,11 @@
         }
 
         // Função para carregar a tabela com as atividades do checklist selecionado
-       function loadChecklistTable(checklistItems) {
+    function loadChecklistTable(checklistItems) {
     const tableBody = document.getElementById('checklist-body');
     tableBody.innerHTML = "";
+
+    let maxDescriptionWidth = 0; // Variável para armazenar a largura máxima da descrição
 
     checklistItems.forEach((item, index) => {
         const row = tableBody.insertRow();
@@ -175,26 +177,33 @@
         const cellDate = row.insertCell(4);
         const cellActions = row.insertCell(5);
 
-        // Definindo o conteúdo do campo de descrição como um campo de entrada HTML
-        cellDescription.innerHTML = `<input type="text" value="${item.description}" id="item-description-${index}" class="description-input" style="width: 90%;">`;
+        // Criar um elemento temporário para medir a largura do texto
+        const tempElement = document.createElement('span');
+        tempElement.textContent = item.description;
+        tempElement.style.visibility = 'hidden'; // Tornar invisível para não afetar o layout
 
-                cellSituation.innerHTML = `
-                    <select id="item-situation-${index}">
-                        <option value="Não Iniciada" ${item.situation === 'Não Iniciada' ? 'selected' : ''}>Não Iniciada</option>
-                        <option value="Em Andamento" ${item.situation === 'Em Andamento' ? 'selected' : ''}>Em Andamento</option>
-                        <option value="Concluída" ${item.situation === 'Concluída' ? 'selected' : ''}>Concluída</option>
-                    </select>`;
-                cellEstimatedDate.innerHTML = `<input type="text" value="${item.estimatedDate}" id="item-estimated-date-${index}">`;
-                // Verifica se a data prevista é anterior à data atual
-                const isLate = new Date(item.estimatedDate) < new Date();
-                cellLate.textContent = isLate ? 'Atrasada' : 'Dentro do prazo';
-                cellDate.textContent = item.date;
-                const deleteButton = document.createElement('button');
-                deleteButton.textContent = 'Remover';
-                deleteButton.onclick = () => removeItem(index);
-                cellActions.appendChild(deleteButton);
-            });
+        // Adicionar o elemento temporário ao corpo do documento para calcular a largura do texto
+        document.body.appendChild(tempElement);
+        const textWidth = tempElement.offsetWidth; // Obter a largura do texto
+
+        // Verificar se a largura atual do texto é a maior encontrada até agora
+        if (textWidth > maxDescriptionWidth) {
+            maxDescriptionWidth = textWidth;
         }
+
+        // Remover o elemento temporário do corpo do documento
+        document.body.removeChild(tempElement);
+
+        // Definir o conteúdo do campo de descrição como um campo de entrada HTML
+        cellDescription.innerHTML = `<input type="text" value="${item.description}" id="item-description-${index}" class="description-input">`;
+    });
+
+    // Definir a largura da coluna "Descrição da Atividade" com base na largura máxima do texto
+    const descriptionColumn = document.querySelector('#checklist-body th:first-child');
+    if (descriptionColumn) {
+        descriptionColumn.style.width = maxDescriptionWidth + 'px';
+    }
+}
 
         // Função para adicionar uma nova atividade ao checklist
         function addItem() {
