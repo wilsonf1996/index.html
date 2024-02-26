@@ -10,23 +10,24 @@
             font-family: 'Arial', sans-serif;
             text-align: center;
             margin: 20px;
-            background-color: #333; /* Fundo escuro */
-            color: #fff; /* Texto claro */
+            background-color: #333;
+            color: #fff;
         }
 
         h1 {
-            color: #fff; /* Texto claro */
+            color: #fff;
         }
 
         table {
             width: 80%;
             margin: 20px auto;
             border-collapse: collapse;
-            background-color: #444; /* Cor mais escura para tabelas */
-            color: #fff; /* Texto claro */
+            background-color: #444;
+            color: #fff;
         }
 
-        th, td {
+        th,
+        td {
             border: 1px solid #ddd;
             padding: 8px;
             text-align: left;
@@ -40,14 +41,14 @@
             padding: 10px;
             font-size: 16px;
             margin: 0 10px;
-            background-color: #ddd; /* Cor de fundo para botões */
-            color: #333; /* Texto escuro */
+            background-color: #ddd;
+            color: #333;
             border: none;
             cursor: pointer;
         }
 
         button:hover {
-            background-color: #ccc; /* Cor de fundo mais clara quando hover */
+            background-color: #ccc;
         }
 
         input {
@@ -190,13 +191,18 @@
         // Função para adicionar uma nova atividade ao checklist
         function addItem() {
             const description = prompt('Descrição da Atividade:');
+            if (!description) return; // Se o usuário cancelar, não faz nada
             const situation = 'Não Iniciada';
             const date = new Date().toLocaleString();
-            const estimatedDate = prompt('Data Prevista:'); // Solicitar data prevista
-
+            const estimatedDate = prompt('Data Prevista:');
             const checklistName = document.getElementById('checklist-selector').value;
             if (checklistName in checklists) {
-                checklists[checklistName].push({ description, situation, estimatedDate, date });
+                checklists[checklistName].push({
+                    description,
+                    situation,
+                    estimatedDate,
+                    date
+                });
                 loadChecklistTable(checklists[checklistName]);
             }
         }
@@ -215,7 +221,19 @@
             const checklistName = document.getElementById('checklist-selector').value;
             if (checklistName in checklists) {
                 const checklistRef = database.ref(`/checklists/${checklistName}`);
-                checklistRef.set(checklists[checklistName]);
+                const updatedChecklist = checklists[checklistName].map((item, index) => {
+                    const description = document.getElementById(`item-description-${index}`).value;
+                    const situation = document.getElementById(`item-situation-${index}`).value;
+                    const estimatedDate = document.getElementById(`item-estimated-date-${index}`).value;
+                    const date = item.date;
+                    return {
+                        description,
+                        situation,
+                        estimatedDate,
+                        date
+                    };
+                });
+                checklistRef.set(updatedChecklist);
                 alert('Checklist salva com sucesso!');
             }
         }
@@ -233,14 +251,11 @@
         function processFile() {
             const fileInput = document.getElementById('file-input');
             const file = fileInput.files[0];
-
             if (file) {
                 const reader = new FileReader();
-
-                reader.onload = function (e) {
+                reader.onload = function(e) {
                     const content = e.target.result;
                     const lines = content.split('\n');
-
                     const checklistName = document.getElementById('checklist-selector').value;
                     if (checklistName in checklists) {
                         lines.forEach(line => {
@@ -249,13 +264,17 @@
                                 const situation = 'Não Iniciada';
                                 const date = new Date().toLocaleString();
                                 const estimatedDate = ''; // Definir a data prevista como vazia inicialmente
-                                checklists[checklistName].push({ description, situation, estimatedDate, date });
+                                checklists[checklistName].push({
+                                    description,
+                                    situation,
+                                    estimatedDate,
+                                    date
+                                });
                             }
                         });
                         loadChecklistTable(checklists[checklistName]);
                     }
                 };
-
                 reader.readAsText(file);
             } else {
                 alert('Por favor, selecione um arquivo de texto.');
@@ -263,7 +282,7 @@
         }
 
         // Carregar checklists salvos ao carregar a página
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function() {
             const checklistRef = database.ref('/checklists');
             checklistRef.on('value', (snapshot) => {
                 const data = snapshot.val();
