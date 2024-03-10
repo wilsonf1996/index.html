@@ -177,32 +177,61 @@
 
         // Função para baixar o currículo em formato .doc com o idioma especificado
         function baixarCurriculo(lang) {
-            var content = document.documentElement.innerHTML;
-            var header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' " +
-                        "xmlns:w='urn:schemas-microsoft-com:office:word' " +
-                        "xmlns='http://www.w3.org/TR/REC-html40'>" +
-                        "<head><meta charset='utf-8'><title>Currículo</title></head><body>";
-            var footer = "</body></html>";
-            var fullHtml = header + content + footer;
+    // Remover os botões de download e o título antes de criar o conteúdo do documento .doc
+    var downloadBtns = document.querySelector('.download-btn');
+    var title = document.querySelector('h1');
+    downloadBtns.style.display = 'none';
+    title.style.display = 'none';
 
-            var blob = new Blob(['\ufeff', fullHtml], {
-                type: 'application/msword'
-            });
+    // Capturar o conteúdo HTML da página
+    var content = document.documentElement.innerHTML;
 
-            var url = URL.createObjectURL(blob);
-            var link = document.createElement('a');
-            document.body.appendChild(link);
-            if (lang === 'pt') {
-                link.download = 'curriculo.doc';
-            } else if (lang === 'en') {
-                link.download = 'resume.doc';
-            } else if (lang === 'es') {
-                link.download = 'curriculum.doc';
-            }
-            link.href = url;
-            link.click();
-            document.body.removeChild(link);
-        }
+    // Remover as linhas indesejadas
+    content = content.replace('<h1>Currículo de Wilson Fernandes Junior</h1>', '');
+    content = content.replace('<button class="edit-btn" onclick="baixarCurriculo(\'pt\')">Baixar Currículo em Português</button>', '');
+    content = content.replace('<button class="edit-btn" onclick="salvarCurriculo()">Salvar Currículo</button>', '');
+
+    // Definir estilos embutidos
+    content = content.replace(/<style([\s\S]*?)<\/style>/gi, '');
+    content = content.replace(/<link([\s\S]*?)>/gi, '');
+
+    // Ajustar fonte e espaçamento
+    content = content.replace(/<body/gi, '<body style="font-size: 10pt; line-height: 1.0;"');
+    content = content.replace(/<p/gi, '<p style="margin: 0; padding: 0;"');
+    content = content.replace(/<li/gi, '<li style="margin-bottom: 5px;"');
+
+    // Criação do cabeçalho do documento .doc
+    var header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' " +
+        "xmlns:w='urn:schemas-microsoft-com:office:word' " +
+        "xmlns='http://www.w3.org/TR/REC-html40'>" +
+        "<head><meta charset='utf-8'><title>Currículo</title></head><body>";
+
+    var footer = "</body></html>";
+    var fullHtml = header + content + footer;
+
+    // Geração do arquivo .doc
+    var blob = new Blob(['\ufeff', fullHtml], {
+        type: 'application/msword'
+    });
+
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    document.body.appendChild(link);
+    if (lang === 'pt') {
+        link.download = 'curriculo.doc';
+    } else if (lang === 'en') {
+        link.download = 'resume.doc';
+    } else if (lang === 'es') {
+        link.download = 'curriculum.doc';
+    }
+    link.href = url;
+    link.click();
+    document.body.removeChild(link);
+
+    // Exibir os botões e o título novamente após a geração do documento
+    downloadBtns.style.display = 'flex';
+    title.style.display = 'block';
+}
 
         // Função para salvar o currículo no Firebase
         function salvarCurriculo() {
