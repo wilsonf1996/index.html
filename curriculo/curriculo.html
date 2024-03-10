@@ -156,7 +156,7 @@
         <select id="previousResumes"></select><br>
 
         <button type="submit">Salvar Currículo</button>
-        <button type="button" id="downloadWord">Baixar Word</button>
+        <button type="button" id="downloadTxt">Baixar Texto</button>
     </form>
 
     <!-- Lista de currículos -->
@@ -168,7 +168,6 @@
     <!-- Firebase e mammoth.js para converter para Word -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.4/mammoth.browser.min.js"></script>
     <script>
         // Configuração do Firebase
         const firebaseConfig = {
@@ -185,9 +184,10 @@
         // Carregar currículos anteriores
         resumeRef.on('value', (snapshot) => {
             const resumes = snapshot.val();
+            const previousResumesDropdown = document.getElementById('previousResumes');
+            previousResumesDropdown.innerHTML = '';
+
             if (resumes) {
-                const previousResumesDropdown = document.getElementById('previousResumes');
-                previousResumesDropdown.innerHTML = '';
                 Object.keys(resumes).forEach((key) => {
                     const option = document.createElement('option');
                     option.value = key;
@@ -206,53 +206,36 @@
             }
         });
 
-        // Função para baixar o currículo em Word
+        // Função para baixar o currículo em formato de texto (.txt)
         function downloadResume(resumeKey) {
             const resume = resumeRef.child(resumeKey);
             resume.once('value', (snapshot) => {
                 const data = snapshot.val();
-                const docxContent = `
-                    <h1>${data.name}</h1>
-                    <p><strong>Email:</strong> ${data.email}</p>
-                    <p><strong>Telefone:</strong> ${data.phone}</p>
-                    <p><strong>Endereço:</strong> ${data.address}</p>
-                    <p><strong>Idade:</strong> ${data.age}</p>
-                    <h2>Resumo</h2>
-                    <p>${data.summary}</p>
-                    <h2>Objetivos Profissionais</h2>
-                    <p>${data.careerObjective}</p>
-                    <h2>Dados Acadêmicos</h2>
-                    ${data.academicData.map(academic => `
-                        <p><strong>Grau Acadêmico:</strong> ${academic.degree}</p>
-                        <p><strong>Instituição:</strong> ${academic.institution}</p>
-                        <p><strong>Período de Estudo:</strong> ${academic.studyPeriod}</p>
-                    `).join('')}
-                    <h2>Habilidades</h2>
-                    <p>${data.skills}</p>
-                    <h2>Experiência Profissional</h2>
-                    ${data.professionalExperience.map(experience => `
-                        <p><strong>Cargo:</strong> ${experience.position}</p>
-                        <p><strong>Empresa:</strong> ${experience.company}</p>
-                        <p><strong>Data de Início:</strong> ${experience.startDate}</p>
-                        <p><strong>Data de Término:</strong> ${experience.endDate}</p>
-                        <p><strong>Responsabilidades:</strong> ${experience.responsibilities}</p>
-                    `).join('')}
-                `;
+                let resumeContent = '';
+                resumeContent += `Nome: ${data.name}\n`;
+                resumeContent += `Email: ${data.email}\n`;
+                resumeContent += `Telefone: ${data.phone}\n`;
+                resumeContent += `Endereço: ${data.address}\n`;
+                resumeContent += `Idade: ${data.age}\n`;
+                resumeContent += `Resumo: ${data.summary}\n`;
+                resumeContent += `Objetivos Profissionais: ${data.careerObjective}\n`;
 
-                mammoth.convertHtml(docxContent)
-                    .then((result) => {
-                        const blob = new Blob([result.value], {type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `${data.name}_resume.docx`;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                    })
-                    .catch((err) => {
-                        console.log(err);
-                    });
+                resumeContent += 'Dados Acadêmicos:\n';
+                data.academicData.forEach((academic) => {
+                    resumeContent += `- Grau: ${academic.degree}, Instituição: ${academic.institution}, Período: ${academic.studyPeriod}\n`;
+                });
+
+                resumeContent += 'Experiência Profissional:\n';
+                data.professionalExperience.forEach((experience) => {
+                    resumeContent += `- Cargo: ${experience.position}, Empresa: ${experience.company}, Início: ${experience.startDate}, Término: ${experience.endDate}, Responsabilidades: ${experience.responsibilities}\n`;
+                });
+
+                const element = document.createElement('a');
+                const file = new Blob([resumeContent], {type: 'text/plain'});
+                element.href = URL.createObjectURL(file);
+                element.download = `${data.name}_resume.txt`;
+                document.body.appendChild(element);
+                element.click();
             });
         }
 
@@ -343,8 +326,8 @@
             });
         });
 
-        // Baixar arquivo Word do currículo selecionado
-        document.getElementById('downloadWord').addEventListener('click', () => {
+        // Baixar arquivo de texto do currículo selecionado
+        document.getElementById('downloadTxt').addEventListener('click', () => {
             const selectedResumeKey = document.getElementById('previousResumes').value;
             if (selectedResumeKey) {
                 downloadResume(selectedResumeKey);
