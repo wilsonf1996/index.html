@@ -24,6 +24,7 @@
         }
 
         input[type="text"],
+        input[type="email"],
         textarea {
             width: 100%;
             padding: 10px;
@@ -35,6 +36,7 @@
         }
 
         input[type="text"]::placeholder,
+        input[type="email"]::placeholder,
         textarea::placeholder {
             color: #555;
         }
@@ -52,8 +54,22 @@
             background-color: #0056b3;
         }
 
+        select {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: rgba(255, 255, 255, 0.5);
+            color: #222;
+        }
+
+        select option {
+            background-color: #fff;
+        }
+
         #resumeList {
             margin-top: 20px;
+            text-align: left;
         }
 
         #resumeItems {
@@ -62,7 +78,7 @@
         }
 
         #resumeItems li {
-            margin: 5px 0;
+            margin: 10px 0;
         }
 
         #resumeItems li a {
@@ -78,13 +94,18 @@
     <div id="createResume">
         <h2>Criar Novo Currículo</h2>
         <form id="createResumeForm">
-            <label for="name">Nome:</label><br>
+            <label for="name">Nome Completo:</label><br>
             <input type="text" id="name" required><br>
+
+            <label for="email">Email:</label><br>
+            <input type="email" id="email" required><br>
+
+            <label for="phone">Telefone:</label><br>
+            <input type="text" id="phone"><br>
 
             <label for="summary">Resumo:</label><br>
             <textarea id="summary" required></textarea><br>
 
-            <!-- Experiências Profissionais -->
             <div id="experienceSection">
                 <h3>Experiências Profissionais</h3>
                 <div class="experience">
@@ -95,7 +116,6 @@
             </div>
             <button type="button" id="addExperience">Adicionar Experiência</button><br>
 
-            <!-- Educação -->
             <div id="educationSection">
                 <h3>Educação</h3>
                 <div class="education">
@@ -106,17 +126,16 @@
             </div>
             <button type="button" id="addEducation">Adicionar Educação</button><br>
 
-            <!-- Habilidades -->
             <label for="skills">Habilidades:</label><br>
             <textarea id="skills" required></textarea><br>
 
-            <!-- Seleção de Currículos Anteriores -->
             <label for="previousResumes">Currículos Anteriores:</label><br>
             <select id="previousResumes" multiple>
                 <!-- Opções serão preenchidas dinamicamente com os currículos existentes -->
             </select><br>
 
             <button type="submit">Salvar Currículo</button>
+            <button type="button" id="downloadPDF">Baixar PDF</button>
         </form>
     </div>
 
@@ -129,6 +148,10 @@
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    
+    <!-- Biblioteca jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
@@ -142,134 +165,19 @@
         };
 
         const app = firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
+        const db = firebase.database();
 
-        // Função para criar um novo currículo
-        document.getElementById('createResumeForm').addEventListener('submit', function(event) {
-            event.preventDefault();
-            const name = document.getElementById('name').value;
-            const summary = document.getElementById('summary').value;
-            const skills = document.getElementById('skills').value;
-
-            // Experiências Profissionais
-            const experiences = [];
-            document.querySelectorAll('.experience').forEach(function(experience) {
-                const experienceFields = experience.querySelectorAll('.experienceInput');
-                const exp = {
-                    position: experienceFields[0].value,
-                    company: experienceFields[1].value,
-                    period: experienceFields[2].value
-                };
-                experiences.push(exp);
-            });
-
-            // Educação
-            const educations = [];
-            document.querySelectorAll('.education').forEach(function(education) {
-                const educationFields = education.querySelectorAll('.educationInput');
-                const edu = {
-                    degree: educationFields[0].value,
-                    institution: educationFields[1].value,
-                    period: educationFields[2].value
-                };
-                educations.push(edu);
-            });
-
-            const resumeRef = database.ref('resumes').push();
-            resumeRef.set({
-                name: name,
-                summary: summary,
-                skills: skills,
-                experiences: experiences,
-                educations: educations
-            });
-            document.getElementById('createResumeForm').reset();
+        // Código JavaScript para gerenciar o aplicativo de currículo aqui
+        document.getElementById('downloadPDF').addEventListener('click', function() {
+            generatePDF();
         });
 
-        // Listar os currículos do banco de dados
-        const resumeItems = document.getElementById('resumeItems');
-        database.ref('resumes').on('value', function(snapshot) {
-            resumeItems.innerHTML = '';
-            snapshot.forEach(function(childSnapshot) {
-                const resume = childSnapshot.val();
-                const li = document.createElement('li');
-                const a = document.createElement('a');
-                a.href = '#';
-                a.textContent = resume.name;
-                a.onclick = function() {
-                    downloadResume(resume);
-                };
-                li.appendChild(a);
-                resumeItems.appendChild(li);
-            });
-        });
-
-        // Função para baixar um currículo como arquivo de texto
-        function downloadResume(resume) {
-            const filename = resume.name.replace(/\s+/g, '_') + '_Resume.txt';
-            const text = `
-                Nome: ${resume.name}
-                Resumo: ${resume.summary}
-                Habilidades: ${resume.skills}
-
-                Experiências Profissionais:
-                ${resume.experiences.map(exp => `
-                    - ${exp.position} at ${exp.company}, ${exp.period}
-                `).join('')}
-
-                Educação:
-                ${resume.educations.map(edu => `
-                    - ${edu.degree} at ${edu.institution}, ${edu.period}
-                `).join('')}
-            `;
-
-            const element = document.createElement('a');
-            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
-            element.setAttribute('download', filename);
-            element.style.display = 'none';
-            document.body.appendChild(element);
-            element.click();
-            document.body.removeChild(element);
+        function generatePDF() {
+            const doc = new jsPDF();
+            const resumeHTML = document.getElementById('createResume').innerHTML;
+            doc.fromHTML(resumeHTML, 15, 15);
+            doc.save('meu_curriculo.pdf');
         }
-
-        // Adicionar campo de Experiência Profissional
-        document.getElementById('addExperience').addEventListener('click', function() {
-            const experienceSection = document.getElementById('experienceSection');
-            const experienceDiv = document.createElement('div');
-            experienceDiv.classList.add('experience');
-            experienceDiv.innerHTML = `
-                <input type="text" class="experienceInput" placeholder="Cargo" required>
-                <input type="text" class="experienceInput" placeholder="Empresa" required>
-                <input type="text" class="experienceInput" placeholder="Período" required>
-            `;
-            experienceSection.appendChild(experienceDiv);
-        });
-
-        // Adicionar campo de Educação
-        document.getElementById('addEducation').addEventListener('click', function() {
-            const educationSection = document.getElementById('educationSection');
-            const educationDiv = document.createElement('div');
-            educationDiv.classList.add('education');
-            educationDiv.innerHTML = `
-                <input type="text" class="educationInput" placeholder="Grau" required>
-                <input type="text" class="educationInput" placeholder="Instituição" required>
-                <input type="text" class="educationInput" placeholder="Período" required>
-            `;
-            educationSection.appendChild(educationDiv);
-        });
-
-        // Preencher opções do seletor de currículos anteriores
-        const previousResumes = document.getElementById('previousResumes');
-        database.ref('resumes').on('value', function(snapshot) {
-            previousResumes.innerHTML = '';
-            snapshot.forEach(function(childSnapshot) {
-                const resume = childSnapshot.val();
-                const option = document.createElement('option');
-                option.value = resume.name;
-                option.textContent = resume.name;
-                previousResumes.appendChild(option);
-            });
-        });
     </script>
 </body>
 </html>
