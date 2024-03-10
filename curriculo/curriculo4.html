@@ -11,67 +11,68 @@
             margin: 0;
             padding: 0;
             font-size: 10pt;
-            line-height: 1.5;
+            color: black;
         }
 
         .container {
             max-width: 800px;
             margin: 20px auto;
-            background-color: #fff;
+            background-color: white;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
 
-        h1 {
-            text-align: center;
-            color: #000;
-        }
-
         .section {
-            margin-bottom: 30px;
-            border-bottom: 1px solid #000;
+            margin-bottom: 20px;
             padding-bottom: 20px;
-        }
-
-        .section:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
-            padding-bottom: 0;
+            border-bottom: 1px solid black;
         }
 
         .section-title {
             font-weight: bold;
-            color: #007bff;
+            color: black;
+            text-transform: uppercase;
+            font-size: 18px;
+            margin-bottom: 10px;
         }
 
         .content {
             padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            background-color: #f9f9f9;
+            background-color: white;
             min-height: 100px;
             text-align: justify;
+            font-size: 16px;
+            color: black;
         }
 
         .download-btn {
-            display: block;
+            display: flex;
+            justify-content: center;
             margin-top: 20px;
-            text-align: center;
         }
 
         .edit-btn {
-            background-color: #007bff;
-            color: #fff;
+            background-color: black;
+            color: white;
             border: none;
-            padding: 5px 10px;
+            padding: 10px 20px;
             cursor: pointer;
             border-radius: 5px;
-            margin-bottom: 10px;
+            margin: 0 10px;
+            font-size: 16px;
+            text-transform: uppercase;
         }
 
         .edit-btn:hover {
             background-color: #0056b3;
+        }
+
+        /* Linhas horizontais separando os itens */
+        .section:not(:last-child) {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid black;
         }
     </style>
 </head>
@@ -130,6 +131,7 @@
 
         <!-- Botões -->
         <div class="download-btn">
+            <button class="edit-btn" onclick="baixarCurriculo('pt')">Baixar Currículo em Português</button>
             <button class="edit-btn" onclick="salvarCurriculo()">Salvar Currículo</button>
         </div>
     </div>
@@ -152,6 +154,45 @@
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
+        // Função para baixar o currículo em formato .doc com o idioma especificado
+        function baixarCurriculo(lang) {
+            // Remove o título e os botões antes de criar o documento .doc
+            var titulo = document.querySelector('h1');
+            var botoes = document.querySelector('.download-btn');
+            if (titulo) titulo.style.display = "none";
+            if (botoes) botoes.style.display = "none";
+
+            var content = document.documentElement.innerHTML;
+            var header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' " +
+                        "xmlns:w='urn:schemas-microsoft-com:office:word' " +
+                        "xmlns='http://www.w3.org/TR/REC-html40'>" +
+                        "<head><meta charset='utf-8'><title>Currículo</title></head><body>";
+            var footer = "</body></html>";
+            var fullHtml = header + content + footer;
+
+            var blob = new Blob(['\ufeff', fullHtml], {
+                type: 'application/msword'
+            });
+
+            var url = URL.createObjectURL(blob);
+            var link = document.createElement('a');
+            document.body.appendChild(link);
+            if (lang === 'pt') {
+                link.download = 'curriculo.doc';
+            } else if (lang === 'en') {
+                link.download = 'resume.doc';
+            } else if (lang === 'es') {
+                link.download = 'curriculum.doc';
+            }
+            link.href = url;
+            link.click();
+            document.body.removeChild(link);
+
+            // Exibir o título e os botões novamente após criar o documento .doc
+            if (titulo) titulo.style.display = "block";
+            if (botoes) botoes.style.display = "flex";
+        }
+
         // Função para salvar o currículo no Firebase
         function salvarCurriculo() {
             var curriculoData = {};
@@ -173,4 +214,3 @@
     </script>
 </body>
 </html>
-
