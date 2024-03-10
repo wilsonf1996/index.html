@@ -4,21 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Currículo de Wilson Fernandes Junior</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: 'Roboto', sans-serif;
+            font-family: Arial, sans-serif;
             text-align: justify;
+            margin: 0;
+            padding: 0;
         }
 
         .container {
             max-width: 800px;
-            margin: 0 auto;
+            margin: 20px auto;
+            background-color: #fff;
             padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
 
         h1 {
             text-align: center;
+            color: #333;
         }
 
         .section {
@@ -48,6 +53,7 @@
         }
 
         .download-btn {
+            display: block;
             margin-top: 20px;
             text-align: center;
         }
@@ -122,7 +128,7 @@
 
         <!-- Botões -->
         <div class="download-btn">
-            <button class="edit-btn" onclick="baixarCurriculo()">Baixar Currículo em Texto</button>
+            <button class="edit-btn" onclick="baixarCurriculo()">Baixar Currículo em Doc</button>
             <button class="edit-btn" onclick="salvarCurriculo()">Salvar Currículo</button>
         </div>
     </div>
@@ -145,23 +151,42 @@
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        // Função para baixar o currículo em texto
+        // Função para baixar o currículo em formato .doc
         function baixarCurriculo() {
-            // Lógica para baixar o currículo
-        }
+            var content = document.documentElement.innerHTML;
+            var header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' " +
+                        "xmlns:w='urn:schemas-microsoft-com:office:word' " +
+                        "xmlns='http://www.w3.org/TR/REC-html40'>" +
+                        "<head><meta charset='utf-8'><title>Currículo</title></head><body>";
+            var footer = "</body></html>";
+            var fullHtml = header + content + footer;
 
-        // Função para salvar o currículo localmente e no Firebase
-        function salvarCurriculo() {
-            var camposEditaveis = document.querySelectorAll('.content[contenteditable="true"]');
-            var curriculoData = {};
-
-            camposEditaveis.forEach(function (campo) {
-                var campoId = campo.id;
-                var valor = campo.innerText.trim();
-                curriculoData[campoId] = valor;
+            var blob = new Blob(['\ufeff', fullHtml], {
+                type: 'application/msword'
             });
 
-            // Atualiza o Firebase
+            var url = URL.createObjectURL(blob);
+            var link = document.createElement('a');
+            document.body.appendChild(link);
+            link.href = url;
+            link.download = 'curriculo.doc';
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Função para salvar o currículo no Firebase
+        function salvarCurriculo() {
+            var curriculoData = {};
+
+            // Obtendo os dados editáveis e salvando no objeto curriculoData
+            var secoes = document.querySelectorAll('.content[contenteditable="true"]');
+            secoes.forEach(function(secao) {
+                var id = secao.id;
+                var conteudo = secao.innerHTML;
+                curriculoData[id] = conteudo;
+            });
+
+            // Salvando os dados no Firebase
             database.ref('/curriculo').set(curriculoData);
 
             console.log("Currículo salvo no Firebase:", curriculoData);
