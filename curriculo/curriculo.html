@@ -6,10 +6,15 @@
     <title>Aplicativo de Currículo</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Roboto', sans-serif;
             text-align: center;
             margin: 20px;
-            background-color: #f4f4f4;
+            background-image: url('https://raw.githubusercontent.com/wilsonf1996/index.html/main/DALL%C2%B7E%202023-12-23%2013.03.50%20-%20mpressionante%20imagem%20de%20fundo%20de%20tela%20para%20aplicativo%20web%20de%20engenheiro%20civil%20fundo%20branco%2C%20hiper-realista%20e%20com%20designer%20moderno.%20A%20imagem%20deve%20ser%20r.png');
+            background-size: cover;
+            background-position: center;
+            -webkit-background-size: cover;
+            -moz-background-size: cover;
+            -o-background-size: cover;
             color: #333;
         }
 
@@ -82,6 +87,8 @@
             margin-top: 5px;
         }
     </style>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
 </head>
 <body>
     <h1>Aplicativo de Currículo</h1>
@@ -156,7 +163,7 @@
         <select id="previousResumes"></select><br>
 
         <button type="submit">Salvar Currículo</button>
-        <button type="button" id="downloadTxt">Baixar Texto</button>
+        <button type="button" id="downloadText">Baixar Texto</button>
     </form>
 
     <!-- Lista de currículos -->
@@ -165,81 +172,17 @@
         <ul id="resumeItems"></ul>
     </div>
 
-    <!-- Firebase e mammoth.js para converter para Word -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
     <script>
-        // Configuração do Firebase
         const firebaseConfig = {
             // Sua configuração do Firebase aqui
         };
 
-        // Inicialização do Firebase
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        // Referência para os currículos
         const resumeRef = database.ref('resumes');
 
-        // Carregar currículos anteriores
-        resumeRef.on('value', (snapshot) => {
-            const resumes = snapshot.val();
-            const previousResumesDropdown = document.getElementById('previousResumes');
-            previousResumesDropdown.innerHTML = '';
-
-            if (resumes) {
-                Object.keys(resumes).forEach((key) => {
-                    const option = document.createElement('option');
-                    option.value = key;
-                    option.textContent = resumes[key].name;
-                    previousResumesDropdown.appendChild(option);
-
-                    // Adicionar currículos à lista
-                    const resumeItem = document.createElement('li');
-                    const link = document.createElement('a');
-                    link.href = '#';
-                    link.textContent = resumes[key].name;
-                    link.onclick = () => downloadResume(key); // Event listener para o clique no currículo
-                    resumeItem.appendChild(link);
-                    document.getElementById('resumeItems').appendChild(resumeItem);
-                });
-            }
-        });
-
-        // Função para baixar o currículo em formato de texto (.txt)
-        function downloadResume(resumeKey) {
-            const resume = resumeRef.child(resumeKey);
-            resume.once('value', (snapshot) => {
-                const data = snapshot.val();
-                let resumeContent = '';
-                resumeContent += `Nome: ${data.name}\n`;
-                resumeContent += `Email: ${data.email}\n`;
-                resumeContent += `Telefone: ${data.phone}\n`;
-                resumeContent += `Endereço: ${data.address}\n`;
-                resumeContent += `Idade: ${data.age}\n`;
-                resumeContent += `Resumo: ${data.summary}\n`;
-                resumeContent += `Objetivos Profissionais: ${data.careerObjective}\n`;
-
-                resumeContent += 'Dados Acadêmicos:\n';
-                data.academicData.forEach((academic) => {
-                    resumeContent += `- Grau: ${academic.degree}, Instituição: ${academic.institution}, Período: ${academic.studyPeriod}\n`;
-                });
-
-                resumeContent += 'Experiência Profissional:\n';
-                data.professionalExperience.forEach((experience) => {
-                    resumeContent += `- Cargo: ${experience.position}, Empresa: ${experience.company}, Início: ${experience.startDate}, Término: ${experience.endDate}, Responsabilidades: ${experience.responsibilities}\n`;
-                });
-
-                const element = document.createElement('a');
-                const file = new Blob([resumeContent], {type: 'text/plain'});
-                element.href = URL.createObjectURL(file);
-                element.download = `${data.name}_resume.txt`;
-                document.body.appendChild(element);
-                element.click();
-            });
-        }
-
-        // Adicionar Dados Acadêmicos
+        // Função para adicionar dados acadêmicos
         document.getElementById('addAcademicData').addEventListener('click', () => {
             const academicData = document.getElementById('academicData');
             const newAcademicGroup = document.createElement('div');
@@ -257,7 +200,7 @@
             academicData.appendChild(newAcademicGroup);
         });
 
-        // Adicionar Experiência Profissional
+        // Função para adicionar experiência profissional
         document.getElementById('addProfessionalExperience').addEventListener('click', () => {
             const professionalExperience = document.getElementById('professionalExperience');
             const newExperienceGroup = document.createElement('div');
@@ -281,58 +224,183 @@
             professionalExperience.appendChild(newExperienceGroup);
         });
 
-        // Submeter o formulário para criar um novo currículo
-        document.getElementById('createResumeForm').addEventListener('submit', (event) => {
-            event.preventDefault();
+        // Função para validar o email
+        function validateEmail(email) {
+            const regex = /\S+@\S+\.\S+/;
+            return regex.test(email);
+        }
+
+        // Função para validar o formulário de criação de currículo
+        function validateForm() {
             const name = document.getElementById('name').value;
             const email = document.getElementById('email').value;
-            const phone = document.getElementById('phone').value;
-            const address = document.getElementById('address').value;
-            const age = document.getElementById('age').value;
             const summary = document.getElementById('summary').value;
             const careerObjective = document.getElementById('careerObjective').value;
-            const skills = document.getElementById('skills').value;
 
-            const academicData = [];
-            document.querySelectorAll('.academic-group').forEach((group) => {
-                const degree = group.querySelector('.degree').value;
-                const institution = group.querySelector('.institution').value;
-                const studyPeriod = group.querySelector('.study-period').value;
-                academicData.push({ degree, institution, studyPeriod });
-            });
+            let valid = true;
 
-            const professionalExperience = [];
-            document.querySelectorAll('.experience-group').forEach((group) => {
-                const position = group.querySelector('.position').value;
-                const company = group.querySelector('.company').value;
-                const startDate = group.querySelector('.start-date').value;
-                const endDate = group.querySelector('.end-date').value;
-                const responsibilities = group.querySelector('.responsibilities').value;
-                professionalExperience.push({ position, company, startDate, endDate, responsibilities });
-            });
+            document.getElementById('nameError').textContent = '';
+            document.getElementById('emailError').textContent = '';
+            document.getElementById('summaryError').textContent = '';
+            document.getElementById('careerObjectiveError').textContent = '';
 
-            // Salvar o currículo no Firebase
-            resumeRef.push({
-                name,
-                email,
-                phone,
-                address,
-                age,
-                summary,
-                careerObjective,
-                skills,
-                academicData,
-                professionalExperience
-            });
-        });
+            if (name.trim() === '') {
+                document.getElementById('nameError').textContent = 'Campo obrigatório';
+                valid = false;
+            }
+            if (email.trim() === '' || !validateEmail(email)) {
+                document.getElementById('emailError').textContent = 'Email inválido';
+                valid = false;
+            }
+            if (summary.trim() === '') {
+                document.getElementById('summaryError').textContent = 'Campo obrigatório';
+                valid = false;
+            }
+            if (careerObjective.trim() === '') {
+                document.getElementById('careerObjectiveError').textContent = 'Campo obrigatório';
+                valid = false;
+            }
 
-        // Baixar arquivo de texto do currículo selecionado
-        document.getElementById('downloadTxt').addEventListener('click', () => {
+            return valid;
+        }
+
+        // Função para baixar currículo em formato de texto
+        document.getElementById('downloadText').addEventListener('click', () => {
             const selectedResumeKey = document.getElementById('previousResumes').value;
             if (selectedResumeKey) {
-                downloadResume(selectedResumeKey);
+                const resume = resumeRef.child(selectedResumeKey);
+                resume.once('value', (snapshot) => {
+                    const data = snapshot.val();
+                    const filename = `${data.name}.txt`;
+                    const content = `
+Nome: ${data.name}
+Email: ${data.email}
+Telefone: ${data.phone}
+Endereço: ${data.address}
+Idade: ${data.age}
+Resumo: ${data.summary}
+Objetivos Profissionais: ${data.careerObjective}
+Habilidades: ${data.skills}
+`;
+                    download(filename, content);
+                });
             }
         });
+
+        // Função para realizar o download
+        function download(filename, text) {
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+            element.setAttribute('download', filename);
+
+            element.style.display = 'none';
+            document.body.appendChild(element);
+
+            element.click();
+
+            document.body.removeChild(element);
+        }
+
+        // Evento de envio do formulário
+        document.getElementById('createResumeForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (validateForm()) {
+                const name = document.getElementById('name').value;
+                const email = document.getElementById('email').value;
+                const phone = document.getElementById('phone').value;
+                const address = document.getElementById('address').value;
+                const age = document.getElementById('age').value;
+                const summary = document.getElementById('summary').value;
+                const careerObjective = document.getElementById('careerObjective').value;
+                const skills = document.getElementById('skills').value;
+
+                const academicGroups = document.querySelectorAll('.academic-group');
+                const academicData = [];
+                academicGroups.forEach(group => {
+                    const degree = group.querySelector('.degree').value;
+                    const institution = group.querySelector('.institution').value;
+                    const studyPeriod = group.querySelector('.study-period').value;
+                    academicData.push({ degree, institution, studyPeriod });
+                });
+
+                const experienceGroups = document.querySelectorAll('.experience-group');
+                const professionalExperience = [];
+                experienceGroups.forEach(group => {
+                    const position = group.querySelector('.position').value;
+                    const company = group.querySelector('.company').value;
+                    const startDate = group.querySelector('.start-date').value;
+                    const endDate = group.querySelector('.end-date').value;
+                    const responsibilities = group.querySelector('.responsibilities').value;
+                    professionalExperience.push({ position, company, startDate, endDate, responsibilities });
+                });
+
+                const newResume = {
+                    name,
+                    email,
+                    phone,
+                    address,
+                    age,
+                    summary,
+                    careerObjective,
+                    skills,
+                    academicData,
+                    professionalExperience
+                };
+
+                // Salvar no Firebase
+                resumeRef.push(newResume);
+
+                // Limpar formulário após envio
+                document.getElementById('createResumeForm').reset();
+                document.getElementById('academicData').innerHTML = '';
+                document.getElementById('professionalExperience').innerHTML = '';
+
+                // Atualizar a lista de currículos
+                updateResumeList();
+            }
+        });
+
+        // Função para atualizar a lista de currículos
+        function updateResumeList() {
+            resumeRef.once('value', (snapshot) => {
+                const resumes = snapshot.val();
+                const resumeItems = document.getElementById('resumeItems');
+                resumeItems.innerHTML = '';
+                document.getElementById('previousResumes').innerHTML = '';
+
+                for (let key in resumes) {
+                    const resume = resumes[key];
+                    const listItem = document.createElement('li');
+                    listItem.innerHTML = `<a href="#" onclick="showResume('${key}')">${resume.name}</a>`;
+                    resumeItems.appendChild(listItem);
+
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = resume.name;
+                    document.getElementById('previousResumes').appendChild(option);
+                }
+            });
+        }
+
+        // Função para mostrar detalhes de um currículo
+        function showResume(key) {
+            resumeRef.child(key).once('value', (snapshot) => {
+                const resume = snapshot.val();
+                alert(`
+Nome: ${resume.name}
+Email: ${resume.email}
+Telefone: ${resume.phone}
+Endereço: ${resume.address}
+Idade: ${resume.age}
+Resumo: ${resume.summary}
+Objetivos Profissionais: ${resume.careerObjective}
+Habilidades: ${resume.skills}
+`);
+            });
+        }
+
+        // Atualizar lista de currículos ao carregar a página
+        updateResumeList();
     </script>
 </body>
 </html>
