@@ -75,6 +75,12 @@
             color: #007bff;
             text-decoration: none;
         }
+
+        .error {
+            color: red;
+            font-size: 12px;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -84,9 +90,11 @@
     <form id="createResumeForm">
         <label for="name">Nome Completo:</label><br>
         <input type="text" id="name" required><br>
+        <div id="nameError" class="error"></div>
 
         <label for="email">Email:</label><br>
         <input type="email" id="email" required><br>
+        <div id="emailError" class="error"></div>
 
         <label for="phone">Telefone:</label><br>
         <input type="text" id="phone"><br>
@@ -99,9 +107,11 @@
 
         <label for="summary">Resumo:</label><br>
         <textarea id="summary" required></textarea><br>
+        <div id="summaryError" class="error"></div>
 
         <label for="careerObjective">Objetivos Profissionais:</label><br>
         <textarea id="careerObjective" required></textarea><br>
+        <div id="careerObjectiveError" class="error"></div>
 
         <div id="academicData">
             <div class="academic-group">
@@ -146,7 +156,7 @@
         <select id="previousResumes"></select><br>
 
         <button type="submit">Salvar Currículo</button>
-        <button type="button" id="downloadPDF">Baixar PDF</button>
+        <button type="button" id="downloadWord">Baixar Word</button>
     </form>
 
     <!-- Lista de currículos -->
@@ -155,10 +165,10 @@
         <ul id="resumeItems"></ul>
     </div>
 
-    <!-- Firebase e jsPDF -->
+    <!-- Firebase e mammoth.js para converter para Word -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.4/mammoth.browser.min.js"></script>
     <script>
         // Configuração do Firebase
         const firebaseConfig = {
@@ -196,14 +206,53 @@
             }
         });
 
-        // Função para baixar o currículo em PDF
+        // Função para baixar o currículo em Word
         function downloadResume(resumeKey) {
             const resume = resumeRef.child(resumeKey);
             resume.once('value', (snapshot) => {
                 const data = snapshot.val();
-                const doc = new jsPDF();
-                // Adicione aqui a lógica para criar o PDF com os dados do currículo
-                doc.save(`${data.name}.pdf`);
+                const docxContent = `
+                    <h1>${data.name}</h1>
+                    <p><strong>Email:</strong> ${data.email}</p>
+                    <p><strong>Telefone:</strong> ${data.phone}</p>
+                    <p><strong>Endereço:</strong> ${data.address}</p>
+                    <p><strong>Idade:</strong> ${data.age}</p>
+                    <h2>Resumo</h2>
+                    <p>${data.summary}</p>
+                    <h2>Objetivos Profissionais</h2>
+                    <p>${data.careerObjective}</p>
+                    <h2>Dados Acadêmicos</h2>
+                    ${data.academicData.map(academic => `
+                        <p><strong>Grau Acadêmico:</strong> ${academic.degree}</p>
+                        <p><strong>Instituição:</strong> ${academic.institution}</p>
+                        <p><strong>Período de Estudo:</strong> ${academic.studyPeriod}</p>
+                    `).join('')}
+                    <h2>Habilidades</h2>
+                    <p>${data.skills}</p>
+                    <h2>Experiência Profissional</h2>
+                    ${data.professionalExperience.map(experience => `
+                        <p><strong>Cargo:</strong> ${experience.position}</p>
+                        <p><strong>Empresa:</strong> ${experience.company}</p>
+                        <p><strong>Data de Início:</strong> ${experience.startDate}</p>
+                        <p><strong>Data de Término:</strong> ${experience.endDate}</p>
+                        <p><strong>Responsabilidades:</strong> ${experience.responsibilities}</p>
+                    `).join('')}
+                `;
+
+                mammoth.convertHtml(docxContent)
+                    .then((result) => {
+                        const blob = new Blob([result.value], {type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${data.name}_resume.docx`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    })
+                    .catch((err) => {
+                        console.log(err);
+                    });
             });
         }
 
@@ -294,8 +343,8 @@
             });
         });
 
-        // Baixar PDF do currículo selecionado
-        document.getElementById('downloadPDF').addEventListener('click', () => {
+        // Baixar arquivo Word do currículo selecionado
+        document.getElementById('downloadWord').addEventListener('click', () => {
             const selectedResumeKey = document.getElementById('previousResumes').value;
             if (selectedResumeKey) {
                 downloadResume(selectedResumeKey);
