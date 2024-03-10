@@ -91,53 +91,34 @@
     <h1>Aplicativo de Currículo</h1>
 
     <!-- Formulário para criar currículo -->
-    <div id="createResume">
-        <h2>Criar Novo Currículo</h2>
-        <form id="createResumeForm">
-            <label for="name">Nome Completo:</label><br>
-            <input type="text" id="name" required><br>
+    <form id="createResumeForm">
+        <label for="name">Nome Completo:</label><br>
+        <input type="text" id="name" required><br>
 
-            <label for="email">Email:</label><br>
-            <input type="email" id="email" required><br>
+        <label for="email">Email:</label><br>
+        <input type="email" id="email" required><br>
 
-            <label for="phone">Telefone:</label><br>
-            <input type="text" id="phone"><br>
+        <label for="phone">Telefone:</label><br>
+        <input type="text" id="phone"><br>
 
-            <label for="summary">Resumo:</label><br>
-            <textarea id="summary" required></textarea><br>
+        <label for="summary">Resumo:</label><br>
+        <textarea id="summary" required></textarea><br>
 
-            <div id="experienceSection">
-                <h3>Experiências Profissionais</h3>
-                <div class="experience">
-                    <input type="text" class="experienceInput" placeholder="Cargo" required>
-                    <input type="text" class="experienceInput" placeholder="Empresa" required>
-                    <input type="text" class="experienceInput" placeholder="Período" required>
-                </div>
-            </div>
-            <button type="button" id="addExperience">Adicionar Experiência</button><br>
+        <label for="education">Educação:</label><br>
+        <textarea id="education" required></textarea><br>
 
-            <div id="educationSection">
-                <h3>Educação</h3>
-                <div class="education">
-                    <input type="text" class="educationInput" placeholder="Grau" required>
-                    <input type="text" class="educationInput" placeholder="Instituição" required>
-                    <input type="text" class="educationInput" placeholder="Período" required>
-                </div>
-            </div>
-            <button type="button" id="addEducation">Adicionar Educação</button><br>
+        <label for="skills">Habilidades:</label><br>
+        <textarea id="skills" required></textarea><br>
 
-            <label for="skills">Habilidades:</label><br>
-            <textarea id="skills" required></textarea><br>
+        <label for="experience">Experiência Profissional:</label><br>
+        <textarea id="experience" required></textarea><br>
 
-            <label for="previousResumes">Currículos Anteriores:</label><br>
-            <select id="previousResumes" multiple>
-                <!-- Opções serão preenchidas dinamicamente com os currículos existentes -->
-            </select><br>
+        <label for="previousResumes">Currículos Anteriores:</label><br>
+        <select id="previousResumes"></select><br>
 
-            <button type="submit">Salvar Currículo</button>
-            <button type="button" id="downloadPDF">Baixar PDF</button>
-        </form>
-    </div>
+        <button type="submit">Salvar Currículo</button>
+        <button type="button" id="downloadPDF">Baixar PDF</button>
+    </form>
 
     <!-- Lista de currículos -->
     <div id="resumeList">
@@ -145,39 +126,71 @@
         <ul id="resumeItems"></ul>
     </div>
 
-    <!-- Firebase -->
+    <!-- Firebase e jsPDF -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
-    
-    <!-- Biblioteca jsPDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
-    
     <script>
+        // Configuração do Firebase
         const firebaseConfig = {
-            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
-            authDomain: "agenda-6accc.firebaseapp.com",
-            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
-            projectId: "agenda-6accc",
-            storageBucket: "agenda-6accc.appspot.com",
-            messagingSenderId: "794262176773",
-            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
-            measurementId: "G-CVBQ54PERH"
+            // Sua configuração do Firebase aqui
         };
 
-        const app = firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+        // Inicialização do Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
 
-        // Código JavaScript para gerenciar o aplicativo de currículo aqui
-        document.getElementById('downloadPDF').addEventListener('click', function() {
-            generatePDF();
+        // Referência para os currículos
+        const resumeRef = database.ref('resumes');
+
+        // Carregar currículos anteriores
+        resumeRef.on('value', (snapshot) => {
+            const resumes = snapshot.val();
+            if (resumes) {
+                const previousResumesDropdown = document.getElementById('previousResumes');
+                previousResumesDropdown.innerHTML = '';
+                Object.keys(resumes).forEach((key) => {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = resumes[key].name;
+                    previousResumesDropdown.appendChild(option);
+                });
+            }
         });
 
-        function generatePDF() {
-            const doc = new jsPDF();
-            const resumeHTML = document.getElementById('createResume').innerHTML;
-            doc.fromHTML(resumeHTML, 15, 15);
-            doc.save('meu_curriculo.pdf');
-        }
+        // Submeter o formulário para criar um novo currículo
+        document.getElementById('createResumeForm').addEventListener('submit', (event) => {
+            event.preventDefault();
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const phone = document.getElementById('phone').value;
+            const summary = document.getElementById('summary').value;
+            const education = document.getElementById('education').value;
+            const skills = document.getElementById('skills').value;
+            const experience = document.getElementById('experience').value;
+
+            // Salvar o currículo no Firebase
+            resumeRef.push({
+                name,
+                email,
+                phone,
+                summary,
+                education,
+                skills,
+                experience
+            });
+        });
+
+        // Baixar PDF do currículo selecionado
+        document.getElementById('downloadPDF').addEventListener('click', () => {
+            const selectedResumeKey = document.getElementById('previousResumes').value;
+            if (selectedResumeKey) {
+                const selectedResume = document.getElementById('previousResumes').options[document.getElementById('previousResumes').selectedIndex].textContent;
+                const doc = new jsPDF();
+                // Lógica para criar PDF
+                // doc.save('nome_do_curriculo.pdf');
+            }
+        });
     </script>
 </body>
 </html>
