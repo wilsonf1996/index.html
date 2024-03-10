@@ -5,7 +5,70 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aplicativo de Currículo</title>
     <style>
-        /* Adicione seus estilos aqui */
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+            background-color: #222;
+            color: #fff;
+        }
+
+        h1, h2, h3 {
+            color: #fff;
+        }
+
+        form {
+            background-color: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: none;
+            border-radius: 5px;
+            background-color: rgba(255, 255, 255, 0.5);
+            color: #222;
+        }
+
+        input[type="text"]::placeholder,
+        textarea::placeholder {
+            color: #555;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #resumeList {
+            margin-top: 20px;
+        }
+
+        #resumeItems {
+            list-style: none;
+            padding: 0;
+        }
+
+        #resumeItems li {
+            margin: 5px 0;
+        }
+
+        #resumeItems li a {
+            color: #fff;
+            text-decoration: none;
+        }
     </style>
 </head>
 <body>
@@ -15,25 +78,41 @@
     <div id="createResume">
         <h2>Criar Novo Currículo</h2>
         <form id="createResumeForm">
-            <label for="name">Nome:</label>
+            <label for="name">Nome:</label><br>
             <input type="text" id="name" required><br>
 
-            <label for="summary">Resumo:</label>
+            <label for="summary">Resumo:</label><br>
             <textarea id="summary" required></textarea><br>
 
-            <!-- Aqui você pode adicionar opções de seleção para cada campo -->
-            <label for="previousExperiences">Experiências Anteriores:</label>
-            <select id="previousExperiences" multiple>
-                <!-- Opções serão preenchidas dinamicamente com os currículos existentes -->
-            </select><br>
+            <!-- Experiências Profissionais -->
+            <div id="experienceSection">
+                <h3>Experiências Profissionais</h3>
+                <div class="experience">
+                    <input type="text" class="experienceInput" placeholder="Cargo" required>
+                    <input type="text" class="experienceInput" placeholder="Empresa" required>
+                    <input type="text" class="experienceInput" placeholder="Período" required>
+                </div>
+            </div>
+            <button type="button" id="addExperience">Adicionar Experiência</button><br>
 
-            <label for="previousEducation">Educação Anterior:</label>
-            <select id="previousEducation" multiple>
-                <!-- Opções serão preenchidas dinamicamente com os currículos existentes -->
-            </select><br>
+            <!-- Educação -->
+            <div id="educationSection">
+                <h3>Educação</h3>
+                <div class="education">
+                    <input type="text" class="educationInput" placeholder="Grau" required>
+                    <input type="text" class="educationInput" placeholder="Instituição" required>
+                    <input type="text" class="educationInput" placeholder="Período" required>
+                </div>
+            </div>
+            <button type="button" id="addEducation">Adicionar Educação</button><br>
 
-            <label for="previousSkills">Habilidades Anteriores:</label>
-            <select id="previousSkills" multiple>
+            <!-- Habilidades -->
+            <label for="skills">Habilidades:</label><br>
+            <textarea id="skills" required></textarea><br>
+
+            <!-- Seleção de Currículos Anteriores -->
+            <label for="previousResumes">Currículos Anteriores:</label><br>
+            <select id="previousResumes" multiple>
                 <!-- Opções serão preenchidas dinamicamente com os currículos existentes -->
             </select><br>
 
@@ -70,17 +149,39 @@
             event.preventDefault();
             const name = document.getElementById('name').value;
             const summary = document.getElementById('summary').value;
-            const previousExperiences = document.getElementById('previousExperiences').value;
-            const previousEducation = document.getElementById('previousEducation').value;
-            const previousSkills = document.getElementById('previousSkills').value;
+            const skills = document.getElementById('skills').value;
+
+            // Experiências Profissionais
+            const experiences = [];
+            document.querySelectorAll('.experience').forEach(function(experience) {
+                const experienceFields = experience.querySelectorAll('.experienceInput');
+                const exp = {
+                    position: experienceFields[0].value,
+                    company: experienceFields[1].value,
+                    period: experienceFields[2].value
+                };
+                experiences.push(exp);
+            });
+
+            // Educação
+            const educations = [];
+            document.querySelectorAll('.education').forEach(function(education) {
+                const educationFields = education.querySelectorAll('.educationInput');
+                const edu = {
+                    degree: educationFields[0].value,
+                    institution: educationFields[1].value,
+                    period: educationFields[2].value
+                };
+                educations.push(edu);
+            });
 
             const resumeRef = database.ref('resumes').push();
             resumeRef.set({
                 name: name,
                 summary: summary,
-                previousExperiences: previousExperiences,
-                previousEducation: previousEducation,
-                previousSkills: previousSkills
+                skills: skills,
+                experiences: experiences,
+                educations: educations
             });
             document.getElementById('createResumeForm').reset();
         });
@@ -92,8 +193,81 @@
             snapshot.forEach(function(childSnapshot) {
                 const resume = childSnapshot.val();
                 const li = document.createElement('li');
-                li.textContent = resume.name;
+                const a = document.createElement('a');
+                a.href = '#';
+                a.textContent = resume.name;
+                a.onclick = function() {
+                    downloadResume(resume);
+                };
+                li.appendChild(a);
                 resumeItems.appendChild(li);
+            });
+        });
+
+        // Função para baixar um currículo como arquivo de texto
+        function downloadResume(resume) {
+            const filename = resume.name.replace(/\s+/g, '_') + '_Resume.txt';
+            const text = `
+                Nome: ${resume.name}
+                Resumo: ${resume.summary}
+                Habilidades: ${resume.skills}
+
+                Experiências Profissionais:
+                ${resume.experiences.map(exp => `
+                    - ${exp.position} at ${exp.company}, ${exp.period}
+                `).join('')}
+
+                Educação:
+                ${resume.educations.map(edu => `
+                    - ${edu.degree} at ${edu.institution}, ${edu.period}
+                `).join('')}
+            `;
+
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+            element.setAttribute('download', filename);
+            element.style.display = 'none';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+        }
+
+        // Adicionar campo de Experiência Profissional
+        document.getElementById('addExperience').addEventListener('click', function() {
+            const experienceSection = document.getElementById('experienceSection');
+            const experienceDiv = document.createElement('div');
+            experienceDiv.classList.add('experience');
+            experienceDiv.innerHTML = `
+                <input type="text" class="experienceInput" placeholder="Cargo" required>
+                <input type="text" class="experienceInput" placeholder="Empresa" required>
+                <input type="text" class="experienceInput" placeholder="Período" required>
+            `;
+            experienceSection.appendChild(experienceDiv);
+        });
+
+        // Adicionar campo de Educação
+        document.getElementById('addEducation').addEventListener('click', function() {
+            const educationSection = document.getElementById('educationSection');
+            const educationDiv = document.createElement('div');
+            educationDiv.classList.add('education');
+            educationDiv.innerHTML = `
+                <input type="text" class="educationInput" placeholder="Grau" required>
+                <input type="text" class="educationInput" placeholder="Instituição" required>
+                <input type="text" class="educationInput" placeholder="Período" required>
+            `;
+            educationSection.appendChild(educationDiv);
+        });
+
+        // Preencher opções do seletor de currículos anteriores
+        const previousResumes = document.getElementById('previousResumes');
+        database.ref('resumes').on('value', function(snapshot) {
+            previousResumes.innerHTML = '';
+            snapshot.forEach(function(childSnapshot) {
+                const resume = childSnapshot.val();
+                const option = document.createElement('option');
+                option.value = resume.name;
+                option.textContent = resume.name;
+                previousResumes.appendChild(option);
             });
         });
     </script>
