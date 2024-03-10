@@ -129,17 +129,39 @@
         <!-- Botões -->
         <div class="download-btn">
             <button class="edit-btn" onclick="baixarCurriculo()">Baixar Currículo em Doc</button>
+            <button class="edit-btn" onclick="salvarCurriculo()">Salvar Currículo</button>
         </div>
     </div>
 
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
     <script>
+        const firebaseConfig = {
+            // Configurações do Firebase
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+            measurementId: "G-CVBQ54PERH"
+        };
+
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // Função para baixar o currículo em formato .doc
         function baixarCurriculo() {
             var content = document.documentElement.innerHTML;
-            var header = "{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Arial;}}\n";
-            var footer = "}";
-            var fullRtf = header + content + footer;
+            var header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' " +
+                        "xmlns:w='urn:schemas-microsoft-com:office:word' " +
+                        "xmlns='http://www.w3.org/TR/REC-html40'>" +
+                        "<head><meta charset='utf-8'><title>Currículo</title></head><body>";
+            var footer = "</body></html>";
+            var fullHtml = header + content + footer;
 
-            var blob = new Blob([fullRtf], {
+            var blob = new Blob(['\ufeff', fullHtml], {
                 type: 'application/msword'
             });
 
@@ -150,6 +172,25 @@
             link.download = 'curriculo.doc';
             link.click();
             document.body.removeChild(link);
+        }
+
+        // Função para salvar o currículo no Firebase
+        function salvarCurriculo() {
+            var curriculoData = {};
+
+            // Obtendo os dados editáveis e salvando no objeto curriculoData
+            var secoes = document.querySelectorAll('.content[contenteditable="true"]');
+            secoes.forEach(function(secao) {
+                var id = secao.id;
+                var conteudo = secao.innerHTML;
+                curriculoData[id] = conteudo;
+            });
+
+            // Salvando os dados no Firebase
+            database.ref('/curriculo').set(curriculoData);
+
+            console.log("Currículo salvo no Firebase:", curriculoData);
+            alert('Currículo salvo com sucesso!');
         }
     </script>
 </body>
