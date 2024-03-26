@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -43,21 +43,9 @@
         </div>
         <div id="parametrosSoloCoesivo" style="display: none;">
             <div class="form-group row">
-                <label for="moduloDeformacao" class="col-sm-4 col-form-label">Módulo de Deformação (kPa):</label>
+                <label for="coesao" class="col-sm-4 col-form-label">Coesão (kPa):</label>
                 <div class="col-sm-8">
-                    <input type="number" id="moduloDeformacao" class="form-control" step="0.1">
-                </div>
-            </div>
-            <div class="form-group row">
-                <label for="coeficientePoisson" class="col-sm-4 col-form-label">Coeficiente de Poisson:</label>
-                <div class="col-sm-8">
-                    <input type="number" id="coeficientePoisson" class="form-control" step="0.01">
-                </div>
-            </div>
-            <div class="form-group row">
-                <label for="resistenciaCisalhamento" class="col-sm-4 col-form-label">Resistência ao Cisalhamento (kPa):</label>
-                <div class="col-sm-8">
-                    <input type="number" id="resistenciaCisalhamento" class="form-control" step="0.1">
+                    <input type="number" id="coesao" class="form-control" step="0.1">
                 </div>
             </div>
         </div>
@@ -66,12 +54,6 @@
                 <label for="anguloFriccao" class="col-sm-4 col-form-label">Ângulo de Fricção (graus):</label>
                 <div class="col-sm-8">
                     <input type="number" id="anguloFriccao" class="form-control" step="0.1">
-                </div>
-            </div>
-            <div class="form-group row">
-                <label for="coeficienteEmpuxo" class="col-sm-4 col-form-label">Coeficiente de Empuxo:</label>
-                <div class="col-sm-8">
-                    <input type="number" id="coeficienteEmpuxo" class="form-control" step="0.01">
                 </div>
             </div>
             <div class="form-group row">
@@ -93,18 +75,6 @@
                 <input type="number" id="cargaExterna" class="form-control" step="0.1">
             </div>
         </div>
-        <div class="form-group row">
-            <label for="cargaTrafego" class="col-sm-4 col-form-label">Carga de Tráfego (kN/m²):</label>
-            <div class="col-sm-8">
-                <input type="number" id="cargaTrafego" class="form-control" step="0.1">
-            </div>
-        </div>
-        <div class="form-group row">
-            <label for="anguloPista" class="col-sm-4 col-form-label">Ângulo da Pista (graus):</label>
-            <div class="col-sm-8">
-                <input type="number" id="anguloPista" class="form-control" step="0.1">
-            </div>
-        </div>
     </div>
 
     <hr>
@@ -115,10 +85,6 @@
             <div class="col-sm-8">
                 <select id="metodoCalculo" class="form-control">
                     <option value="fellenius">Método de Fellenius</option>
-                    <option value="bishops">Método de Bishops</option>
-                    <option value="spencers">Método de Spencers</option>
-                    <option value="alvarado">Método de Alvarado</option>
-                    <option value="bishopSimplificado">Método de Bishop Simplificado</option>
                 </select>
             </div>
         </div>
@@ -128,58 +94,37 @@
 </div>
 
 <script>
-    function calcularFatorSeguranca() {
-        var alturaTalude = parseFloat(document.getElementById("alturaTalude").value);
-        var inclinacaoTalude = parseFloat(document.getElementById("inclinação").value);
-        var tipoSolo = document.getElementById("tipoSolo").value;
-        var nivelAgua = parseFloat(document.getElementById("nivelAgua").value);
-        var cargaExterna = parseFloat(document.getElementById("cargaExterna").value);
-        var cargaTrafego = parseFloat(document.getElementById("cargaTrafego").value);
-        var anguloPista = parseFloat(document.getElementById("anguloPista").value);
+    // Função para calcular o fator de segurança pelo método de Fellenius
+    function calcularFatorSegurancaFellenius(alturaTalude, inclinacaoTalude, tipoSolo, nivelAgua, cargaExterna, parametrosSolo) {
+        // Convertendo ângulo de inclinação para radianos
+        var anguloRadianos = inclinacaoTalude * Math.PI / 180;
 
-        var parametrosSolo = {};
+        // Calculando forças atuantes no talude
+        var pesoTalude = alturaTalude * parametrosSolo.pesoEspecifico;
+        var forcaNormal = pesoTalude * Math.cos(anguloRadianos);
+        var forcaTangencial = pesoTalude * Math.sin(anguloRadianos);
 
-        if (tipoSolo === "coesivo") {
-            parametrosSolo.moduloDeformacao = parseFloat(document.getElementById("moduloDeformacao").value);
-            parametrosSolo.coeficientePoisson = parseFloat(document.getElementById("coeficientePoisson").value);
-            parametrosSolo.resistenciaCisalhamento = parseFloat(document.getElementById("resistenciaCisalhamento").value);
-        } else if (tipoSolo === "granular") {
-            parametrosSolo.anguloFriccao = parseFloat(document.getElementById("anguloFriccao").value);
-            parametrosSolo.coeficienteEmpuxo = parseFloat(document.getElementById("coeficienteEmpuxo").value);
-            parametrosSolo.pesoEspecifico = parseFloat(document.getElementById("pesoEspecifico").value);
-        }
+        // Calculando força de cisalhamento
+        var forcaCisalhamento = parametrosSolo.coesao + forcaNormal * Math.tan(parametrosSolo.anguloFriccao * Math.PI / 180);
 
-        var metodoCalculo = document.getElementById("metodoCalculo").value;
-        var fatorSeguranca;
+        // Considerando a influência do nível de água
+        var forcaHidrostatica = nivelAgua * 9.81; // 9.81 é a aceleração da gravidade em m/s^2
+        forcaCisalhamento -= forcaHidrostatica;
 
-        switch (metodoCalculo) {
-            case "fellenius":
-                fatorSeguranca = calcularFatorSegurancaFellenius(alturaTalude, inclinacaoTalude, parametrosSolo.coesao, parametrosSolo.anguloFriccao, parametrosSolo.pesoEspecifico, nivelAgua, cargaExterna);
-                break;
-            case "bishops":
-                fatorSeguranca = calcularFatorSegurancaBishops(alturaTalude, inclinacaoTalude, parametrosSolo.coesao, parametrosSolo.anguloFriccao, parametrosSolo.pesoEspecifico, nivelAgua, cargaExterna);
-                break;
-            case "spencers":
-                fatorSeguranca = calcularFatorSegurancaSpencers(alturaTalude, inclinacaoTalude, parametrosSolo.coesao, parametrosSolo.anguloFriccao, parametrosSolo.pesoEspecifico, nivelAgua, cargaExterna);
-                break;
-            case "alvarado":
-                fatorSeguranca = calcularFatorSegurancaAlvarado(alturaTalude, inclinacaoTalude, parametrosSolo.coesao, parametrosSolo.anguloFriccao, parametrosSolo.pesoEspecifico, nivelAgua, cargaExterna);
-                break;
-            case "bishopSimplificado":
-                fatorSeguranca = calcularFatorSegurancaBishopSimplificado(alturaTalude, inclinacaoTalude, parametrosSolo.coesao, parametrosSolo.anguloFriccao, parametrosSolo.pesoEspecifico, nivelAgua, cargaExterna);
-                break;
-            default:
-                fatorSeguranca = "Erro: Método de cálculo inválido";
-        }
+        // Considerando a influência da carga externa
+        forcaCisalhamento -= cargaExterna;
 
-        var resultadoElement = document.getElementById("resultado");
-        resultadoElement.innerHTML = "<strong>Fator de Segurança:</strong> " + fatorSeguranca.toFixed(2);
+        // Calculando o fator de segurança
+        var fatorSeguranca = forcaTangencial / forcaCisalhamento;
+
+        return fatorSeguranca;
     }
 
+    // Função para exibir os parâmetros do solo correspondentes ao tipo selecionado
     function exibirParametrosSolo() {
         var tipoSolo = document.getElementById("tipoSolo").value;
         var parametrosSoloCoesivo = document.getElementById("parametrosSoloCoesivo");
-        var parametrosSoloGranular = document.getElementById("parametrosSoloGranular");
+var parametrosSoloGranular = document.getElementById("parametrosSoloGranular");
 
         if (tipoSolo === "coesivo") {
             parametrosSoloCoesivo.style.display = "block";
@@ -190,132 +135,35 @@
         }
     }
 
-    
-    function calcularFatorSegurancaFellenius(alturaTalude, inclinacaoTalude, tipoSolo, nivelAgua, cargaExterna, cargaTrafego, anguloPista, parametrosSolo) {
-        // Convertendo ângulo de inclinação para radianos
-        var anguloRadianos = inclinacaoTalude * Math.PI / 180;
+    // Função para calcular o fator de segurança
+    function calcularFatorSeguranca() {
+        // Obtendo os valores dos campos de entrada
+        var alturaTalude = parseFloat(document.getElementById("alturaTalude").value);
+        var inclinacaoTalude = parseFloat(document.getElementById("inclinação").value);
+        var tipoSolo = document.getElementById("tipoSolo").value;
+        var nivelAgua = parseFloat(document.getElementById("nivelAgua").value);
+        var cargaExterna = parseFloat(document.getElementById("cargaExterna").value);
 
-        // Calculando forças atuantes no talude
-        var pesoTalude = alturaTalude * parametrosSolo.pesoEspecifico;
-        var forcaNormal = pesoTalude * Math.cos(anguloRadianos);
-        var forcaTangencial = pesoTalude * Math.sin(anguloRadianos);
+        // Parâmetros do solo
+        var parametrosSolo = {};
 
-        // Calculando força de cisalhamento
-        var forcaCisalhamento = forcaNormal * Math.tan(parametrosSolo.anguloFriccao * Math.PI / 180) + parametrosSolo.coesao;
+        if (tipoSolo === "coesivo") {
+            parametrosSolo.coesao = parseFloat(document.getElementById("coesao").value);
+            parametrosSolo.anguloFriccao = 0; // Ângulo de fricção é zero para solos coesivos
+            parametrosSolo.pesoEspecifico = 0; // Peso específico é zero para solos coesivos
+        } else if (tipoSolo === "granular") {
+            parametrosSolo.anguloFriccao = parseFloat(document.getElementById("anguloFriccao").value);
+            parametrosSolo.pesoEspecifico = parseFloat(document.getElementById("pesoEspecifico").value);
+            parametrosSolo.coesao = 0; // Coesão é zero para solos granulares
+        }
 
-        // Considerando a influência do nível de água
-        var forcaHidrostatica = nivelAgua * 9.81; // 9.81 é a aceleração da gravidade em m/s^2
-        forcaCisalhamento -= forcaHidrostatica;
+        // Chamando a função para calcular o fator de segurança pelo método de Fellenius
+        var fatorSeguranca = calcularFatorSegurancaFellenius(alturaTalude, inclinacaoTalude, tipoSolo, nivelAgua, cargaExterna, parametrosSolo);
 
-        // Considerando a influência da carga externa
-        forcaCisalhamento -= cargaExterna;
-
-        // Calculando o fator de segurança
-        var fatorSeguranca = forcaCisalhamento / forcaTangencial;
-
-        return fatorSeguranca;
+        // Exibindo o resultado na página
+        var resultadoElement = document.getElementById("resultado");
+        resultadoElement.innerHTML = "<strong>Fator de Segurança:</strong> " + fatorSeguranca.toFixed(2);
     }
-
-    function calcularFatorSegurancaSpencers(alturaTalude, inclinacaoTalude, tipoSolo, nivelAgua, cargaExterna, cargaTrafego, anguloPista, parametrosSolo) {
-        // Convertendo ângulo de inclinação para radianos
-        var anguloRadianos = inclinacaoTalude * Math.PI / 180;
-
-        // Calculando forças atuantes no talude
-        var pesoTalude = alturaTalude * parametrosSolo.pesoEspecifico;
-        var forcaNormal = pesoTalude * Math.cos(anguloRadianos);
-        var forcaTangencial = pesoTalude * Math.sin(anguloRadianos);
-
-        // Calculando força de cisalhamento
-        var forcaCisalhamento = forcaNormal * Math.tan(parametrosSolo.anguloFriccao * Math.PI / 180) + parametrosSolo.coeficienteEmpuxo * nivelAgua;
-
-        // Considerando a influência do nível de água
-        var forcaHidrostatica = nivelAgua * 9.81; // 9.81 é a aceleração da gravidade em m/s^2
-        forcaCisalhamento -= forcaHidrostatica;
-
-        // Considerando a influência da carga externa
-        forcaCisalhamento -= cargaExterna;
-
-        // Calculando o fator de segurança
-        var fatorSeguranca = forcaCisalhamento / forcaTangencial;
-
-        return fatorSeguranca;
-    }
-
-    // Função para calcular o fator de segurança pelo método de Alvarado
-    function calcularFatorSegurancaAlvarado(alturaTalude, inclinacaoTalude, tipoSolo, nivelAgua, cargaExterna, cargaTrafego, anguloPista, parametrosSolo) {
-        // Convertendo ângulo de inclinação para radianos
-        var anguloRadianos = inclinacaoTalude * Math.PI / 180;
-
-        // Calculando forças atuantes no talude
-        var forcaNormal = parametrosSolo.pesoEspecifico * alturaTalude * Math.cos(anguloRadianos);
-        var forcaTangencial = parametrosSolo.pesoEspecifico * alturaTalude * Math.sin(anguloRadianos);
-
-        // Calculando força de cisalhamento
-        var forcaCisalhamento = parametrosSolo.coesao + forcaNormal * Math.tan(parametrosSolo.anguloFriccao * Math.PI / 180);
-
-        // Considerando a influência do nível de água
-        var forcaHidrostatica = nivelAgua * 9.81; // 9.81 é a aceleração da gravidade em m/s^2
-        forcaCisalhamento -= forcaHidrostatica;
-
-        // Considerando a influência da carga externa
-        forcaCisalhamento -= cargaExterna;
-
-        // Calculando o fator de segurança
-        var fatorSeguranca = forcaTangencial / forcaCisalhamento;
-
-        return fatorSeguranca;
-    }
-
-    // Função para calcular o fator de segurança pelo método de Bishop Simplificado
-    function calcularFatorSegurancaBishopSimplificado(alturaTalude, inclinacaoTalude, tipoSolo, nivelAgua, cargaExterna, cargaTrafego, anguloPista, parametrosSolo) {
-        // Convertendo ângulo de inclinação para radianos
-        var anguloRadianos = inclinacaoTalude * Math.PI / 180;
-
-        // Calculando forças atuantes no talude
-        var forcaNormal = parametrosSolo.pesoEspecifico * alturaTalude * Math.cos(anguloRadianos);
-        var forcaTangencial = parametrosSolo.pesoEspecifico * alturaTalude * Math.sin(anguloRadianos);
-
-        // Calculando força de cisalhamento
-        var forcaCisalhamento = parametrosSolo.coesao + forcaNormal * Math.tan(parametrosSolo.anguloFriccao * Math.PI / 180);
-
-        // Considerando a influência do nível de água
-        var forcaHidrostatica = nivelAgua * 9.81; // 9.81 é a aceleração da gravidade em m/s^2
-        forcaCisalhamento -= forcaHidrostatica;
-
-        // Considerando a influência da carga externa
-        forcaCisalhamento -= cargaExterna;
-
-        // Calculando o fator de segurança
-        var fatorSeguranca = forcaTangencial / forcaCisalhamento;
-
-        return fatorSeguranca;
-    }
-
-    function calcularFatorSegurancaBishops(alturaTalude, inclinacaoTalude, tipoSolo, nivelAgua, cargaExterna, cargaTrafego, anguloPista, parametrosSolo) {
-        // Convertendo ângulo de inclinação para radianos
-        var anguloRadianos = inclinacaoTalude * Math.PI / 180;
-
-        // Calculando forças atuantes no talude
-        var pesoTalude = alturaTalude * parametrosSolo.pesoEspecifico;
-        var forcaNormal = pesoTalude * Math.cos(anguloRadianos);
-        var forcaTangencial = pesoTalude * Math.sin(anguloRadianos);
-
-        // Calculando força de cisalhamento
-        var forcaCisalhamento = forcaNormal * Math.tan(parametrosSolo.anguloFriccao * Math.PI / 180) + parametrosSolo.coeficienteEmpuxo * nivelAgua;
-
-        // Considerando a influência do nível de água
-        var forcaHidrostatica = nivelAgua * 9.81; // 9.81 é a aceleração da gravidade em m/s^2
-        forcaCisalhamento -= forcaHidrostatica;
-
-        // Considerando a influência da carga externa
-        forcaCisalhamento -= cargaExterna;
-
-        // Calculando o fator de segurança
-        var fatorSeguranca = forcaCisalhamento / forcaTangencial;
-
-        return fatorSeguranca;
-    }
-</script>
 </script>
 </body>
 </html>
