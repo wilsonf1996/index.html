@@ -50,6 +50,18 @@
                 <input type="number" id="pesoEspecificoSolo" class="form-control" step="0.1">
             </div>
         </div>
+        <div class="form-group row">
+            <label for="nivelAgua" class="col-sm-4 col-form-label">Nível de Água (m):</label>
+            <div class="col-sm-8">
+                <input type="number" id="nivelAgua" class="form-control" step="0.1">
+            </div>
+        </div>
+        <div class="form-group row">
+            <label for="cargaExterna" class="col-sm-4 col-form-label">Carga Externa (kN/m²):</label>
+            <div class="col-sm-8">
+                <input type="number" id="cargaExterna" class="form-control" step="0.1">
+            </div>
+        </div>
     </div>
     <hr>
     <div id="opcoesCalculo">
@@ -78,25 +90,27 @@
         var coesao = parseFloat(document.getElementById("coesao").value);
         var anguloAtrito = parseFloat(document.getElementById("anguloAtrito").value);
         var pesoEspecificoSolo = parseFloat(document.getElementById("pesoEspecificoSolo").value);
+        var nivelAgua = parseFloat(document.getElementById("nivelAgua").value);
+        var cargaExterna = parseFloat(document.getElementById("cargaExterna").value);
 
         var metodoCalculo = document.getElementById("metodoCalculo").value;
         var fatorSeguranca;
 
         switch (metodoCalculo) {
             case "fellenius":
-                fatorSeguranca = calcularFatorSegurancaFellenius(alturaTalude, inclinacaoTalude, coesao, anguloAtrito, pesoEspecificoSolo);
+                fatorSeguranca = calcularFatorSegurancaFellenius(alturaTalude, inclinacaoTalude, coesao, anguloAtrito, pesoEspecificoSolo, nivelAgua, cargaExterna);
                 break;
             case "bishops":
-                fatorSeguranca = calcularFatorSegurancaBishops(alturaTalude, inclinacaoTalude, coesao, anguloAtrito, pesoEspecificoSolo);
+                fatorSeguranca = calcularFatorSegurancaBishops(alturaTalude, inclinacaoTalude, coesao, anguloAtrito, pesoEspecificoSolo, nivelAgua, cargaExterna);
                 break;
             case "spencers":
-                fatorSeguranca = calcularFatorSegurancaSpencers(alturaTalude, inclinacaoTalude, coesao, anguloAtrito, pesoEspecificoSolo);
+                fatorSeguranca = calcularFatorSegurancaSpencers(alturaTalude, inclinacaoTalude, coesao, anguloAtrito, pesoEspecificoSolo, nivelAgua, cargaExterna);
                 break;
             case "alvarado":
-                fatorSeguranca = calcularFatorSegurancaAlvarado(alturaTalude, inclinacaoTalude, coesao, anguloAtrito, pesoEspecificoSolo);
+                fatorSeguranca = calcularFatorSegurancaAlvarado(alturaTalude, inclinacaoTalude, coesao, anguloAtrito, pesoEspecificoSolo, nivelAgua, cargaExterna);
                 break;
             case "bishopSimplificado":
-                fatorSeguranca = calcularFatorSegurancaBishopSimplificado(alturaTalude, inclinacaoTalude, coesao, anguloAtrito, pesoEspecificoSolo);
+                fatorSeguranca = calcularFatorSegurancaBishopSimplificado(alturaTalude, inclinacaoTalude, coesao, anguloAtrito, pesoEspecificoSolo, nivelAgua, cargaExterna);
                 break;
             default:
                 fatorSeguranca = "Erro: Método de cálculo inválido";
@@ -106,37 +120,83 @@
         resultadoElement.innerHTML = "<strong>Fator de Segurança:</strong> " + fatorSeguranca.toFixed(2);
     }
 
-    function calcularFatorSegurancaFellenius(alturaTalude, inclinacaoTalude, coesao, anguloAtrito, pesoEspecificoSolo) {
-        var pesoTalude = alturaTalude * pesoEspecificoSolo;
-        var forcaNormal = pesoTalude * Math.cos(inclinacaoTalude * Math.PI / 180);
-        var forcaTangencial = pesoTalude * Math.sin(inclinacaoTalude * Math.PI / 180);
-        var forcaCisalhamento = forcaNormal * Math.tan(anguloAtrito * Math.PI / 180) + coesao;
-        var fatorSeguranca = forcaCisalhamento
+    function calcularFatorSegurancaFellenius(alturaTalude, inclinacaoTalude, coesao, anguloAtrito, pesoEspecificoSolo, nivelAgua, cargaExterna) {
+    // Convertendo ângulo de inclinação para radianos
+    var anguloRadianos = inclinacaoTalude * Math.PI / 180;
+
+    // Calculando forças atuantes no talude
+    var pesoTalude = alturaTalude * pesoEspecificoSolo;
+    var forcaNormal = pesoTalude * Math.cos(anguloRadianos);
+    var forcaTangencial = pesoTalude * Math.sin(anguloRadianos);
+
+    // Calculando força de cisalhamento
+    var forcaCisalhamento = forcaNormal * Math.tan(anguloAtrito * Math.PI / 180) + coesao;
+    
+    // Considerando a influência do nível de água
+    var forcaHidrostatica = nivelAgua * 9.81; // 9.81 é a aceleração da gravidade em m/s^2
+    forcaCisalhamento -= forcaHidrostatica;
+
+    // Considerando a influência da carga externa
+    forcaCisalhamento -= cargaExterna;
+
+    // Calculando o fator de segurança
+    var fatorSeguranca = forcaCisalhamento / forcaTangencial;
+    
+    return fatorSeguranca;
+}
+
+    function calcularFatorSegurancaBishops(alturaTalude, inclinacaoTalude, coesao, anguloAtrito, pesoEspecificoSolo, nivelAgua, cargaExterna) {
+    // Convertendo ângulo de inclinação para radianos
+    var anguloRadianos = inclinacaoTalude * Math.PI / 180;
+
+    // Calculando forças atuantes no talude
+    var pesoTalude = alturaTalude * pesoEspecificoSolo;
+    var forcaNormal = pesoTalude * Math.cos(anguloRadianos);
+    var forcaTangencial = pesoTalude * Math.sin(anguloRadianos);
+
+    // Calculando força de cisalhamento
+    var forcaCisalhamento = forcaNormal * Math.tan(anguloAtrito * Math.PI / 180) + coesao;
+    
+    // Considerando a influência do nível de água
+    var forcaHidrostatica = nivelAgua * 9.81; // 9.81 é a aceleração da gravidade em m/s^2
+    forcaCisalhamento -= forcaHidrostatica;
+
+    // Considerando a influência da carga externa
+    forcaCisalhamento -= cargaExterna;
+
+    // Calculando o fator de segurança
+    var fatorSeguranca = forcaCisalhamento / forcaTangencial;
+    
+    return fatorSeguranca;
+}
 
 
-               var fatorSeguranca = forcaCisalhamento / forcaTangencial;
-        return fatorSeguranca;
-    }
+    function calcularFatorSegurancaSpencers(alturaTalude, inclinacaoTalude, coesao, anguloAtrito, pesoEspecificoSolo, nivelAgua, cargaExterna) {
+    // Convertendo ângulo de inclinação para radianos
+    var anguloRadianos = inclinacaoTalude * Math.PI / 180;
 
-    function calcularFatorSegurancaBishops(alturaTalude, inclinacaoTalude, coesao, anguloAtrito, pesoEspecificoSolo) {
-        var pesoTalude = alturaTalude * pesoEspecificoSolo;
-        var forcaNormal = pesoTalude * Math.cos(inclinacaoTalude * Math.PI / 180);
-        var forcaTangencial = pesoTalude * Math.sin(inclinacaoTalude * Math.PI / 180);
-        var forcaCisalhamento = forcaNormal * Math.tan(anguloAtrito * Math.PI / 180) + coesao;
-        var fatorSeguranca = forcaCisalhamento / forcaTangencial;
-        return fatorSeguranca;
-    }
+    // Calculando forças atuantes no talude
+    var pesoTalude = alturaTalude * pesoEspecificoSolo;
+    var forcaNormal = pesoTalude * Math.cos(anguloRadianos);
+    var forcaTangencial = pesoTalude * Math.sin(anguloRadianos);
 
-    function calcularFatorSegurancaSpencers(alturaTalude, inclinacaoTalude, coesao, anguloAtrito, pesoEspecificoSolo) {
-        var pesoTalude = alturaTalude * pesoEspecificoSolo;
-        var forcaNormal = pesoTalude * Math.cos(inclinacaoTalude * Math.PI / 180);
-        var forcaTangencial = pesoTalude * Math.sin(inclinacaoTalude * Math.PI / 180);
-        var forcaCisalhamento = forcaNormal * Math.tan(anguloAtrito * Math.PI / 180) + coesao;
-        var fatorSeguranca = forcaCisalhamento / forcaTangencial;
-        return fatorSeguranca;
-    }
+    // Calculando força de cisalhamento
+    var forcaCisalhamento = forcaNormal * Math.tan(anguloAtrito * Math.PI / 180) + coesao;
+    
+    // Considerando a influência do nível de água
+    var forcaHidrostatica = nivelAgua * 9.81; // 9.81 é a aceleração da gravidade em m/s^2
+    forcaCisalhamento -= forcaHidrostatica;
 
-    function calcularFatorSegurancaAlvarado(alturaTalude, inclinacaoTalude, coesao, anguloAtrito, pesoEspecificoSolo) {
+    // Considerando a influência da carga externa
+    forcaCisalhamento -= cargaExterna;
+
+    // Calculando o fator de segurança
+    var fatorSeguranca = forcaCisalhamento / forcaTangencial;
+    
+    return fatorSeguranca;
+}
+
+function calcularFatorSegurancaAlvarado(alturaTalude, inclinacaoTalude, coesao, anguloAtrito, pesoEspecificoSolo, nivelAgua, cargaExterna) {
     // Convertendo ângulo de inclinação para radianos
     var anguloRadianos = inclinacaoTalude * Math.PI / 180;
 
@@ -147,13 +207,20 @@
     // Calculando força de cisalhamento
     var forcaCisalhamento = coesao + forcaNormal * Math.tan(anguloAtrito * Math.PI / 180);
 
-    // Calculando fator de segurança
+    // Considerando a influência do nível de água
+    var forcaHidrostatica = nivelAgua * 9.81; // 9.81 é a aceleração da gravidade em m/s^2
+    forcaCisalhamento -= forcaHidrostatica;
+
+    // Considerando a influência da carga externa
+    forcaCisalhamento -= cargaExterna;
+
+    // Calculando o fator de segurança
     var fatorSeguranca = forcaTangencial / forcaCisalhamento;
     
     return fatorSeguranca;
 }
 
-function calcularFatorSegurancaBishopSimplificado(alturaTalude, inclinacaoTalude, coesao, anguloAtrito, pesoEspecificoSolo) {
+function calcularFatorSegurancaBishopSimplificado(alturaTalude, inclinacaoTalude, coesao, anguloAtrito, pesoEspecificoSolo, nivelAgua, cargaExterna) {
     // Convertendo ângulo de inclinação para radianos
     var anguloRadianos = inclinacaoTalude * Math.PI / 180;
 
@@ -164,12 +231,19 @@ function calcularFatorSegurancaBishopSimplificado(alturaTalude, inclinacaoTalude
     // Calculando força de cisalhamento
     var forcaCisalhamento = coesao + forcaNormal * Math.tan(anguloAtrito * Math.PI / 180);
 
-    // Calculando fator de segurança
-    var fatorSeguranca = forcaTangencial / forcaCisalhamento;
-    
+    // Considerando a influência do nível de água
+    var forcaHidrostatica = nivelAgua * 9.81; // 9.81 é a aceleração da gravidade em m/s^2
+    forcaCisalhamento -= forcaHidrostatica;
+
+    // Considerando a influência da carga externa
+    forcaCisalhamento -= cargaExterna;
+
+    // Calculando o fator de
+
     return fatorSeguranca;
+
 }
-    
-</script>
+
+    </script>
 </body>
 </html>
