@@ -1,4 +1,4 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -41,15 +41,13 @@
                 </select>
             </div>
         </div>
-        <div id="parametrosSoloCoesivo" style="display: none;">
+        <div id="parametrosSoloCoesivo">
             <div class="form-group row">
                 <label for="coesao" class="col-sm-4 col-form-label">Coesão (kPa):</label>
                 <div class="col-sm-8">
                     <input type="number" id="coesao" class="form-control" step="0.1">
                 </div>
             </div>
-        </div>
-        <div id="parametrosSoloGranular" style="display: none;">
             <div class="form-group row">
                 <label for="anguloFriccao" class="col-sm-4 col-form-label">Ângulo de Fricção (graus):</label>
                 <div class="col-sm-8">
@@ -60,6 +58,20 @@
                 <label for="pesoEspecifico" class="col-sm-4 col-form-label">Peso Específico (kN/m³):</label>
                 <div class="col-sm-8">
                     <input type="number" id="pesoEspecifico" class="form-control" step="0.1">
+                </div>
+            </div>
+        </div>
+        <div id="parametrosSoloGranular" style="display: none;">
+            <div class="form-group row">
+                <label for="anguloFriccaoGranular" class="col-sm-4 col-form-label">Ângulo de Fricção (graus):</label>
+                <div class="col-sm-8">
+                    <input type="number" id="anguloFriccaoGranular" class="form-control" step="0.1">
+                </div>
+            </div>
+            <div class="form-group row">
+                <label for="pesoEspecificoGranular" class="col-sm-4 col-form-label">Peso Específico (kN/m³):</label>
+                <div class="col-sm-8">
+                    <input type="number" id="pesoEspecificoGranular" class="form-control" step="0.1">
                 </div>
             </div>
         </div>
@@ -107,63 +119,60 @@
         // Calculando força de cisalhamento
         var forcaCisalhamento = parametrosSolo.coesao + forcaNormal * Math.tan(parametrosSolo.anguloFriccao * Math.PI / 180);
 
-        // Considerando a influência do nível de água
-        var forcaHidrostatica = nivelAgua * 9.81; // 9.81 é a aceleração da gravidade em m/s^2
-        forcaCisalhamento -= forcaHidrostatica;
+        // Considerando
 
-        // Considerando a influência da carga externa
-        forcaCisalhamento -= cargaExterna;
+orcaCisalhamento -= cargaExterna;
 
-        // Calculando o fator de segurança
-        var fatorSeguranca = forcaTangencial / forcaCisalhamento;
+    // Calculando o fator de segurança
+    var fatorSeguranca = forcaTangencial / forcaCisalhamento;
 
-        return fatorSeguranca;
+    return fatorSeguranca;
+}
+
+// Função para exibir os parâmetros do solo correspondentes ao tipo selecionado
+function exibirParametrosSolo() {
+    var tipoSolo = document.getElementById("tipoSolo").value;
+    var parametrosSoloCoesivo = document.getElementById("parametrosSoloCoesivo");
+    var parametrosSoloGranular = document.getElementById("parametrosSoloGranular");
+
+    if (tipoSolo === "coesivo") {
+        parametrosSoloCoesivo.style.display = "block";
+        parametrosSoloGranular.style.display = "none";
+    } else if (tipoSolo === "granular") {
+        parametrosSoloCoesivo.style.display = "none";
+        parametrosSoloGranular.style.display = "block";
+    }
+}
+
+// Função para calcular o fator de segurança
+function calcularFatorSeguranca() {
+    // Obtendo os valores dos campos de entrada
+    var alturaTalude = parseFloat(document.getElementById("alturaTalude").value);
+    var inclinacaoTalude = parseFloat(document.getElementById("inclinação").value);
+    var tipoSolo = document.getElementById("tipoSolo").value;
+    var nivelAgua = parseFloat(document.getElementById("nivelAgua").value);
+    var cargaExterna = parseFloat(document.getElementById("cargaExterna").value);
+
+    // Parâmetros do solo
+    var parametrosSolo = {};
+
+    if (tipoSolo === "coesivo") {
+        parametrosSolo.coesao = parseFloat(document.getElementById("coesao").value);
+        parametrosSolo.anguloFriccao = parseFloat(document.getElementById("anguloFriccao").value);
+        parametrosSolo.pesoEspecifico = parseFloat(document.getElementById("pesoEspecifico").value);
+    } else if (tipoSolo === "granular") {
+        parametrosSolo.anguloFriccao = parseFloat(document.getElementById("anguloFriccaoGranular").value);
+        parametrosSolo.pesoEspecifico = parseFloat(document.getElementById("pesoEspecificoGranular").value);
+        parametrosSolo.coesao = 0; // Coesão é zero para solos granulares
     }
 
-    // Função para exibir os parâmetros do solo correspondentes ao tipo selecionado
-    function exibirParametrosSolo() {
-        var tipoSolo = document.getElementById("tipoSolo").value;
-        var parametrosSoloCoesivo = document.getElementById("parametrosSoloCoesivo");
-var parametrosSoloGranular = document.getElementById("parametrosSoloGranular");
+    // Chamando a função para calcular o fator de segurança pelo método de Fellenius
+    var fatorSeguranca = calcularFatorSegurancaFellenius(alturaTalude, inclinacaoTalude, tipoSolo, nivelAgua, cargaExterna, parametrosSolo);
 
-        if (tipoSolo === "coesivo") {
-            parametrosSoloCoesivo.style.display = "block";
-            parametrosSoloGranular.style.display = "none";
-        } else if (tipoSolo === "granular") {
-            parametrosSoloCoesivo.style.display = "none";
-            parametrosSoloGranular.style.display = "block";
-        }
-    }
-
-    // Função para calcular o fator de segurança
-    function calcularFatorSeguranca() {
-        // Obtendo os valores dos campos de entrada
-        var alturaTalude = parseFloat(document.getElementById("alturaTalude").value);
-        var inclinacaoTalude = parseFloat(document.getElementById("inclinação").value);
-        var tipoSolo = document.getElementById("tipoSolo").value;
-        var nivelAgua = parseFloat(document.getElementById("nivelAgua").value);
-        var cargaExterna = parseFloat(document.getElementById("cargaExterna").value);
-
-        // Parâmetros do solo
-        var parametrosSolo = {};
-
-        if (tipoSolo === "coesivo") {
-            parametrosSolo.coesao = parseFloat(document.getElementById("coesao").value);
-            parametrosSolo.anguloFriccao = 0; // Ângulo de fricção é zero para solos coesivos
-            parametrosSolo.pesoEspecifico = 0; // Peso específico é zero para solos coesivos
-        } else if (tipoSolo === "granular") {
-            parametrosSolo.anguloFriccao = parseFloat(document.getElementById("anguloFriccao").value);
-            parametrosSolo.pesoEspecifico = parseFloat(document.getElementById("pesoEspecifico").value);
-            parametrosSolo.coesao = 0; // Coesão é zero para solos granulares
-        }
-
-        // Chamando a função para calcular o fator de segurança pelo método de Fellenius
-        var fatorSeguranca = calcularFatorSegurancaFellenius(alturaTalude, inclinacaoTalude, tipoSolo, nivelAgua, cargaExterna, parametrosSolo);
-
-        // Exibindo o resultado na página
-        var resultadoElement = document.getElementById("resultado");
-        resultadoElement.innerHTML = "<strong>Fator de Segurança:</strong> " + fatorSeguranca.toFixed(2);
-    }
+    // Exibindo o resultado na página
+    var resultadoElement = document.getElementById("resultado");
+    resultadoElement.innerHTML = "<strong>Fator de Segurança:</strong> " + fatorSeguranca.toFixed(2);
+}
 </script>
 </body>
 </html>
