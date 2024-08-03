@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatbot Avançado</title>
+    <title>Advanced Chatbot</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -54,47 +54,48 @@
 </head>
 <body>
     <div id="chatbox"></div>
-    <input type="text" id="user-input" placeholder="Digite sua mensagem...">
-    <button onclick="sendMessage()">Enviar</button>
+    <input type="text" id="user-input" placeholder="Type your message...">
+    <button onclick="sendMessage()">Send</button>
 
     <script>
-        const responses = {
-            greetings: ['Oi!', 'Olá!', 'E aí!', 'Como posso ajudar?'],
-            nameInquiry: ['Eu sou um chatbot.', 'Você pode me chamar de Chatbot.', 'Sou um assistente virtual.'],
-            unknown: ['Desculpe, não entendi.', 'Pode reformular a pergunta?', 'Não tenho uma resposta para isso.']
-        };
-
-        function getBotResponse(userMessage) {
-            userMessage = userMessage.toLowerCase();
-            if (/\boi\b/.test(userMessage) || /\bolá\b/.test(userMessage)) {
-                return responses.greetings[Math.floor(Math.random() * responses.greetings.length)];
-            } else if (/\b(nome|chamado)\b/.test(userMessage)) {
-                return responses.nameInquiry[Math.floor(Math.random() * responses.nameInquiry.length)];
-            } else {
-                return responses.unknown[Math.floor(Math.random() * responses.unknown.length)];
-            }
-        }
-
-        function sendMessage() {
+        async function sendMessage() {
             const inputField = document.getElementById('user-input');
             const chatbox = document.getElementById('chatbox');
             const userMessage = inputField.value.trim();
             
             if (userMessage === '') return;
 
-            // Adiciona a mensagem do usuário ao chatbox
-            chatbox.innerHTML += `<div class="message user-message"><b>Você:</b> ${userMessage}</div>`;
+            // Add user's message to chatbox
+            chatbox.innerHTML += `<div class="message user-message"><b>You:</b> ${userMessage}</div>`;
 
-            // Obtem a resposta do chatbot
-            const botReply = getBotResponse(userMessage);
+            // Set up the API request
+            const apiKey = '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'; // Replace with your API key
+            const url = 'https://api.openai.com/v1/chat/completions';
+            const data = {
+                model: 'gpt-3.5-turbo', // Advanced free model
+                messages: [{ role: 'user', content: userMessage }],
+                max_tokens: 150
+            };
 
-            // Adiciona a resposta do chatbot ao chatbox
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify(data)
+            });
+
+            const responseData = await response.json();
+            const botReply = responseData.choices[0].message.content.trim();
+
+            // Add chatbot's response to chatbox
             chatbox.innerHTML += `<div class="message bot-message"><b>Chatbot:</b> ${botReply}</div>`;
 
-            // Limpa o campo de entrada
+            // Clear the input field
             inputField.value = '';
 
-            // Rola para a parte inferior do chatbox
+            // Scroll to the bottom of the chatbox
             chatbox.scrollTop = chatbox.scrollHeight;
         }
     </script>
