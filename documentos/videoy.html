@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -105,7 +104,7 @@
             flex: 1;
         }
 
-        .music-info {
+        .music-info, .video-info {
             font-size: 1.2rem;
             color: #fff;
             margin-bottom: 10px;
@@ -133,8 +132,7 @@
             background-color: #4cae4c;
         }
 
-        audio,
-        video {
+        audio, video {
             width: 100%;
             margin-top: 10px;
         }
@@ -158,7 +156,6 @@
         }
     </style>
 </head>
-
 <body>
     <div id="app-container">
         <div class="sidebar">
@@ -172,11 +169,10 @@
             <ul id="fileList"></ul>
         </div>
         <div class="content">
-            <div class="music-info">
-                <span id="currentSong">Nenhuma música tocando</span>
-            </div>
+            <div class="music-info" id="currentMusicInfo">Nenhuma música tocando</div>
             <audio id="audioPlayer" controls></audio>
-            <video id="videoPlayer" controls style="display:none;"></video>
+            <div class="video-info" id="currentVideoInfo">Nenhum vídeo tocando</div>
+            <video id="videoPlayer" controls></video>
             <input type="range" id="volumeControl" min="0" max="1" step="0.1" value="0.5">
             <div class="player-controls">
                 <button id="prevButton">Anterior</button>
@@ -210,7 +206,8 @@
         document.getElementById('goToRootButton').addEventListener('click', goToRoot);
 
         let currentPath = "";
-        let currentMediaIndex = 0;
+        let currentIndex = 0;
+        let isPlayingVideo = false;
         let audioPlayer = document.getElementById('audioPlayer');
         let videoPlayer = document.getElementById('videoPlayer');
         let playPauseButton = document.getElementById('playPauseButton');
@@ -218,7 +215,8 @@
         let prevButton = document.getElementById('prevButton');
         let nextButton = document.getElementById('nextButton');
         let volumeControl = document.getElementById('volumeControl');
-        let currentSong = document.getElementById('currentSong');
+        let currentMusicInfo = document.getElementById('currentMusicInfo');
+        let currentVideoInfo = document.getElementById('currentVideoInfo');
 
         playPauseButton.addEventListener('click', togglePlayPause);
         stopButton.addEventListener('click', stopMedia);
@@ -258,90 +256,59 @@
         function listFiles() {
             const fileList = document.getElementById('fileList');
             fileList.innerHTML = '';
+            const folderRef = storageRef.child(currentPath);
 
-            storageRef.child(currentPath).listAll().then(result => {
-                result.items.forEach((item, index) => {
-                    const li = document.createElement('li');
-                    li.textContent = item.name;
-
-                    const playButton = createButton('Tocar', 'play-btn', () => playSelectedMedia(index));
-                    const downloadButton = createButton('Baixar', 'download-btn', () => downloadFile(item));
-                    const deleteButton = createButton('Excluir', 'delete-btn', () => deleteFile(item));
-
-                    li.appendChild(playButton);
-                    li.appendChild(downloadButton);
-                    li.appendChild(deleteButton);
-
-                    fileList.appendChild(li);
+            folderRef.listAll().then(result => {
+                result.items.forEach(fileRef => {
+                    const fileName = fileRef.name;
+                    const listItem = document.createElement('li');
+                    listItem.textContent = fileName;
+                    listItem.appendChild(createButton('Tocar', 'play-btn', () => playFile(fileRef)));
+                    fileList.appendChild(listItem);
                 });
             }).catch(error => {
                 alert(`Erro ao listar arquivos: ${error.message}`);
             });
         }
 
-        function playSelectedMedia(index) {
-            storageRef.child(currentPath).listAll().then(result => {
-                result.items[index].getDownloadURL().then(url => {
-                    const fileName = result.items[index].name;
-                    if (fileName.endsWith('.mp4')) {
-                        audioPlayer.style.display = 'none';
-                        videoPlayer.style.display = 'block';
-                        videoPlayer.src = url;
-                        videoPlayer.play();
-                        currentSong.textContent = `Vídeo: ${fileName}`;
-                    } else if (fileName.endsWith('.mp3')) {
-                        videoPlayer.style.display = 'none';
-                        audioPlayer.style.display = 'block';
-                        audioPlayer.src = url;
-                        audioPlayer.play();
-                        currentSong.textContent = `Música: ${fileName}`;
-                    } else {
-                        alert('Formato de arquivo não suportado.');
-                    }
-                }).catch(error => {
-                    alert(`Erro ao obter o URL do arquivo: ${error.message}`);
-                });
+        function playFile(fileRef) {
+            fileRef.getDownloadURL().then(url => {
+                if (url.endsWith('.mp4') || url.endsWith('.avi') || url.endsWith('.mov')) {
+                    // Vídeo
+                    videoPlayer.src = url;
+                    videoPlayer.style.display = 'block';
+                    audioPlayer.style.display = 'none';
+                    videoPlayer.play();
+                    currentVideoInfo.textContent = `Reproduzindo vídeo: ${fileRef.name}`;
+                    isPlayingVideo = true;
+                } else if (url.endsWith('.mp3') || url.endsWith('.wav')) {
+                    // Música
+                    audioPlayer.src = url;
+                    audioPlayer.style.display = 'block';
+                    videoPlayer.style.display = 'none';
+                    audioPlayer.play();
+                    currentMusicInfo.textContent = `Reproduzindo música: ${fileRef.name}`;
+                    isPlayingVideo = false;
+                }
             }).catch(error => {
-                alert(`Erro ao listar arquivos: ${error.message}`);
+                alert(`Erro ao obter URL do arquivo: ${error.message}`);
             });
-        }
-
-        function downloadFile(item) {
-            item.getDownloadURL().then(url => {
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = item.name;
-                a.click();
-            }).catch(error => {
-                alert(`Erro ao obter o URL do arquivo: ${error.message}`);
-            });
-        }
-
-        function deleteFile(item) {
-            if (confirm(`Tem certeza de que deseja excluir ${item.name}?`)) {
-                item.delete().then(() => {
-                    listFiles();
-                }).catch(error => {
-                    alert(`Erro ao excluir o arquivo: ${error.message}`);
-                });
-            }
         }
 
         function createFolder() {
             const folderName = prompt('Digite o nome da nova pasta:');
-            if (folderName) {
-                const folderRef = storageRef.child(currentPath + folderName + '/');
-                folderRef.put(new Blob()).then(() => {
-                    listFiles();
-                }).catch(error => {
-                    alert(`Erro ao criar a pasta: ${error.message}`);
-                });
-            }
+            if (!folderName) return;
+            const newFolderRef = storageRef.child(currentPath + folderName + '/');
+            newFolderRef.put(new Blob([])).then(() => {
+                listFiles();
+            }).catch(error => {
+                alert(`Erro ao criar pasta: ${error.message}`);
+            });
         }
 
         function goToRoot() {
-            currentPath = "";
-            document.getElementById('currentPath').textContent = "Pasta Atual: Raiz";
+            currentPath = '';
+            document.getElementById('currentPath').textContent = 'Pasta Atual: Raiz';
             listFiles();
         }
 
@@ -350,50 +317,55 @@
         }
 
         function togglePlayPause() {
-            if (audioPlayer.style.display === 'block' && audioPlayer.paused) {
-                audioPlayer.play();
-                playPauseButton.textContent = 'Pausar';
-            } else if (audioPlayer.style.display === 'block') {
-                audioPlayer.pause();
-                playPauseButton.textContent = 'Tocar';
-            } else if (videoPlayer.style.display === 'block' && videoPlayer.paused) {
-                videoPlayer.play();
-                playPauseButton.textContent = 'Pausar';
-            } else if (videoPlayer.style.display === 'block') {
-                videoPlayer.pause();
-                playPauseButton.textContent = 'Tocar';
+            if (isPlayingVideo) {
+                if (videoPlayer.paused) {
+                    videoPlayer.play();
+                    playPauseButton.textContent = 'Pausar';
+                } else {
+                    videoPlayer.pause();
+                    playPauseButton.textContent = 'Tocar';
+                }
+            } else {
+                if (audioPlayer.paused) {
+                    audioPlayer.play();
+                    playPauseButton.textContent = 'Pausar';
+                } else {
+                    audioPlayer.pause();
+                    playPauseButton.textContent = 'Tocar';
+                }
             }
         }
 
         function stopMedia() {
-            if (audioPlayer.style.display === 'block') {
-                audioPlayer.pause();
-                audioPlayer.currentTime = 0;
-            } else if (videoPlayer.style.display === 'block') {
+            if (isPlayingVideo) {
                 videoPlayer.pause();
                 videoPlayer.currentTime = 0;
+                videoPlayer.style.display = 'none';
+            } else {
+                audioPlayer.pause();
+                audioPlayer.currentTime = 0;
+                audioPlayer.style.display = 'none';
             }
             playPauseButton.textContent = 'Tocar';
         }
 
         function playPreviousMedia() {
-            // Lógica para tocar a mídia anterior, se necessário
+            // Lógica para reproduzir o arquivo anterior (não implementada)
         }
 
         function playNextMedia() {
-            // Lógica para tocar a próxima mídia, se necessário
+            // Lógica para reproduzir o próximo arquivo (não implementada)
         }
 
         function adjustVolume() {
-            if (audioPlayer.style.display === 'block') {
-                audioPlayer.volume = volumeControl.value;
-            } else if (videoPlayer.style.display === 'block') {
+            if (isPlayingVideo) {
                 videoPlayer.volume = volumeControl.value;
+            } else {
+                audioPlayer.volume = volumeControl.value;
             }
         }
 
-        listFiles();  // Carregar a lista de arquivos ao iniciar
+        listFiles(); // Inicializar a lista de arquivos
     </script>
 </body>
-
 </html>
