@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Music Player</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #1e1e1e; /* Fundo escuro */
+            color: #fff; /* Texto branco */
+        }
+
+        #app-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #2c2c2c;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            color: #f5f5f5;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        input[type="file"] {
+            display: block;
+            margin: 0 auto 20px;
+            padding: 10px;
+            border: 2px dashed #888;
+            border-radius: 5px;
+            background-color: #3b3b3b;
+            font-size: 16px;
+            color: #fff;
+            width: calc(100% - 24px);
+            max-width: 400px;
+        }
+
+        button {
+            background-color: #5bc0de;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background-color: #4a9ac6;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .controls button {
+            flex: 1;
+            margin: 0 5px;
+        }
+
+        #volumeControl {
+            background: linear-gradient(to right, #5bc0de, #4a9ac6);
+            height: 10px;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        li {
+            background-color: #3b3b3b;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        li button {
+            margin-left: 5px;
+        }
+
+        audio {
+            width: 100%;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 5px;
+            background: #444;
+            border-radius: 5px;
+            margin-top: 10px;
+            position: relative;
+        }
+
+        .progress-bar .progress {
+            height: 100%;
+            background: #5bc0de;
+            border-radius: 5px;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .volume-container {
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .volume-container input[type="range"] {
+            width: 80%;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app-container">
+        <h1>My Music Player</h1>
+        <input type="file" id="fileInput" multiple>
+        <button id="uploadButton">Upload</button>
+        <button id="createFolderButton">Create Folder</button>
+        <button id="goToRootButton">Go to Root</button>
+        <button onclick="goToHomePage()">Back to Homepage</button>
+        <h2 id="currentPath"></h2>
+        <nav>
+            <button id="goToRootButton">Root</button>
+            <span id="breadcrumbs"></span>
+        </nav>
+        <ul id="fileList"></ul>
+        <audio id="audioPlayer" controls></audio>
+        <div class="volume-container">
+            <input type="range" id="volumeControl" min="0" max="1" step="0.1" value="0.5">
+        </div>
+        <div class="controls">
+            <button id="prevButton">Previous</button>
+            <button id="playPauseButton">Play</button>
+            <button id="stopButton">Stop</button>
+            <button id="nextButton">Next</button>
+        </div>
+        <div class="progress-bar">
+            <div id="progress" class="progress"></div>
+        </div>
+        <div>
+            <span id="currentTime">0:00</span> / <span id="duration">0:00</span>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDxMWPu_CnXV-u4-vlDFd-IZ8fzlyKJHng",
+            authDomain: "financeiro-5.firebaseapp.com",
+            projectId: "financeiro-5",
+            storageBucket: "financeiro-5.appspot.com",
+            messagingSenderId: "686639785223",
+            appId: "1:686639785223:web:0314689c82c6dd1c2951a2",
+            measurementId: "G-Q5REWML5DX"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const storage = firebase.storage();
+        const storageRef = storage.ref();
+
+        document.getElementById('uploadButton').addEventListener('click', uploadFiles);
+        document.getElementById('createFolderButton').addEventListener('click', createFolder);
+        document.getElementById('goToRootButton').addEventListener('click', goToRoot);
+
+        let currentPath = "";
+        let currentMusicIndex = 0;
+        let audioPlayer = document.getElementById('audioPlayer');
+        let playPauseButton = document.getElementById('playPauseButton');
+        let stopButton = document.getElementById('stopButton');
+        let prevButton = document.getElementById('prevButton');
+        let nextButton = document.getElementById('nextButton');
+        let volumeControl = document.getElementById('volumeControl');
+        let progressBar = document.getElementById('progress');
+
+        playPauseButton.addEventListener('click', togglePlayPause);
+        stopButton.addEventListener('click', stopMusic);
+        prevButton.addEventListener('click', playPreviousMusic);
+        nextButton.addEventListener('click', playNextMusic);
+        volumeControl.addEventListener('input', adjustVolume);
+        audioPlayer.addEventListener('timeupdate', updateProgressBar);
+        audioPlayer.addEventListener('ended', playNextMusic);
+
+        function uploadFiles() {
+            const fileInput = document.getElementById('fileInput');
+            const files = fileInput.files;
+
+            if (files.length === 0) {
+                alert('Selecione um ou mais arquivos para fazer upload.');
+                return;
+            }
+
+            Array.from(files).forEach(file => {
+                const fileRef = storageRef.child(currentPath + file.name);
+                fileRef.put(file).then(() => {
+                    listFiles();
+                }).catch(error => {
+                    alert(`Erro ao enviar o arquivo ${file.name}: ${error.message}`);
+                });
+            });
+        }
+
+        function listFiles() {
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '';
+
+            storageRef.child(currentPath).listAll().then(result => {
+                result.items.forEach((item, index) => {
+                    const li = document.createElement('li');
+                    li.textContent = item.name;
+
+                    const playButton = createButton('Play', 'play-btn', () => playSelectedMusic(index));
+                    const downloadButton = createButton('Download', 'download-btn', () => downloadFile(item));
+                    const deleteButton = createButton('Delete', 'delete-btn', () => deleteFile(item));
+                    const openFolderButton = createButton('Open Folder', 'open-folder-btn', () => openFolder(item));
+
+                    li.appendChild(playButton);
+                    li.appendChild(downloadButton);
+                    li.appendChild(deleteButton);
+                    li.appendChild(openFolderButton);
+                    fileList.appendChild(li);
+                });
+            }).catch(error => {
+                alert(`Erro ao listar os arquivos: ${error.message}`);
+            });
+        }
+
+        function playSelectedMusic(index) {
+            storageRef.child(currentPath).listAll().then(result => {
+                result.items[index].getDownloadURL().then(url => {
+                    audioPlayer.src = url;
+                    audioPlayer.play();
+                    currentMusicIndex = index;
+                    playPauseButton.textContent = 'Pause';
+                }).catch(error => {
+                    alert(`Erro ao obter URL do arquivo: ${error.message}`);
+                });
+            });
+        }
+
+        function downloadFile(item) {
+            item.getDownloadURL().then(url => {
+                window.open(url);
+            }).catch(error => {
+                alert(`Erro ao obter URL do arquivo para download: ${error.message}`);
+            });
+        }
+
+        function deleteFile(item) {
+            if (confirm('Você tem certeza que deseja excluir este arquivo?')) {
+                item.delete().then(() => {
+                    listFiles();
+                }).catch(error => {
+                    alert(`Erro ao excluir o arquivo: ${error.message}`);
+                });
+            }
+        }
+
+        function createFolder() {
+            const folderName = prompt('Digite o nome da nova pasta:');
+            if (folderName) {
+                const folderRef = storageRef.child(currentPath + folderName + '/');
+                folderRef.getDownloadURL().then(() => {
+                    alert('A pasta já existe!');
+                }).catch(() => {
+                    // Pasta não existe, então podemos criar a pasta
+                    listFiles();
+                });
+            }
+        }
+
+        function openFolder(folderRef) {
+            currentPath = folderRef.fullPath + '/';
+            document.getElementById('currentPath').textContent = `Pasta Atual: ${currentPath}`;
+            updateBreadcrumbs();
+            listFiles();
+        }
+
+        function goToRoot() {
+            currentPath = "";
+            document.getElementById('currentPath').textContent = "Pasta Atual: Pasta Principal";
+            updateBreadcrumbs();
+            listFiles();
+        }
+
+        function goToHomePage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html/wf/principal.html';
+        }
+
+        function updateBreadcrumbs() {
+            const breadcrumbs = document.getElementById('breadcrumbs');
+            breadcrumbs.innerHTML = '';
+            let pathSegments = currentPath.split('/').filter(segment => segment);
+            pathSegments.forEach((segment, index) => {
+                const breadcrumb = document.createElement('span');
+                breadcrumb.textContent = segment;
+                breadcrumb.className = 'breadcrumb';
+                breadcrumb.onclick = () => {
+                    currentPath = pathSegments.slice(0, index + 1).join('/') + '/';
+                    updateBreadcrumbs();
+                    listFiles();
+                };
+                breadcrumbs.appendChild(breadcrumb);
+                if (index < pathSegments.length - 1) {
+                    const separator = document.createTextNode(' > ');
+                    breadcrumbs.appendChild(separator);
+                }
+            });
+        }
+
+        function togglePlayPause() {
+            if (audioPlayer.paused) {
+                audioPlayer.play();
+                playPauseButton.textContent = 'Pause';
+                playPauseButton.classList.add('playing');
+            } else {
+                audioPlayer.pause();
+                playPauseButton.textContent = 'Play';
+                playPauseButton.classList.remove('playing');
+            }
+        }
+
+        function stopMusic() {
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
+            playPauseButton.textContent = 'Play';
+            playPauseButton.classList.remove('playing');
+        }
+
+        function playNextMusic() {
+            storageRef.child(currentPath).listAll().then(result => {
+                if (currentMusicIndex < result.items.length - 1) {
+                    currentMusicIndex++;
+                    playSelectedMusic(currentMusicIndex);
+                } else {
+                    currentMusicIndex = 0; // Loop to the beginning
+                    playSelectedMusic(currentMusicIndex);
+                }
+            });
+        }
+
+        function playPreviousMusic() {
+            storageRef.child(currentPath).listAll().then(result => {
+                if (currentMusicIndex > 0) {
+                    currentMusicIndex--;
+                    playSelectedMusic(currentMusicIndex);
+                } else {
+                    currentMusicIndex = result.items.length - 1; // Loop to the end
+                    playSelectedMusic(currentMusicIndex);
+                }
+            });
+        }
+
+        function adjustVolume() {
+            audioPlayer.volume = volumeControl.value;
+            volumeControl.style.backgroundSize = `${volumeControl.value * 100}% 100%`;
+        }
+
+        function updateProgressBar() {
+            const progress = document.getElementById('progress');
+            const percentage = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+            progress.style.width = `${percentage}%`;
+            document.getElementById('currentTime').textContent = formatTime(audioPlayer.currentTime);
+            document.getElementById('duration').textContent = formatTime(audioPlayer.duration);
+        }
+
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+    </script>
+</body>
+
+</html>
