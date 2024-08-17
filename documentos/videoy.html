@@ -1,1 +1,406 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reprodutor de Música</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #1e1e1e;
+            color: #fff;
+        }
+
+        #app-container {
+            display: flex;
+            min-height: 100vh;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: #232323;
+            padding: 15px;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.3);
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            overflow-y: auto;
+            z-index: 1;
+        }
+
+        .sidebar h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #fff;
+            text-align: center;
+        }
+
+        .sidebar input[type="file"],
+        .sidebar button {
+            display: block;
+            width: calc(100% - 20px);
+            margin: 10px auto;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #444;
+            background-color: #333;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .sidebar input[type="file"] {
+            border: 2px dashed #888;
+        }
+
+        .sidebar button {
+            background-color: #5bc0de;
+            border: none;
+            cursor: pointer;
+        }
+
+        .sidebar button:hover {
+            background-color: #4cae4c;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar li {
+            background-color: #333;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            font-size: 14px;
+        }
+
+        .sidebar li button {
+            background-color: #5bc0de;
+            border: none;
+            color: #fff;
+            padding: 5px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .sidebar li button:hover {
+            background-color: #4cae4c;
+        }
+
+        .content {
+            margin-left: 270px;
+            padding: 20px;
+            flex: 1;
+        }
+
+        .music-info {
+            font-size: 1.2rem;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
+        .player-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .player-controls button {
+            background-color: #5bc0de;
+            border: none;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-size: 16px;
+        }
+
+        .player-controls button:hover {
+            background-color: #4cae4c;
+        }
+
+        audio,
+        video {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        /* Responsividade para telas pequenas */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: static;
+                box-shadow: none;
+            }
+
+            .content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app-container">
+        <div class="sidebar">
+            <h1>Reprodutor de Música</h1>
+            <input type="file" id="fileInput" multiple>
+            <button id="uploadButton">Enviar</button>
+            <button id="createFolderButton">Criar Pasta</button>
+            <button id="goToRootButton">Ir para Raiz</button>
+            <button onclick="goToHomePage()">Voltar para Página Inicial</button>
+            <h2 id="currentPath">Pasta Atual: Raiz</h2>
+            <ul id="fileList"></ul>
+        </div>
+        <div class="content">
+            <div class="music-info">
+                <span id="currentSong">Nenhuma música tocando</span>
+            </div>
+            <audio id="audioPlayer" controls></audio>
+            <video id="videoPlayer" controls style="display: none;"></video>
+            <input type="range" id="volumeControl" min="0" max="1" step="0.1" value="0.5">
+            <div class="player-controls">
+                <button id="prevButton">Anterior</button>
+                <button id="playPauseButton">Tocar</button>
+                <button id="stopButton">Parar</button>
+                <button id="nextButton">Próximo</button>
+                <button id="expandButton">Expandir Tela</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDxMWPu_CnXV-u4-vlDFd-IZ8fzlyKJHng",
+            authDomain: "financeiro-5.firebaseapp.com",
+            projectId: "financeiro-5",
+            storageBucket: "financeiro-5.appspot.com",
+            messagingSenderId: "686639785223",
+            appId: "1:686639785223:web:0314689c82c6dd1c2951a2",
+            measurementId: "G-Q5REWML5DX"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const storage = firebase.storage();
+        const storageRef = storage.ref();
+
+        document.getElementById('uploadButton').addEventListener('click', uploadFiles);
+        document.getElementById('createFolderButton').addEventListener('click', createFolder);
+        document.getElementById('goToRootButton').addEventListener('click', goToRoot);
+        document.getElementById('expandButton').addEventListener('click', toggleFullScreen);
+
+        let currentPath = "";
+        let currentMusicIndex = 0;
+        let audioPlayer = document.getElementById('audioPlayer');
+        let videoPlayer = document.getElementById('videoPlayer');
+        let playPauseButton = document.getElementById('playPauseButton');
+        let stopButton = document.getElementById('stopButton');
+        let prevButton = document.getElementById('prevButton');
+        let nextButton = document.getElementById('nextButton');
+        let volumeControl = document.getElementById('volumeControl');
+        let currentSong = document.getElementById('currentSong');
+        let isFullScreen = false;
+
+        playPauseButton.addEventListener('click', togglePlayPause);
+        stopButton.addEventListener('click', stopMedia);
+        prevButton.addEventListener('click', playPreviousMedia);
+        nextButton.addEventListener('click', playNextMedia);
+        volumeControl.addEventListener('input', adjustVolume);
+        audioPlayer.addEventListener('ended', playNextMedia);
+        videoPlayer.addEventListener('ended', playNextMedia);
+
+        function createButton(text, className, onClick) {
+            const button = document.createElement('button');
+            button.textContent = text;
+            button.className = className;
+            button.addEventListener('click', onClick);
+            return button;
+        }
+
+        function uploadFiles() {
+            const fileInput = document.getElementById('fileInput');
+            const files = fileInput.files;
+
+            if (files.length === 0) {
+                alert('Selecione um ou mais arquivos para fazer upload.');
+                return;
+            }
+
+            Array.from(files).forEach(file => {
+                const fileRef = storageRef.child(currentPath + file.name);
+                fileRef.put(file).then(() => {
+                    listFiles();
+                }).catch(error => {
+                    alert(`Erro ao enviar o arquivo ${file.name}: ${error.message}`);
+                });
+            });
+        }
+
+        function listFiles() {
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '';
+
+            storageRef.child(currentPath).listAll().then(result => {
+                result.items.forEach((item, index) => {
+                    const li = document.createElement('li');
+                    li.textContent = item.name;
+
+                    const playButton = createButton('Tocar', 'play-button', () => playMedia(item));
+                    const deleteButton = createButton('Excluir', 'delete-button', () => deleteFile(item));
+
+                    li.appendChild(playButton);
+                    li.appendChild(deleteButton);
+                    fileList.appendChild(li);
+                });
+            }).catch(error => {
+                alert(`Erro ao listar os arquivos: ${error.message}`);
+            });
+        }
+
+        function createFolder() {
+            const folderName = prompt('Digite o nome da nova pasta:');
+            if (!folderName) return;
+
+            const folderRef = storageRef.child(currentPath + folderName + '/');
+            folderRef.put(new Blob([])).then(() => {
+                listFiles();
+            }).catch(error => {
+                alert(`Erro ao criar a pasta ${folderName}: ${error.message}`);
+            });
+        }
+
+        function deleteFile(item) {
+            item.delete().then(() => {
+                listFiles();
+            }).catch(error => {
+                alert(`Erro ao excluir o arquivo: ${error.message}`);
+            });
+        }
+
+        function playMedia(item) {
+            const mediaRef = storageRef.child(item.fullPath);
+            mediaRef.getDownloadURL().then(url => {
+                if (url.endsWith('.mp4') || url.endsWith('.avi') || url.endsWith('.mov')) {
+                    audioPlayer.style.display = 'none';
+                    videoPlayer.style.display = 'block';
+                    videoPlayer.src = url;
+                    videoPlayer.play();
+                    currentSong.textContent = `Reproduzindo vídeo: ${item.name}`;
+                } else if (url.endsWith('.mp3') || url.endsWith('.wav')) {
+                    videoPlayer.style.display = 'none';
+                    audioPlayer.style.display = 'block';
+                    audioPlayer.src = url;
+                    audioPlayer.play();
+                    currentSong.textContent = `Reproduzindo áudio: ${item.name}`;
+                } else {
+                    alert('Formato de arquivo não suportado.');
+                }
+            }).catch(error => {
+                alert(`Erro ao reproduzir o arquivo: ${error.message}`);
+            });
+        }
+
+        function togglePlayPause() {
+            if (audioPlayer.style.display === 'block' && audioPlayer.paused) {
+                audioPlayer.play();
+                playPauseButton.textContent = 'Pausar';
+            } else if (videoPlayer.style.display === 'block' && videoPlayer.paused) {
+                videoPlayer.play();
+                playPauseButton.textContent = 'Pausar';
+            } else {
+                audioPlayer.pause();
+                videoPlayer.pause();
+                playPauseButton.textContent = 'Tocar';
+            }
+        }
+
+        function stopMedia() {
+            audioPlayer.pause();
+            videoPlayer.pause();
+            audioPlayer.currentTime = 0;
+            videoPlayer.currentTime = 0;
+            playPauseButton.textContent = 'Tocar';
+            currentSong.textContent = 'Nenhuma mídia tocando';
+        }
+
+        function playPreviousMedia() {
+            // Implementar a lógica para tocar o item anterior
+        }
+
+        function playNextMedia() {
+            // Implementar a lógica para tocar o próximo item
+        }
+
+        function adjustVolume() {
+            const volume = volumeControl.value;
+            audioPlayer.volume = volume;
+            videoPlayer.volume = volume;
+        }
+
+        function goToHomePage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html/wf/principal.html';
+        }
+
+        function goToRoot() {
+            currentPath = "";
+            listFiles();
+            document.getElementById('currentPath').textContent = "Pasta Atual: Raiz";
+        }
+
+        function toggleFullScreen() {
+            if (!isFullScreen) {
+                if (videoPlayer.requestFullscreen) {
+                    videoPlayer.requestFullscreen();
+                } else if (videoPlayer.mozRequestFullScreen) { /* Firefox */
+                    videoPlayer.mozRequestFullScreen();
+                } else if (videoPlayer.webkitRequestFullscreen) { /* Chrome, Safari & Opera */
+                    videoPlayer.webkitRequestFullscreen();
+                } else if (videoPlayer.msRequestFullscreen) { /* IE/Edge */
+                    videoPlayer.msRequestFullscreen();
+                }
+                isFullScreen = true;
+                document.getElementById('expandButton').textContent = 'Sair da Tela Cheia';
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.mozCancelFullScreen) { /* Firefox */
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) { /* Chrome, Safari & Opera */
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) { /* IE/Edge */
+                    document.msExitFullscreen();
+                }
+                isFullScreen = false;
+                document.getElementById('expandButton').textContent = 'Expandir Tela';
+            }
+        }
+
+        // Listar arquivos ao carregar a página
+        listFiles();
+    </script>
+</body>
+
+</html>
 
