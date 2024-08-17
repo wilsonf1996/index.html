@@ -19,7 +19,6 @@
             min-height: 100vh;
             flex-direction: column;
             padding: 20px;
-            transition: margin-left 0.3s ease;
         }
 
         .sidebar {
@@ -33,10 +32,6 @@
             bottom: 0;
             overflow-y: auto;
             z-index: 1;
-        }
-
-        .sidebar.hidden {
-            display: none;
         }
 
         .sidebar h1 {
@@ -110,10 +105,6 @@
             flex: 1;
         }
 
-        .content.fullscreen {
-            margin-left: 0;
-        }
-
         .music-info {
             font-size: 1.2rem;
             color: #fff;
@@ -152,7 +143,6 @@
             margin-top: 10px;
         }
 
-        /* Responsividade para telas pequenas */
         @media (max-width: 768px) {
             .sidebar {
                 width: 100%;
@@ -169,7 +159,7 @@
 
 <body>
     <div id="app-container">
-        <div class="sidebar" id="sidebar">
+        <div class="sidebar">
             <h1>Reprodutor de Música</h1>
             <input type="file" id="fileInput" multiple>
             <button id="uploadButton">Enviar</button>
@@ -179,7 +169,7 @@
             <h2 id="currentPath">Pasta Atual: Raiz</h2>
             <ul id="fileList"></ul>
         </div>
-        <div class="content" id="content">
+        <div class="content">
             <div class="music-info">
                 <span id="currentSong">Nenhuma música tocando</span>
             </div>
@@ -219,6 +209,7 @@
         document.getElementById('fullscreenButton').addEventListener('click', toggleFullScreen);
 
         let currentPath = "";
+        let currentMusicIndex = 0;
         let audioPlayer = document.getElementById('audioPlayer');
         let playPauseButton = document.getElementById('playPauseButton');
         let stopButton = document.getElementById('stopButton');
@@ -226,11 +217,7 @@
         let nextButton = document.getElementById('nextButton');
         let volumeControl = document.getElementById('volumeControl');
         let currentSong = document.getElementById('currentSong');
-        let sidebar = document.getElementById('sidebar');
-        let content = document.getElementById('content');
-
-        let filesList = [];
-        let currentIndex = 0;
+        let musicFiles = [];
 
         playPauseButton.addEventListener('click', togglePlayPause);
         stopButton.addEventListener('click', stopMusic);
@@ -266,126 +253,87 @@
             });
         }
 
-        function createFolder() {
-            const folderName = prompt('Digite o nome da nova pasta:');
-            if (folderName) {
-                const folderRef = storageRef.child(currentPath + folderName + '/');
-                folderRef.getDownloadURL().catch(() => {
-                    listFiles();
-                });
-            }
-        }
-
-        function goToRoot() {
-            currentPath = '';
-            listFiles();
-        }
-
-        function goToHomePage() {
-            window.location.href = "https://wilsonf1996.github.io/index.html/wf/principal.html";
-        }
-
         function listFiles() {
             const fileList = document.getElementById('fileList');
             fileList.innerHTML = '';
+            musicFiles = [];
 
-            const listRef = storageRef.child(currentPath);
-            listRef.listAll().then(result => {
-                result.prefixes.forEach(folderRef => {
-                    const folderName = folderRef.name.split('/').pop();
-                    const listItem = document.createElement('li');
-                    listItem.textContent = folderName;
-                    listItem.appendChild(createButton('Abrir', 'open-folder', () => {
-                        currentPath = folderRef.fullPath + '/';
-                        listFiles();
-                    }));
-                    listItem.appendChild(createButton('Excluir', 'delete-folder', () => {
-                        deleteFolder(folderRef);
-                    }));
-                    fileList.appendChild(listItem);
+            storageRef.child(currentPath).listAll().then(result => {
+                result.items.forEach((item, index) => {
+                    musicFiles.push(item);
+
+                    const li = document.createElement('li');
+                    li.textContent = item.name;
+
+                    const playButton = createButton('Tocar', 'play-btn', () => playSelectedMusic(index));
+                    const downloadButton = createButton('Baixar', 'download-btn', () => downloadFile(item));
+                    const deleteButton = createButton('Excluir', 'delete-btn', () => deleteFile(item));
+
+                    li.appendChild(playButton);
+                    li.appendChild(downloadButton);
+                    li.appendChild(deleteButton);
+
+                    fileList.appendChild(li);
                 });
-
-                result.items.forEach(fileRef => {
-                    const fileName = fileRef.name.split('/').pop();
-                    const listItem = document.createElement('li');
-                    listItem.textContent = fileName;
-                    listItem.appendChild(createButton('Reproduzir', 'play-file', () => {
-                        playMusic(fileRef);
-                    }));
-                    listItem.appendChild(createButton('Excluir', 'delete-file', () => {
-                        deleteFile(fileRef);
-                    }));
-                    fileList.appendChild(listItem);
-                });
-
-                document.getElementById('currentPath').textContent = `Pasta Atual: ${currentPath || 'Raiz'}`;
             }).catch(error => {
                 alert(`Erro ao listar arquivos: ${error.message}`);
             });
         }
 
-        function playMusic(fileRef) {
-            fileRef.getDownloadURL().then(url => {
-                audioPlayer.src = url;
-                audioPlayer.play();
-                currentSong.textContent = fileRef.name;
-                filesList.push(fileRef);
-                currentIndex = filesList.indexOf(fileRef);
-            }).catch(error => {
-                alert(`Erro ao carregar o arquivo: ${error.message}`);
-            });
+        function playSelectedMusic(index) {
+            if (index >= 0 && index < musicFiles.length) {
+                const file = musicFiles[index];
+                file.getDownloadURL().then(url => {
+                    audioPlayer.src = url;
+                    audioPlayer.play();
+                    currentMusicIndex = index;
+                    currentSong.textContent = `Tocando: ${file.name}`;
+                }).catch(error => {
+                    alert(`Erro ao obter URL do arquivo: ${error.message}`);
+                });
+            }
         }
 
-        function togglePlayPause() {
-            if (audioPlayer.paused) {
-                audioPlayer.play();
-                playPauseButton.textContent = 'Pausar';
-            } else {
-                audioPlayer.pause();
-                playPauseButton.textContent = 'Tocar';
+        function playPreviousMusic() {
+            if (musicFiles.length > 0) {
+                currentMusicIndex = (currentMusicIndex - 1 + musicFiles.length) % musicFiles.length;
+                playSelectedMusic(currentMusicIndex);
+            }
+        }
+
+        function playNextMusic() {
+            if (musicFiles.length > 0) {
+                currentMusicIndex = (currentMusicIndex + 1) % musicFiles.length;
+                playSelectedMusic(currentMusicIndex);
             }
         }
 
         function stopMusic() {
             audioPlayer.pause();
             audioPlayer.currentTime = 0;
-            playPauseButton.textContent = 'Tocar';
             currentSong.textContent = 'Nenhuma música tocando';
-        }
-
-        function playPreviousMusic() {
-            if (filesList.length === 0) return;
-
-            currentIndex = (currentIndex - 1 + filesList.length) % filesList.length;
-            playMusic(filesList[currentIndex]);
-        }
-
-        function playNextMusic() {
-            if (filesList.length === 0) return;
-
-            currentIndex = (currentIndex + 1) % filesList.length;
-            playMusic(filesList[currentIndex]);
         }
 
         function adjustVolume() {
             audioPlayer.volume = volumeControl.value;
         }
 
-        function toggleFullScreen() {
-            if (!document.fullscreenElement) {
-                content.requestFullscreen().catch(err => {
-                    alert(`Erro ao tentar entrar em tela cheia: ${err.message}`);
-                });
-                sidebar.classList.add('hidden');
-            } else {
-                document.exitFullscreen();
-                sidebar.classList.remove('hidden');
-            }
+        function downloadFile(file) {
+            file.getDownloadURL().then(url => {
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = file.name;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }).catch(error => {
+                alert(`Erro ao baixar o arquivo: ${error.message}`);
+            });
         }
 
-        function deleteFile(fileRef) {
-            if (confirm(`Você tem certeza que deseja excluir o arquivo ${fileRef.name}?`)) {
-                fileRef.delete().then(() => {
+        function deleteFile(file) {
+            if (confirm(`Você tem certeza que deseja excluir o arquivo ${file.name}?`)) {
+                file.delete().then(() => {
                     listFiles();
                 }).catch(error => {
                     alert(`Erro ao excluir o arquivo: ${error.message}`);
@@ -393,23 +341,36 @@
             }
         }
 
-        function deleteFolder(folderRef) {
-            if (confirm(`Você tem certeza que deseja excluir a pasta ${folderRef.name}?`)) {
-                folderRef.listAll().then(result => {
-                    const deletePromises = result.items.map(fileRef => fileRef.delete());
-                    const deleteFoldersPromises = result.prefixes.map(deleteFolder);
-                    return Promise.all([...deletePromises, ...deleteFoldersPromises]);
-                }).then(() => {
-                    folderRef.delete().then(() => {
-                        listFiles();
-                    });
+        function createFolder() {
+            const folderName = prompt('Nome da nova pasta:');
+            if (folderName) {
+                storageRef.child(currentPath + folderName + '/').put(new Blob([])).then(() => {
+                    listFiles();
                 }).catch(error => {
-                    alert(`Erro ao excluir a pasta: ${error.message}`);
+                    alert(`Erro ao criar a pasta: ${error.message}`);
                 });
             }
         }
 
-        listFiles(); // Inicializa a lista de arquivos ao carregar a página
+        function goToRoot() {
+            currentPath = "";
+            document.getElementById('currentPath').textContent = 'Pasta Atual: Raiz';
+            listFiles();
+        }
+
+        function goToHomePage() {
+            window.location.href = "https://wilsonf1996.github.io/index.html/wf/principal.html";
+        }
+
+        function toggleFullScreen() {
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            } else {
+                document.documentElement.requestFullscreen();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', listFiles);
     </script>
 </body>
 
