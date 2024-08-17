@@ -32,10 +32,11 @@
             bottom: 0;
             overflow-y: auto;
             z-index: 1;
+            transition: transform 0.3s ease;
         }
 
-        .sidebar.hidden {
-            display: none;
+        .sidebar.fullscreen {
+            transform: translateX(-100%);
         }
 
         .sidebar h1 {
@@ -109,13 +110,6 @@
             flex: 1;
         }
 
-        .content.fullscreen {
-            margin-left: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-        }
-
         .music-info {
             font-size: 1.2rem;
             color: #fff;
@@ -154,6 +148,21 @@
             margin-top: 10px;
         }
 
+        .fullscreen-button {
+            background-color: #5bc0de;
+            border: none;
+            color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+
+        .fullscreen-button:hover {
+            background-color: #4cae4c;
+        }
+
         /* Responsividade para telas pequenas */
         @media (max-width: 768px) {
             .sidebar {
@@ -180,8 +189,9 @@
             <button onclick="goToHomePage()">Voltar para Página Inicial</button>
             <h2 id="currentPath">Pasta Atual: Raiz</h2>
             <ul id="fileList"></ul>
+            <button id="fullscreenButton" class="fullscreen-button">Tela Cheia</button>
         </div>
-        <div class="content" id="content">
+        <div class="content">
             <div class="music-info">
                 <span id="currentSong">Nenhuma música tocando</span>
             </div>
@@ -192,7 +202,6 @@
                 <button id="playPauseButton">Tocar</button>
                 <button id="stopButton">Parar</button>
                 <button id="nextButton">Próximo</button>
-                <button id="fullscreenButton">Tela Cheia</button>
             </div>
         </div>
     </div>
@@ -218,6 +227,7 @@
         document.getElementById('uploadButton').addEventListener('click', uploadFiles);
         document.getElementById('createFolderButton').addEventListener('click', createFolder);
         document.getElementById('goToRootButton').addEventListener('click', goToRoot);
+        document.getElementById('fullscreenButton').addEventListener('click', toggleFullscreen);
 
         let currentPath = "";
         let currentMusicIndex = 0;
@@ -228,9 +238,7 @@
         let nextButton = document.getElementById('nextButton');
         let volumeControl = document.getElementById('volumeControl');
         let currentSong = document.getElementById('currentSong');
-        let fullscreenButton = document.getElementById('fullscreenButton');
         let sidebar = document.getElementById('sidebar');
-        let content = document.getElementById('content');
 
         playPauseButton.addEventListener('click', togglePlayPause);
         stopButton.addEventListener('click', stopMusic);
@@ -238,7 +246,22 @@
         nextButton.addEventListener('click', playNextMusic);
         volumeControl.addEventListener('input', adjustVolume);
         audioPlayer.addEventListener('ended', playNextMusic);
-        fullscreenButton.addEventListener('click', toggleFullscreen);
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    alert(`Erro ao tentar entrar no modo tela cheia: ${err.message}`);
+                });
+                sidebar.classList.add('fullscreen');
+                document.getElementById('fullscreenButton').textContent = 'Sair de Tela Cheia';
+            } else {
+                document.exitFullscreen().catch(err => {
+                    alert(`Erro ao sair do modo tela cheia: ${err.message}`);
+                });
+                sidebar.classList.remove('fullscreen');
+                document.getElementById('fullscreenButton').textContent = 'Tela Cheia';
+            }
+        }
 
         function createButton(text, className, onClick) {
             const button = document.createElement('button');
@@ -248,96 +271,81 @@
             return button;
         }
 
-        function uploadFiles() {
-            const fileInput = document.getElementById('fileInput');
-            const files = fileInput.files;
+        function updateFileList(files) {
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '';
+            files.forEach(file => {
+                const li = document.createElement('li');
+                li.textContent = file.name;
+                const playButton = createButton('Tocar', 'play-button', () => playMusic(file));
+                const deleteButton = createButton('Excluir', 'delete-button', () => deleteFile(file));
+                li.appendChild(playButton);
+                li.appendChild(deleteButton);
+                fileList.appendChild(li);
+            });
+        }
 
-            if (files.length === 0) {
-                alert('Selecione um ou mais arquivos para fazer upload.');
-                return;
-            }
+        function uploadFiles() {
+            const files = document.getElementById('fileInput').files;
+            if (files.length === 0) return;
 
             Array.from(files).forEach(file => {
-                const fileRef = storageRef.child(currentPath + file.name);
+                const fileRef = storageRef.child(`${currentPath}/${file.name}`);
                 fileRef.put(file).then(() => {
-                    listFiles();
+                    alert('Arquivo enviado com sucesso!');
+                    updateFileList();
                 }).catch(error => {
-                    alert(`Erro ao enviar o arquivo ${file.name}: ${error.message}`);
+                    alert('Erro ao enviar o arquivo: ' + error.message);
                 });
             });
         }
 
-        function listFiles() {
-            const fileList = document.getElementById('fileList');
-            fileList.innerHTML = '';
-
-            storageRef.child(currentPath).listAll().then(result => {
-                result.items.forEach((item, index) => {
-                    const li = document.createElement('li');
-                    li.textContent = item.name;
-
-                    const playButton = createButton('Tocar', 'play-btn', () => playSelectedMusic(index));
-                    const downloadButton = createButton('Baixar', 'download-btn', () => downloadFile(item));
-                    const deleteButton = createButton('Excluir', 'delete-btn', () => deleteFile(item));
-
-                    li.appendChild(playButton);
-                    li.appendChild(downloadButton);
-                    li.appendChild(deleteButton);
-                    fileList.appendChild(li);
+        function createFolder() {
+            const folderName = prompt('Digite o nome da nova pasta:');
+            if (folderName) {
+                const folderRef = storageRef.child(`${currentPath}/${folderName}`);
+                folderRef.child('dummy').set(null).then(() => {
+                    alert('Pasta criada com sucesso!');
+                    goToCurrentPath();
+                }).catch(error => {
+                    alert('Erro ao criar a pasta: ' + error.message);
                 });
+            }
+        }
 
-                result.prefixes.forEach(prefix => {
-                    const li = document.createElement('li');
-                    li.textContent = `[Pasta] ${prefix.name}`;
+        function goToRoot() {
+            currentPath = '';
+            goToCurrentPath();
+        }
 
-                    const openButton = createButton('Abrir', 'open-btn', () => {
-                        currentPath = prefix.fullPath + '/';
-                        listFiles();
-                    });
-
-                    const deleteButton = createButton('Excluir', 'delete-btn', () => deleteFolder(prefix));
-
-                    li.appendChild(openButton);
-                    li.appendChild(deleteButton);
-                    fileList.appendChild(li);
-                });
+        function goToCurrentPath() {
+            const listRef = storageRef.child(currentPath);
+            listRef.listAll().then(result => {
+                updateFileList(result.items);
+                document.getElementById('currentPath').textContent = `Pasta Atual: ${currentPath || 'Raiz'}`;
             }).catch(error => {
                 alert('Erro ao listar arquivos: ' + error.message);
             });
         }
 
-        function playSelectedMusic(index) {
-            storageRef.child(currentPath).listAll().then(result => {
-                if (index < 0 || index >= result.items.length) {
-                    return;
-                }
-                result.items[index].getDownloadURL().then(url => {
-                    audioPlayer.src = url;
-                    audioPlayer.play();
-                    currentMusicIndex = index;
-                    currentSong.textContent = result.items[index].name;
-                    playPauseButton.textContent = 'Pausar';
-                }).catch(error => {
-                    alert('Erro ao reproduzir a música: ' + error.message);
-                });
+        function playMusic(file) {
+            const fileRef = storageRef.child(`${currentPath}/${file.name}`);
+            fileRef.getDownloadURL().then(url => {
+                audioPlayer.src = url;
+                audioPlayer.play();
+                currentSong.textContent = `Tocando: ${file.name}`;
+            }).catch(error => {
+                alert('Erro ao reproduzir a música: ' + error.message);
             });
         }
 
-        function playPreviousMusic() {
-            currentMusicIndex--;
-            if (currentMusicIndex < 0) {
-                currentMusicIndex = 0;
-            }
-            playSelectedMusic(currentMusicIndex);
-        }
-
-        function playNextMusic() {
-            storageRef.child(currentPath).listAll().then(result => {
-                currentMusicIndex++;
-                if (currentMusicIndex >= result.items.length) {
-                    currentMusicIndex = 0;
-                }
-                playSelectedMusic(currentMusicIndex);
+        function deleteFile(file) {
+            const fileRef = storageRef.child(`${currentPath}/${file.name}`);
+            fileRef.delete().then(() => {
+                alert('Arquivo excluído com sucesso!');
+                goToCurrentPath();
+            }).catch(error => {
+                alert('Erro ao excluir o arquivo: ' + error.message);
             });
         }
 
@@ -355,31 +363,23 @@
             audioPlayer.pause();
             audioPlayer.currentTime = 0;
             playPauseButton.textContent = 'Tocar';
+            currentSong.textContent = 'Nenhuma música tocando';
+        }
+
+        function playPreviousMusic() {
+            // Lógica para tocar a música anterior
+        }
+
+        function playNextMusic() {
+            // Lógica para tocar a próxima música
         }
 
         function adjustVolume() {
             audioPlayer.volume = volumeControl.value;
         }
 
-        function goToRoot() {
-            currentPath = '';
-            listFiles();
-        }
-
         function goToHomePage() {
-            window.location.href = "https://wilsonf1996.github.io/index.html/wf/principal.html";
-        }
-
-        function toggleFullscreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen();
-                sidebar.classList.add('hidden');
-                content.classList.add('fullscreen');
-            } else {
-                document.exitFullscreen();
-                sidebar.classList.remove('hidden');
-                content.classList.remove('fullscreen');
-            }
+            window.location.href = 'https://wilsonf1996.github.io/index.html/wf/principal.html';
         }
     </script>
 </body>
