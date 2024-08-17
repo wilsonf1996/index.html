@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reprodutor de Música</title>
+    <title>Reprodutor de Música e Vídeo</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -132,7 +133,8 @@
             background-color: #4cae4c;
         }
 
-        audio, video {
+        audio,
+        video {
             width: 100%;
             margin-top: 10px;
         }
@@ -156,10 +158,11 @@
         }
     </style>
 </head>
+
 <body>
     <div id="app-container">
         <div class="sidebar">
-            <h1>Reprodutor de Música</h1>
+            <h1>Reprodutor de Música e Vídeo</h1>
             <input type="file" id="fileInput" multiple>
             <button id="uploadButton">Enviar</button>
             <button id="createFolderButton">Criar Pasta</button>
@@ -263,61 +266,44 @@
 
                     const playButton = createButton('Tocar', 'play-btn', () => playSelectedMedia(index));
                     const downloadButton = createButton('Baixar', 'download-btn', () => downloadFile(item));
+                    const deleteButton = createButton('Excluir', 'delete-btn', () => deleteFile(item));
 
                     li.appendChild(playButton);
                     li.appendChild(downloadButton);
+                    li.appendChild(deleteButton);
 
                     fileList.appendChild(li);
                 });
             }).catch(error => {
-                alert(`Erro ao listar os arquivos: ${error.message}`);
+                alert(`Erro ao listar arquivos: ${error.message}`);
             });
         }
 
         function playSelectedMedia(index) {
-            storageRef.child(currentPath + index).getDownloadURL().then(url => {
-                const extension = url.split('.').pop().toLowerCase();
-
-                if (['mp3', 'wav'].includes(extension)) {
-                    audioPlayer.src = url;
-                    audioPlayer.style.display = 'block';
-                    videoPlayer.style.display = 'none';
-                    audioPlayer.play();
-                    currentSong.textContent = `Tocando: ${index}`;
-                } else if (['mp4', 'avi', 'mov'].includes(extension)) {
-                    videoPlayer.src = url;
-                    videoPlayer.style.display = 'block';
-                    audioPlayer.style.display = 'none';
-                    videoPlayer.play();
-                    currentSong.textContent = `Assistindo: ${index}`;
-                } else {
-                    alert('Formato de arquivo não suportado.');
-                }
+            storageRef.child(currentPath).listAll().then(result => {
+                result.items[index].getDownloadURL().then(url => {
+                    const fileName = result.items[index].name;
+                    if (fileName.endsWith('.mp4')) {
+                        audioPlayer.style.display = 'none';
+                        videoPlayer.style.display = 'block';
+                        videoPlayer.src = url;
+                        videoPlayer.play();
+                        currentSong.textContent = `Vídeo: ${fileName}`;
+                    } else if (fileName.endsWith('.mp3')) {
+                        videoPlayer.style.display = 'none';
+                        audioPlayer.style.display = 'block';
+                        audioPlayer.src = url;
+                        audioPlayer.play();
+                        currentSong.textContent = `Música: ${fileName}`;
+                    } else {
+                        alert('Formato de arquivo não suportado.');
+                    }
+                }).catch(error => {
+                    alert(`Erro ao obter o URL do arquivo: ${error.message}`);
+                });
             }).catch(error => {
-                alert(`Erro ao reproduzir o arquivo: ${error.message}`);
+                alert(`Erro ao listar arquivos: ${error.message}`);
             });
-        }
-
-        function stopMedia() {
-            audioPlayer.pause();
-            videoPlayer.pause();
-            audioPlayer.currentTime = 0;
-            videoPlayer.currentTime = 0;
-            currentSong.textContent = 'Nenhuma mídia tocando';
-        }
-
-        function playPreviousMedia() {
-            // Implementar lógica para tocar o arquivo anterior
-        }
-
-        function playNextMedia() {
-            // Implementar lógica para tocar o próximo arquivo
-        }
-
-        function adjustVolume() {
-            const volume = volumeControl.value;
-            audioPlayer.volume = volume;
-            videoPlayer.volume = volume;
         }
 
         function downloadFile(item) {
@@ -327,12 +313,30 @@
                 a.download = item.name;
                 a.click();
             }).catch(error => {
-                alert(`Erro ao baixar o arquivo: ${error.message}`);
+                alert(`Erro ao obter o URL do arquivo: ${error.message}`);
             });
         }
 
+        function deleteFile(item) {
+            if (confirm(`Tem certeza de que deseja excluir ${item.name}?`)) {
+                item.delete().then(() => {
+                    listFiles();
+                }).catch(error => {
+                    alert(`Erro ao excluir o arquivo: ${error.message}`);
+                });
+            }
+        }
+
         function createFolder() {
-            // Implementar a lógica para criar uma nova pasta
+            const folderName = prompt('Digite o nome da nova pasta:');
+            if (folderName) {
+                const folderRef = storageRef.child(currentPath + folderName + '/');
+                folderRef.put(new Blob()).then(() => {
+                    listFiles();
+                }).catch(error => {
+                    alert(`Erro ao criar a pasta: ${error.message}`);
+                });
+            }
         }
 
         function goToRoot() {
@@ -342,10 +346,54 @@
         }
 
         function goToHomePage() {
-            window.location.href = "https://wilsonf1996.github.io/index.html/wf/principal.html";
+            window.location.href = 'https://wilsonf1996.github.io/index.html/wf/principal.html';
         }
 
-        listFiles();
+        function togglePlayPause() {
+            if (audioPlayer.style.display === 'block' && audioPlayer.paused) {
+                audioPlayer.play();
+                playPauseButton.textContent = 'Pausar';
+            } else if (audioPlayer.style.display === 'block') {
+                audioPlayer.pause();
+                playPauseButton.textContent = 'Tocar';
+            } else if (videoPlayer.style.display === 'block' && videoPlayer.paused) {
+                videoPlayer.play();
+                playPauseButton.textContent = 'Pausar';
+            } else if (videoPlayer.style.display === 'block') {
+                videoPlayer.pause();
+                playPauseButton.textContent = 'Tocar';
+            }
+        }
+
+        function stopMedia() {
+            if (audioPlayer.style.display === 'block') {
+                audioPlayer.pause();
+                audioPlayer.currentTime = 0;
+            } else if (videoPlayer.style.display === 'block') {
+                videoPlayer.pause();
+                videoPlayer.currentTime = 0;
+            }
+            playPauseButton.textContent = 'Tocar';
+        }
+
+        function playPreviousMedia() {
+            // Lógica para tocar a mídia anterior, se necessário
+        }
+
+        function playNextMedia() {
+            // Lógica para tocar a próxima mídia, se necessário
+        }
+
+        function adjustVolume() {
+            if (audioPlayer.style.display === 'block') {
+                audioPlayer.volume = volumeControl.value;
+            } else if (videoPlayer.style.display === 'block') {
+                videoPlayer.volume = volumeControl.value;
+            }
+        }
+
+        listFiles();  // Carregar a lista de arquivos ao iniciar
     </script>
 </body>
+
 </html>
