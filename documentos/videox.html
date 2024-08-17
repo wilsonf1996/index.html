@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reprodutor de Música e Vídeo</title>
+    <title>Reprodutor de Música</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -105,7 +105,7 @@
             flex: 1;
         }
 
-        .media-info {
+        .music-info {
             font-size: 1.2rem;
             color: #fff;
             margin-bottom: 10px;
@@ -133,7 +133,7 @@
             background-color: #4cae4c;
         }
 
-        video, audio {
+        audio, video {
             width: 100%;
             margin-top: 10px;
         }
@@ -156,14 +156,15 @@
             }
         }
 
-        /* Estilo para tela cheia */
+        /* Estilo para a tela cheia */
         .fullscreen {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            z-index: 1000;
+            z-index: 9999;
+            background: #000;
         }
     </style>
 </head>
@@ -171,7 +172,7 @@
 <body>
     <div id="app-container">
         <div class="sidebar">
-            <h1>Reprodutor de Música e Vídeo</h1>
+            <h1>Reprodutor de Música</h1>
             <input type="file" id="fileInput" multiple>
             <button id="uploadButton">Enviar</button>
             <button id="createFolderButton">Criar Pasta</button>
@@ -181,16 +182,18 @@
             <ul id="fileList"></ul>
         </div>
         <div class="content">
-            <div class="media-info">
-                <span id="currentMedia">Nenhuma mídia tocando</span>
+            <div class="music-info">
+                <span id="currentSong">Nenhuma música tocando</span>
             </div>
-            <video id="mediaPlayer" controls></video>
+            <audio id="audioPlayer" controls></audio>
+            <video id="videoPlayer" controls style="display: none;"></video>
             <input type="range" id="volumeControl" min="0" max="1" step="0.1" value="0.5">
             <div class="player-controls">
                 <button id="prevButton">Anterior</button>
                 <button id="playPauseButton">Tocar</button>
                 <button id="stopButton">Parar</button>
                 <button id="nextButton">Próximo</button>
+                <button id="openFileButton">Abrir Arquivo</button>
                 <button id="fullscreenButton">Tela Cheia</button>
             </div>
         </div>
@@ -217,25 +220,30 @@
         document.getElementById('uploadButton').addEventListener('click', uploadFiles);
         document.getElementById('createFolderButton').addEventListener('click', createFolder);
         document.getElementById('goToRootButton').addEventListener('click', goToRoot);
+        document.getElementById('openFileButton').addEventListener('click', openFile);
+        document.getElementById('fullscreenButton').addEventListener('click', toggleFullscreen);
 
         let currentPath = "";
-        let currentMediaIndex = 0;
-        let mediaPlayer = document.getElementById('mediaPlayer');
+        let currentMusicIndex = 0;
+        let audioPlayer = document.getElementById('audioPlayer');
+        let videoPlayer = document.getElementById('videoPlayer');
         let playPauseButton = document.getElementById('playPauseButton');
         let stopButton = document.getElementById('stopButton');
         let prevButton = document.getElementById('prevButton');
         let nextButton = document.getElementById('nextButton');
         let volumeControl = document.getElementById('volumeControl');
-        let fullscreenButton = document.getElementById('fullscreenButton');
-        let currentMedia = document.getElementById('currentMedia');
+        let currentSong = document.getElementById('currentSong');
 
         playPauseButton.addEventListener('click', togglePlayPause);
         stopButton.addEventListener('click', stopMedia);
         prevButton.addEventListener('click', playPreviousMedia);
         nextButton.addEventListener('click', playNextMedia);
         volumeControl.addEventListener('input', adjustVolume);
-        fullscreenButton.addEventListener('click', toggleFullscreen);
-        mediaPlayer.addEventListener('ended', playNextMedia);
+        audioPlayer.addEventListener('ended', playNextMedia);
+        videoPlayer.addEventListener('ended', () => {
+            videoPlayer.style.display = 'none';
+            audioPlayer.style.display = 'block';
+        });
 
         function createButton(text, className, onClick) {
             const button = document.createElement('button');
@@ -255,11 +263,12 @@
             }
 
             Array.from(files).forEach(file => {
-                const fileRef = storageRef.child(currentPath + file.name);
+                const fileRef = storageRef.child(`${currentPath}/${file.name}`);
                 fileRef.put(file).then(() => {
+                    alert(`Arquivo ${file.name} enviado com sucesso.`);
                     listFiles();
                 }).catch(error => {
-                    alert(`Erro ao enviar o arquivo ${file.name}: ${error.message}`);
+                    alert(`Erro ao enviar arquivo ${file.name}: ${error.message}`);
                 });
             });
         }
@@ -269,29 +278,61 @@
             fileList.innerHTML = '';
 
             storageRef.child(currentPath).listAll().then(result => {
-                result.items.forEach((item, index) => {
-                    const li = document.createElement('li');
-                    li.textContent = item.name;
-
-                    const playButton = createButton('Tocar', 'play-btn', () => playSelectedMedia(index));
-                    const downloadButton = createButton('Baixar', 'download-btn', () => downloadFile(item));
-
-                    li.appendChild(playButton);
-                    li.appendChild(downloadButton);
-                    fileList.appendChild(li);
+                result.items.forEach(fileRef => {
+                    fileRef.getMetadata().then(metadata => {
+                        const fileName = metadata.name;
+                        const listItem = document.createElement('li');
+                        listItem.textContent = fileName;
+                        listItem.appendChild(createButton('Tocar', 'play-button', () => playMedia(fileRef)));
+                        listItem.appendChild(createButton('Excluir', 'delete-button', () => deleteFile(fileRef)));
+                        fileList.appendChild(listItem);
+                    });
                 });
-            }).catch(error => {
-                alert(`Erro ao listar arquivos: ${error.message}`);
             });
         }
 
-        function createFolder() {
-            const folderName = prompt('Nome da nova pasta:');
-            if (folderName) {
-                storageRef.child(currentPath + folderName + '/').put(new Blob()).then(() => {
+        function playMedia(fileRef) {
+            fileRef.getDownloadURL().then(url => {
+                const fileName = fileRef.name.toLowerCase();
+                if (fileName.endsWith('.mp3') || fileName.endsWith('.wav')) {
+                    audioPlayer.src = url;
+                    audioPlayer.style.display = 'block';
+                    videoPlayer.style.display = 'none';
+                    currentSong.textContent = `Tocando: ${fileName}`;
+                    audioPlayer.play();
+                } else if (fileName.endsWith('.mp4') || fileName.endsWith('.webm')) {
+                    videoPlayer.src = url;
+                    videoPlayer.style.display = 'block';
+                    audioPlayer.style.display = 'none';
+                    currentSong.textContent = `Tocando: ${fileName}`;
+                    videoPlayer.play();
+                } else {
+                    alert('Tipo de arquivo não suportado.');
+                }
+            }).catch(error => {
+                alert(`Erro ao obter URL do arquivo: ${error.message}`);
+            });
+        }
+
+        function deleteFile(fileRef) {
+            if (confirm('Tem certeza que deseja excluir este arquivo?')) {
+                fileRef.delete().then(() => {
+                    alert('Arquivo excluído com sucesso.');
                     listFiles();
                 }).catch(error => {
-                    alert(`Erro ao criar a pasta: ${error.message}`);
+                    alert(`Erro ao excluir arquivo: ${error.message}`);
+                });
+            }
+        }
+
+        function createFolder() {
+            const folderName = prompt('Digite o nome da nova pasta:');
+            if (folderName) {
+                storageRef.child(`${currentPath}/${folderName}`).child('dummy').put(new Blob([])).then(() => {
+                    alert('Pasta criada com sucesso.');
+                    listFiles();
+                }).catch(error => {
+                    alert(`Erro ao criar pasta: ${error.message}`);
                 });
             }
         }
@@ -302,91 +343,57 @@
             listFiles();
         }
 
-        function playSelectedMedia(index) {
-            storageRef.child(currentPath).listAll().then(result => {
-                result.items[index].getDownloadURL().then(url => {
-                    mediaPlayer.src = url;
-                    mediaPlayer.play();
-                    currentMedia.textContent = `Tocando: ${result.items[index].name}`;
-                    currentMediaIndex = index;
-                }).catch(error => {
-                    alert(`Erro ao obter URL para o arquivo: ${error.message}`);
-                });
-            }).catch(error => {
-                alert(`Erro ao listar arquivos: ${error.message}`);
-            });
+        function openFile() {
+            document.getElementById('fileInput').click();
         }
 
         function togglePlayPause() {
-            if (mediaPlayer.paused) {
-                mediaPlayer.play();
+            if (audioPlayer.paused) {
+                audioPlayer.play();
                 playPauseButton.textContent = 'Pausar';
             } else {
-                mediaPlayer.pause();
+                audioPlayer.pause();
                 playPauseButton.textContent = 'Tocar';
             }
         }
 
         function stopMedia() {
-            mediaPlayer.pause();
-            mediaPlayer.currentTime = 0;
+            audioPlayer.pause();
+            videoPlayer.pause();
+            audioPlayer.currentTime = 0;
+            videoPlayer.currentTime = 0;
             playPauseButton.textContent = 'Tocar';
         }
 
         function playPreviousMedia() {
-            storageRef.child(currentPath).listAll().then(result => {
-                if (currentMediaIndex > 0) {
-                    currentMediaIndex--;
-                    playSelectedMedia(currentMediaIndex);
-                } else {
-                    alert('Não há mídia anterior.');
-                }
-            });
+            // Implementar lógica para tocar a música anterior
         }
 
         function playNextMedia() {
-            storageRef.child(currentPath).listAll().then(result => {
-                if (currentMediaIndex < result.items.length - 1) {
-                    currentMediaIndex++;
-                    playSelectedMedia(currentMediaIndex);
-                } else {
-                    alert('Não há mídia seguinte.');
-                }
-            });
+            // Implementar lógica para tocar a próxima música
         }
 
         function adjustVolume() {
-            mediaPlayer.volume = volumeControl.value;
+            audioPlayer.volume = volumeControl.value;
         }
 
         function toggleFullscreen() {
             if (!document.fullscreenElement) {
-                mediaPlayer.requestFullscreen().catch(err => {
-                    alert(`Erro ao entrar em tela cheia: ${err.message}`);
-                });
+                if (audioPlayer.style.display === 'block') {
+                    audioPlayer.requestFullscreen();
+                } else if (videoPlayer.style.display === 'block') {
+                    videoPlayer.requestFullscreen();
+                }
             } else {
                 document.exitFullscreen();
             }
         }
 
-        function downloadFile(item) {
-            item.getDownloadURL().then(url => {
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = item.name;
-                link.click();
-            }).catch(error => {
-                alert(`Erro ao obter URL para download: ${error.message}`);
-            });
-        }
-
         function goToHomePage() {
             window.location.href = 'https://wilsonf1996.github.io/index.html/wf/principal.html';
         }
-
-        // Carregar arquivos da pasta inicial ao carregar a página
-        window.onload = listFiles;
     </script>
 </body>
 
 </html>
+
