@@ -156,18 +156,14 @@
             }
         }
 
-        /* Estilo para fullscreen */
+        /* Estilo para tela cheia */
         .fullscreen {
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: black;
-            z-index: 9999;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1000;
         }
     </style>
 </head>
@@ -186,10 +182,9 @@
         </div>
         <div class="content">
             <div class="media-info">
-                <span id="currentMedia">Nenhum mídia tocando</span>
+                <span id="currentMedia">Nenhuma mídia tocando</span>
             </div>
-            <audio id="audioPlayer" controls></audio>
-            <video id="videoPlayer" controls></video>
+            <video id="mediaPlayer" controls></video>
             <input type="range" id="volumeControl" min="0" max="1" step="0.1" value="0.5">
             <div class="player-controls">
                 <button id="prevButton">Anterior</button>
@@ -222,27 +217,25 @@
         document.getElementById('uploadButton').addEventListener('click', uploadFiles);
         document.getElementById('createFolderButton').addEventListener('click', createFolder);
         document.getElementById('goToRootButton').addEventListener('click', goToRoot);
-        document.getElementById('fullscreenButton').addEventListener('click', toggleFullscreen);
 
         let currentPath = "";
         let currentMediaIndex = 0;
-        let audioPlayer = document.getElementById('audioPlayer');
-        let videoPlayer = document.getElementById('videoPlayer');
+        let mediaPlayer = document.getElementById('mediaPlayer');
         let playPauseButton = document.getElementById('playPauseButton');
         let stopButton = document.getElementById('stopButton');
         let prevButton = document.getElementById('prevButton');
         let nextButton = document.getElementById('nextButton');
         let volumeControl = document.getElementById('volumeControl');
+        let fullscreenButton = document.getElementById('fullscreenButton');
         let currentMedia = document.getElementById('currentMedia');
-        let isFullscreen = false;
 
         playPauseButton.addEventListener('click', togglePlayPause);
         stopButton.addEventListener('click', stopMedia);
         prevButton.addEventListener('click', playPreviousMedia);
         nextButton.addEventListener('click', playNextMedia);
         volumeControl.addEventListener('input', adjustVolume);
-        audioPlayer.addEventListener('ended', playNextMedia);
-        videoPlayer.addEventListener('ended', playNextMedia);
+        fullscreenButton.addEventListener('click', toggleFullscreen);
+        mediaPlayer.addEventListener('ended', playNextMedia);
 
         function createButton(text, className, onClick) {
             const button = document.createElement('button');
@@ -275,97 +268,30 @@
             const fileList = document.getElementById('fileList');
             fileList.innerHTML = '';
 
-            const listRef = storageRef.child(currentPath);
-            listRef.listAll().then(res => {
-                res.items.forEach(itemRef => {
-                    itemRef.getDownloadURL().then(url => {
-                        const li = document.createElement('li');
-                        li.textContent = itemRef.name;
-                        const playButton = createButton('Tocar', 'play-button', () => playMedia(url, itemRef.name));
-                        const deleteButton = createButton('Excluir', 'delete-button', () => deleteFile(itemRef));
-                        li.appendChild(playButton);
-                        li.appendChild(deleteButton);
-                        fileList.appendChild(li);
-                    });
+            storageRef.child(currentPath).listAll().then(result => {
+                result.items.forEach((item, index) => {
+                    const li = document.createElement('li');
+                    li.textContent = item.name;
+
+                    const playButton = createButton('Tocar', 'play-btn', () => playSelectedMedia(index));
+                    const downloadButton = createButton('Baixar', 'download-btn', () => downloadFile(item));
+
+                    li.appendChild(playButton);
+                    li.appendChild(downloadButton);
+                    fileList.appendChild(li);
                 });
             }).catch(error => {
                 alert(`Erro ao listar arquivos: ${error.message}`);
             });
         }
 
-        function playMedia(url, name) {
-            if (name.endsWith('.mp4')) {
-                videoPlayer.src = url;
-                videoPlayer.style.display = 'block';
-                audioPlayer.style.display = 'none';
-                currentMedia.textContent = `Reproduzindo vídeo: ${name}`;
-            } else if (name.endsWith('.mp3')) {
-                audioPlayer.src = url;
-                audioPlayer.style.display = 'block';
-                videoPlayer.style.display = 'none';
-                currentMedia.textContent = `Reproduzindo áudio: ${name}`;
-            } else {
-                alert('Formato de arquivo não suportado.');
-                return;
-            }
-            audioPlayer.play();
-            videoPlayer.play();
-        }
-
-        function stopMedia() {
-            audioPlayer.pause();
-            videoPlayer.pause();
-            audioPlayer.currentTime = 0;
-            videoPlayer.currentTime = 0;
-            currentMedia.textContent = 'Nenhum mídia tocando';
-        }
-
-        function togglePlayPause() {
-            if (audioPlayer.style.display === 'block' && !audioPlayer.paused) {
-                audioPlayer.pause();
-                playPauseButton.textContent = 'Tocar';
-            } else if (videoPlayer.style.display === 'block' && !videoPlayer.paused) {
-                videoPlayer.pause();
-                playPauseButton.textContent = 'Tocar';
-            } else {
-                if (audioPlayer.style.display === 'block') {
-                    audioPlayer.play();
-                    playPauseButton.textContent = 'Pausar';
-                } else if (videoPlayer.style.display === 'block') {
-                    videoPlayer.play();
-                    playPauseButton.textContent = 'Pausar';
-                }
-            }
-        }
-
-        function playPreviousMedia() {
-            // Implement logic to play the previous media
-        }
-
-        function playNextMedia() {
-            // Implement logic to play the next media
-        }
-
-        function adjustVolume() {
-            const volume = volumeControl.value;
-            audioPlayer.volume = volume;
-            videoPlayer.volume = volume;
-        }
-
-        function deleteFile(fileRef) {
-            fileRef.delete().then(() => {
-                listFiles();
-            }).catch(error => {
-                alert(`Erro ao excluir o arquivo: ${error.message}`);
-            });
-        }
-
         function createFolder() {
-            const folderName = prompt('Digite o nome da nova pasta:');
+            const folderName = prompt('Nome da nova pasta:');
             if (folderName) {
-                const newFolderRef = storageRef.child(`${currentPath}${folderName}/`);
-                newFolderRef.getDownloadURL().catch(() => {
+                storageRef.child(currentPath + folderName + '/').put(new Blob()).then(() => {
                     listFiles();
+                }).catch(error => {
+                    alert(`Erro ao criar a pasta: ${error.message}`);
                 });
             }
         }
@@ -376,25 +302,91 @@
             listFiles();
         }
 
+        function playSelectedMedia(index) {
+            storageRef.child(currentPath).listAll().then(result => {
+                result.items[index].getDownloadURL().then(url => {
+                    mediaPlayer.src = url;
+                    mediaPlayer.play();
+                    currentMedia.textContent = `Tocando: ${result.items[index].name}`;
+                    currentMediaIndex = index;
+                }).catch(error => {
+                    alert(`Erro ao obter URL para o arquivo: ${error.message}`);
+                });
+            }).catch(error => {
+                alert(`Erro ao listar arquivos: ${error.message}`);
+            });
+        }
+
+        function togglePlayPause() {
+            if (mediaPlayer.paused) {
+                mediaPlayer.play();
+                playPauseButton.textContent = 'Pausar';
+            } else {
+                mediaPlayer.pause();
+                playPauseButton.textContent = 'Tocar';
+            }
+        }
+
+        function stopMedia() {
+            mediaPlayer.pause();
+            mediaPlayer.currentTime = 0;
+            playPauseButton.textContent = 'Tocar';
+        }
+
+        function playPreviousMedia() {
+            storageRef.child(currentPath).listAll().then(result => {
+                if (currentMediaIndex > 0) {
+                    currentMediaIndex--;
+                    playSelectedMedia(currentMediaIndex);
+                } else {
+                    alert('Não há mídia anterior.');
+                }
+            });
+        }
+
+        function playNextMedia() {
+            storageRef.child(currentPath).listAll().then(result => {
+                if (currentMediaIndex < result.items.length - 1) {
+                    currentMediaIndex++;
+                    playSelectedMedia(currentMediaIndex);
+                } else {
+                    alert('Não há mídia seguinte.');
+                }
+            });
+        }
+
+        function adjustVolume() {
+            mediaPlayer.volume = volumeControl.value;
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                mediaPlayer.requestFullscreen().catch(err => {
+                    alert(`Erro ao entrar em tela cheia: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        function downloadFile(item) {
+            item.getDownloadURL().then(url => {
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = item.name;
+                link.click();
+            }).catch(error => {
+                alert(`Erro ao obter URL para download: ${error.message}`);
+            });
+        }
+
         function goToHomePage() {
             window.location.href = 'https://wilsonf1996.github.io/index.html/wf/principal.html';
         }
 
-        function toggleFullscreen() {
-            if (isFullscreen) {
-                document.exitFullscreen();
-                isFullscreen = false;
-                document.getElementById('app-container').classList.remove('fullscreen');
-            } else {
-                document.documentElement.requestFullscreen();
-                isFullscreen = true;
-                document.getElementById('app-container').classList.add('fullscreen');
-            }
-        }
-
-        listFiles(); // Inicializa a lista de arquivos ao carregar a página
+        // Carregar arquivos da pasta inicial ao carregar a página
+        window.onload = listFiles;
     </script>
 </body>
 
 </html>
-
