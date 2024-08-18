@@ -212,7 +212,6 @@
 
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
-
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyDxMWPu_CnXV-u4-vlDFd-IZ8fzlyKJHng",
@@ -234,7 +233,7 @@
         document.getElementById('fullscreenButton').addEventListener('click', toggleFullScreen);
 
         let currentPath = "";
-        let currentMediaIndex = 0;
+        let currentMusicIndex = 0;
         let mediaPlayer = document.getElementById('mediaPlayer');
         let playPauseButton = document.getElementById('playPauseButton');
         let stopButton = document.getElementById('stopButton');
@@ -285,66 +284,33 @@
                     const li = document.createElement('li');
                     li.textContent = item.name;
 
-                    const playButton = createButton('Tocar', 'play-btn', () => playMedia(item));
+                    const playButton = createButton('Tocar', 'play-btn', () => playSelectedMedia(index));
                     const deleteButton = createButton('Excluir', 'delete-btn', () => deleteFile(item));
+                    const openFolderButton = createButton('Abrir Pasta', 'open-folder-btn', () => openFolder(item));
 
                     li.appendChild(playButton);
                     li.appendChild(deleteButton);
+                    li.appendChild(openFolderButton);
 
                     fileList.appendChild(li);
                 });
             }).catch(error => {
-                alert(`Erro ao listar os arquivos: ${error.message}`);
+                alert(`Erro ao listar arquivos: ${error.message}`);
             });
         }
 
-        function createFolder() {
-            const folderName = prompt('Digite o nome da nova pasta:');
-            if (!folderName) return;
-
-            const folderRef = storageRef.child(`${currentPath}${folderName}/`);
-            folderRef.child('dummy.txt').put(new Blob()).then(() => {
-                listFiles();
-            }).catch(error => {
-                alert(`Erro ao criar a pasta: ${error.message}`);
-            });
-        }
-
-        function deleteFile(fileRef) {
-            if (confirm('Tem certeza que deseja excluir este arquivo?')) {
-                fileRef.delete().then(() => {
-                    listFiles();
+        function playSelectedMedia(index) {
+            storageRef.child(currentPath).listAll().then(result => {
+                result.items[index].getDownloadURL().then(url => {
+                    mediaPlayer.src = url;
+                    mediaPlayer.play();
+                    currentMusicIndex = index;
+                    currentSong.textContent = `Tocando: ${result.items[index].name}`;
                 }).catch(error => {
-                    alert(`Erro ao excluir o arquivo: ${error.message}`);
+                    alert(`Erro ao obter URL para o arquivo: ${error.message}`);
                 });
-            }
-        }
-
-        function goToRoot() {
-            currentPath = '';
-            document.getElementById('currentPath').textContent = 'Pasta Atual: Raiz';
-            listFiles();
-        }
-
-        function goToHomePage() {
-            window.location.href = 'https://wilsonf1996.github.io/index.html/wf/principal.html';
-        }
-
-        function playMedia(item) {
-            item.getDownloadURL().then(url => {
-                if (url.endsWith('.mp4')) {
-                    mediaPlayer.src = url;
-                    mediaPlayer.type = 'video/mp4';
-                } else if (url.endsWith('.mp3')) {
-                    mediaPlayer.src = url;
-                    mediaPlayer.type = 'audio/mp3';
-                } else {
-                    alert('Formato de arquivo não suportado.');
-                }
-                currentSong.textContent = `Tocando: ${item.name}`;
-                mediaPlayer.play();
             }).catch(error => {
-                alert(`Erro ao reproduzir o arquivo: ${error.message}`);
+                alert(`Erro ao listar arquivos: ${error.message}`);
             });
         }
 
@@ -365,13 +331,29 @@
         }
 
         function playPreviousMedia() {
-            currentMediaIndex = (currentMediaIndex - 1 + mediaList.length) % mediaList.length;
-            playMedia(mediaList[currentMediaIndex]);
+            storageRef.child(currentPath).listAll().then(result => {
+                if (currentMusicIndex > 0) {
+                    currentMusicIndex--;
+                    playSelectedMedia(currentMusicIndex);
+                } else {
+                    alert('Não há mídia anterior.');
+                }
+            }).catch(error => {
+                alert(`Erro ao listar arquivos: ${error.message}`);
+            });
         }
 
         function playNextMedia() {
-            currentMediaIndex = (currentMediaIndex + 1) % mediaList.length;
-            playMedia(mediaList[currentMediaIndex]);
+            storageRef.child(currentPath).listAll().then(result => {
+                if (currentMusicIndex < result.items.length - 1) {
+                    currentMusicIndex++;
+                    playSelectedMedia(currentMusicIndex);
+                } else {
+                    alert('Não há mais mídia.');
+                }
+            }).catch(error => {
+                alert(`Erro ao listar arquivos: ${error.message}`);
+            });
         }
 
         function adjustVolume() {
@@ -379,16 +361,62 @@
         }
 
         function toggleFullScreen() {
-            if (document.fullscreenElement) {
-                document.exitFullscreen();
-                document.querySelector('.fullscreen').classList.remove('fullscreen');
+            if (!document.fullscreenElement) {
+                if (mediaPlayer.requestFullscreen) {
+                    mediaPlayer.requestFullscreen();
+                } else if (mediaPlayer.webkitRequestFullscreen) {
+                    mediaPlayer.webkitRequestFullscreen();
+                } else if (mediaPlayer.msRequestFullscreen) {
+                    mediaPlayer.msRequestFullscreen();
+                }
             } else {
-                document.documentElement.requestFullscreen();
-                document.querySelector('.fullscreen').classList.add('fullscreen');
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
             }
         }
 
-        listFiles(); // Carregar arquivos ao iniciar
+        function createFolder() {
+            const folderName = prompt('Digite o nome da nova pasta:');
+            if (folderName) {
+                const newFolderRef = storageRef.child(currentPath + folderName + '/');
+                newFolderRef.getDownloadURL().then(() => {
+                    alert('Pasta já existe.');
+                }).catch(() => {
+                    listFiles();
+                });
+            }
+        }
+
+        function deleteFile(file) {
+            file.delete().then(() => {
+                listFiles();
+            }).catch(error => {
+                alert(`Erro ao excluir arquivo: ${error.message}`);
+            });
+        }
+
+        function openFolder(folder) {
+            currentPath = folder.fullPath + '/';
+            document.getElementById('currentPath').textContent = `Pasta Atual: ${currentPath}`;
+            listFiles();
+        }
+
+        function goToRoot() {
+            currentPath = "";
+            document.getElementById('currentPath').textContent = `Pasta Atual: Raiz`;
+            listFiles();
+        }
+
+        function goToHomePage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html/wf/principal.html';
+        }
+
+        listFiles();
     </script>
 </body>
 
