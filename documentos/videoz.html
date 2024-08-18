@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 
@@ -20,6 +19,7 @@
             min-height: 100vh;
             flex-direction: column;
             padding: 20px;
+            transition: padding 0.3s;
         }
 
         .sidebar {
@@ -33,6 +33,7 @@
             bottom: 0;
             overflow-y: auto;
             z-index: 1;
+            transition: transform 0.3s;
         }
 
         .sidebar h1 {
@@ -144,28 +145,20 @@
             margin-top: 10px;
         }
 
-        /* Estilo para tela cheia */
-        .fullscreen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: #1e1e1e;
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+        .fullscreen-button {
+            background-color: #5bc0de;
+            border: none;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-size: 16px;
+            margin-top: 20px;
         }
 
-        .fullscreen audio {
-            width: 80%;
-            margin: 0;
-        }
-
-        .fullscreen .player-controls {
-            margin: 20px 0;
+        .fullscreen-button:hover {
+            background-color: #4cae4c;
         }
 
         /* Responsividade para telas pequenas */
@@ -179,6 +172,15 @@
             .content {
                 margin-left: 0;
             }
+        }
+
+        /* Estilos para modo tela cheia */
+        body.fullscreen #app-container {
+            padding: 0;
+        }
+
+        body.fullscreen .sidebar {
+            transform: translateX(-100%);
         }
     </style>
 </head>
@@ -206,8 +208,8 @@
                 <button id="playPauseButton">Tocar</button>
                 <button id="stopButton">Parar</button>
                 <button id="nextButton">Próximo</button>
-                <button id="fullscreenButton">Tela Cheia</button>
             </div>
+            <button id="fullscreenButton" class="fullscreen-button">Tela Cheia</button>
         </div>
     </div>
 
@@ -232,7 +234,6 @@
         document.getElementById('uploadButton').addEventListener('click', uploadFiles);
         document.getElementById('createFolderButton').addEventListener('click', createFolder);
         document.getElementById('goToRootButton').addEventListener('click', goToRoot);
-        document.getElementById('fullscreenButton').addEventListener('click', toggleFullscreen);
 
         let currentPath = "";
         let currentMusicIndex = 0;
@@ -243,8 +244,7 @@
         let nextButton = document.getElementById('nextButton');
         let volumeControl = document.getElementById('volumeControl');
         let currentSong = document.getElementById('currentSong');
-        let appContainer = document.getElementById('app-container');
-        let isFullscreen = false;
+        let fullscreenButton = document.getElementById('fullscreenButton');
 
         playPauseButton.addEventListener('click', togglePlayPause);
         stopButton.addEventListener('click', stopMusic);
@@ -252,6 +252,7 @@
         nextButton.addEventListener('click', playNextMusic);
         volumeControl.addEventListener('input', adjustVolume);
         audioPlayer.addEventListener('ended', playNextMusic);
+        fullscreenButton.addEventListener('click', toggleFullscreen);
 
         function createButton(text, className, onClick) {
             const button = document.createElement('button');
@@ -271,11 +272,12 @@
             }
 
             Array.from(files).forEach(file => {
-                const fileRef = storageRef.child(currentPath + file.name);
+                const fileRef = storageRef.child(`${currentPath}/${file.name}`);
                 fileRef.put(file).then(() => {
+                    alert(`Arquivo ${file.name} enviado com sucesso!`);
                     listFiles();
                 }).catch(error => {
-                    alert(`Erro ao enviar o arquivo ${file.name}: ${error.message}`);
+                    console.error('Erro ao enviar o arquivo:', error);
                 });
             });
         }
@@ -283,12 +285,12 @@
         function createFolder() {
             const folderName = prompt('Digite o nome da nova pasta:');
             if (folderName) {
-                const folderRef = storageRef.child(currentPath + folderName + '/');
-                folderRef.getDownloadURL().catch(error => {
-                    if (error.code === 'storage/object-not-found') {
-                        // Pasta não existe, então criamos
-                        listFiles();
-                    }
+                const folderRef = storageRef.child(`${currentPath}/${folderName}/`);
+                folderRef.child('placeholder.txt').put(new Blob([])).then(() => {
+                    alert(`Pasta ${folderName} criada com sucesso!`);
+                    listFiles();
+                }).catch(error => {
+                    console.error('Erro ao criar a pasta:', error);
                 });
             }
         }
@@ -299,7 +301,7 @@
         }
 
         function goToHomePage() {
-            window.location.href = 'https://wilsonf1996.github.io/index.html/wf/principal.html';
+            window.location.href = "https://wilsonf1996.github.io/index.html/wf/principal.html";
         }
 
         function listFiles() {
@@ -307,19 +309,28 @@
             fileList.innerHTML = '';
 
             storageRef.child(currentPath).listAll().then(result => {
-                result.items.forEach(fileRef => {
+                result.prefixes.forEach(folderRef => {
+                    const folderName = folderRef.name.replace(/.*\//, '');
                     const listItem = document.createElement('li');
-                    listItem.textContent = fileRef.name;
+                    listItem.textContent = `📁 ${folderName}`;
+                    listItem.appendChild(createButton('Abrir', 'folder-button', () => {
+                        currentPath += `${folderName}/`;
+                        listFiles();
+                    }));
+                    fileList.appendChild(listItem);
+                });
 
-                    const playButton = createButton('Tocar', 'play-btn', () => playMusic(fileRef));
-                    const deleteButton = createButton('Excluir', 'delete-btn', () => deleteFile(fileRef));
-
-                    listItem.appendChild(playButton);
-                    listItem.appendChild(deleteButton);
+                result.items.forEach(fileRef => {
+                    const fileName = fileRef.name.replace(/.*\//, '');
+                    const listItem = document.createElement('li');
+                    listItem.textContent = fileName;
+                    listItem.appendChild(createButton('Tocar', 'play-button', () => {
+                        playMusic(fileRef);
+                    }));
                     fileList.appendChild(listItem);
                 });
             }).catch(error => {
-                alert(`Erro ao listar arquivos: ${error.message}`);
+                console.error('Erro ao listar arquivos:', error);
             });
         }
 
@@ -328,14 +339,10 @@
                 audioPlayer.src = url;
                 audioPlayer.play();
                 currentSong.textContent = `Tocando: ${fileRef.name}`;
-                currentMusicIndex = Array.from(document.getElementById('fileList').children).findIndex(li => li.textContent.includes(fileRef.name));
+                playPauseButton.textContent = 'Pausar';
+            }).catch(error => {
+                console.error('Erro ao obter URL do arquivo:', error);
             });
-        }
-
-        function stopMusic() {
-            audioPlayer.pause();
-            audioPlayer.currentTime = 0;
-            currentSong.textContent = 'Nenhuma música tocando';
         }
 
         function togglePlayPause() {
@@ -348,67 +355,49 @@
             }
         }
 
+        function stopMusic() {
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
+            playPauseButton.textContent = 'Tocar';
+            currentSong.textContent = 'Nenhuma música tocando';
+        }
+
         function playPreviousMusic() {
-            if (currentMusicIndex > 0) {
-                currentMusicIndex--;
-                const previousFile = document.getElementById('fileList').children[currentMusicIndex];
-                if (previousFile) {
-                    playMusic({ name: previousFile.textContent });
-                }
-            }
+            // Implementar funcionalidade de tocar música anterior
         }
 
         function playNextMusic() {
-            if (currentMusicIndex < document.getElementById('fileList').children.length - 1) {
-                currentMusicIndex++;
-                const nextFile = document.getElementById('fileList').children[currentMusicIndex];
-                if (nextFile) {
-                    playMusic({ name: nextFile.textContent });
-                }
-            }
+            // Implementar funcionalidade de tocar próxima música
         }
 
         function adjustVolume() {
             audioPlayer.volume = volumeControl.value;
         }
 
-        function deleteFile(fileRef) {
-            fileRef.delete().then(() => {
-                listFiles();
-            }).catch(error => {
-                alert(`Erro ao excluir o arquivo: ${error.message}`);
-            });
-        }
-
         function toggleFullscreen() {
-            if (!isFullscreen) {
-                if (appContainer.requestFullscreen) {
-                    appContainer.requestFullscreen();
-                } else if (appContainer.mozRequestFullScreen) { // Firefox
-                    appContainer.mozRequestFullScreen();
-                } else if (appContainer.webkitRequestFullscreen) { // Chrome, Safari and Opera
-                    appContainer.webkitRequestFullscreen();
-                } else if (appContainer.msRequestFullscreen) { // IE/Edge
-                    appContainer.msRequestFullscreen();
-                }
-                isFullscreen = true;
-                document.getElementById('fullscreenButton').textContent = 'Sair da Tela Cheia';
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+                fullscreenButton.textContent = 'Sair da Tela Cheia';
             } else {
                 if (document.exitFullscreen) {
                     document.exitFullscreen();
-                } else if (document.mozCancelFullScreen) { // Firefox
-                    document.mozCancelFullScreen();
-                } else if (document.webkitExitFullscreen) { // Chrome, Safari and Opera
-                    document.webkitExitFullscreen();
-                } else if (document.msExitFullscreen) { // IE/Edge
-                    document.msExitFullscreen();
                 }
-                isFullscreen = false;
-                document.getElementById('fullscreenButton').textContent = 'Tela Cheia';
+                fullscreenButton.textContent = 'Tela Cheia';
             }
         }
+
+        document.addEventListener('fullscreenchange', () => {
+            if (document.fullscreenElement) {
+                document.body.classList.add('fullscreen');
+            } else {
+                document.body.classList.remove('fullscreen');
+            }
+        });
+
+        listFiles();
     </script>
 </body>
 
 </html>
+
 
