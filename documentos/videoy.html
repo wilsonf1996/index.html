@@ -158,10 +158,11 @@
     flex-direction: column;
 }
 
-        .fullscreen #audioPlayer {
+        video {
     width: 100%;
-    height: 100%;
+    margin-top: 10px;
 }
+
 
 .fullscreen .player-controls {
     position: absolute;
@@ -204,7 +205,7 @@
             <div class="music-info">
                 <span id="currentSong">Nenhuma música tocando</span>
             </div>
-            <audio id="audioPlayer" controls></audio>
+            <video id="mediaPlayer" controls></video>
             <input type="range" id="volumeControl" min="0" max="1" step="0.1" value="0.5">
             <div class="player-controls">
                 <button id="prevButton">Anterior</button>
@@ -283,83 +284,88 @@
         }
 
         function listFiles() {
-            const fileList = document.getElementById('fileList');
-            fileList.innerHTML = '';
+    const fileList = document.getElementById('fileList');
+    fileList.innerHTML = '';
 
-            storageRef.child(currentPath).listAll().then(result => {
-                result.items.forEach((item, index) => {
-                    const li = document.createElement('li');
-                    li.textContent = item.name;
+    storageRef.child(currentPath).listAll().then(result => {
+        result.items.forEach((item, index) => {
+            const li = document.createElement('li');
+            li.textContent = item.name;
 
-                    const playButton = createButton('Tocar', 'play-btn', () => playSelectedMusic(index));
-                    const downloadButton = createButton('Baixar', 'download-btn', () => downloadFile(item));
-                    const deleteButton = createButton('Excluir', 'delete-btn', () => deleteFile(item));
-                    const openFolderButton = createButton('Abrir Pasta', 'open-folder-btn', () => openFolder(item));
+            const playButton = createButton('Tocar', 'play-btn', () => playSelectedMedia(index));
+            const downloadButton = createButton('Baixar', 'download-btn', () => downloadFile(item));
+            const deleteButton = createButton('Excluir', 'delete-btn', () => deleteFile(item));
+            const openFolderButton = createButton('Abrir Pasta', 'open-folder-btn', () => openFolder(item));
 
-                    li.appendChild(playButton);
-                    li.appendChild(downloadButton);
-                    li.appendChild(deleteButton);
-                    li.appendChild(openFolderButton);
+            li.appendChild(playButton);
+            li.appendChild(downloadButton);
+            li.appendChild(deleteButton);
+            li.appendChild(openFolderButton);
 
-                    fileList.appendChild(li);
-                });
-            }).catch(error => {
-                alert(`Erro ao listar arquivos: ${error.message}`);
-            });
+            fileList.appendChild(li);
+        });
+    }).catch(error => {
+        alert(`Erro ao listar arquivos: ${error.message}`);
+    });
+}
+
+
+       let mediaPlayer = document.getElementById('mediaPlayer');
+
+function playSelectedMedia(index) {
+    storageRef.child(currentPath).listAll().then(result => {
+        result.items[index].getDownloadURL().then(url => {
+            mediaPlayer.src = url;
+            mediaPlayer.play();
+            currentMusicIndex = index;
+            currentSong.textContent = `Tocando: ${result.items[index].name}`;
+        }).catch(error => {
+            alert(`Erro ao obter URL para o arquivo: ${error.message}`);
+        });
+    }).catch(error => {
+        alert(`Erro ao listar arquivos: ${error.message}`);
+    });
+}
+
+
+      function togglePlayPause() {
+    if (mediaPlayer.paused) {
+        mediaPlayer.play();
+        playPauseButton.textContent = 'Pausar';
+    } else {
+        mediaPlayer.pause();
+        playPauseButton.textContent = 'Tocar';
+    }
+}
+
+function stopMedia() {
+    mediaPlayer.pause();
+    mediaPlayer.currentTime = 0;
+    playPauseButton.textContent = 'Tocar';
+}
+
+function playPreviousMedia() {
+    storageRef.child(currentPath).listAll().then(result => {
+        if (currentMusicIndex > 0) {
+            currentMusicIndex--;
+            playSelectedMedia(currentMusicIndex);
+        } else {
+            alert('Não há mídia anterior.');
         }
+    });
+}
 
-        function playSelectedMusic(index) {
-            storageRef.child(currentPath).listAll().then(result => {
-                result.items[index].getDownloadURL().then(url => {
-                    audioPlayer.src = url;
-                    audioPlayer.play();
-                    currentMusicIndex = index;
-                    currentSong.textContent = `Tocando: ${result.items[index].name}`;
-                }).catch(error => {
-                    alert(`Erro ao obter URL para o arquivo: ${error.message}`);
-                });
-            }).catch(error => {
-                alert(`Erro ao listar arquivos: ${error.message}`);
-            });
+function playNextMedia() {
+    storageRef.child(currentPath).listAll().then(result => {
+        if (currentMusicIndex < result.items.length - 1) {
+            currentMusicIndex++;
+            playSelectedMedia(currentMusicIndex);
+        } else {
+            alert('Não há mídia seguinte.');
         }
+    });
+}
 
-        function togglePlayPause() {
-            if (audioPlayer.paused) {
-                audioPlayer.play();
-                playPauseButton.textContent = 'Pausar';
-            } else {
-                audioPlayer.pause();
-                playPauseButton.textContent = 'Tocar';
-            }
-        }
-
-        function stopMusic() {
-            audioPlayer.pause();
-            audioPlayer.currentTime = 0;
-            playPauseButton.textContent = 'Tocar';
-        }
-
-        function playPreviousMusic() {
-            storageRef.child(currentPath).listAll().then(result => {
-                if (currentMusicIndex > 0) {
-                    currentMusicIndex--;
-                    playSelectedMusic(currentMusicIndex);
-                } else {
-                    alert('Não há música anterior.');
-                }
-            });
-        }
-
-        function playNextMusic() {
-            storageRef.child(currentPath).listAll().then(result => {
-                if (currentMusicIndex < result.items.length - 1) {
-                    currentMusicIndex++;
-                    playSelectedMusic(currentMusicIndex);
-                } else {
-                    alert('Não há música seguinte.');
-                }
-            });
-        }
 
         function adjustVolume() {
             audioPlayer.volume = volumeControl.value;
