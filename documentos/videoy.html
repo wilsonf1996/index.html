@@ -133,7 +133,7 @@
             background-color: #4cae4c;
         }
 
-        audio {
+        video {
             width: 100%;
             margin-top: 10px;
         }
@@ -144,35 +144,28 @@
         }
 
         .fullscreen .sidebar {
-    display: none;
-}
+            display: none;
+        }
 
-.fullscreen .content {
-    margin-left: 0;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-}
+        .fullscreen .content {
+            margin-left: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
 
-.fullscreen #app-container {
-    flex-direction: column;
-}
+        .fullscreen #app-container {
+            flex-direction: column;
+        }
 
-        video {
-    width: 100%;
-    margin-top: 10px;
-}
-
-
-.fullscreen .player-controls {
-    position: absolute;
-    bottom: 20px;
-    left: 0;
-    width: 100%;
-    display: flex;
-    justify-content: space-around;
-}
-
+        .fullscreen .player-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+        }
 
         /* Responsividade para telas pequenas */
         @media (max-width: 768px) {
@@ -238,10 +231,11 @@
         document.getElementById('uploadButton').addEventListener('click', uploadFiles);
         document.getElementById('createFolderButton').addEventListener('click', createFolder);
         document.getElementById('goToRootButton').addEventListener('click', goToRoot);
+        document.getElementById('fullscreenButton').addEventListener('click', toggleFullScreen);
 
         let currentPath = "";
-        let currentMusicIndex = 0;
-        let audioPlayer = document.getElementById('audioPlayer');
+        let currentMediaIndex = 0;
+        let mediaPlayer = document.getElementById('mediaPlayer');
         let playPauseButton = document.getElementById('playPauseButton');
         let stopButton = document.getElementById('stopButton');
         let prevButton = document.getElementById('prevButton');
@@ -250,11 +244,10 @@
         let currentSong = document.getElementById('currentSong');
 
         playPauseButton.addEventListener('click', togglePlayPause);
-        stopButton.addEventListener('click', stopMusic);
-        prevButton.addEventListener('click', playPreviousMusic);
-        nextButton.addEventListener('click', playNextMusic);
+        stopButton.addEventListener('click', stopMedia);
+        prevButton.addEventListener('click', playPreviousMedia);
+        nextButton.addEventListener('click', playNextMedia);
         volumeControl.addEventListener('input', adjustVolume);
-        audioPlayer.addEventListener('ended', playNextMusic);
 
         function createButton(text, className, onClick) {
             const button = document.createElement('button');
@@ -284,100 +277,45 @@
         }
 
         function listFiles() {
-    const fileList = document.getElementById('fileList');
-    fileList.innerHTML = '';
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '';
 
-    storageRef.child(currentPath).listAll().then(result => {
-        result.items.forEach((item, index) => {
-            const li = document.createElement('li');
-            li.textContent = item.name;
+            storageRef.child(currentPath).listAll().then(result => {
+                result.items.forEach((item, index) => {
+                    const li = document.createElement('li');
+                    li.textContent = item.name;
 
-            const playButton = createButton('Tocar', 'play-btn', () => playSelectedMedia(index));
-            const downloadButton = createButton('Baixar', 'download-btn', () => downloadFile(item));
-            const deleteButton = createButton('Excluir', 'delete-btn', () => deleteFile(item));
-            const openFolderButton = createButton('Abrir Pasta', 'open-folder-btn', () => openFolder(item));
+                    const playButton = createButton('Tocar', 'play-btn', () => playMedia(item));
+                    const deleteButton = createButton('Excluir', 'delete-btn', () => deleteFile(item));
 
-            li.appendChild(playButton);
-            li.appendChild(downloadButton);
-            li.appendChild(deleteButton);
-            li.appendChild(openFolderButton);
+                    li.appendChild(playButton);
+                    li.appendChild(deleteButton);
 
-            fileList.appendChild(li);
-        });
-    }).catch(error => {
-        alert(`Erro ao listar arquivos: ${error.message}`);
-    });
-}
-
-
-       let mediaPlayer = document.getElementById('mediaPlayer');
-
-function playSelectedMedia(index) {
-    storageRef.child(currentPath).listAll().then(result => {
-        result.items[index].getDownloadURL().then(url => {
-            mediaPlayer.src = url;
-            mediaPlayer.play();
-            currentMusicIndex = index;
-            currentSong.textContent = `Tocando: ${result.items[index].name}`;
-        }).catch(error => {
-            alert(`Erro ao obter URL para o arquivo: ${error.message}`);
-        });
-    }).catch(error => {
-        alert(`Erro ao listar arquivos: ${error.message}`);
-    });
-}
-
-
-      function togglePlayPause() {
-    if (mediaPlayer.paused) {
-        mediaPlayer.play();
-        playPauseButton.textContent = 'Pausar';
-    } else {
-        mediaPlayer.pause();
-        playPauseButton.textContent = 'Tocar';
-    }
-}
-
-function stopMedia() {
-    mediaPlayer.pause();
-    mediaPlayer.currentTime = 0;
-    playPauseButton.textContent = 'Tocar';
-}
-
-function playPreviousMedia() {
-    storageRef.child(currentPath).listAll().then(result => {
-        if (currentMusicIndex > 0) {
-            currentMusicIndex--;
-            playSelectedMedia(currentMusicIndex);
-        } else {
-            alert('Não há mídia anterior.');
-        }
-    });
-}
-
-function playNextMedia() {
-    storageRef.child(currentPath).listAll().then(result => {
-        if (currentMusicIndex < result.items.length - 1) {
-            currentMusicIndex++;
-            playSelectedMedia(currentMusicIndex);
-        } else {
-            alert('Não há mídia seguinte.');
-        }
-    });
-}
-
-
-        function adjustVolume() {
-            audioPlayer.volume = volumeControl.value;
+                    fileList.appendChild(li);
+                });
+            }).catch(error => {
+                alert(`Erro ao listar os arquivos: ${error.message}`);
+            });
         }
 
         function createFolder() {
             const folderName = prompt('Digite o nome da nova pasta:');
-            if (folderName) {
-                storageRef.child(currentPath + folderName + '/').put(new Blob([])).then(() => {
+            if (!folderName) return;
+
+            const folderRef = storageRef.child(`${currentPath}${folderName}/`);
+            folderRef.child('dummy.txt').put(new Blob()).then(() => {
+                listFiles();
+            }).catch(error => {
+                alert(`Erro ao criar a pasta: ${error.message}`);
+            });
+        }
+
+        function deleteFile(fileRef) {
+            if (confirm('Tem certeza que deseja excluir este arquivo?')) {
+                fileRef.delete().then(() => {
                     listFiles();
                 }).catch(error => {
-                    alert(`Erro ao criar a pasta: ${error.message}`);
+                    alert(`Erro ao excluir o arquivo: ${error.message}`);
                 });
             }
         }
@@ -388,58 +326,69 @@ function playNextMedia() {
             listFiles();
         }
 
-        function openFolder(item) {
-            currentPath += item.name + '/';
-            document.getElementById('currentPath').textContent = `Pasta Atual: ${currentPath}`;
-            listFiles();
-        }
-
-        function downloadFile(item) {
-            item.getDownloadURL().then(url => {
-                window.open(url);
-            }).catch(error => {
-                alert(`Erro ao obter URL para download: ${error.message}`);
-            });
-        }
-
-        function deleteFile(item) {
-            if (confirm('Tem certeza de que deseja excluir este arquivo?')) {
-                item.delete().then(() => {
-                    listFiles();
-                }).catch(error => {
-                    alert(`Erro ao excluir o arquivo: ${error.message}`);
-                });
-            }
-        }
-
-        document.getElementById('fullscreenButton').addEventListener('click', toggleFullScreen);
-
-function toggleFullScreen() {
-    const appContainer = document.getElementById('app-container');
-    if (appContainer.classList.contains('fullscreen')) {
-        // Sai do modo de tela cheia
-        appContainer.classList.remove('fullscreen');
-        document.exitFullscreen().catch(err => {
-            alert(`Erro ao sair do modo de tela cheia: ${err.message}`);
-        });
-    } else {
-        // Entra no modo de tela cheia
-        appContainer.classList.add('fullscreen');
-        document.documentElement.requestFullscreen().catch(err => {
-            alert(`Erro ao entrar no modo de tela cheia: ${err.message}`);
-        });
-    }
-}
-
-
         function goToHomePage() {
             window.location.href = 'https://wilsonf1996.github.io/index.html/wf/principal.html';
         }
 
+        function playMedia(item) {
+            item.getDownloadURL().then(url => {
+                if (url.endsWith('.mp4')) {
+                    mediaPlayer.src = url;
+                    mediaPlayer.type = 'video/mp4';
+                } else if (url.endsWith('.mp3')) {
+                    mediaPlayer.src = url;
+                    mediaPlayer.type = 'audio/mp3';
+                } else {
+                    alert('Formato de arquivo não suportado.');
+                }
+                currentSong.textContent = `Tocando: ${item.name}`;
+                mediaPlayer.play();
+            }).catch(error => {
+                alert(`Erro ao reproduzir o arquivo: ${error.message}`);
+            });
+        }
 
-        
-        // Inicializa a lista de arquivos
-        listFiles();
+        function togglePlayPause() {
+            if (mediaPlayer.paused) {
+                mediaPlayer.play();
+                playPauseButton.textContent = 'Pausar';
+            } else {
+                mediaPlayer.pause();
+                playPauseButton.textContent = 'Tocar';
+            }
+        }
+
+        function stopMedia() {
+            mediaPlayer.pause();
+            mediaPlayer.currentTime = 0;
+            playPauseButton.textContent = 'Tocar';
+        }
+
+        function playPreviousMedia() {
+            currentMediaIndex = (currentMediaIndex - 1 + mediaList.length) % mediaList.length;
+            playMedia(mediaList[currentMediaIndex]);
+        }
+
+        function playNextMedia() {
+            currentMediaIndex = (currentMediaIndex + 1) % mediaList.length;
+            playMedia(mediaList[currentMediaIndex]);
+        }
+
+        function adjustVolume() {
+            mediaPlayer.volume = volumeControl.value;
+        }
+
+        function toggleFullScreen() {
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+                document.querySelector('.fullscreen').classList.remove('fullscreen');
+            } else {
+                document.documentElement.requestFullscreen();
+                document.querySelector('.fullscreen').classList.add('fullscreen');
+            }
+        }
+
+        listFiles(); // Carregar arquivos ao iniciar
     </script>
 </body>
 
