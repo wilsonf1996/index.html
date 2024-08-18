@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 
@@ -143,6 +144,31 @@
             margin-top: 10px;
         }
 
+        /* Estilo para tela cheia */
+        .fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #1e1e1e;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fullscreen audio {
+            width: 80%;
+            margin: 0;
+        }
+
+        .fullscreen .player-controls {
+            margin: 20px 0;
+        }
+
+        /* Responsividade para telas pequenas */
         @media (max-width: 768px) {
             .sidebar {
                 width: 100%;
@@ -206,7 +232,7 @@
         document.getElementById('uploadButton').addEventListener('click', uploadFiles);
         document.getElementById('createFolderButton').addEventListener('click', createFolder);
         document.getElementById('goToRootButton').addEventListener('click', goToRoot);
-        document.getElementById('fullscreenButton').addEventListener('click', toggleFullScreen);
+        document.getElementById('fullscreenButton').addEventListener('click', toggleFullscreen);
 
         let currentPath = "";
         let currentMusicIndex = 0;
@@ -217,7 +243,8 @@
         let nextButton = document.getElementById('nextButton');
         let volumeControl = document.getElementById('volumeControl');
         let currentSong = document.getElementById('currentSong');
-        let musicFiles = [];
+        let appContainer = document.getElementById('app-container');
+        let isFullscreen = false;
 
         playPauseButton.addEventListener('click', togglePlayPause);
         stopButton.addEventListener('click', stopMusic);
@@ -253,59 +280,56 @@
             });
         }
 
+        function createFolder() {
+            const folderName = prompt('Digite o nome da nova pasta:');
+            if (folderName) {
+                const folderRef = storageRef.child(currentPath + folderName + '/');
+                folderRef.getDownloadURL().catch(error => {
+                    if (error.code === 'storage/object-not-found') {
+                        // Pasta não existe, então criamos
+                        listFiles();
+                    }
+                });
+            }
+        }
+
+        function goToRoot() {
+            currentPath = "";
+            listFiles();
+        }
+
+        function goToHomePage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html/wf/principal.html';
+        }
+
         function listFiles() {
             const fileList = document.getElementById('fileList');
             fileList.innerHTML = '';
-            musicFiles = [];
 
             storageRef.child(currentPath).listAll().then(result => {
-                result.items.forEach((item, index) => {
-                    musicFiles.push(item);
+                result.items.forEach(fileRef => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = fileRef.name;
 
-                    const li = document.createElement('li');
-                    li.textContent = item.name;
+                    const playButton = createButton('Tocar', 'play-btn', () => playMusic(fileRef));
+                    const deleteButton = createButton('Excluir', 'delete-btn', () => deleteFile(fileRef));
 
-                    const playButton = createButton('Tocar', 'play-btn', () => playSelectedMusic(index));
-                    const downloadButton = createButton('Baixar', 'download-btn', () => downloadFile(item));
-                    const deleteButton = createButton('Excluir', 'delete-btn', () => deleteFile(item));
-
-                    li.appendChild(playButton);
-                    li.appendChild(downloadButton);
-                    li.appendChild(deleteButton);
-
-                    fileList.appendChild(li);
+                    listItem.appendChild(playButton);
+                    listItem.appendChild(deleteButton);
+                    fileList.appendChild(listItem);
                 });
             }).catch(error => {
                 alert(`Erro ao listar arquivos: ${error.message}`);
             });
         }
 
-        function playSelectedMusic(index) {
-            if (index >= 0 && index < musicFiles.length) {
-                const file = musicFiles[index];
-                file.getDownloadURL().then(url => {
-                    audioPlayer.src = url;
-                    audioPlayer.play();
-                    currentMusicIndex = index;
-                    currentSong.textContent = `Tocando: ${file.name}`;
-                }).catch(error => {
-                    alert(`Erro ao obter URL do arquivo: ${error.message}`);
-                });
-            }
-        }
-
-        function playPreviousMusic() {
-            if (musicFiles.length > 0) {
-                currentMusicIndex = (currentMusicIndex - 1 + musicFiles.length) % musicFiles.length;
-                playSelectedMusic(currentMusicIndex);
-            }
-        }
-
-        function playNextMusic() {
-            if (musicFiles.length > 0) {
-                currentMusicIndex = (currentMusicIndex + 1) % musicFiles.length;
-                playSelectedMusic(currentMusicIndex);
-            }
+        function playMusic(fileRef) {
+            fileRef.getDownloadURL().then(url => {
+                audioPlayer.src = url;
+                audioPlayer.play();
+                currentSong.textContent = `Tocando: ${fileRef.name}`;
+                currentMusicIndex = Array.from(document.getElementById('fileList').children).findIndex(li => li.textContent.includes(fileRef.name));
+            });
         }
 
         function stopMusic() {
@@ -314,64 +338,77 @@
             currentSong.textContent = 'Nenhuma música tocando';
         }
 
+        function togglePlayPause() {
+            if (audioPlayer.paused) {
+                audioPlayer.play();
+                playPauseButton.textContent = 'Pausar';
+            } else {
+                audioPlayer.pause();
+                playPauseButton.textContent = 'Tocar';
+            }
+        }
+
+        function playPreviousMusic() {
+            if (currentMusicIndex > 0) {
+                currentMusicIndex--;
+                const previousFile = document.getElementById('fileList').children[currentMusicIndex];
+                if (previousFile) {
+                    playMusic({ name: previousFile.textContent });
+                }
+            }
+        }
+
+        function playNextMusic() {
+            if (currentMusicIndex < document.getElementById('fileList').children.length - 1) {
+                currentMusicIndex++;
+                const nextFile = document.getElementById('fileList').children[currentMusicIndex];
+                if (nextFile) {
+                    playMusic({ name: nextFile.textContent });
+                }
+            }
+        }
+
         function adjustVolume() {
             audioPlayer.volume = volumeControl.value;
         }
 
-        function downloadFile(file) {
-            file.getDownloadURL().then(url => {
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = file.name;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+        function deleteFile(fileRef) {
+            fileRef.delete().then(() => {
+                listFiles();
             }).catch(error => {
-                alert(`Erro ao baixar o arquivo: ${error.message}`);
+                alert(`Erro ao excluir o arquivo: ${error.message}`);
             });
         }
 
-        function deleteFile(file) {
-            if (confirm(`Você tem certeza que deseja excluir o arquivo ${file.name}?`)) {
-                file.delete().then(() => {
-                    listFiles();
-                }).catch(error => {
-                    alert(`Erro ao excluir o arquivo: ${error.message}`);
-                });
-            }
-        }
-
-        function createFolder() {
-            const folderName = prompt('Nome da nova pasta:');
-            if (folderName) {
-                storageRef.child(currentPath + folderName + '/').put(new Blob([])).then(() => {
-                    listFiles();
-                }).catch(error => {
-                    alert(`Erro ao criar a pasta: ${error.message}`);
-                });
-            }
-        }
-
-        function goToRoot() {
-            currentPath = "";
-            document.getElementById('currentPath').textContent = 'Pasta Atual: Raiz';
-            listFiles();
-        }
-
-        function goToHomePage() {
-            window.location.href = "https://wilsonf1996.github.io/index.html/wf/principal.html";
-        }
-
-        function toggleFullScreen() {
-            if (document.fullscreenElement) {
-                document.exitFullscreen();
+        function toggleFullscreen() {
+            if (!isFullscreen) {
+                if (appContainer.requestFullscreen) {
+                    appContainer.requestFullscreen();
+                } else if (appContainer.mozRequestFullScreen) { // Firefox
+                    appContainer.mozRequestFullScreen();
+                } else if (appContainer.webkitRequestFullscreen) { // Chrome, Safari and Opera
+                    appContainer.webkitRequestFullscreen();
+                } else if (appContainer.msRequestFullscreen) { // IE/Edge
+                    appContainer.msRequestFullscreen();
+                }
+                isFullscreen = true;
+                document.getElementById('fullscreenButton').textContent = 'Sair da Tela Cheia';
             } else {
-                document.documentElement.requestFullscreen();
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.mozCancelFullScreen) { // Firefox
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) { // Chrome, Safari and Opera
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) { // IE/Edge
+                    document.msExitFullscreen();
+                }
+                isFullscreen = false;
+                document.getElementById('fullscreenButton').textContent = 'Tela Cheia';
             }
         }
-
-        document.addEventListener('DOMContentLoaded', listFiles);
     </script>
 </body>
 
 </html>
+
