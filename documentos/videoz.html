@@ -19,7 +19,6 @@
             min-height: 100vh;
             flex-direction: column;
             padding: 20px;
-            transition: padding 0.3s;
         }
 
         .sidebar {
@@ -33,7 +32,6 @@
             bottom: 0;
             overflow-y: auto;
             z-index: 1;
-            transition: transform 0.3s;
         }
 
         .sidebar h1 {
@@ -145,22 +143,6 @@
             margin-top: 10px;
         }
 
-        .fullscreen-button {
-            background-color: #5bc0de;
-            border: none;
-            color: #fff;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-            font-size: 16px;
-            margin-top: 20px;
-        }
-
-        .fullscreen-button:hover {
-            background-color: #4cae4c;
-        }
-
         /* Responsividade para telas pequenas */
         @media (max-width: 768px) {
             .sidebar {
@@ -172,15 +154,6 @@
             .content {
                 margin-left: 0;
             }
-        }
-
-        /* Estilos para modo tela cheia */
-        body.fullscreen #app-container {
-            padding: 0;
-        }
-
-        body.fullscreen .sidebar {
-            transform: translateX(-100%);
         }
     </style>
 </head>
@@ -209,7 +182,6 @@
                 <button id="stopButton">Parar</button>
                 <button id="nextButton">Próximo</button>
             </div>
-            <button id="fullscreenButton" class="fullscreen-button">Tela Cheia</button>
         </div>
     </div>
 
@@ -244,7 +216,6 @@
         let nextButton = document.getElementById('nextButton');
         let volumeControl = document.getElementById('volumeControl');
         let currentSong = document.getElementById('currentSong');
-        let fullscreenButton = document.getElementById('fullscreenButton');
 
         playPauseButton.addEventListener('click', togglePlayPause);
         stopButton.addEventListener('click', stopMusic);
@@ -252,7 +223,6 @@
         nextButton.addEventListener('click', playNextMusic);
         volumeControl.addEventListener('input', adjustVolume);
         audioPlayer.addEventListener('ended', playNextMusic);
-        fullscreenButton.addEventListener('click', toggleFullscreen);
 
         function createButton(text, className, onClick) {
             const button = document.createElement('button');
@@ -272,36 +242,13 @@
             }
 
             Array.from(files).forEach(file => {
-                const fileRef = storageRef.child(`${currentPath}/${file.name}`);
+                const fileRef = storageRef.child(currentPath + file.name);
                 fileRef.put(file).then(() => {
-                    alert(`Arquivo ${file.name} enviado com sucesso!`);
                     listFiles();
                 }).catch(error => {
-                    console.error('Erro ao enviar o arquivo:', error);
+                    alert(`Erro ao enviar o arquivo ${file.name}: ${error.message}`);
                 });
             });
-        }
-
-        function createFolder() {
-            const folderName = prompt('Digite o nome da nova pasta:');
-            if (folderName) {
-                const folderRef = storageRef.child(`${currentPath}/${folderName}/`);
-                folderRef.child('placeholder.txt').put(new Blob([])).then(() => {
-                    alert(`Pasta ${folderName} criada com sucesso!`);
-                    listFiles();
-                }).catch(error => {
-                    console.error('Erro ao criar a pasta:', error);
-                });
-            }
-        }
-
-        function goToRoot() {
-            currentPath = "";
-            listFiles();
-        }
-
-        function goToHomePage() {
-            window.location.href = "https://wilsonf1996.github.io/index.html/wf/principal.html";
         }
 
         function listFiles() {
@@ -309,39 +256,39 @@
             fileList.innerHTML = '';
 
             storageRef.child(currentPath).listAll().then(result => {
-                result.prefixes.forEach(folderRef => {
-                    const folderName = folderRef.name.replace(/.*\//, '');
-                    const listItem = document.createElement('li');
-                    listItem.textContent = `📁 ${folderName}`;
-                    listItem.appendChild(createButton('Abrir', 'folder-button', () => {
-                        currentPath += `${folderName}/`;
-                        listFiles();
-                    }));
-                    fileList.appendChild(listItem);
-                });
+                result.items.forEach((item, index) => {
+                    const li = document.createElement('li');
+                    li.textContent = item.name;
 
-                result.items.forEach(fileRef => {
-                    const fileName = fileRef.name.replace(/.*\//, '');
-                    const listItem = document.createElement('li');
-                    listItem.textContent = fileName;
-                    listItem.appendChild(createButton('Tocar', 'play-button', () => {
-                        playMusic(fileRef);
-                    }));
-                    fileList.appendChild(listItem);
+                    const playButton = createButton('Tocar', 'play-btn', () => playSelectedMusic(index));
+                    const downloadButton = createButton('Baixar', 'download-btn', () => downloadFile(item));
+                    const deleteButton = createButton('Excluir', 'delete-btn', () => deleteFile(item));
+                    const openFolderButton = createButton('Abrir Pasta', 'open-folder-btn', () => openFolder(item));
+
+                    li.appendChild(playButton);
+                    li.appendChild(downloadButton);
+                    li.appendChild(deleteButton);
+                    li.appendChild(openFolderButton);
+
+                    fileList.appendChild(li);
                 });
             }).catch(error => {
-                console.error('Erro ao listar arquivos:', error);
+                alert(`Erro ao listar arquivos: ${error.message}`);
             });
         }
 
-        function playMusic(fileRef) {
-            fileRef.getDownloadURL().then(url => {
-                audioPlayer.src = url;
-                audioPlayer.play();
-                currentSong.textContent = `Tocando: ${fileRef.name}`;
-                playPauseButton.textContent = 'Pausar';
+        function playSelectedMusic(index) {
+            storageRef.child(currentPath).listAll().then(result => {
+                result.items[index].getDownloadURL().then(url => {
+                    audioPlayer.src = url;
+                    audioPlayer.play();
+                    currentMusicIndex = index;
+                    currentSong.textContent = `Tocando: ${result.items[index].name}`;
+                }).catch(error => {
+                    alert(`Erro ao obter URL para o arquivo: ${error.message}`);
+                });
             }).catch(error => {
-                console.error('Erro ao obter URL do arquivo:', error);
+                alert(`Erro ao listar arquivos: ${error.message}`);
             });
         }
 
@@ -359,45 +306,83 @@
             audioPlayer.pause();
             audioPlayer.currentTime = 0;
             playPauseButton.textContent = 'Tocar';
-            currentSong.textContent = 'Nenhuma música tocando';
         }
 
         function playPreviousMusic() {
-            // Implementar funcionalidade de tocar música anterior
+            storageRef.child(currentPath).listAll().then(result => {
+                if (currentMusicIndex > 0) {
+                    currentMusicIndex--;
+                    playSelectedMusic(currentMusicIndex);
+                } else {
+                    alert('Não há música anterior.');
+                }
+            });
         }
 
         function playNextMusic() {
-            // Implementar funcionalidade de tocar próxima música
+            storageRef.child(currentPath).listAll().then(result => {
+                if (currentMusicIndex < result.items.length - 1) {
+                    currentMusicIndex++;
+                    playSelectedMusic(currentMusicIndex);
+                } else {
+                    alert('Não há música seguinte.');
+                }
+            });
         }
 
         function adjustVolume() {
             audioPlayer.volume = volumeControl.value;
         }
 
-        function toggleFullscreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen();
-                fullscreenButton.textContent = 'Sair da Tela Cheia';
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                }
-                fullscreenButton.textContent = 'Tela Cheia';
+        function createFolder() {
+            const folderName = prompt('Digite o nome da nova pasta:');
+            if (folderName) {
+                storageRef.child(currentPath + folderName + '/').put(new Blob([])).then(() => {
+                    listFiles();
+                }).catch(error => {
+                    alert(`Erro ao criar a pasta: ${error.message}`);
+                });
             }
         }
 
-        document.addEventListener('fullscreenchange', () => {
-            if (document.fullscreenElement) {
-                document.body.classList.add('fullscreen');
-            } else {
-                document.body.classList.remove('fullscreen');
-            }
-        });
+        function goToRoot() {
+            currentPath = '';
+            document.getElementById('currentPath').textContent = 'Pasta Atual: Raiz';
+            listFiles();
+        }
 
+        function openFolder(item) {
+            currentPath += item.name + '/';
+            document.getElementById('currentPath').textContent = `Pasta Atual: ${currentPath}`;
+            listFiles();
+        }
+
+        function downloadFile(item) {
+            item.getDownloadURL().then(url => {
+                window.open(url);
+            }).catch(error => {
+                alert(`Erro ao obter URL para download: ${error.message}`);
+            });
+        }
+
+        function deleteFile(item) {
+            if (confirm('Tem certeza de que deseja excluir este arquivo?')) {
+                item.delete().then(() => {
+                    listFiles();
+                }).catch(error => {
+                    alert(`Erro ao excluir o arquivo: ${error.message}`);
+                });
+            }
+        }
+
+        function goToHomePage() {
+            window.location.href = 'https://wilsonf1996.github.io/index.html/wf/principal.html';
+        }
+
+        // Inicializa a lista de arquivos
         listFiles();
     </script>
 </body>
 
 </html>
-
 
