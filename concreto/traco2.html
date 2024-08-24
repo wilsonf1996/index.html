@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -58,6 +58,17 @@
         <h1>Calculadora de Traço de Concreto</h1>
 
         <div class="input-group">
+            <label for="metodoCalculo">Método de Cálculo:</label>
+            <select id="metodoCalculo">
+                <option value="porProporcao">Por Proporção</option>
+                <option value="porVolume">Por Volume</option>
+                <option value="porFck">Por Fck</option>
+                <option value="porTipoCimento">Por Tipo de Cimento</option>
+            </select>
+        </div>
+
+        <!-- Inputs comuns -->
+        <div class="input-group">
             <label for="tipoCimento">Tipo de Cimento:</label>
             <select id="tipoCimento">
                 <option value="CP I">CP I</option>
@@ -79,22 +90,43 @@
 
         <div class="input-group">
             <label for="fatorAgua">Fator de Água:</label>
-            <input type="number" id="fatorAgua" placeholder="Ex: 0.5">
+            <input type="number" id="fatorAgua" placeholder="Ex: 0.5" step="0.01">
         </div>
 
-        <div class="input-group">
+        <!-- Inputs para o método Por Proporção -->
+        <div id="inputsProporcao" class="input-group">
             <label for="proporcaoCimento">Proporção de Cimento (kg):</label>
-            <input type="number" id="proporcaoCimento" placeholder="Ex: 50">
-        </div>
-
-        <div class="input-group">
+            <input type="number" id="proporcaoCimento" placeholder="Ex: 50" step="0.1">
             <label for="proporcaoAreia">Proporção de Areia (kg):</label>
-            <input type="number" id="proporcaoAreia" placeholder="Ex: 100">
+            <input type="number" id="proporcaoAreia" placeholder="Ex: 100" step="0.1">
+            <label for="proporcaoBrita">Proporção de Brita (kg):</label>
+            <input type="number" id="proporcaoBrita" placeholder="Ex: 150" step="0.1">
         </div>
 
-        <div class="input-group">
-            <label for="proporcaoBrita">Proporção de Brita (kg):</label>
-            <input type="number" id="proporcaoBrita" placeholder="Ex: 150">
+        <!-- Inputs para o método Por Volume -->
+        <div id="inputsVolume" class="input-group" style="display: none;">
+            <label for="volumeCimento">Volume de Cimento (m³):</label>
+            <input type="number" id="volumeCimento" placeholder="Ex: 0.15" step="0.01">
+            <label for="volumeAreia">Volume de Areia (m³):</label>
+            <input type="number" id="volumeAreia" placeholder="Ex: 0.3" step="0.01">
+            <label for="volumeBrita">Volume de Brita (m³):</label>
+            <input type="number" id="volumeBrita" placeholder="Ex: 0.45" step="0.01">
+        </div>
+
+        <!-- Inputs para o método Por Fck -->
+        <div id="inputsFck" class="input-group" style="display: none;">
+            <label for="fck">Fck desejado (MPa):</label>
+            <input type="number" id="fck" placeholder="Ex: 25" step="0.1">
+            <label for="quantidadeConcreto">Quantidade de Concreto (m³):</label>
+            <input type="number" id="quantidadeConcreto" placeholder="Ex: 10" step="0.01">
+        </div>
+
+        <!-- Inputs para o método Por Tipo de Cimento -->
+        <div id="inputsTipoCimento" class="input-group" style="display: none;">
+            <label for="resistenciaConcreto">Resistência do Concreto (MPa):</label>
+            <input type="number" id="resistenciaConcreto" placeholder="Ex: 25" step="0.1">
+            <label for="quantidadeConcretoTipo">Quantidade de Concreto (m³):</label>
+            <input type="number" id="quantidadeConcretoTipo" placeholder="Ex: 10" step="0.01">
         </div>
 
         <div class="button-group">
@@ -107,12 +139,12 @@
 
         <div class="input-group">
             <label for="temperatura">Temperatura (°C):</label>
-            <input type="number" id="temperatura" placeholder="Ex: 25">
+            <input type="number" id="temperatura" placeholder="Ex: 25" step="0.1">
         </div>
 
         <div class="input-group">
             <label for="umidade">Umidade (%):</label>
-            <input type="number" id="umidade" placeholder="Ex: 60">
+            <input type="number" id="umidade" placeholder="Ex: 60" step="0.1">
         </div>
 
         <div class="button-group">
@@ -123,33 +155,121 @@
     </div>
 
     <script>
+        document.getElementById('metodoCalculo').addEventListener('change', function() {
+            const metodo = this.value;
+            document.getElementById('inputsProporcao').style.display = metodo === 'porProporcao' ? 'block' : 'none';
+            document.getElementById('inputsVolume').style.display = metodo === 'porVolume' ? 'block' : 'none';
+            document.getElementById('inputsFck').style.display = metodo === 'porFck' ? 'block' : 'none';
+            document.getElementById('inputsTipoCimento').style.display = metodo === 'porTipoCimento' ? 'block' : 'none';
+        });
+
         function calcularConcreto() {
+            const metodo = document.getElementById('metodoCalculo').value;
             const tipoCimento = document.getElementById('tipoCimento').value;
             const tipoBrita = document.getElementById('tipoBrita').value;
             const fatorAgua = parseFloat(document.getElementById('fatorAgua').value);
-            const proporcaoCimento = parseFloat(document.getElementById('proporcaoCimento').value);
-            const proporcaoAreia = parseFloat(document.getElementById('proporcaoAreia').value);
-            const proporcaoBrita = parseFloat(document.getElementById('proporcaoBrita').value);
 
-            if (isNaN(fatorAgua) || isNaN(proporcaoCimento) || isNaN(proporcaoAreia) || isNaN(proporcaoBrita)) {
-                document.getElementById('resultado').innerHTML = "Por favor, preencha todos os campos corretamente.";
-                return;
+            let proporcaoCimento = 0, proporcaoAreia = 0, proporcaoBrita = 0, volumeTotal = 0, aguaNecessaria = 0;
+
+            if (metodo === 'porProporcao') {
+                proporcaoCimento = parseFloat(document.getElementById('proporcaoCimento').value);
+                proporcaoAreia = parseFloat(document.getElementById('proporcaoAreia').value);
+                proporcaoBrita = parseFloat(document.getElementById('proporcaoBrita').value);
+
+                if (isNaN(proporcaoCimento) || isNaN(proporcaoAreia) || isNaN(proporcaoBrita) || isNaN(fatorAgua)) {
+                    document.getElementById('resultado').innerHTML = "Por favor, preencha todos os campos corretamente.";
+                    return;
+                }
+
+                volumeTotal = proporcaoCimento + proporcaoAreia + proporcaoBrita;
+                aguaNecessaria = fatorAgua * volumeTotal;
+
+            } else if (metodo === 'porVolume') {
+                const volumeCimento = parseFloat(document.getElementById('volumeCimento').value);
+                const volumeAreia = parseFloat(document.getElementById('volumeAreia').value);
+                const volumeBrita = parseFloat(document.getElementById('volumeBrita').value);
+
+                if (isNaN(volumeCimento) || isNaN(volumeAreia) || isNaN(volumeBrita) || isNaN(fatorAgua)) {
+                    document.getElementById('resultado').innerHTML = "Por favor, preencha todos os campos corretamente.";
+                    return;
+                }
+
+                volumeTotal = (volumeCimento + volumeAreia + volumeBrita) * 1000; // Convertendo m³ para kg
+                aguaNecessaria = fatorAgua * volumeTotal;
+
+                proporcaoCimento = volumeCimento * 1000;
+                proporcaoAreia = volumeAreia * 1000;
+                proporcaoBrita = volumeBrita * 1000;
+
+            } else if (metodo === 'porFck') {
+                const fck = parseFloat(document.getElementById('fck').value);
+                const quantidadeConcreto = parseFloat(document.getElementById('quantidadeConcreto').value);
+
+                if (isNaN(fck) || isNaN(quantidadeConcreto) || isNaN(fatorAgua)) {
+                    document.getElementById('resultado').innerHTML = "Por favor, preencha todos os campos corretamente.";
+                    return;
+                }
+
+                let proporcaoCimentoFck = 0, proporcaoAreiaFck = 0, proporcaoBritaFck = 0;
+                if (fck <= 20) {
+                    proporcaoCimentoFck = 250;
+                    proporcaoAreiaFck = 500;
+                    proporcaoBritaFck = 750;
+                } else if (fck <= 30) {
+                    proporcaoCimentoFck = 300;
+                    proporcaoAreiaFck = 600;
+                    proporcaoBritaFck = 900;
+                } else {
+                    proporcaoCimentoFck = 350;
+                    proporcaoAreiaFck = 700;
+                    proporcaoBritaFck = 1050;
+                }
+
+                volumeTotal = (proporcaoCimentoFck + proporcaoAreiaFck + proporcaoBritaFck) * quantidadeConcreto / 1000; // Convertendo para kg
+                aguaNecessaria = fatorAgua * volumeTotal;
+                proporcaoCimento = proporcaoCimentoFck * quantidadeConcreto / 1000;
+                proporcaoAreia = proporcaoAreiaFck * quantidadeConcreto / 1000;
+                proporcaoBrita = proporcaoBritaFck * quantidadeConcreto / 1000;
+
+            } else if (metodo === 'porTipoCimento') {
+                const resistenciaConcreto = parseFloat(document.getElementById('resistenciaConcreto').value);
+                const quantidadeConcretoTipo = parseFloat(document.getElementById('quantidadeConcretoTipo').value);
+
+                if (isNaN(resistenciaConcreto) || isNaN(quantidadeConcretoTipo) || isNaN(fatorAgua)) {
+                    document.getElementById('resultado').innerHTML = "Por favor, preencha todos os campos corretamente.";
+                    return;
+                }
+
+                let proporcaoCimentoTipo = 0, proporcaoAreiaTipo = 0, proporcaoBritaTipo = 0;
+                if (resistenciaConcreto <= 20) {
+                    proporcaoCimentoTipo = 200;
+                    proporcaoAreiaTipo = 400;
+                    proporcaoBritaTipo = 600;
+                } else if (resistenciaConcreto <= 30) {
+                    proporcaoCimentoTipo = 250;
+                    proporcaoAreiaTipo = 500;
+                    proporcaoBritaTipo = 750;
+                } else {
+                    proporcaoCimentoTipo = 300;
+                    proporcaoAreiaTipo = 600;
+                    proporcaoBritaTipo = 900;
+                }
+
+                volumeTotal = (proporcaoCimentoTipo + proporcaoAreiaTipo + proporcaoBritaTipo) * quantidadeConcretoTipo / 1000; // Convertendo para kg
+                aguaNecessaria = fatorAgua * volumeTotal;
+                proporcaoCimento = proporcaoCimentoTipo * quantidadeConcretoTipo / 1000;
+                proporcaoAreia = proporcaoAreiaTipo * quantidadeConcretoTipo / 1000;
+                proporcaoBrita = proporcaoBritaTipo * quantidadeConcretoTipo / 1000;
             }
 
-            const volumeTotal = proporcaoCimento + proporcaoAreia + proporcaoBrita;
-            const aguaNecessaria = fatorAgua * volumeTotal;
-
-            const resultado = `
-                <p><strong>Tipo de Cimento:</strong> ${tipoCimento}</p>
-                <p><strong>Tipo de Brita:</strong> ${tipoBrita}</p>
-                <p><strong>Fator de Água:</strong> ${fatorAgua}</p>
-                <p><strong>Proporção de Cimento:</strong> ${proporcaoCimento} kg</p>
-                <p><strong>Proporção de Areia:</strong> ${proporcaoAreia} kg</p>
-                <p><strong>Proporção de Brita:</strong> ${proporcaoBrita} kg</p>
-                <p><strong>Quantidade de Água Necessária:</strong> ${aguaNecessaria.toFixed(2)} litros</p>
+            document.getElementById('resultado').innerHTML = `
+                <strong>Resultado:</strong><br>
+                Volume Total: ${volumeTotal.toFixed(2)} kg<br>
+                Água Necessária: ${aguaNecessaria.toFixed(2)} litros<br>
+                Proporção de Cimento: ${proporcaoCimento.toFixed(2)} kg<br>
+                Proporção de Areia: ${proporcaoAreia.toFixed(2)} kg<br>
+                Proporção de Brita: ${proporcaoBrita.toFixed(2)} kg
             `;
-
-            document.getElementById('resultado').innerHTML = resultado;
         }
 
         function simularCura() {
@@ -161,17 +281,19 @@
                 return;
             }
 
-            const impactoTemperatura = temperatura > 25 ? "Aumento da resistência" : "Redução da resistência";
-            const impactoUmidade = umidade > 60 ? "Cura acelerada" : "Cura retardada";
+            let tempoCura;
+            if (temperatura >= 25 && umidade >= 60) {
+                tempoCura = "7 a 14 dias";
+            } else if (temperatura < 25 && umidade < 60) {
+                tempoCura = "14 a 28 dias";
+            } else {
+                tempoCura = "10 a 21 dias";
+            }
 
-            const resultadoCura = `
-                <p><strong>Temperatura:</strong> ${temperatura} °C</p>
-                <p><strong>Umidade:</strong> ${umidade} %</p>
-                <p><strong>Impacto da Temperatura:</strong> ${impactoTemperatura}</p>
-                <p><strong>Impacto da Umidade:</strong> ${impactoUmidade}</p>
+            document.getElementById('resultadoCura').innerHTML = `
+                <strong>Resultado da Simulação de Cura:</strong><br>
+                Tempo de Cura Recomendado: ${tempoCura}
             `;
-
-            document.getElementById('resultadoCura').innerHTML = resultadoCura;
         }
     </script>
 </body>
