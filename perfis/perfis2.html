@@ -33,6 +33,20 @@
             margin-top: 20px;
             font-size: 1.2em;
         }
+
+        button {
+            font-size: 1.2em;
+            padding: 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
@@ -52,7 +66,7 @@
     </select>
 
     <div id="dimensao1-group">
-        <label for="dimensao1">Diâmetro (mm)</label>
+        <label for="dimensao1">Diâmetro / Lado (mm)</label>
         <input type="number" id="dimensao1" placeholder="Insira a dimensão principal">
     </div>
 
@@ -65,6 +79,9 @@
         <label for="dimensao3">Altura (mm)</label>
         <input type="number" id="dimensao3" placeholder="Insira a altura">
     </div>
+
+    <label for="comprimento">Comprimento (m):</label>
+    <input type="number" id="comprimento" placeholder="Insira o comprimento">
 
     <button onclick="calcularPropriedades()">Calcular</button>
 
@@ -122,123 +139,128 @@
         function calcularPropriedades() {
             const tipoPerfil = perfil.value;
             const dimensao1 = parseFloat(document.getElementById('dimensao1').value);
-            const dimensao2 = parseFloat(document.getElementById('dimensao2').value) || 0;
-            const dimensao3 = parseFloat(document.getElementById('dimensao3').value) || 0;
+            const dimensao2 = parseFloat(document.getElementById('dimensao2').value) || dimensao1;
+            const dimensao3 = parseFloat(document.getElementById('dimensao3').value) || dimensao1;
+            const comprimento = parseFloat(document.getElementById('comprimento').value);
+            const densidade = 7850; // kg/m³ (densidade do aço)
 
             let area = 0;
             let inercia = 0;
             let polar = 0;
-            const densidadeAco = 7850; // kg/m³
+            let peso = 0;
 
             switch (tipoPerfil) {
                 case 'circular':
-                    area = Math.PI * Math.pow(dimensao1 / 2, 2);
-                    inercia = (Math.PI * Math.pow(dimensao1 / 2, 4)) / 4;
-                    polar = (Math.PI * Math.pow(dimensao1 / 2, 4)) / 2;
+                    area = Math.PI * Math.pow(dimensao1 / 2, 2) / 1e6; // m²
+                    inercia = (Math.PI * Math.pow(dimensao1 / 2, 4)) / (4 * 1e12); // m⁴
+                    polar = (Math.PI * Math.pow(dimensao1 / 2, 4)) / (2 * 1e12); // m⁴
                     break;
                 case 'tubular':
                     const diametroInterno = dimensao1 - 2 * dimensao2;
-                    area = Math.PI * (Math.pow(dimensao1 / 2, 2) - Math.pow(diametroInterno / 2, 2));
-                    inercia = (Math.PI * (Math.pow(dimensao1 / 2, 4) - Math.pow(diametroInterno / 2, 4))) / 4;
-                    polar = (Math.PI * (Math.pow(dimensao1 / 2, 4) - Math.pow(diametroInterno / 2, 4))) / 2;
+                    area = (Math.PI * (Math.pow(dimensao1 / 2, 2) - Math.pow(diametroInterno / 2, 2))) / 1e6; // m²
+                    inercia = (Math.PI * (Math.pow(dimensao1 / 2, 4) - Math.pow(diametroInterno / 2, 4))) / (4 * 1e12); // m⁴
+                    polar = (Math.PI * (Math.pow(dimensao1 / 2, 4) - Math.pow(diametroInterno / 2, 4))) / (2 * 1e12); // m⁴
                     break;
                 case 'quadrado':
-                    area = Math.pow(dimensao1, 2);
-                    inercia = Math.pow(dimensao1, 4) / 12;
+                    area = Math.pow(dimensao1, 2) / 1e6; // m²
+                    inercia = Math.pow(dimensao1, 4) / (12 * 1e12); // m⁴
                     break;
                 case 'quadradoVazado':
                     const ladoInterno = dimensao1 - 2 * dimensao2;
-                    area = Math.pow(dimensao1, 2) - Math.pow(ladoInterno, 2);
-                    inercia = (Math.pow(dimensao1, 4) - Math.pow(ladoInterno, 4)) / 12;
+                    area = (Math.pow(dimensao1, 2) - Math.pow(ladoInterno, 2)) / 1e6; // m²
+                    inercia = (Math.pow(dimensao1, 4) - Math.pow(ladoInterno, 4)) / (12 * 1e12); // m⁴
                     break;
                 case 'u':
                 case 'c':
-                    area = 2 * dimensao2 * dimensao3 + (dimensao1 - dimensao2) * dimensao2;
-                    inercia = ((dimensao3 * Math.pow(dimensao1, 3)) - ((dimensao3 - dimensao2) * Math.pow(dimensao1 - dimensao2 * 2, 3))) / 12;
+                    area = (2 * dimensao2 * dimensao3 + (dimensao1 - dimensao2) * dimensao2) / 1e6; // m²
+                    inercia = ((dimensao3 * Math.pow(dimensao1, 3)) - ((dimensao3 - dimensao2) * Math.pow(dimensao1 - dimensao2 * 2, 3))) / (12 * 1e12); // m⁴
                     break;
                 case 'i':
                 case 'h':
-                    area = 2 * dimensao2 * dimensao3 + (dimensao1 - dimensao2) * dimensao2;
-                    inercia = ((dimensao3 * Math.pow(dimensao1, 3)) - ((dimensao3 - dimensao2) * Math.pow(dimensao1 - dimensao2 * 2, 3))) / 12;
+                    area = (2 * dimensao2 * dimensao3 + (dimensao1 - dimensao2 * 2) * dimensao2) / 1e6; // m²
+                    inercia = ((dimensao3 * Math.pow(dimensao1, 3)) - ((dimensao3 - dimensao2) * Math.pow(dimensao1 - dimensao2 * 2, 3))) / (12 * 1e12); // m⁴
                     break;
                 case 'l':
-                    area = dimensao1 * dimensao2;
-                    inercia = (dimensao1 * Math.pow(dimensao2, 3)) / 12;
+                    area = dimensao1 * dimensao2 / 1e6; // m²
+                    inercia = (dimensao1 * Math.pow(dimensao2, 3)) / (12 * 1e12); // m⁴
                     break;
+                default:
+                    area = 0;
             }
 
-            const areaMetros = area / 1e6; // mm² para m²
-            const peso = areaMetros * densidadeAco; // Peso em kg
+            peso = area * comprimento * densidade; // kg
 
-            mostrarResultado(area, inercia, polar, tipoPerfil, peso);
+            const resultadoHtml = `
+                <p>Área: ${area.toFixed(4)} m²</p>
+                <p>Inércia: ${inercia.toFixed(6)} m⁴</p>
+                <p>Polar: ${polar.toFixed(6)} m⁴</p>
+                <p>Peso: ${peso.toFixed(2)} kg</p>
+            `;
+
             desenharPerfil(tipoPerfil, dimensao1, dimensao2, dimensao3);
-        }
-
-        function mostrarResultado(area, inercia, polar, tipoPerfil, peso) {
-            let resultadoHtml = `<p>Área: ${area.toFixed(2)} mm²</p>`;
-            resultadoHtml += `<p>Momento de Inércia: ${inercia.toFixed(2)} mm⁴</p>`;
-            if (tipoPerfil === 'circular' || tipoPerfil === 'tubular') {
-                resultadoHtml += `<p>Momento de Inércia Polar: ${polar.toFixed(2)} mm⁴</p>`;
-            }
-            resultadoHtml += `<p>Peso: ${peso.toFixed(2)} kg</p>`;
             document.getElementById('resultado').innerHTML = resultadoHtml;
         }
 
-        function desenharPerfil(tipo, dimensao1, dimensao2, dimensao3) {
-            let svg = '';
-            const svgWidth = 300;
-            const svgHeight = 300;
-            const margin = 10;
-            const scale = svgWidth / (dimensao1 * 2 + margin);
+        function desenharPerfil(tipoPerfil, dimensao1, dimensao2, dimensao3) {
+            let desenhoSvg = '';
 
-            switch (tipo) {
+            switch (tipoPerfil) {
                 case 'circular':
-                    svg = `<svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">
-                        <circle cx="${svgWidth / 2}" cy="${svgHeight / 2}" r="${dimensao1 * scale / 2}" stroke="black" stroke-width="2" fill="none" />
+                    desenhoSvg = `<svg width="200" height="200" viewBox="0 0 200 200">
+                        <circle cx="100" cy="100" r="${dimensao1 / 2}" stroke="black" stroke-width="2" fill="none"/>
                     </svg>`;
                     break;
                 case 'tubular':
                     const diametroInterno = dimensao1 - 2 * dimensao2;
-                    svg = `<svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">
-                        <circle cx="${svgWidth / 2}" cy="${svgHeight / 2}" r="${dimensao1 * scale / 2}" stroke="black" stroke-width="2" fill="none" />
-                        <circle cx="${svgWidth / 2}" cy="${svgHeight / 2}" r="${diametroInterno * scale / 2}" stroke="black" stroke-width="2" fill="white" />
+                    desenhoSvg = `<svg width="200" height="200" viewBox="0 0 200 200">
+                        <circle cx="100" cy="100" r="${dimensao1 / 2}" stroke="black" stroke-width="2" fill="none"/>
+                        <circle cx="100" cy="100" r="${diametroInterno / 2}" stroke="black" stroke-width="2" fill="none"/>
                     </svg>`;
                     break;
                 case 'quadrado':
-                    svg = `<svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">
-                        <rect x="${margin}" y="${margin}" width="${dimensao1 * scale}" height="${dimensao1 * scale}" stroke="black" stroke-width="2" fill="none" />
+                    desenhoSvg = `<svg width="200" height="200" viewBox="0 0 200 200">
+                        <rect x="50" y="50" width="${dimensao1}" height="${dimensao1}" stroke="black" stroke-width="2" fill="none"/>
                     </svg>`;
                     break;
                 case 'quadradoVazado':
                     const ladoInterno = dimensao1 - 2 * dimensao2;
-                    svg = `<svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">
-                        <rect x="${margin}" y="${margin}" width="${dimensao1 * scale}" height="${dimensao1 * scale}" stroke="black" stroke-width="2" fill="none" />
-                        <rect x="${(dimensao1 - ladoInterno) * scale / 2 + margin}" y="${(dimensao1 - ladoInterno) * scale / 2 + margin}" width="${ladoInterno * scale}" height="${ladoInterno * scale}" stroke="black" stroke-width="2" fill="white" />
+                    desenhoSvg = `<svg width="200" height="200" viewBox="0 0 200 200">
+                        <rect x="50" y="50" width="${dimensao1}" height="${dimensao1}" stroke="black" stroke-width="2" fill="none"/>
+                        <rect x="50 + ${dimensao2}" y="50 + ${dimensao2}" width="${ladoInterno}" height="${ladoInterno}" stroke="black" stroke-width="2" fill="none"/>
                     </svg>`;
                     break;
                 case 'u':
+                    desenhoSvg = `<svg width="200" height="200" viewBox="0 0 200 200">
+                        <rect x="50" y="50" width="${dimensao1}" height="${dimensao3}" stroke="black" stroke-width="2" fill="none"/>
+                        <rect x="50" y="50" width="${dimensao2}" height="${dimensao3 - dimensao2}" stroke="black" stroke-width="2" fill="none"/>
+                    </svg>`;
+                    break;
                 case 'c':
-                    svg = `<svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">
-                        <rect x="${margin}" y="${margin + dimensao2 * scale}" width="${(dimensao1 - dimensao2) * scale}" height="${dimensao2 * scale}" stroke="black" stroke-width="2" fill="none" />
-                        <rect x="${margin}" y="${margin}" width="${dimensao2 * scale}" height="${dimensao3 * scale}" stroke="black" stroke-width="2" fill="none" />
-                        <rect x="${(dimensao1 - dimensao2) * scale + margin}" y="${margin}" width="${dimensao2 * scale}" height="${dimensao3 * scale}" stroke="black" stroke-width="2" fill="none" />
+                    desenhoSvg = `<svg width="200" height="200" viewBox="0 0 200 200">
+                        <rect x="50" y="50" width="${dimensao1}" height="${dimensao3}" stroke="black" stroke-width="2" fill="none"/>
+                        <rect x="50" y="50" width="${dimensao2}" height="${dimensao3 - dimensao2}" stroke="black" stroke-width="2" fill="none"/>
                     </svg>`;
                     break;
                 case 'i':
+                    desenhoSvg = `<svg width="200" height="200" viewBox="0 0 200 200">
+                        <rect x="50" y="50" width="${dimensao1}" height="${dimensao3}" stroke="black" stroke-width="2" fill="none"/>
+                        <rect x="50" y="50" width="${dimensao2}" height="${dimensao3 - dimensao2}" stroke="black" stroke-width="2" fill="none"/>
+                    </svg>`;
+                    break;
                 case 'h':
-                    svg = `<svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">
-                        <rect x="${margin}" y="${margin}" width="${dimensao1 * scale}" height="${dimensao2 * scale}" stroke="black" stroke-width="2" fill="none" />
-                        <rect x="${margin}" y="${margin + dimensao2 * scale}" width="${(dimensao1 - dimensao2 * 2) * scale}" height="${dimensao3 * scale}" stroke="black" stroke-width="2" fill="none" />
-                        <rect x="${(dimensao1 - dimensao2) * scale + margin}" y="${margin + dimensao2 * scale + dimensao3 * scale}" width="${dimensao2 * scale}" height="${dimensao2 * scale}" stroke="black" stroke-width="2" fill="none" />
+                    desenhoSvg = `<svg width="200" height="200" viewBox="0 0 200 200">
+                        <rect x="50" y="50" width="${dimensao1}" height="${dimensao3}" stroke="black" stroke-width="2" fill="none"/>
+                        <rect x="50" y="50" width="${dimensao2}" height="${dimensao3 - dimensao2}" stroke="black" stroke-width="2" fill="none"/>
                     </svg>`;
                     break;
                 case 'l':
-                    svg = `<svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">
-                        <rect x="${margin}" y="${margin}" width="${dimensao1 * scale}" height="${dimensao2 * scale}" stroke="black" stroke-width="2" fill="none" />
+                    desenhoSvg = `<svg width="200" height="200" viewBox="0 0 200 200">
+                        <rect x="50" y="50" width="${dimensao1}" height="${dimensao2}" stroke="black" stroke-width="2" fill="none"/>
                     </svg>`;
                     break;
             }
-            document.getElementById('desenho').innerHTML = svg;
+
+            document.getElementById('desenho').innerHTML = desenhoSvg;
         }
     </script>
 </body>
