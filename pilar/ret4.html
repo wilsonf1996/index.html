@@ -133,116 +133,117 @@
 
     <script>
         const areasBitola = {
-            10: 78.5,
-            12: 113.1,
-            16: 201.1,
-            20: 314.2,
-            25: 490.9,
-            32: 804.2,
-            40: 1256.6
-        };
+        10: 78.5,
+        12: 113.1,
+        16: 201.1,
+        20: 314.2,
+        25: 490.9,
+        32: 804.2,
+        40: 1256.6
+    };
 
-        function atualizarAreaBitola() {
-            const diametroAco = document.getElementById('diametroAco').value;
-            document.getElementById('areaBitola').value = areasBitola[diametroAco];
+    function atualizarAreaBitola() {
+        const diametroAco = document.getElementById('diametroAco').value;
+        document.getElementById('areaBitola').value = areasBitola[diametroAco];
+    }
+
+    function calcular() {
+        const momentoFletor = parseFloat(document.getElementById('momentoFletor').value) * 1e6; // kN.m para N.mm
+        const forca = parseFloat(document.getElementById('forca').value) * 1e3; // kN para N
+        const cargaTransversal = parseFloat(document.getElementById('cargaTransversal').value) * 1e3; // kN para N
+        const altura = parseFloat(document.getElementById('altura').value); // mm
+        const largura = parseFloat(document.getElementById('largura').value); // mm
+        const cobrimento = parseFloat(document.getElementById('cobrimento').value); // mm
+        const fck = parseFloat(document.getElementById('fck').value); // MPa
+        const tipoAco = parseFloat(document.getElementById('tipoAco').value); // MPa
+        const diametroAco = parseFloat(document.getElementById('diametroAco').value); // mm
+        const comprimentoEfeito = parseFloat(document.getElementById('comprimentoEfeito').value); // mm
+        const tipoEsforco = document.getElementById('tipoEsforco').value;
+        const areaBitola = areasBitola[diametroAco];
+
+        const fyd = tipoAco; // Tensão de escoamento do aço em MPa
+        const fcd = fck / 1.4; // Tensão de compressão do concreto em MPa (fcd = fck / γc)
+        const d = altura - cobrimento; // mm
+
+        let resultado = '';
+        let estagioCarregamento = '';
+
+        switch (tipoEsforco) {
+            case 'flexaoSimples':
+                const AsFlexaoSimples = momentoFletor / (0.87 * fyd * (d - altura / 2));
+                const numeroBarrasFlexaoSimples = Math.ceil(AsFlexaoSimples / areaBitola);
+
+                const momentoResistenteFlexaoSimples = 0.87 * fyd * d * (altura - d / 2) * 1e-6; // kN.m
+                resultado = Área de Aço para Flexão Simples: ${AsFlexaoSimples.toFixed(2)} mm²<br>
+                             Número de Barras: ${numeroBarrasFlexaoSimples}<br>
+                             Momento Resistente: ${momentoResistenteFlexaoSimples.toFixed(2)} kN.m;
+                break;
+
+            case 'flexaoComposta':
+                const AsFlexaoComposta = momentoFletor / (0.87 * fyd * (d - altura / 2));
+                const numeroBarrasFlexaoComposta = Math.ceil(AsFlexaoComposta / areaBitola);
+
+                const momentoResistenteFlexaoComposta = 0.87 * fyd * d * (altura - d / 2) * 1e-6; // kN.m
+                resultado = Área de Aço para Flexão Composta: ${AsFlexaoComposta.toFixed(2)} mm²<br>
+                             Número de Barras: ${numeroBarrasFlexaoComposta}<br>
+                             Momento Resistente: ${momentoResistenteFlexaoComposta.toFixed(2)} kN.m;
+                break;
+
+            case 'cisalhamento':
+                const Vrd = (0.6 * fcd * largura * altura) / 1e3; // kN
+                const AsCisalhamento = (forca / Vrd) * areaBitola; // Área de aço para cisalhamento
+                const numeroBarrasCisalhamento = Math.ceil(AsCisalhamento / areaBitola);
+                resultado = Resistência ao Cisalhamento: ${Vrd.toFixed(2)} kN<br>
+                             Área de Aço para Cisalhamento: ${AsCisalhamento.toFixed(2)} mm²<br>
+                             Número de Barras: ${numeroBarrasCisalhamento};
+                break;
+
+            case 'flambagem':
+                const I = (largura * Math.pow(altura, 3)) / 12; // mm^4
+                const Ae = Math.pow(comprimentoEfeito, 2) / I; // mm^2
+                const Ncr = (Math.PI ** 2 * tipoAco * I) / Math.pow(comprimentoEfeito, 2); // N
+                const AsFlambagem = (Ncr / (0.6 * fcd)) * areaBitola; // Área de aço para flambagem
+                const numeroBarrasFlambagem = Math.ceil(AsFlambagem / areaBitola);
+                resultado = Capacidade de Carga Crítica por Flambagem: ${Ncr.toFixed(2)} N<br>
+                             Área de Aço para Flambagem: ${AsFlambagem.toFixed(2)} mm²<br>
+                             Número de Barras: ${numeroBarrasFlambagem};
+                break;
+
+            case 'combinado':
+                const AsCombinado = momentoFletor / (0.87 * fyd * (d - altura / 2));
+                const numeroBarrasCombinado = Math.ceil(AsCombinado / areaBitola);
+
+                const momentoResistenteCombinado = 0.87 * fyd * d * (altura - d / 2) * 1e-6; // kN.m
+                resultado = Área de Aço para Esforço Combinado: ${AsCombinado.toFixed(2)} mm²<br>
+                             Número de Barras: ${numeroBarrasCombinado}<br>
+                             Momento Resistente: ${momentoResistenteCombinado.toFixed(2)} kN.m;
+                break;
         }
 
-        function calcular() {
-            const momentoFletor = parseFloat(document.getElementById('momentoFletor').value) * 1e6; // kN.m para N.mm
-            const forca = parseFloat(document.getElementById('forca').value) * 1e3; // kN para N
-            const cargaTransversal = parseFloat(document.getElementById('cargaTransversal').value) * 1e3; // kN para N
-            const altura = parseFloat(document.getElementById('altura').value); // mm
-            const largura = parseFloat(document.getElementById('largura').value); // mm
-            const cobrimento = parseFloat(document.getElementById('cobrimento').value); // mm
-            const fck = parseFloat(document.getElementById('fck').value); // MPa
-            const tipoAco = parseFloat(document.getElementById('tipoAco').value); // MPa
-            const diametroAco = parseFloat(document.getElementById('diametroAco').value); // mm
-            const comprimentoEfeito = parseFloat(document.getElementById('comprimentoEfeito').value); // mm
-            const tipoEsforco = document.getElementById('tipoEsforco').value;
-            const areaBitola = areasBitola[diametroAco];
+        // Cálculo dos estádios de carregamento com base na carga atuante na viga
+        const M1 = 0.5 * cargaTransversal * largura * altura ** 2 / 1e6; // Estádio I: kN.m
+        const M2 = 0.8 * cargaTransversal * largura * altura ** 2 / 1e6; // Estádio II: kN.m
+        const M3 = 1.2 * cargaTransversal * largura * altura ** 2 / 1e6; // Estádio III: kN.m
 
-            const fyd = tipoAco; // Tensão de escoamento do aço em MPa
-            const fcd = fck / 1.5; // Tensão de compressão do concreto em MPa (fcd = fck / γc)
-            const d = altura - cobrimento; // mm
-
-            let resultado = '';
-            let estagioCarregamento = '';
-
-            switch (tipoEsforco) {
-                case 'flexaoSimples':
-                    const AsFlexaoSimples = momentoFletor / (0.9 * fyd * (d - altura / 2));
-                    const numeroBarrasFlexaoSimples = Math.ceil(AsFlexaoSimples / areaBitola);
-
-                    const momentoResistenteFlexaoSimples = 0.9 * fyd * d * (altura - d / 2) * 1e-6; // kN.m
-                    resultado = `Área de Aço para Flexão Simples: ${AsFlexaoSimples.toFixed(2)} mm²<br>
-                                 Número de Barras: ${numeroBarrasFlexaoSimples}<br>
-                                 Momento Resistente: ${momentoResistenteFlexaoSimples.toFixed(2)} kN.m`;
-                    break;
-
-                case 'flexaoComposta':
-                    const AsFlexaoComposta = momentoFletor / (0.9 * fyd * (d - altura / 2));
-                    const numeroBarrasFlexaoComposta = Math.ceil(AsFlexaoComposta / areaBitola);
-
-                    const momentoResistenteFlexaoComposta = 0.9 * fyd * d * (altura - d / 2) * 1e-6; // kN.m
-                    resultado = `Área de Aço para Flexão Composta: ${AsFlexaoComposta.toFixed(2)} mm²<br>
-                                 Número de Barras: ${numeroBarrasFlexaoComposta}<br>
-                                 Momento Resistente: ${momentoResistenteFlexaoComposta.toFixed(2)} kN.m`;
-                    break;
-
-                case 'cisalhamento':
-                    const Vrd = (0.6 * fcd * largura * altura) / 1e3; // kN
-                    const AsCisalhamento = (forca / Vrd) * areaBitola; // Área de aço para cisalhamento
-                    const numeroBarrasCisalhamento = Math.ceil(AsCisalhamento / areaBitola);
-                    resultado = `Resistência ao Cisalhamento: ${Vrd.toFixed(2)} kN<br>
-                                 Área de Aço para Cisalhamento: ${AsCisalhamento.toFixed(2)} mm²<br>
-                                 Número de Barras: ${numeroBarrasCisalhamento}`;
-                    break;
-
-                case 'flambagem':
-                    const I = (largura * Math.pow(altura, 3)) / 12; // mm^4
-                    const Ae = Math.pow(comprimentoEfeito, 2) / I; // mm^2
-                    const Ncr = (Math.PI ** 2 * tipoAco * I) / Math.pow(comprimentoEfeito, 2); // N
-                    const AsFlambagem = (Ncr / (0.6 * fcd)) * areaBitola; // Área de aço para flambagem
-                    const numeroBarrasFlambagem = Math.ceil(AsFlambagem / areaBitola);
-                    resultado = `Capacidade de Carga Crítica por Flambagem: ${Ncr.toFixed(2)} N<br>
-                                 Área de Aço para Flambagem: ${AsFlambagem.toFixed(2)} mm²<br>
-                                 Número de Barras: ${numeroBarrasFlambagem}`;
-                    break;
-
-                case 'combinado':
-                    const AsCombinado = momentoFletor / (0.9 * fyd * (d - altura / 2));
-                    const numeroBarrasCombinado = Math.ceil(AsCombinado / areaBitola);
-
-                    const momentoResistenteCombinado = 0.9 * fyd * d * (altura - d / 2) * 1e-6; // kN.m
-                    resultado = `Área de Aço para Esforço Combinado: ${AsCombinado.toFixed(2)} mm²<br>
-                                 Número de Barras: ${numeroBarrasCombinado}<br>
-                                 Momento Resistente: ${momentoResistenteCombinado.toFixed(2)} kN.m`;
-                    break;
-            }
-
-            // Cálculo dos estádios de carregamento com base na carga atuante na viga
-            const M1 = 0.5 * cargaTransversal * largura * altura ** 2 / 1e6; // Estádio I: kN.m
-            const M2 = 0.8 * cargaTransversal * largura * altura ** 2 / 1e6; // Estádio II: kN.m
-            const M3 = 1.2 * cargaTransversal * largura * altura ** 2 / 1e6; // Estádio III: kN.m
-
-            let estagioAtual = '';
-            if (momentoFletor <= M1) {
-                estagioAtual = 'Estádio I: Fase Elástica';
-            } else if (momentoFletor <= M2) {
-                estagioAtual = 'Estádio II: Fase de Fissuração no Concreto';
-            } else if (momentoFletor <= M3) {
-                estagioAtual = 'Estádio III: Ruptura do Aço e do Concreto';
-            } else {
-                estagioAtual = 'Carga acima da capacidade de projeto';
-            }
-
-            estagioCarregamento = `Estádio I: Fase Elástica - Momento Máximo: ${M1.toFixed(2)} kN.m<br>
-                                   Estádio II: Fase de Fissuração no Concreto - Momento Máximo: ${M2.toFixed(2)} kN.m<br>
-                                   Estádio III: Ruptura do Aço e do Concreto - Momento Máximo: ${M3.toFixed(2)} kN.m<br>
-                           
-            document.getElementById('resultado').innerHTML = resultado;
-            document.getElementById('estagioCarregamento').innerHTML = estagioCarregamento;
+        let estagioAtual = '';
+        if (momentoFletor <= M1) {
+            estagioAtual = 'Estádio I: Fase Elástica';
+        } else if (momentoFletor <= M2) {
+            estagioAtual = 'Estádio II: Fase de Fissuração no Concreto';
+        } else if (momentoFletor <= M3) {
+            estagioAtual = 'Estádio III: Ruptura do Aço e do Concreto';
+        } else {
+            estagioAtual = 'Carga acima da capacidade de projeto';
         }
+
+        estagioCarregamento = Estádio I: Fase Elástica - Momento Máximo: ${M1.toFixed(2)} kN.m<br>
+                               Estádio II: Fase de Fissuração no Concreto - Momento Máximo: ${M2.toFixed(2)} kN.m<br>
+                               Estádio III: Ruptura do Aço e do Concreto - Momento Máximo: ${M3.toFixed(2)} kN.m<br>
+                               Estágio Atual: ${estagioAtual};
+
+        document.getElementById('resultado').innerHTML = resultado;
+        document.getElementById('estagioCarregamento').innerHTML = estagioCarregamento;
+    }
     </script>
 </body>
 </html>
