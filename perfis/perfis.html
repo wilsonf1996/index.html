@@ -7,305 +7,251 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
+            padding: 20px;
+            max-width: 600px;
+            margin: auto;
         }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        label {
+
+        label, input, select {
             display: block;
-            margin-bottom: 5px;
-        }
-        input {
             width: 100%;
-            padding: 8px;
-            box-sizing: border-box;
+            margin-bottom: 10px;
+            font-size: 1.2em;
         }
+
         svg {
             margin-top: 20px;
+            max-width: 100%;
+            height: auto;
         }
+
+        .hidden {
+            display: none;
+        }
+
         #resultado {
             margin-top: 20px;
+            font-size: 1.2em;
         }
     </style>
 </head>
 <body>
     <h1>Calculadora de Perfis de Aço</h1>
-    <form id="perfilForm">
-        <div class="form-group">
-            <label for="perfil">Tipo de Perfil:</label>
-            <select id="perfil" name="perfil">
-                <option value="">Selecione</option>
-                <option value="i">Perfil I</option>
-                <option value="h">Perfil H</option>
-                <option value="l">Perfil L</option>
-                <option value="s">Perfil Quadrado</option>
-                <option value="sv">Perfil Quadrado Vazado</option>
-                <option value="t">Perfil Tubular</option>
-                <option value="c">Perfil Circular</option>
-                <option value="u">Perfil U</option>
-                <option value="c">Perfil C</option>
-            </select>
-        </div>
-        <div class="form-group" id="dimensao1-group">
-            <label for="dimensao1">Dimensão 1:</label>
-            <input type="number" id="dimensao1" name="dimensao1" step="0.01">
-        </div>
-        <div class="form-group" id="dimensao2-group">
-            <label for="dimensao2">Dimensão 2:</label>
-            <input type="number" id="dimensao2" name="dimensao2" step="0.01">
-        </div>
-        <div class="form-group">
-            <label for="espessura">Espessura:</label>
-            <input type="number" id="espessura" name="espessura" step="0.01">
-        </div>
-        <div class="form-group">
-            <label for="comprimento">Comprimento do Perfil (m):</label>
-            <input type="number" id="comprimento" name="comprimento" step="0.01">
-        </div>
-        <div class="form-group">
-            <label for="travamentos">Número de Travamentos:</label>
-            <input type="number" id="travamentos" name="travamentos" step="1">
-        </div>
-        <button type="button" onclick="calcular()">Calcular</button>
-    </form>
-    <div id="drawing"></div>
+
+    <label for="perfil">Selecione o tipo de perfil:</label>
+    <select id="perfil">
+        <option value="circular">Perfil Circular</option>
+        <option value="tubular">Perfil Tubular</option>
+        <option value="quadrado">Perfil Quadrado</option>
+        <option value="quadradoVazado">Perfil Quadrado Vazado</option>
+        <option value="u">Perfil U</option>
+        <option value="c">Perfil C</option>
+        <option value="i">Perfil I</option>
+        <option value="h">Perfil H</option>
+        <option value="l">Perfil L</option>
+    </select>
+
+    <div id="dimensao1-group">
+        <label for="dimensao1">Diâmetro (mm)</label>
+        <input type="number" id="dimensao1" placeholder="Insira a dimensão principal">
+    </div>
+
+    <div id="dimensao2-group" class="hidden">
+        <label for="dimensao2">Espessura (mm)</label>
+        <input type="number" id="dimensao2" placeholder="Insira a espessura">
+    </div>
+
+    <div id="dimensao3-group" class="hidden">
+        <label for="dimensao3">Altura (mm)</label>
+        <input type="number" id="dimensao3" placeholder="Insira a altura">
+    </div>
+
+    <button onclick="calcularPropriedades()">Calcular</button>
+
+    <div id="desenho"></div>
     <div id="resultado"></div>
 
     <script>
-        document.getElementById('perfil').addEventListener('change', updateFormFields);
+        const perfil = document.getElementById('perfil');
+        const dimensao1Group = document.getElementById('dimensao1-group');
+        const dimensao2Group = document.getElementById('dimensao2-group');
+        const dimensao3Group = document.getElementById('dimensao3-group');
 
-        function calcular() {
-            const perfil = document.getElementById('perfil').value;
-            const dimensao1 = parseFloat(document.getElementById('dimensao1').value);
-            const dimensao2 = parseFloat(document.getElementById('dimensao2').value) || dimensao1;
-            const espessura = parseFloat(document.getElementById('espessura').value);
-            const comprimento = parseFloat(document.getElementById('comprimento').value);
-            const travamentos = parseInt(document.getElementById('travamentos').value);
-
-            let momentoInercia, moduloResistencia, momentoInerciaPolar;
-
-            switch (perfil) {
-                case 'i':
-                    // Calcula propriedades para Perfil I
-                    momentoInercia = ((dimensao1 * Math.pow(dimensao2, 3)) / 12) - ((dimensao1 - espessura) * Math.pow(dimensao2 - 2 * espessura, 3) / 12);
-                    moduloResistencia = momentoInercia / (dimensao2 / 2);
+        perfil.addEventListener('change', function() {
+            const tipoPerfil = perfil.value;
+            switch (tipoPerfil) {
+                case 'circular':
+                    dimensao1Group.querySelector('label').innerText = 'Diâmetro (mm)';
+                    dimensao2Group.classList.add('hidden');
+                    dimensao3Group.classList.add('hidden');
                     break;
-                case 'h':
-                    // Calcula propriedades para Perfil H
-                    momentoInercia = ((dimensao1 * Math.pow(dimensao2, 3)) / 12) - ((dimensao1 - espessura) * Math.pow(dimensao2 - 2 * espessura, 3) / 12);
-                    moduloResistencia = momentoInercia / (dimensao2 / 2);
+                case 'tubular':
+                    dimensao1Group.querySelector('label').innerText = 'Diâmetro Externo (mm)';
+                    dimensao2Group.querySelector('label').innerText = 'Espessura (mm)';
+                    dimensao2Group.classList.remove('hidden');
+                    dimensao3Group.classList.add('hidden');
                     break;
-                case 'l':
-                    // Calcula propriedades para Perfil L
-                    momentoInercia = (dimensao1 * Math.pow(dimensao2, 3) / 12) - (espessura * Math.pow(dimensao2 - espessura, 3) / 12);
-                    moduloResistencia = momentoInercia / (dimensao2 / 2);
+                case 'quadrado':
+                    dimensao1Group.querySelector('label').innerText = 'Lado (mm)';
+                    dimensao2Group.classList.add('hidden');
+                    dimensao3Group.classList.add('hidden');
                     break;
-                case 's':
-                    // Calcula propriedades para Perfil Quadrado
-                    momentoInercia = (Math.pow(dimensao1, 4) / 12);
-                    moduloResistencia = momentoInercia / (dimensao1 / 2);
-                    break;
-                case 'sv':
-                    // Calcula propriedades para Perfil Quadrado Vazado
-                    momentoInercia = (Math.pow(dimensao1, 4) - Math.pow(dimensao1 - 2 * espessura, 4)) / 12;
-                    moduloResistencia = momentoInercia / (dimensao1 / 2);
-                    break;
-                case 't':
-                    // Calcula propriedades para Perfil Tubular
-                    const raioExterno = dimensao1 / 2;
-                    const raioInterno = raioExterno - espessura;
-                    momentoInerciaPolar = (Math.PI / 32) * (Math.pow(dimensao1, 4) - Math.pow(dimensao1 - 2 * espessura, 4));
-                    moduloResistencia = momentoInerciaPolar / raioExterno;
-                    break;
-                case 'c':
-                    // Calcula propriedades para Perfil Circular
-                    const raio = dimensao1 / 2;
-                    momentoInerciaPolar = (Math.PI / 64) * Math.pow(dimensao1, 4);
-                    moduloResistencia = momentoInerciaPolar / raio;
+                case 'quadradoVazado':
+                    dimensao1Group.querySelector('label').innerText = 'Lado Externo (mm)';
+                    dimensao2Group.querySelector('label').innerText = 'Espessura (mm)';
+                    dimensao2Group.classList.remove('hidden');
+                    dimensao3Group.classList.add('hidden');
                     break;
                 case 'u':
-                    // Calcula propriedades para Perfil U
-                    momentoInercia = ((dimensao1 * Math.pow(dimensao2, 3)) / 12) - ((dimensao1 - espessura) * Math.pow(dimensao2 - 2 * espessura, 3) / 12);
-                    moduloResistencia = momentoInercia / (dimensao2 / 2);
-                    break;
-                default:
-                    momentoInercia = moduloResistencia = momentoInerciaPolar = 'N/A';
-                    break;
-            }
-
-            const resultado = `
-                Momento de Inércia: ${momentoInercia ? momentoInercia.toFixed(2) : 'N/A'} mm⁴<br>
-                Módulo de Resistência: ${moduloResistencia ? moduloResistencia.toFixed(2) : 'N/A'} mm³<br>
-                Momento de Inércia Polar: ${momentoInerciaPolar ? momentoInerciaPolar.toFixed(2) : 'N/A'} mm⁴<br>
-                Comprimento do Perfil: ${comprimento} m<br>
-                Número de Travamentos: ${travamentos}
-            `;
-
-            document.getElementById('resultado').innerHTML = resultado;
-            updateDrawing();
-        }
-
-        function updateFormFields() {
-            const perfil = document.getElementById('perfil').value;
-            const dimensao2Group = document.getElementById('dimensao2-group');
-
-            switch (perfil) {
+                case 'c':
                 case 'i':
                 case 'h':
                 case 'l':
-                case 'u':
-                    document.getElementById('dimensao1-group').querySelector('label').innerText = 'Dimensão Principal 1 (mm)';
-                    dimensao2Group.querySelector('label').innerText = 'Dimensão Principal 2 (mm)';
-                    dimensao2Group.style.display = 'block';
-                    break;
-                case 's':
-                case 'c':
-                    document.getElementById('dimensao1-group').querySelector('label').innerText = 'Lado do Quadrado (mm)';
-                    dimensao2Group.style.display = 'none';
-                    break;
-                case 'sv':
-                    document.getElementById('dimensao1-group').querySelector('label').innerText = 'Lado do Quadrado (mm)';
+                    dimensao1Group.querySelector('label').innerText = 'Largura (mm)';
                     dimensao2Group.querySelector('label').innerText = 'Espessura (mm)';
-                    dimensao2Group.style.display = 'block';
-                    break;
-                case 't':
-                    document.getElementById('dimensao1-group').querySelector('label').innerText = 'Diâmetro Externo (mm)';
-                    dimensao2Group.querySelector('label').innerText = 'Espessura (mm)';
-                    dimensao2Group.style.display = 'block';
+                    dimensao3Group.querySelector('label').innerText = 'Altura (mm)';
+                    dimensao2Group.classList.remove('hidden');
+                    dimensao3Group.classList.remove('hidden');
                     break;
                 default:
-                    dimensao2Group.style.display = 'none';
-                    break;
+                    dimensao2Group.classList.add('hidden');
+                    dimensao3Group.classList.add('hidden');
             }
-        }
+        });
 
-        function updateDrawing() {
-            const perfil = document.getElementById('perfil').value;
+        function calcularPropriedades() {
+            const tipoPerfil = perfil.value;
             const dimensao1 = parseFloat(document.getElementById('dimensao1').value);
             const dimensao2 = parseFloat(document.getElementById('dimensao2').value) || dimensao1;
-            const espessura = parseFloat(document.getElementById('espessura').value);
+            const dimensao3 = parseFloat(document.getElementById('dimensao3').value) || dimensao1;
 
+            let area = 0;
+            let inercia = 0;
+            let polar = 0;
+
+            switch (tipoPerfil) {
+                case 'circular':
+                    area = Math.PI * Math.pow(dimensao1 / 2, 2);
+                    inercia = (Math.PI * Math.pow(dimensao1 / 2, 4)) / 4;
+                    polar = (Math.PI * Math.pow(dimensao1 / 2, 4)) / 2;
+                    break;
+                case 'tubular':
+                    const diametroInterno = dimensao1 - 2 * dimensao2;
+                    area = Math.PI * (Math.pow(dimensao1 / 2, 2) - Math.pow(diametroInterno / 2, 2));
+                    inercia = (Math.PI * (Math.pow(dimensao1 / 2, 4) - Math.pow(diametroInterno / 2, 4))) / 4;
+                    polar = (Math.PI * (Math.pow(dimensao1 / 2, 4) - Math.pow(diametroInterno / 2, 4))) / 2;
+                    break;
+                case 'quadrado':
+                    area = Math.pow(dimensao1, 2);
+                    inercia = Math.pow(dimensao1, 4) / 12;
+                    break;
+                case 'quadradoVazado':
+                    const ladoInterno = dimensao1 - 2 * dimensao2;
+                    area = Math.pow(dimensao1, 2) - Math.pow(ladoInterno, 2);
+                    inercia = (Math.pow(dimensao1, 4) - Math.pow(ladoInterno, 4)) / 12;
+                    break;
+                case 'u':
+                case 'c':
+                    area = 2 * dimensao2 * dimensao3 + (dimensao1 - dimensao2) * dimensao2;
+                    inercia = ((dimensao3 * Math.pow(dimensao1, 3)) - ((dimensao3 - dimensao2) * Math.pow(dimensao1 - dimensao2 * 2, 3))) / 12;
+                    break;
+                case 'i':
+                case 'h':
+                    area = 2 * dimensao2 * dimensao3 + (dimensao1 - dimensao2) * dimensao2;
+                    inercia = ((dimensao3 * Math.pow(dimensao1, 3)) - ((dimensao3 - dimensao2) * Math.pow(dimensao1 - dimensao2 * 2, 3))) / 12;
+                    break;
+                case 'l':
+                    area = dimensao1 * dimensao2;
+                    inercia = (dimensao1 * Math.pow(dimensao2, 3)) / 12;
+                    break;
+            }
+
+            mostrarResultado(area, inercia, polar, tipoPerfil);
+            desenharPerfil(tipoPerfil, dimensao1, dimensao2, dimensao3);
+        }
+
+        function mostrarResultado(area, inercia, polar, tipoPerfil) {
+            let resultadoHtml = `<p>Área: ${area.toFixed(2)} mm²</p>`;
+            resultadoHtml += `<p>Momento de Inércia: ${inercia.toFixed(2)} mm⁴</p>`;
+            if (tipoPerfil === 'circular' || tipoPerfil === 'tubular') {
+                resultadoHtml += `<p>Momento de Inércia Polar: ${polar.toFixed(2)} mm⁴</p>`;
+            }
+            document.getElementById('resultado').innerHTML = resultadoHtml;
+        }
+
+        function desenharPerfil(tipoPerfil, dimensao1, dimensao2, dimensao3) {
             let desenho = '';
 
-            switch (perfil) {
-                case 'i':
+            switch (tipoPerfil) {
+                case 'circular':
                     desenho = `
-                        <svg width="300" height="200">
-                            <rect x="50" y="30" width="${dimensao1}" height="${dimensao2}" fill="lightblue" stroke="black"/>
-                            <rect x="50" y="${30 + espessura}" width="${dimensao1 - 2 * espessura}" height="${dimensao2 - 2 * espessura}" fill="white" stroke="black"/>
-                            <text x="50" y="20" font-size="12">Perfil I</text>
-                            <text x="50" y="${30 + dimensao2 + 20}" font-size="12">Dim1: ${dimensao1} mm</text>
-                            <text x="50" y="${30 + dimensao2 + 40}" font-size="12">Dim2: ${dimensao2} mm</text>
-                            <text x="50" y="${30 + dimensao2 + 60}" font-size="12">Espessura: ${espessura} mm</text>
+                        <svg viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="40" fill="none" stroke="black" stroke-width="2" />
                         </svg>
                     `;
                     break;
-                case 'h':
+                case 'tubular':
                     desenho = `
-                        <svg width="300" height="200">
-                            <rect x="50" y="30" width="${dimensao1}" height="${dimensao2}" fill="lightgreen" stroke="black"/>
-                            <rect x="50" y="${30 + espessura}" width="${dimensao1 - 2 * espessura}" height="${dimensao2 - 2 * espessura}" fill="white" stroke="black"/>
-                            <text x="50" y="20" font-size="12">Perfil H</text>
-                            <text x="50" y="${30 + dimensao2 + 20}" font-size="12">Dim1: ${dimensao1} mm</text>
-                            <text x="50" y="${30 + dimensao2 + 40}" font-size="12">Dim2: ${dimensao2} mm</text>
-                            <text x="50" y="${30 + dimensao2 + 60}" font-size="12">Espessura: ${espessura} mm</text>
+                        <svg viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="40" fill="none" stroke="black" stroke-width="2" />
+                            <circle cx="50" cy="50" r="30" fill="none" stroke="black" stroke-width="2" />
                         </svg>
                     `;
                     break;
-                case 'l':
+                case 'quadrado':
                     desenho = `
-                        <svg width="300" height="200">
-                            <rect x="50" y="30" width="${dimensao1}" height="${dimensao2}" fill="lightcoral" stroke="black"/>
-                            <rect x="50" y="${30 + espessura}" width="${dimensao1 - espessura}" height="${dimensao2 - espessura}" fill="white" stroke="black"/>
-                            <text x="50" y="20" font-size="12">Perfil L</text>
-                            <text x="50" y="${30 + dimensao2 + 20}" font-size="12">Dim1: ${dimensao1} mm</text>
-                            <text x="50" y="${30 + dimensao2 + 40}" font-size="12">Dim2: ${dimensao2} mm</text>
-                            <text x="50" y="${30 + dimensao2 + 60}" font-size="12">Espessura: ${espessura} mm</text>
+                        <svg viewBox="0 0 100 100">
+                            <rect x="10" y="10" width="80" height="80" fill="none" stroke="black" stroke-width="2" />
                         </svg>
                     `;
                     break;
-                case 's':
+                case 'quadradoVazado':
                     desenho = `
-                        <svg width="300" height="300">
-                            <rect x="50" y="50" width="${dimensao1}" height="${dimensao1}" fill="lightgray" stroke="black"/>
-                            <text x="50" y="40" font-size="12">Perfil Quadrado</text>
-                            <text x="50" y="${50 + dimensao1 + 20}" font-size="12">Lado: ${dimensao1} mm</text>
-                        </svg>
-                    `;
-                    break;
-                case 'sv':
-                    desenho = `
-                        <svg width="300" height="300">
-                            <rect x="50" y="50" width="${dimensao1}" height="${dimensao1}" fill="lightyellow" stroke="black"/>
-                            <rect x="50 + ${espessura}" y="50 + ${espessura}" width="${dimensao1 - 2 * espessura}" height="${dimensao1 - 2 * espessura}" fill="white" stroke="black"/>
-                            <text x="50" y="40" font-size="12">Perfil Quadrado Vazado</text>
-                            <text x="50" y="${50 + dimensao1 + 20}" font-size="12">Lado: ${dimensao1} mm</text>
-                            <text x="50" y="${50 + dimensao1 + 40}" font-size="12">Espessura: ${espessura} mm</text>
-                        </svg>
-                    `;
-                    break;
-                case 't':
-                    desenho = `
-                        <svg width="300" height="300">
-                            <circle cx="150" cy="150" r="${dimensao1 / 2}" fill="lightblue" stroke="black"/>
-                            <circle cx="150" cy="150" r="${(dimensao1 / 2) - espessura}" fill="white" stroke="black"/>
-                            <text x="50" y="40" font-size="12">Perfil Tubular</text>
-                            <text x="50" y="${300 - 30}" font-size="12">Diâmetro: ${dimensao1} mm</text>
-                            <text x="50" y="${300 - 10}" font-size="12">Espessura: ${espessura} mm</text>
-                        </svg>
-                    `;
-                    break;
-                case 'c':
-                    desenho = `
-                        <svg width="300" height="300">
-                            <circle cx="150" cy="150" r="${dimensao1 / 2}" fill="lightgreen" stroke="black"/>
-                            <text x="50" y="40" font-size="12">Perfil Circular</text>
-                            <text x="50" y="${300 - 30}" font-size="12">Diâmetro: ${dimensao1} mm</text>
+                        <svg viewBox="0 0 100 100">
+                            <rect x="10" y="10" width="80" height="80" fill="none" stroke="black" stroke-width="2" />
+                            <rect x="30" y="30" width="40" height="40" fill="none" stroke="black" stroke-width="2" />
                         </svg>
                     `;
                     break;
                 case 'u':
                     desenho = `
-                        <svg width="300" height="200">
-                            <path d="M50,30 L${50 + dimensao1},30 L${50 + dimensao1},${30 + dimensao2 - espessura} L50, ${30 + dimensao2 - espessura} Z
-                                     M60, ${30 + espessura} L${50 + dimensao1 - espessura}, ${30 + espessura} L${50 + dimensao1 - espessura}, ${30 + dimensao2} L60, ${30 + dimensao2} Z"
-                                  fill="lightcoral" stroke="black"/>
-                            <text x="50" y="20" font-size="12">Perfil U</text>
-                            <text x="50" y="${30 + dimensao2 + 20}" font-size="12">Dim1: ${dimensao1} mm</text>
-                            <text x="50" y="${30 + dimensao2 + 40}" font-size="12">Dim2: ${dimensao2} mm</text>
-                            <text x="50" y="${30 + dimensao2 + 60}" font-size="12">Espessura: ${espessura} mm</text>
+                        <svg viewBox="0 0 100 100">
+                            <path d="M 10 10 H 30 V 90 H 70 V 10 H 90" fill="none" stroke="black" stroke-width="2" />
                         </svg>
                     `;
                     break;
                 case 'c':
                     desenho = `
-                        <svg width="300" height="200">
-                            <path d="M50,30 L${50 + dimensao1},30 L${50 + dimensao1},${30 + dimensao2} L50, ${30 + dimensao2} Z
-                                     M50 + ${espessura}, ${30 + espessura} L${50 + dimensao1 - espessura}, ${30 + espessura} L${50 + dimensao1 - espessura}, ${30 + dimensao2 - espessura} L50 + ${espessura}, ${30 + dimensao2 - espessura} Z"
-                                  fill="lightblue" stroke="black"/>
-                            <text x="50" y="20" font-size="12">Perfil C</text>
-                            <text x="50" y="${30 + dimensao2 + 20}" font-size="12">Dim1: ${dimensao1} mm</text>
-                            <text x="50" y="${30 + dimensao2 + 40}" font-size="12">Dim2: ${dimensao2} mm</text>
-                            <text x="50" y="${30 + dimensao2 + 60}" font-size="12">Espessura: ${espessura} mm</text>
+                        <svg viewBox="0 0 100 100">
+                            <path d="M 90 10 H 30 V 30 H 70 V 70 H 30 V 90 H 90 Z" fill="none" stroke="black" stroke-width="2" />
                         </svg>
                     `;
                     break;
-                default:
-                    desenho = '';
+                case 'i':
+                case 'h':
+                    desenho = `
+                        <svg viewBox="0 0 100 100">
+                            <rect x="10" y="10" width="80" height="20" fill="none" stroke="black" stroke-width="2" />
+                            <rect x="30" y="30" width="40" height="40" fill="none" stroke="black" stroke-width="2" />
+                            <rect x="10" y="70" width="80" height="20" fill="none" stroke="black" stroke-width="2" />
+                        </svg>
+                    `;
+                    break;
+                case 'l':
+                    desenho = `
+                        <svg viewBox="0 0 100 100">
+                            <path d="M 10 10 H 90 V 30 H 30 V 90 H 10 Z" fill="none" stroke="black" stroke-width="2" />
+                        </svg>
+                    `;
                     break;
             }
 
             document.getElementById('desenho').innerHTML = desenho;
         }
 
-        document.getElementById('perfil').addEventListener('change', updateDimensions);
-        document.getElementById('dimensao1').addEventListener('input', updateDrawing);
-        document.getElementById('dimensao2').addEventListener('input', updateDrawing);
-        document.getElementById('espessura').addEventListener('input', updateDrawing);
-
-        // Initial drawing
-        updateDrawing();
+        // Desenho inicial
+        desenharPerfil(perfil.value, 0, 0);
     </script>
 </body>
 </html>
+
