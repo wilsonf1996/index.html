@@ -1,1 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Aço para Vigas de Concreto</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            font-size: 24px;
+        }
+
+        label {
+            display: block;
+            margin: 15px 0 5px;
+            color: #333;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        button {
+            width: 100%;
+            background-color: #007bff;
+            color: #fff;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .resultado {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 20px;
+            }
+
+            input, select {
+                font-size: 14px;
+            }
+
+            button {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Calculadora de Aço para Vigas de Concreto</h1>
+        <label for="fck">fck (MPa):</label>
+        <input type="number" id="fck" placeholder="Digite o valor de fck" required>
+
+        <label for="cargaTransversal">Carga Transversal (kN):</label>
+        <input type="number" id="cargaTransversal" placeholder="Digite a carga transversal" required>
+
+        <label for="momentoFletor">Momento Fletor (kN.m):</label>
+        <input type="number" id="momentoFletor" placeholder="Digite o momento fletor" required>
+
+        <label for="fyd">fyd (MPa):</label>
+        <input type="number" id="fyd" placeholder="Digite o valor de fyd" required>
+
+        <label for="largura">Largura da Viga (mm):</label>
+        <input type="number" id="largura" placeholder="Digite a largura da viga" required>
+
+        <label for="altura">Altura da Viga (mm):</label>
+        <input type="number" id="altura" placeholder="Digite a altura da viga" required>
+
+        <label for="bitola">Diâmetro da Bitola (mm):</label>
+        <input type="number" id="bitola" placeholder="Digite o diâmetro da bitola" required>
+
+        <label for="cobrimento">Cobrimento do Concreto (mm):</label>
+        <select id="cobrimento">
+            <option value="20">20 mm</option>
+            <option value="25">25 mm</option>
+            <option value="30">30 mm</option>
+            <option value="35">35 mm</option>
+            <option value="40">40 mm</option>
+        </select>
+
+        <label for="tipoEsforco">Tipo de Esforço:</label>
+        <select id="tipoEsforco">
+            <option value="flexao">Flexão</option>
+            <option value="cisalhamento">Cisalhamento</option>
+            <option value="flambagem">Flambagem</option>
+            <option value="combinado">Combinado</option>
+        </select>
+
+        <button onclick="calcularAco()">Calcular</button>
+
+        <div id="resultado" class="resultado"></div>
+        <div id="estagioCarregamento" class="resultado"></div>
+    </div>
+
+    <script>
+        function calcularAco() {
+            const fck = parseFloat(document.getElementById('fck').value);
+            const cargaTransversal = parseFloat(document.getElementById('cargaTransversal').value);
+            const momentoFletor = parseFloat(document.getElementById('momentoFletor').value);
+            const fyd = parseFloat(document.getElementById('fyd').value);
+            const largura = parseFloat(document.getElementById('largura').value);
+            const altura = parseFloat(document.getElementById('altura').value);
+            const bitola = parseFloat(document.getElementById('bitola').value);
+            const cobrimento = parseFloat(document.getElementById('cobrimento').value);
+            const tipoEsforco = document.getElementById('tipoEsforco').value;
+
+            const d = altura - cobrimento; // Altura útil considerando o cobrimento
+            const areaBitola = Math.PI * Math.pow(bitola / 2, 2); // mm²
+            let resultado = '';
+            let estagioCarregamento = '';
+
+            switch (tipoEsforco) {
+                case 'flexao':
+                    const AsFlexao = momentoFletor / (0.9 * fyd * d); // mm²
+                    const numeroBarrasFlexao = Math.ceil(AsFlexao / areaBitola);
+
+                    const momentoResistente = 0.9 * fyd * d * (altura - d / 2) * 1e-6; // kN.m
+                    resultado = `Área de Aço para Flexão: ${AsFlexao.toFixed(2)} mm²<br>
+                                 Número de Barras: ${numeroBarrasFlexao}<br>
+                                 Momento Resistente: ${momentoResistente.toFixed(2)} kN.m`;
+                    break;
+
+                case 'cisalhamento':
+                    const Vc = 0.17 * Math.sqrt(fck) * largura * altura / 1e6; // kN
+                    const AsCisalhamento = Math.max(0, cargaTransversal - Vc) / (0.9 * fyd); // mm²
+                    const numeroBarrasCisalhamento = Math.ceil(AsCisalhamento / areaBitola);
+
+                    const cisalhamentoResistente = Vc; // kN
+                    resultado = `Área de Aço para Cisalhamento: ${AsCisalhamento.toFixed(2)} mm²<br>
+                                 Número de Barras: ${numeroBarrasCisalhamento}<br>
+                                 Cisalhamento Resistente: ${cisalhamentoResistente.toFixed(2)} kN`;
+                    break;
+
+                case 'flambagem':
+                    const fcr = fyd / (1.4 * (altura / d)); // MPa
+                    const AsFlambagem = momentoFletor / (0.9 * fcr); // mm²
+                    const numeroBarrasFlambagem = Math.ceil(AsFlambagem / areaBitola);
+
+                    const flambagemResistente = 0.9 * fcr * altura; // kN
+                    resultado = `Área de Aço para Flambagem: ${AsFlambagem.toFixed(2)} mm²<br>
+                                 Número de Barras: ${numeroBarrasFlambagem}<br>
+                                 Flambagem Resistente: ${flambagemResistente.toFixed(2)} kN`;
+                    break;
+
+                case 'combinado':
+                    const AsCombinado = momentoFletor / (0.9 * fyd * (d - altura / 2)); // mm²
+                    const numeroBarrasCombinado = Math.ceil(AsCombinado / areaBitola);
+
+                    const momentoResistenteCombinado = 0.9 * fyd * d * (altura - d / 2) * 1e-6; // kN.m
+                    resultado = `Área de Aço Combinada: ${AsCombinado.toFixed(2)} mm²<br>
+                                 Número de Barras: ${numeroBarrasCombinado}<br>
+                                 Momento Resistente: ${momentoResistenteCombinado.toFixed(2)} kN.m`;
+                    break;
+            }
+
+            if (fck <= 30) {
+                estagioCarregamento = "Estágio de carregamento inicial.";
+            } else if (fck > 30 && fck <= 50) {
+                estagioCarregamento = "Estágio de carregamento médio.";
+            } else {
+                estagioCarregamento = "Estágio de carregamento avançado.";
+            }
+
+            document.getElementById('resultado').innerHTML = resultado;
+            document.getElementById('estagioCarregamento').innerHTML = estagioCarregamento;
+        }
+    </script>
+</body>
+</html>
 
