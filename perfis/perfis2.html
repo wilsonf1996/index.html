@@ -3,276 +3,316 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Perfis de Aço</title>
+    <title>Calculadora de Perfis Estruturais</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            max-width: 800px;
-            margin: auto;
-        }
-
-        label, input, select {
-            display: block;
-            width: 100%;
-            margin-bottom: 10px;
-            font-size: 1.2em;
-        }
-
-        svg {
-            margin-top: 20px;
-            max-width: 100%;
-            height: auto;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        #resultado {
-            margin-top: 20px;
-            font-size: 1.2em;
-        }
-
-        .profile-description {
-            margin-top: 20px;
-            font-size: 1.1em;
-            line-height: 1.6;
-        }
+        body { font-family: Arial, sans-serif; }
+        .container { max-width: 800px; margin: 0 auto; }
+        form { margin-bottom: 20px; }
+        label { display: block; margin: 10px 0 5px; }
+        input { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; }
+        button { padding: 10px 15px; font-size: 16px; }
+        canvas { border: 1px solid #000; margin-top: 20px; }
     </style>
 </head>
 <body>
-    <h1>Calculadora de Perfis de Aço</h1>
+    <div class="container">
+        <h1>Calculadora de Perfis Estruturais</h1>
 
-    <label for="perfil">Selecione o tipo de perfil:</label>
-    <select id="perfil">
-        <option value="circular">Perfil Circular</option>
-        <option value="tubular">Perfil Tubular</option>
-        <option value="quadrado">Perfil Quadrado</option>
-        <option value="quadradoVazado">Perfil Quadrado Vazado</option>
-        <option value="u">Perfil U</option>
-        <option value="c">Perfil C</option>
-        <option value="i">Perfil I</option>
-        <option value="h">Perfil H</option>
-        <option value="l">Perfil L</option>
-        <option value="cantoneira">Cantoneira</option>
-        <option value="vigaT">Viga T</option>
-    </select>
+        <form id="perfilForm">
+            <label for="perfilType">Tipo de Perfil:</label>
+            <select id="perfilType" name="perfilType" required>
+                <option value="i">Perfil I</option>
+                <option value="h">Perfil H</option>
+                <option value="u">Perfil U</option>
+                <option value="c">Perfil C</option>
+                <option value="l">Perfil L</option>
+                <option value="t">Perfil T</option>
+                <option value="ct">Tubular Circular</option>
+                <option value="qt">Tubular Quadrado</option>
+            </select>
 
-    <div id="dimensao1-group">
-        <label for="dimensao1">Largura / Diâmetro Externo (mm)</label>
-        <input type="number" id="dimensao1" placeholder="Insira a largura ou diâmetro">
+            <div id="inputFields">
+                <!-- Campos de entrada dinamicamente gerados -->
+            </div>
+
+            <button type="submit">Calcular</button>
+        </form>
+
+        <canvas id="perfilCanvas" width="600" height="400"></canvas>
     </div>
-
-    <div id="dimensao2-group" class="hidden">
-        <label for="dimensao2">Espessura (mm)</label>
-        <input type="number" id="dimensao2" placeholder="Insira a espessura">
-    </div>
-
-    <div id="dimensao3-group" class="hidden">
-        <label for="dimensao3">Altura / Comprimento da Alma (mm)</label>
-        <input type="number" id="dimensao3" placeholder="Insira a altura ou comprimento da alma">
-    </div>
-
-    <div id="dimensao4-group" class="hidden">
-        <label for="dimensao4">Largura da Mesa (mm)</label>
-        <input type="number" id="dimensao4" placeholder="Insira a largura da mesa">
-    </div>
-
-    <button onclick="calcularPropriedades()">Calcular</button>
-
-    <div id="desenho"></div>
-    <div id="resultado"></div>
-    <div id="descricao" class="profile-description"></div>
 
     <script>
-        const perfil = document.getElementById('perfil');
-        const dimensao1Group = document.getElementById('dimensao1-group');
-        const dimensao2Group = document.getElementById('dimensao2-group');
-        const dimensao3Group = document.getElementById('dimensao3-group');
-        const dimensao4Group = document.getElementById('dimensao4-group');
-        const descricao = document.getElementById('descricao');
-        const desenho = document.getElementById('desenho');
+        const perfilForm = document.getElementById('perfilForm');
+        const inputFields = document.getElementById('inputFields');
+        const perfilCanvas = document.getElementById('perfilCanvas');
+        const ctx = perfilCanvas.getContext('2d');
 
-        perfil.addEventListener('change', function() {
-            const tipoPerfil = perfil.value;
-            switch (tipoPerfil) {
-                case 'circular':
-                    dimensao1Group.querySelector('label').innerText = 'Diâmetro (mm)';
-                    dimensao2Group.classList.add('hidden');
-                    dimensao3Group.classList.add('hidden');
-                    dimensao4Group.classList.add('hidden');
-                    break;
-                case 'tubular':
-                    dimensao1Group.querySelector('label').innerText = 'Diâmetro Externo (mm)';
-                    dimensao2Group.querySelector('label').innerText = 'Espessura (mm)';
-                    dimensao2Group.classList.remove('hidden');
-                    dimensao3Group.classList.add('hidden');
-                    dimensao4Group.classList.add('hidden');
-                    break;
-                case 'quadrado':
-                    dimensao1Group.querySelector('label').innerText = 'Lado (mm)';
-                    dimensao2Group.classList.add('hidden');
-                    dimensao3Group.classList.add('hidden');
-                    dimensao4Group.classList.add('hidden');
-                    break;
-                case 'quadradoVazado':
-                    dimensao1Group.querySelector('label').innerText = 'Lado Externo (mm)';
-                    dimensao2Group.querySelector('label').innerText = 'Espessura (mm)';
-                    dimensao2Group.classList.remove('hidden');
-                    dimensao3Group.classList.add('hidden');
-                    dimensao4Group.classList.add('hidden');
-                    break;
-                case 'u':
-                case 'c':
+        function gerarCamposEntrada(tipo) {
+            let campos = '';
+
+            switch (tipo) {
                 case 'i':
                 case 'h':
-                case 'l':
-                    dimensao1Group.querySelector('label').innerText = 'Largura (mm)';
-                    dimensao2Group.querySelector('label').innerText = 'Espessura (mm)';
-                    dimensao3Group.querySelector('label').innerText = 'Altura (mm)';
-                    dimensao2Group.classList.remove('hidden');
-                    dimensao3Group.classList.remove('hidden');
-                    dimensao4Group.classList.add('hidden');
-                    break;
-                case 'cantoneira':
-                    dimensao1Group.querySelector('label').innerText = 'Lado Maior (mm)';
-                    dimensao2Group.querySelector('label').innerText = 'Lado Menor (mm)';
-                    dimensao2Group.classList.remove('hidden');
-                    dimensao3Group.classList.add('hidden');
-                    dimensao4Group.classList.add('hidden');
-                    break;
-                case 'vigaT':
-                    dimensao1Group.querySelector('label').innerText = 'Base (mm)';
-                    dimensao2Group.querySelector('label').innerText = 'Altura (mm)';
-                    dimensao3Group.querySelector('label').innerText = 'Espessura (mm)';
-                    dimensao2Group.classList.remove('hidden');
-                    dimensao3Group.classList.remove('hidden');
-                    dimensao4Group.classList.remove('hidden');
-                    break;
-                default:
-                    dimensao2Group.classList.add('hidden');
-                    dimensao3Group.classList.add('hidden');
-                    dimensao4Group.classList.add('hidden');
-            }
-        });
-
-        function calcularPropriedades() {
-            const tipoPerfil = perfil.value;
-            const dimensao1 = parseFloat(document.getElementById('dimensao1').value);
-            const dimensao2 = parseFloat(document.getElementById('dimensao2').value) || 0;
-            const dimensao3 = parseFloat(document.getElementById('dimensao3').value) || 0;
-            const dimensao4 = parseFloat(document.getElementById('dimensao4').value) || 0;
-
-            let area = 0;
-            let inercia = 0;
-            let polar = 0;
-            let svgContent = '';
-
-            switch (tipoPerfil) {
-                case 'circular':
-                    area = Math.PI * Math.pow(dimensao1 / 2, 2);
-                    inercia = (Math.PI * Math.pow(dimensao1 / 2, 4)) / 4;
-                    polar = (Math.PI * Math.pow(dimensao1 / 2, 4)) / 2;
-                    svgContent = `<circle cx="50" cy="50" r="${dimensao1 / 2}" stroke="black" stroke-width="2" fill="none"/>`;
-                    break;
-                case 'tubular':
-                    const diametroInterno = dimensao1 - 2 * dimensao2;
-                    area = Math.PI * (Math.pow(dimensao1 / 2, 2) - Math.pow(diametroInterno / 2, 2));
-                    inercia = (Math.PI * (Math.pow(dimensao1 / 2, 4) - Math.pow(diametroInterno / 2, 4))) / 4;
-                    polar = (Math.PI * (Math.pow(dimensao1 / 2, 4) - Math.pow(diametroInterno / 2, 4))) / 2;
-                    svgContent = `
-                        <circle cx="50" cy="50" r="${dimensao1 / 2}" stroke="black" stroke-width="2" fill="none"/>
-                        <circle cx="50" cy="50" r="${diametroInterno / 2}" stroke="black" stroke-width="2" fill="none"/>
-                    `;
-                    break;
-                case 'quadrado':
-                    area = Math.pow(dimensao1, 2);
-                    inercia = (Math.pow(dimensao1, 4)) / 12;
-                    polar = (Math.pow(dimensao1, 4)) / 6;
-                    svgContent = `
-                        <rect x="10" y="10" width="${dimensao1}" height="${dimensao1}" stroke="black" stroke-width="2" fill="none"/>
-                    `;
-                    break;
-                case 'quadradoVazado':
-                    area = Math.pow(dimensao1, 2) - Math.pow(dimensao1 - 2 * dimensao2, 2);
-                    inercia = (Math.pow(dimensao1, 4) - Math.pow(dimensao1 - 2 * dimensao2, 4)) / 12;
-                    polar = (Math.pow(dimensao1, 4) - Math.pow(dimensao1 - 2 * dimensao2, 4)) / 6;
-                    svgContent = `
-                        <rect x="10" y="10" width="${dimensao1}" height="${dimensao1}" stroke="black" stroke-width="2" fill="none"/>
-                        <rect x="${dimensao2}" y="${dimensao2}" width="${dimensao1 - 2 * dimensao2}" height="${dimensao1 - 2 * dimensao2}" stroke="black" stroke-width="2" fill="none"/>
-                    `;
-                    break;
                 case 'u':
-                    area = dimensao1 * dimensao3 - (dimensao1 - 2 * dimensao2) * (dimensao3 - dimensao2);
-                    inercia = ((dimensao1 * Math.pow(dimensao3, 3)) - (dimensao1 - 2 * dimensao2) * Math.pow(dimensao3 - dimensao2, 3)) / 12;
-                    polar = ((dimensao1 * Math.pow(dimensao3, 3)) - (dimensao1 - 2 * dimensao2) * Math.pow(dimensao3 - dimensao2, 3)) / 6;
-                    svgContent = `
-                        <path d="M10 10 L${dimensao1 + 10} 10 L${dimensao1 + 10} ${dimensao3 + 10} L10 ${dimensao3 + 10} Z" stroke="black" stroke-width="2" fill="none"/>
-                        <path d="M${dimensao2 + 10} ${dimensao2 + 10} L${dimensao1 - dimensao2 + 10} ${dimensao2 + 10} L${dimensao1 - dimensao2 + 10} ${dimensao3 - dimensao2 + 10} L${dimensao2 + 10} ${dimensao3 - dimensao2 + 10} Z" stroke="black" stroke-width="2" fill="none"/>
+                    campos += `
+                        <label for="height">Altura (h):</label>
+                        <input type="number" id="height" name="height" step="any" required>
+                        <label for="width">Largura da aba (b):</label>
+                        <input type="number" id="width" name="width" step="any" required>
+                        <label for="thicknessFlange">Espessura da aba (t):</label>
+                        <input type="number" id="thicknessFlange" name="thicknessFlange" step="any" required>
+                        <label for="thicknessWeb">Espessura da alma (s):</label>
+                        <input type="number" id="thicknessWeb" name="thicknessWeb" step="any" required>
                     `;
                     break;
                 case 'c':
-                case 'i':
-                case 'h':
+                    campos += `
+                        <label for="heightC">Altura (h):</label>
+                        <input type="number" id="heightC" name="heightC" step="any" required>
+                        <label for="widthC">Largura da aba (b):</label>
+                        <input type="number" id="widthC" name="widthC" step="any" required>
+                        <label for="thicknessFlangeC">Espessura da aba (t):</label>
+                        <input type="number" id="thicknessFlangeC" name="thicknessFlangeC" step="any" required>
+                        <label for="thicknessWebC">Espessura da alma (s):</label>
+                        <input type="number" id="thicknessWebC" name="thicknessWebC" step="any" required>
+                    `;
+                    break;
                 case 'l':
-                    area = dimensao1 * dimensao3 - (dimensao1 - 2 * dimensao2) * (dimensao3 - 2 * dimensao2);
-                    inercia = ((dimensao1 * Math.pow(dimensao3, 3)) - (dimensao1 - 2 * dimensao2) * Math.pow(dimensao3 - 2 * dimensao2, 3)) / 12;
-                    polar = ((dimensao1 * Math.pow(dimensao3, 3)) - (dimensao1 - 2 * dimensao2) * Math.pow(dimensao3 - 2 * dimensao2, 3)) / 6;
-                    svgContent = `
-                        <path d="M10 10 L${dimensao1 + 10} 10 L${dimensao1 + 10} ${dimensao3 + 10} L10 ${dimensao3 + 10} Z" stroke="black" stroke-width="2" fill="none"/>
-                        <path d="M${dimensao2 + 10} ${dimensao2 + 10} L${dimensao1 - dimensao2 + 10} ${dimensao2 + 10} L${dimensao1 - dimensao2 + 10} ${dimensao3 - dimensao2 + 10} L${dimensao2 + 10} ${dimensao3 - dimensao2 + 10} Z" stroke="black" stroke-width="2" fill="none"/>
+                    campos += `
+                        <label for="length1">Comprimento do lado 1 (a1):</label>
+                        <input type="number" id="length1" name="length1" step="any" required>
+                        <label for="length2">Comprimento do lado 2 (a2):</label>
+                        <input type="number" id="length2" name="length2" step="any" required>
+                        <label for="thicknessL">Espessura (t):</label>
+                        <input type="number" id="thicknessL" name="thicknessL" step="any" required>
                     `;
                     break;
-                case 'cantoneira':
-                    area = 2 * dimensao1 * dimensao2 - Math.pow(dimensao2, 2);
-                    inercia = (2 * Math.pow(dimensao1, 3) * dimensao2 - Math.pow(dimensao2, 3)) / 12;
-                    polar = (2 * Math.pow(dimensao1, 3) * dimensao2 - Math.pow(dimensao2, 3)) / 6;
-                    svgContent = `
-                        <path d="M10 10 L${dimensao1 + 10} 10 L${dimensao1 + 10} ${dimensao2 + 10} L10 ${dimensao2 + 10} Z" stroke="black" stroke-width="2" fill="none"/>
-                        <path d="M10 ${dimensao2 + 10} L${dimensao2 + 10} ${dimensao2 + 10} L${dimensao2 + 10} ${dimensao1 + 10} L10 ${dimensao1 + 10} Z" stroke="black" stroke-width="2" fill="none"/>
+                case 't':
+                    campos += `
+                        <label for="heightT">Altura (h):</label>
+                        <input type="number" id="heightT" name="heightT" step="any" required>
+                        <label for="widthT">Largura da aba (b):</label>
+                        <input type="number" id="widthT" name="widthT" step="any" required>
+                        <label for="thicknessT">Espessura (t):</label>
+                        <input type="number" id="thicknessT" name="thicknessT" step="any" required>
                     `;
                     break;
-                case 'vigaT':
-                    area = dimensao1 * dimensao2 + (dimensao3 - dimensao2) * dimensao4;
-                    inercia = (dimensao1 * Math.pow(dimensao2, 3) / 12) + (dimensao3 - dimensao2) * (Math.pow(dimensao4, 3) / 12);
-                    polar = (dimensao1 * Math.pow(dimensao2, 3) / 6) + (dimensao3 - dimensao2) * (Math.pow(dimensao4, 3) / 6);
-                    svgContent = `
-                        <rect x="10" y="10" width="${dimensao1}" height="${dimensao2}" stroke="black" stroke-width="2" fill="none"/>
-                        <rect x="10" y="${dimensao2 + 10}" width="${dimensao4}" height="${dimensao3 - dimensao2}" stroke="black" stroke-width="2" fill="none"/>
+                case 'ct':
+                    campos += `
+                        <label for="diameter">Diâmetro Externo (d):</label>
+                        <input type="number" id="diameter" name="diameter" step="any" required>
+                        <label for="innerDiameter">Diâmetro Interno (d_i):</label>
+                        <input type="number" id="innerDiameter" name="innerDiameter" step="any">
                     `;
                     break;
-                default:
-                    svgContent = '';
+                case 'qt':
+                    campos += `
+                        <label for="side">Lado Externo (d):</label>
+                        <input type="number" id="side" name="side" step="any" required>
+                        <label for="innerSide">Lado Interno (d_i):</label>
+                        <input type="number" id="innerSide" name="innerSide" step="any">
+                    `;
+                    break;
             }
 
-            document.getElementById('resultado').innerText = `Área: ${area.toFixed(2)} mm²\nMomento de Inércia: ${inercia.toFixed(2)} mm^4\nMomento Polar: ${polar.toFixed(2)} mm^4`;
-
-            const descriptions = {
-                'circular': 'Perfil circular, ideal para colunas e tubos.',
-                'tubular': 'Perfil tubular, utilizado em estruturas metálicas e suportes.',
-                'quadrado': 'Perfil quadrado, comumente usado em estruturas de apoio.',
-                'quadradoVazado': 'Perfil quadrado vazado, usado quando é necessário reduzir peso.',
-                'u': 'Perfil U, utilizado em suportes e estruturas com alta resistência.',
-                'c': 'Perfil C, conhecido por sua versatilidade em diversas aplicações.',
-                'i': 'Perfil I, amplamente utilizado em vigas e colunas.',
-                'h': 'Perfil H, oferece maior resistência e é utilizado em grandes estruturas.',
-                'l': 'Perfil L, comumente usado em suportes e reforços.',
-                'cantoneira': 'Cantoneira, ideal para reforços em ângulos.',
-                'vigaT': 'Viga T, utilizada para suportar cargas pesadas.'
-            };
-
-            descricao.innerText = descriptions[tipoPerfil] || 'Selecione um perfil para ver a descrição.';
-
-            desenho.innerHTML = `
-                <svg width="200" height="200" viewBox="0 0 100 100">
-                    ${svgContent}
-                </svg>
-            `;
+            inputFields.innerHTML = campos;
         }
 
-        // Inicializa com a primeira seleção
-        perfil.dispatchEvent(new Event('change'));
+        function calcularPerfil(tipo, data) {
+            switch (tipo) {
+                case 'i':
+                case 'h':
+                case 'u':
+                    return calcularPerfilI(data.height, data.width, data.thicknessFlange, data.thicknessWeb);
+                case 'c':
+                    return calcularPerfilC(data.heightC, data.widthC, data.thicknessFlangeC, data.thicknessWebC);
+                case 'l':
+                    return calcularPerfilL(data.length1, data.length2, data.thicknessL);
+                case 't':
+                    return calcularPerfilT(data.heightT, data.widthT, data.thicknessT);
+                case 'ct':
+                    return calcularPerfilCircular(data.diameter, data.innerDiameter);
+                case 'qt':
+                    return calcularPerfilQuadrado(data.side, data.innerSide);
+            }
+        }
+
+        function desenharPerfil(tipo, data) {
+            ctx.clearRect(0, 0, perfilCanvas.width, perfilCanvas.height);
+            ctx.beginPath();
+            switch (tipo) {
+                case 'i':
+                case 'h':
+                case 'u':
+                    desenharPerfilI(ctx, data.height, data.width, data.thicknessFlange, data.thicknessWeb);
+                    break;
+                case 'c':
+                    desenharPerfilC(ctx, data.heightC, data.widthC, data.thicknessFlangeC, data.thicknessWebC);
+                    break;
+                case 'l':
+                    desenharPerfilL(ctx, data.length1, data.length2, data.thicknessL);
+                    break;
+                case 't':
+                    desenharPerfilT(ctx, data.heightT, data.widthT, data.thicknessT);
+                    break;
+                case 'ct':
+                    desenharPerfilCircular(ctx, data.diameter, data.innerDiameter);
+                    break;
+                case 'qt':
+                    desenharPerfilQuadrado(ctx, data.side, data.innerSide);
+                    break;
+            }
+            ctx.stroke();
+        }
+
+        perfilForm.addEventListener('change', function(event) {
+            gerarCamposEntrada(event.target.value);
+        });
+
+        perfilForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const tipo = document.getElementById('perfilType').value;
+            const data = {
+                height: parseFloat(document.getElementById('height')?.value || 0),
+                width: parseFloat(document.getElementById('width')?.value || 0),
+                thicknessFlange: parseFloat(document.getElementById('thicknessFlange')?.value || 0),
+                thicknessWeb: parseFloat(document.getElementById('thicknessWeb')?.value || 0),
+                heightC: parseFloat(document.getElementById('heightC')?.value || 0),
+                widthC: parseFloat(document.getElementById('widthC')?.value || 0),
+                thicknessFlangeC: parseFloat(document.getElementById('thicknessFlangeC')?.value || 0),
+                thicknessWebC: parseFloat(document.getElementById('thicknessWebC')?.value || 0),
+                length1: parseFloat(document.getElementById('length1')?.value || 0),
+                length2: parseFloat(document.getElementById('length2')?.value || 0),
+                thicknessL: parseFloat(document.getElementById('thicknessL')?.value || 0),
+                heightT: parseFloat(document.getElementById('heightT')?.value || 0),
+                widthT: parseFloat(document.getElementById('widthT')?.value || 0),
+                thicknessT: parseFloat(document.getElementById('thicknessT')?.value || 0),
+                diameter: parseFloat(document.getElementById('diameter')?.value || 0),
+                innerDiameter: parseFloat(document.getElementById('innerDiameter')?.value || 0),
+                side: parseFloat(document.getElementById('side')?.value || 0),
+                innerSide: parseFloat(document.getElementById('innerSide')?.value || 0)
+            };
+
+            const resultados = calcularPerfil(tipo, data);
+            console.log(resultados);
+            desenharPerfil(tipo, data);
+        });
+
+        function calcularPerfilI(height, width, thicknessFlange, thicknessWeb) {
+            const area = (width * thicknessFlange) + ((height - 2 * thicknessFlange) * thicknessWeb);
+            const perimeter = 2 * width + 2 * height - 2 * thicknessFlange;
+            return { area, perimeter };
+        }
+
+        function desenharPerfilI(ctx, height, width, thicknessFlange, thicknessWeb) {
+            ctx.beginPath();
+            ctx.moveTo(50, 50);
+            ctx.lineTo(50 + width, 50);
+            ctx.lineTo(50 + width, 50 + height);
+            ctx.lineTo(50, 50 + height);
+            ctx.closePath();
+            ctx.moveTo(50, 50);
+            ctx.lineTo(50 + width, 50);
+            ctx.lineTo(50 + width, 50 + thicknessFlange);
+            ctx.lineTo(50, 50 + thicknessFlange);
+            ctx.closePath();
+            ctx.moveTo(50, 50 + height - thicknessFlange);
+            ctx.lineTo(50 + width, 50 + height - thicknessFlange);
+            ctx.lineTo(50 + width, 50 + height);
+            ctx.lineTo(50, 50 + height);
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        function calcularPerfilC(height, width, thicknessFlange, thicknessWeb) {
+            const area = (2 * width * thicknessFlange) + (height - 2 * thicknessFlange) * thicknessWeb;
+            const perimeter = 2 * width + 2 * height - 4 * thicknessFlange;
+            return { area, perimeter };
+        }
+
+        function desenharPerfilC(ctx, height, width, thicknessFlange, thicknessWeb) {
+            ctx.beginPath();
+            ctx.moveTo(50, 50);
+            ctx.lineTo(50 + width, 50);
+            ctx.lineTo(50 + width, 50 + thicknessFlange);
+            ctx.lineTo(50 + thicknessWeb, 50 + thicknessFlange);
+            ctx.lineTo(50 + thicknessWeb, 50 + height - thicknessFlange);
+            ctx.lineTo(50 + width - thicknessWeb, 50 + height - thicknessFlange);
+            ctx.lineTo(50 + width - thicknessWeb, 50 + thicknessFlange);
+            ctx.lineTo(50 + width, 50 + thicknessFlange);
+            ctx.lineTo(50 + width, 50 + height);
+            ctx.lineTo(50, 50 + height);
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        function calcularPerfilL(length1, length2, thicknessL) {
+            const area = (length1 + length2) * thicknessL;
+            const perimeter = 2 * (length1 + length2) + 2 * thicknessL;
+            return { area, perimeter };
+        }
+
+        function desenharPerfilL(ctx, length1, length2, thicknessL) {
+            ctx.beginPath();
+            ctx.moveTo(50, 50);
+            ctx.lineTo(50 + length1, 50);
+            ctx.lineTo(50 + length1, 50 + thicknessL);
+            ctx.lineTo(50 + thicknessL, 50 + thicknessL);
+            ctx.lineTo(50 + thicknessL, 50 + length2);
+            ctx.lineTo(50, 50 + length2);
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        function calcularPerfilT(height, width, thicknessT) {
+            const area = (width * thicknessT) + (height - 2 * thicknessT) * thicknessT;
+            const perimeter = 2 * width + 2 * height - 4 * thicknessT;
+            return { area, perimeter };
+        }
+
+        function desenharPerfilT(ctx, height, width, thicknessT) {
+            ctx.beginPath();
+            ctx.moveTo(50, 50);
+            ctx.lineTo(50 + width, 50);
+            ctx.lineTo(50 + width, 50 + thicknessT);
+            ctx.lineTo(50 + width / 2 + thicknessT, 50 + thicknessT);
+            ctx.lineTo(50 + width / 2 + thicknessT, 50 + height - thicknessT);
+            ctx.lineTo(50 + width / 2 - thicknessT, 50 + height - thicknessT);
+            ctx.lineTo(50 + width / 2 - thicknessT, 50 + thicknessT);
+            ctx.lineTo(50, 50 + thicknessT);
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        function calcularPerfilCircular(diameter, innerDiameter) {
+            const area = Math.PI * ((diameter ** 2 - innerDiameter ** 2) / 4);
+            const perimeter = Math.PI * (diameter + innerDiameter);
+            return { area, perimeter };
+        }
+
+        function desenharPerfilCircular(ctx, diameter, innerDiameter) {
+            ctx.beginPath();
+            ctx.arc(50 + diameter / 2, 50 + diameter / 2, diameter / 2, 0, 2 * Math.PI);
+            ctx.arc(50 + diameter / 2, 50 + diameter / 2, innerDiameter / 2, 0, 2 * Math.PI, true);
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        function calcularPerfilQuadrado(side, innerSide) {
+            const area = (side ** 2 - innerSide ** 2);
+            const perimeter = 4 * side + 4 * innerSide;
+            return { area, perimeter };
+        }
+
+        function desenharPerfilQuadrado(ctx, side, innerSide) {
+            ctx.beginPath();
+            ctx.rect(50, 50, side, side);
+            ctx.rect(50 + (side - innerSide) / 2, 50 + (side - innerSide) / 2, innerSide, innerSide);
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        gerarCamposEntrada(document.getElementById('perfilType').value);
     </script>
 </body>
 </html>
