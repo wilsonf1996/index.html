@@ -1,1 +1,252 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Propriedades de Perfis de Aço</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="number"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .result, .drawing {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .result {
+            background-color: #e7f0e7;
+            border: 1px solid #d4e2d4;
+        }
+        .result.error {
+            background-color: #fdd;
+            border-color: #fbb;
+        }
+        .drawing {
+            background-color: #e7e7e7;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        .drawing svg {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Calculadora de Propriedades de Perfis de Aço</h1>
+        <form id="profileForm">
+            <div class="form-group">
+                <label for="perfil">Tipo de Perfil</label>
+                <select id="perfil" onchange="updateDrawing()" required>
+                    <option value="" disabled selected>Selecione um perfil</option>
+                    <option value="i">Perfil I</option>
+                    <option value="h">Perfil H</option>
+                    <option value="l">Perfil L</option>
+                    <option value="s">Perfil Quadrado</option>
+                    <option value="c">Perfil Circular</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="espessura">Espessura (mm)</label>
+                <input type="number" id="espessura" step="0.1" required>
+            </div>
+            <div class="form-group">
+                <label for="dimensao1">Dimensão Principal 1 (mm)</label>
+                <input type="number" id="dimensao1" step="0.1" required>
+            </div>
+            <div class="form-group">
+                <label for="dimensao2">Dimensão Principal 2 (mm)</label>
+                <input type="number" id="dimensao2" step="0.1">
+            </div>
+            <div class="form-group">
+                <label for="comprimento">Comprimento do Perfil (m)</label>
+                <input type="number" id="comprimento" step="0.1" required>
+            </div>
+            <div class="form-group">
+                <label for="travamentos">Número de Travamentos</label>
+                <input type="number" id="travamentos" required>
+            </div>
+            <button type="button" onclick="calcularPropriedades()">Calcular Propriedades</button>
+            <div id="resultado" class="result"></div>
+            <div id="drawing" class="drawing"></div>
+        </form>
+    </div>
+
+    <script>
+        function calcularPropriedades() {
+            const perfil = document.getElementById('perfil').value;
+            const espessura = parseFloat(document.getElementById('espessura').value);
+            const dimensao1 = parseFloat(document.getElementById('dimensao1').value);
+            const dimensao2 = parseFloat(document.getElementById('dimensao2').value) || dimensao1; // Default to dimensao1 if not provided
+            const comprimento = parseFloat(document.getElementById('comprimento').value);
+            const travamentos = parseInt(document.getElementById('travamentos').value);
+
+            let area, momentoInercia, moduloResistencia, resultado;
+
+            switch (perfil) {
+                case 'i':
+                    area = (dimensao1 - espessura) * espessura * 2 + (dimensao2 - espessura) * espessura;
+                    momentoInercia = (dimensao1 * Math.pow(dimensao2, 3) - (dimensao1 - espessura) * Math.pow(dimensao2 - espessura, 3)) / 12;
+                    moduloResistencia = momentoInercia / (dimensao2 / 2);
+                    break;
+                case 'h':
+                    area = (dimensao1 - espessura) * espessura * 2 + (dimensao2 - espessura) * espessura;
+                    momentoInercia = (dimensao1 * Math.pow(dimensao2, 3) - (dimensao1 - espessura) * Math.pow(dimensao2 - espessura, 3)) / 12;
+                    moduloResistencia = momentoInercia / (dimensao2 / 2);
+                    break;
+                case 'l':
+                    area = dimensao1 * espessura + dimensao2 * espessura - espessura * espessura;
+                    momentoInercia = (Math.pow(dimensao1, 3) * espessura / 3) + (Math.pow(dimensao2, 3) * espessura / 3);
+                    moduloResistencia = momentoInercia / (dimensao2 / 2);
+                    break;
+                case 's':
+                    area = Math.pow(dimensao1, 2);
+                    momentoInercia = Math.pow(dimensao1, 4) / 12;
+                    moduloResistencia = momentoInercia / (dimensao1 / 2);
+                    break;
+                case 'c':
+                    const raio = dimensao1 / 2;
+                    area = Math.PI * Math.pow(raio, 2);
+                    momentoInercia = Math.PI * Math.pow(raio, 4) / 4;
+                    moduloResistencia = momentoInercia / raio;
+                    break;
+                default:
+                    resultado = "Perfil não suportado.";
+                    document.getElementById('resultado').innerText = resultado;
+                    return;
+            }
+
+            resultado = `
+                <strong>Propriedades do Perfil:</strong><br>
+                Área da Seção Transversal: ${area.toFixed(2)} mm²<br>
+                Momento de Inércia: ${momentoInercia.toFixed(2)} mm⁴<br>
+                Módulo de Resistência: ${moduloResistencia.toFixed(2)} mm³<br>
+                Comprimento do Perfil: ${comprimento.toFixed(2)} m<br>
+                Número de Travamentos: ${travamentos}
+            `;
+
+            document.getElementById('resultado').innerHTML = resultado;
+            drawProfile(perfil, dimensao1, dimensao2, espessura);
+        }
+
+        function updateDrawing() {
+            const perfil = document.getElementById('perfil').value;
+            const dimensao1 = parseFloat(document.getElementById('dimensao1').value);
+            const dimensao2 = parseFloat(document.getElementById('dimensao2').value) || dimensao1;
+            const espessura = parseFloat(document.getElementById('espessura').value);
+
+            if (perfil) {
+                drawProfile(perfil, dimensao1, dimensao2, espessura);
+            }
+        }
+
+        function drawProfile(perfil, dimensao1, dimensao2, espessura) {
+            const drawing = document.getElementById('drawing');
+            let svgContent = '';
+
+            switch (perfil) {
+                case 'i':
+                    svgContent = `
+                        <svg width="300" height="150" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="20" y="30" width="${dimensao1}" height="${espessura}" fill="lightblue" stroke="black"/>
+                            <rect x="20" y="${150 - espessura - 30}" width="${dimensao1}" height="${espessura}" fill="lightblue" stroke="black"/>
+                            <rect x="20" y="${30 + espessura}" width="${dimensao1}" height="${dimensao2 - 2 * espessura}" fill="lightblue" stroke="black"/>
+                            <text x="150" y="20" text-anchor="middle">Perfil I</text>
+                            <text x="150" y="140" text-anchor="middle">Dim 1: ${dimensao1} mm</text>
+                            <text x="150" y="155" text-anchor="middle">Dim 2: ${dimensao2} mm</text>
+                        </svg>
+                    `;
+                    break;
+                case 'h':
+                    svgContent = `
+                        <svg width="300" height="150" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="20" y="30" width="${dimensao1}" height="${espessura}" fill="lightblue" stroke="black"/>
+                            <rect x="20" y="${150 - espessura - 30}" width="${dimensao1}" height="${espessura}" fill="lightblue" stroke="black"/>
+                            <rect x="20" y="${30 + espessura}" width="${dimensao1}" height="${dimensao2 - 2 * espessura}" fill="lightblue" stroke="black"/>
+                            <text x="150" y="20" text-anchor="middle">Perfil H</text>
+                            <text x="150" y="140" text-anchor="middle">Dim 1: ${dimensao1} mm</text>
+                            <text x="150" y="155" text-anchor="middle">Dim 2: ${dimensao2} mm</text>
+                        </svg>
+                    `;
+                    break;
+                case 'l':
+                    svgContent = `
+                        <svg width="300" height="150" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="20" y="30" width="${dimensao1}" height="${espessura}" fill="lightblue" stroke="black"/>
+                            <rect x="20" y="${30 + espessura}" width="${espessura}" height="${dimensao2 - espessura}" fill="lightblue" stroke="black"/>
+                            <text x="150" y="20" text-anchor="middle">Perfil L</text>
+                            <text x="150" y="140" text-anchor="middle">Dim 1: ${dimensao1} mm</text>
+                            <text x="150" y="155" text-anchor="middle">Dim 2: ${dimensao2} mm</text>
+                        </svg>
+                    `;
+                    break;
+                case 's':
+                    svgContent = `
+                        <svg width="150" height="150" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="25" y="25" width="${dimensao1}" height="${dimensao1}" fill="lightblue" stroke="black"/>
+                            <text x="75" y="20" text-anchor="middle">Perfil Quadrado</text>
+                            <text x="75" y="140" text-anchor="middle">Dim: ${dimensao1} mm</text>
+                        </svg>
+                    `;
+                    break;
+                case 'c':
+                    const raio = dimensao1 / 2;
+                    svgContent = `
+                        <svg width="150" height="150" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="75" cy="75" r="${raio}" fill="lightblue" stroke="black"/>
+                            <text x="75" y="20" text-anchor="middle">Perfil Circular</text>
+                            <text x="75" y="140" text-anchor="middle">Raio: ${raio} mm</text>
+                        </svg>
+                    `;
+                    break;
+                default:
+                    svgContent = '<p>Selecione um perfil para ver o desenho.</p>';
+            }
+
+            drawing.innerHTML = svgContent;
+        }
+    </script>
+</body>
+</html>
 
