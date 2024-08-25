@@ -8,7 +8,7 @@
         body {
             font-family: Arial, sans-serif;
             padding: 20px;
-            max-width: 600px;
+            max-width: 800px;
             margin: auto;
         }
 
@@ -40,8 +40,8 @@
 
     <label for="perfil">Selecione o tipo de perfil:</label>
     <select id="perfil">
-        <option value="retangular">Viga Retangular</option>
-        <option value="t">Viga T</option>
+        <option value="retangular">Perfil Retangular</option>
+        <option value="vigaT">Viga T</option>
         <option value="circular">Pilar Circular</option>
     </select>
 
@@ -56,8 +56,13 @@
     </div>
 
     <div id="dimensao3-group" class="hidden">
-        <label for="dimensao3">Espessura (mm)</label>
-        <input type="number" id="dimensao3" placeholder="Insira a espessura">
+        <label for="dimensao3">Espessura da Alma (mm)</label>
+        <input type="number" id="dimensao3" placeholder="Insira a espessura da alma">
+    </div>
+
+    <div id="dimensao4-group" class="hidden">
+        <label for="dimensao4">Espessura da Mesa (mm)</label>
+        <input type="number" id="dimensao4" placeholder="Insira a espessura da mesa">
     </div>
 
     <button onclick="calcularPropriedades()">Calcular</button>
@@ -70,6 +75,7 @@
         const dimensao1Group = document.getElementById('dimensao1-group');
         const dimensao2Group = document.getElementById('dimensao2-group');
         const dimensao3Group = document.getElementById('dimensao3-group');
+        const dimensao4Group = document.getElementById('dimensao4-group');
 
         perfil.addEventListener('change', function() {
             const tipoPerfil = perfil.value;
@@ -78,86 +84,103 @@
                     dimensao1Group.querySelector('label').innerText = 'Largura (mm)';
                     dimensao2Group.querySelector('label').innerText = 'Altura (mm)';
                     dimensao3Group.classList.add('hidden');
+                    dimensao4Group.classList.add('hidden');
                     dimensao2Group.classList.remove('hidden');
+                    dimensao1Group.classList.remove('hidden');
                     break;
-                case 't':
-                    dimensao1Group.querySelector('label').innerText = 'Largura da base (mm)';
-                    dimensao2Group.querySelector('label').innerText = 'Altura total (mm)';
-                    dimensao3Group.querySelector('label').innerText = 'Espessura da alma (mm)';
-                    dimensao2Group.classList.remove('hidden');
+                case 'vigaT':
+                    dimensao1Group.querySelector('label').innerText = 'Largura da Mesa (mm)';
+                    dimensao2Group.querySelector('label').innerText = 'Altura Total (mm)';
+                    dimensao3Group.querySelector('label').innerText = 'Espessura da Alma (mm)';
+                    dimensao4Group.querySelector('label').innerText = 'Espessura da Mesa (mm)';
                     dimensao3Group.classList.remove('hidden');
+                    dimensao4Group.classList.remove('hidden');
+                    dimensao2Group.classList.remove('hidden');
+                    dimensao1Group.classList.remove('hidden');
                     break;
                 case 'circular':
                     dimensao1Group.querySelector('label').innerText = 'Diâmetro (mm)';
                     dimensao2Group.classList.add('hidden');
                     dimensao3Group.classList.add('hidden');
+                    dimensao4Group.classList.add('hidden');
+                    dimensao1Group.classList.remove('hidden');
                     break;
                 default:
+                    dimensao1Group.classList.add('hidden');
                     dimensao2Group.classList.add('hidden');
                     dimensao3Group.classList.add('hidden');
+                    dimensao4Group.classList.add('hidden');
             }
         });
 
         function calcularPropriedades() {
             const tipoPerfil = perfil.value;
-            const dimensao1 = parseFloat(document.getElementById('dimensao1').value);
-            const dimensao2 = parseFloat(document.getElementById('dimensao2').value) || dimensao1;
-            const dimensao3 = parseFloat(document.getElementById('dimensao3').value) || dimensao1;
+            const largura = parseFloat(document.getElementById('dimensao1').value);
+            const altura = parseFloat(document.getElementById('dimensao2').value) || largura;
+            const espessuraAlma = parseFloat(document.getElementById('dimensao3').value) || 0;
+            const espessuraMesa = parseFloat(document.getElementById('dimensao4').value) || 0;
 
             let area = 0;
             let inercia = 0;
+            let polar = 0;
 
             switch (tipoPerfil) {
                 case 'retangular':
-                    area = dimensao1 * dimensao2;
-                    inercia = (dimensao1 * Math.pow(dimensao2, 3)) / 12;
+                    area = largura * altura;
+                    inercia = (largura * Math.pow(altura, 3)) / 12;
                     break;
-                case 't':
-                    const base = dimensao1;
-                    const altura = dimensao2;
-                    const espessura = dimensao3;
-                    area = base * altura - (base - 2 * espessura) * (altura - espessura);
-                    inercia = (base * Math.pow(altura, 3) - (base - 2 * espessura) * Math.pow(altura - espessura, 3)) / 12;
+                case 'vigaT':
+                    area = largura * espessuraMesa + (altura - espessuraMesa) * espessuraAlma;
+                    inercia = ((altura * Math.pow(largura, 3)) - ((altura - espessuraMesa) * Math.pow(largura - espessuraAlma * 2, 3))) / 12;
                     break;
                 case 'circular':
-                    area = Math.PI * Math.pow(dimensao1 / 2, 2);
-                    inercia = (Math.PI * Math.pow(dimensao1 / 2, 4)) / 4;
+                    area = Math.PI * Math.pow(largura / 2, 2);
+                    inercia = (Math.PI * Math.pow(largura / 2, 4)) / 4;
+                    polar = (Math.PI * Math.pow(largura / 2, 4)) / 2;
                     break;
             }
 
-            mostrarResultado(area, inercia, tipoPerfil);
-            desenharPerfil(tipoPerfil, dimensao1, dimensao2, dimensao3);
+            mostrarResultado(area, inercia, polar, tipoPerfil);
+            desenharPerfil(tipoPerfil, largura, altura, espessuraAlma, espessuraMesa);
         }
 
-        function mostrarResultado(area, inercia, tipoPerfil) {
+        function mostrarResultado(area, inercia, polar, tipoPerfil) {
             let resultadoHtml = `<p>Área: ${area.toFixed(2)} mm²</p>`;
             resultadoHtml += `<p>Momento de Inércia: ${inercia.toFixed(2)} mm⁴</p>`;
+            if (tipoPerfil === 'circular' || tipoPerfil === 'tubular') {
+                resultadoHtml += `<p>Momento de Inércia Polar: ${polar.toFixed(2)} mm⁴</p>`;
+            }
             document.getElementById('resultado').innerHTML = resultadoHtml;
         }
 
-        function desenharPerfil(tipoPerfil, dimensao1, dimensao2, dimensao3) {
+        function desenharPerfil(tipoPerfil, largura, altura, espessuraAlma, espessuraMesa) {
             let desenho = '';
 
             switch (tipoPerfil) {
                 case 'retangular':
                     desenho = `
                         <svg viewBox="0 0 100 100">
-                            <rect x="10" y="10" width="${dimensao1}" height="${dimensao2}" fill="none" stroke="black" stroke-width="2" />
+                            <rect x="10" y="10" width="${largura}" height="${altura}" fill="none" stroke="black" stroke-width="2" />
                         </svg>
                     `;
                     break;
-                case 't':
+                case 'vigaT':
+                    const mesa = largura;
+                    const alturaTotal = altura;
+                    const yMesa = (alturaTotal - espessuraMesa) / 2;
                     desenho = `
                         <svg viewBox="0 0 100 100">
-                            <rect x="10" y="10" width="${dimensao1}" height="${dimensao2}" fill="none" stroke="black" stroke-width="2" />
-                            <rect x="${10 + dimensao3}" y="${10 + dimensao2 - dimensao3}" width="${dimensao1 - 2 * dimensao3}" height="${dimensao3}" fill="none" stroke="black" stroke-width="2" />
+                            <!-- Mesa -->
+                            <rect x="10" y="${yMesa}" width="${mesa}" height="${espessuraMesa}" fill="none" stroke="black" stroke-width="2" />
+                            <!-- Alma -->
+                            <rect x="${10 + (mesa - espessuraAlma) / 2}" y="10" width="${espessuraAlma}" height="${alturaTotal - espessuraMesa}" fill="none" stroke="black" stroke-width="2" />
                         </svg>
                     `;
                     break;
                 case 'circular':
                     desenho = `
                         <svg viewBox="0 0 100 100">
-                            <circle cx="50" cy="50" r="${dimensao1 / 2}" fill="none" stroke="black" stroke-width="2" />
+                            <circle cx="50" cy="50" r="${largura / 2}" fill="none" stroke="black" stroke-width="2" />
                         </svg>
                     `;
                     break;
@@ -167,7 +190,7 @@
         }
 
         // Desenho inicial
-        desenharPerfil(perfil.value, 0, 0);
+        desenharPerfil(perfil.value, 0, 0, 0, 0);
     </script>
 </body>
 </html>
