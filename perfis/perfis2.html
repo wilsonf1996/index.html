@@ -60,8 +60,8 @@
     </select>
 
     <div id="dimensao1-group">
-        <label for="dimensao1">Dimensão Principal (mm)</label>
-        <input type="number" id="dimensao1" placeholder="Insira a dimensão principal">
+        <label for="dimensao1">Largura / Diâmetro Externo (mm)</label>
+        <input type="number" id="dimensao1" placeholder="Insira a largura ou diâmetro">
     </div>
 
     <div id="dimensao2-group" class="hidden">
@@ -70,13 +70,13 @@
     </div>
 
     <div id="dimensao3-group" class="hidden">
-        <label for="dimensao3">Altura (mm)</label>
-        <input type="number" id="dimensao3" placeholder="Insira a altura">
+        <label for="dimensao3">Altura / Comprimento da Alma (mm)</label>
+        <input type="number" id="dimensao3" placeholder="Insira a altura ou comprimento da alma">
     </div>
 
     <div id="dimensao4-group" class="hidden">
-        <label for="dimensao4">Largura (mm)</label>
-        <input type="number" id="dimensao4" placeholder="Insira a largura">
+        <label for="dimensao4">Largura da Mesa (mm)</label>
+        <input type="number" id="dimensao4" placeholder="Insira a largura da mesa">
     </div>
 
     <button onclick="calcularPropriedades()">Calcular</button>
@@ -92,6 +92,7 @@
         const dimensao3Group = document.getElementById('dimensao3-group');
         const dimensao4Group = document.getElementById('dimensao4-group');
         const descricao = document.getElementById('descricao');
+        const desenho = document.getElementById('desenho');
 
         perfil.addEventListener('change', function() {
             const tipoPerfil = perfil.value;
@@ -135,8 +136,8 @@
                     dimensao4Group.classList.add('hidden');
                     break;
                 case 'cantoneira':
-                    dimensao1Group.querySelector('label').innerText = 'Lado (mm)';
-                    dimensao2Group.querySelector('label').innerText = 'Espessura (mm)';
+                    dimensao1Group.querySelector('label').innerText = 'Lado Maior (mm)';
+                    dimensao2Group.querySelector('label').innerText = 'Lado Menor (mm)';
                     dimensao2Group.classList.remove('hidden');
                     dimensao3Group.classList.add('hidden');
                     dimensao4Group.classList.add('hidden');
@@ -166,31 +167,50 @@
             let area = 0;
             let inercia = 0;
             let polar = 0;
+            let svgContent = '';
 
             switch (tipoPerfil) {
                 case 'circular':
                     area = Math.PI * Math.pow(dimensao1 / 2, 2);
                     inercia = (Math.PI * Math.pow(dimensao1 / 2, 4)) / 4;
                     polar = (Math.PI * Math.pow(dimensao1 / 2, 4)) / 2;
+                    svgContent = `<circle cx="50" cy="50" r="${dimensao1 / 2}" stroke="black" stroke-width="2" fill="none"/>`;
                     break;
                 case 'tubular':
                     const diametroInterno = dimensao1 - 2 * dimensao2;
                     area = Math.PI * (Math.pow(dimensao1 / 2, 2) - Math.pow(diametroInterno / 2, 2));
                     inercia = (Math.PI * (Math.pow(dimensao1 / 2, 4) - Math.pow(diametroInterno / 2, 4))) / 4;
                     polar = (Math.PI * (Math.pow(dimensao1 / 2, 4) - Math.pow(diametroInterno / 2, 4))) / 2;
+                    svgContent = `
+                        <circle cx="50" cy="50" r="${dimensao1 / 2}" stroke="black" stroke-width="2" fill="none"/>
+                        <circle cx="50" cy="50" r="${diametroInterno / 2}" stroke="black" stroke-width="2" fill="none"/>
+                    `;
                     break;
                 case 'quadrado':
                     area = Math.pow(dimensao1, 2);
-                    inercia = Math.pow(dimensao1, 4) / 12;
+                    inercia = (Math.pow(dimensao1, 4)) / 12;
+                    polar = (Math.pow(dimensao1, 4)) / 6;
+                    svgContent = `
+                        <rect x="10" y="10" width="${dimensao1}" height="${dimensao1}" stroke="black" stroke-width="2" fill="none"/>
+                    `;
                     break;
                 case 'quadradoVazado':
-                    const ladoInterno = dimensao1 - 2 * dimensao2;
-                    area = Math.pow(dimensao1, 2) - Math.pow(ladoInterno, 2);
-                    inercia = (Math.pow(dimensao1, 4) - Math.pow(ladoInterno, 4)) / 12;
+                    area = Math.pow(dimensao1, 2) - Math.pow(dimensao1 - 2 * dimensao2, 2);
+                    inercia = (Math.pow(dimensao1, 4) - Math.pow(dimensao1 - 2 * dimensao2, 4)) / 12;
+                    polar = (Math.pow(dimensao1, 4) - Math.pow(dimensao1 - 2 * dimensao2, 4)) / 6;
+                    svgContent = `
+                        <rect x="10" y="10" width="${dimensao1}" height="${dimensao1}" stroke="black" stroke-width="2" fill="none"/>
+                        <rect x="${dimensao2}" y="${dimensao2}" width="${dimensao1 - 2 * dimensao2}" height="${dimensao1 - 2 * dimensao2}" stroke="black" stroke-width="2" fill="none"/>
+                    `;
                     break;
                 case 'u':
-                    area = dimensao1 * dimensao3 - (dimensao1 - 2 * dimensao2) * (dimensao3 - 2 * dimensao2);
-                    inercia = ((dimensao1 * Math.pow(dimensao3, 3)) - (dimensao1 - 2 * dimensao2) * Math.pow(dimensao3 - 2 * dimensao2, 3)) / 12;
+                    area = dimensao1 * dimensao3 - (dimensao1 - 2 * dimensao2) * (dimensao3 - dimensao2);
+                    inercia = ((dimensao1 * Math.pow(dimensao3, 3)) - (dimensao1 - 2 * dimensao2) * Math.pow(dimensao3 - dimensao2, 3)) / 12;
+                    polar = ((dimensao1 * Math.pow(dimensao3, 3)) - (dimensao1 - 2 * dimensao2) * Math.pow(dimensao3 - dimensao2, 3)) / 6;
+                    svgContent = `
+                        <path d="M10 10 L${dimensao1 + 10} 10 L${dimensao1 + 10} ${dimensao3 + 10} L10 ${dimensao3 + 10} Z" stroke="black" stroke-width="2" fill="none"/>
+                        <path d="M${dimensao2 + 10} ${dimensao2 + 10} L${dimensao1 - dimensao2 + 10} ${dimensao2 + 10} L${dimensao1 - dimensao2 + 10} ${dimensao3 - dimensao2 + 10} L${dimensao2 + 10} ${dimensao3 - dimensao2 + 10} Z" stroke="black" stroke-width="2" fill="none"/>
+                    `;
                     break;
                 case 'c':
                 case 'i':
@@ -198,15 +218,32 @@
                 case 'l':
                     area = dimensao1 * dimensao3 - (dimensao1 - 2 * dimensao2) * (dimensao3 - 2 * dimensao2);
                     inercia = ((dimensao1 * Math.pow(dimensao3, 3)) - (dimensao1 - 2 * dimensao2) * Math.pow(dimensao3 - 2 * dimensao2, 3)) / 12;
+                    polar = ((dimensao1 * Math.pow(dimensao3, 3)) - (dimensao1 - 2 * dimensao2) * Math.pow(dimensao3 - 2 * dimensao2, 3)) / 6;
+                    svgContent = `
+                        <path d="M10 10 L${dimensao1 + 10} 10 L${dimensao1 + 10} ${dimensao3 + 10} L10 ${dimensao3 + 10} Z" stroke="black" stroke-width="2" fill="none"/>
+                        <path d="M${dimensao2 + 10} ${dimensao2 + 10} L${dimensao1 - dimensao2 + 10} ${dimensao2 + 10} L${dimensao1 - dimensao2 + 10} ${dimensao3 - dimensao2 + 10} L${dimensao2 + 10} ${dimensao3 - dimensao2 + 10} Z" stroke="black" stroke-width="2" fill="none"/>
+                    `;
                     break;
                 case 'cantoneira':
-                    area = 2 * dimensao1 * dimensao2 - dimensao2 * dimensao2;
+                    area = 2 * dimensao1 * dimensao2 - Math.pow(dimensao2, 2);
                     inercia = (2 * Math.pow(dimensao1, 3) * dimensao2 - Math.pow(dimensao2, 3)) / 12;
+                    polar = (2 * Math.pow(dimensao1, 3) * dimensao2 - Math.pow(dimensao2, 3)) / 6;
+                    svgContent = `
+                        <path d="M10 10 L${dimensao1 + 10} 10 L${dimensao1 + 10} ${dimensao2 + 10} L10 ${dimensao2 + 10} Z" stroke="black" stroke-width="2" fill="none"/>
+                        <path d="M10 ${dimensao2 + 10} L${dimensao2 + 10} ${dimensao2 + 10} L${dimensao2 + 10} ${dimensao1 + 10} L10 ${dimensao1 + 10} Z" stroke="black" stroke-width="2" fill="none"/>
+                    `;
                     break;
                 case 'vigaT':
-                    area = dimensao1 * dimensao3 - (dimensao1 - 2 * dimensao2) * (dimensao3 - dimensao4);
-                    inercia = ((dimensao1 * Math.pow(dimensao3, 3)) - (dimensao1 - 2 * dimensao2) * Math.pow(dimensao3 - dimensao4, 3)) / 12;
+                    area = dimensao1 * dimensao2 + (dimensao3 - dimensao2) * dimensao4;
+                    inercia = (dimensao1 * Math.pow(dimensao2, 3) / 12) + (dimensao3 - dimensao2) * (Math.pow(dimensao4, 3) / 12);
+                    polar = (dimensao1 * Math.pow(dimensao2, 3) / 6) + (dimensao3 - dimensao2) * (Math.pow(dimensao4, 3) / 6);
+                    svgContent = `
+                        <rect x="10" y="10" width="${dimensao1}" height="${dimensao2}" stroke="black" stroke-width="2" fill="none"/>
+                        <rect x="10" y="${dimensao2 + 10}" width="${dimensao4}" height="${dimensao3 - dimensao2}" stroke="black" stroke-width="2" fill="none"/>
+                    `;
                     break;
+                default:
+                    svgContent = '';
             }
 
             document.getElementById('resultado').innerText = `Área: ${area.toFixed(2)} mm²\nMomento de Inércia: ${inercia.toFixed(2)} mm^4\nMomento Polar: ${polar.toFixed(2)} mm^4`;
@@ -214,7 +251,7 @@
             const descriptions = {
                 'circular': 'Perfil circular, ideal para colunas e tubos.',
                 'tubular': 'Perfil tubular, utilizado em estruturas metálicas e suportes.',
-                'quadrado': 'Perfil quadrado, comumente usado em estrutura de estruturas de apoio.',
+                'quadrado': 'Perfil quadrado, comumente usado em estruturas de apoio.',
                 'quadradoVazado': 'Perfil quadrado vazado, usado quando é necessário reduzir peso.',
                 'u': 'Perfil U, utilizado em suportes e estruturas com alta resistência.',
                 'c': 'Perfil C, conhecido por sua versatilidade em diversas aplicações.',
@@ -226,8 +263,16 @@
             };
 
             descricao.innerText = descriptions[tipoPerfil] || 'Selecione um perfil para ver a descrição.';
+
+            desenho.innerHTML = `
+                <svg width="200" height="200" viewBox="0 0 100 100">
+                    ${svgContent}
+                </svg>
+            `;
         }
+
+        // Inicializa com a primeira seleção
+        perfil.dispatchEvent(new Event('change'));
     </script>
 </body>
 </html>
-
