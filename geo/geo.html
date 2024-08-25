@@ -1,4 +1,4 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -98,38 +98,55 @@
         const locationList = document.getElementById('location-list');
 
         // Adiciona um novo registro ao Firebase
-        function addLocation() {
+        async function addLocation() {
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition((position) => {
+                navigator.geolocation.getCurrentPosition(async (position) => {
                     const lat = position.coords.latitude;
                     const lon = position.coords.longitude;
                     const currentDate = new Date().toISOString().slice(0, 10); // Data no formato YYYY-MM-DD
                     const currentTime = new Date().toISOString().slice(11, 16); // Hora no formato HH:MM
-                    const temperature = "Desconhecida"; // Você pode substituir isso por um valor real se tiver acesso a uma API de temperatura
-
                     const note = document.getElementById('note').value;
 
-                    const newRecord = {
-                        note,
-                        date: currentDate,
-                        time: currentTime,
-                        temperature,
-                        coordinates: `${lat}, ${lon}`
-                    };
+                    try {
+                        const weatherData = await getWeather(lat, lon);
+                        const temperature = weatherData.main.temp;
+                        const weatherDescription = weatherData.weather[0].description;
 
-                    const newRecordRef = database.ref('locations').push();
-                    newRecordRef.set(newRecord)
-                        .then(() => {
-                            form.reset();
-                            loadRecords();
-                        })
-                        .catch(error => console.error('Erro ao adicionar registro: ', error));
+                        const newRecord = {
+                            note,
+                            date: currentDate,
+                            time: currentTime,
+                            temperature: `${temperature}°C`,
+                            weather: weatherDescription,
+                            coordinates: `${lat}, ${lon}`
+                        };
+
+                        const newRecordRef = database.ref('locations').push();
+                        await newRecordRef.set(newRecord);
+
+                        form.reset();
+                        loadRecords();
+                    } catch (error) {
+                        console.error('Erro ao obter dados do clima:', error);
+                    }
                 }, (error) => {
                     alert('Não foi possível obter a localização. Verifique suas permissões de localização.');
                 });
             } else {
                 alert('Geolocalização não é suportada por este navegador.');
             }
+        }
+
+        // Função para obter dados do clima usando a API do OpenWeatherMap
+        async function getWeather(lat, lon) {
+            const apiKey = 'e18e61a7e515eb3b92b588155acd3bc1';
+            const apiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`;
+            
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                throw new Error('Erro na resposta da API do OpenWeatherMap');
+            }
+            return await response.json();
         }
 
         // Carrega e exibe os registros da Firebase
@@ -146,7 +163,8 @@
                             <strong>Nota:</strong> ${data.note}<br>
                             <strong>Data:</strong> ${data.date}<br>
                             <strong>Hora:</strong> ${data.time}<br>
-                            <strong>Temp:</strong> ${data.temperature}°C<br>
+                            <strong>Temp:</strong> ${data.temperature}<br>
+                            <strong>Clima:</strong> ${data.weather}<br>
                             <strong>Coord:</strong> ${data.coordinates}
                         </div>
                         <button onclick="deleteRecord('${key}')">Excluir</button>
