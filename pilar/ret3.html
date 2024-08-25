@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Vigas e Colunas de Concreto</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        input, select, button {
+            display: block;
+            margin: 10px 0;
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+        }
+        h2 {
+            text-align: center;
+        }
+        .resultado {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Calculadora de Vigas e Colunas de Concreto</h2>
+        <form id="calcForm">
+            <label for="momentoFletor">Momento Fletor (kN.m):</label>
+            <input type="number" id="momentoFletor" step="0.01" required>
+
+            <label for="forca">Força Axial (kN):</label>
+            <input type="number" id="forca" step="0.01" required>
+
+            <label for="cargaTransversal">Carga Transversal (kN):</label>
+            <input type="number" id="cargaTransversal" step="0.01" required>
+
+            <label for="altura">Altura da Seção (mm):</label>
+            <input type="number" id="altura" step="0.01" required>
+
+            <label for="largura">Largura da Seção (mm):</label>
+            <input type="number" id="largura" step="0.01" required>
+
+            <label for="cobrimento">Cobrimento do Concreto (mm):</label>
+            <select id="cobrimento" required>
+                <option value="20">20</option>
+                <option value="25">25</option>
+                <option value="30">30</option>
+                <option value="35">35</option>
+            </select>
+
+            <label for="fck">Fck (MPa):</label>
+            <select id="fck" required>
+                <option value="15">15</option>
+                <option value="20">20</option>
+                <option value="25">25</option>
+                <option value="30">30</option>
+                <option value="35">35</option>
+                <option value="40">40</option>
+                <option value="45">45</option>
+                <option value="50">50</option>
+                <option value="55">55</option>
+                <option value="60">60</option>
+            </select>
+
+            <label for="tipoAco">Tipo de Aço:</label>
+            <select id="tipoAco" required>
+                <option value="420">Aço ASTM A615 Gr. 420</option>
+                <option value="500">Aço ASTM A615 Gr. 500</option>
+                <option value="600">Aço ASTM A615 Gr. 600</option>
+            </select>
+
+            <label for="diametroAco">Diâmetro da Barra de Aço (mm):</label>
+            <select id="diametroAco" onchange="atualizarAreaBitola()" required>
+                <option value="8">8</option>
+                <option value="10">10</option>
+                <option value="12">12</option>
+                <option value="16">16</option>
+                <option value="20">20</option>
+                <option value="25">25</option>
+                <option value="32">32</option>
+                <option value="40">40</option>
+            </select>
+
+            <label for="areaBitola">Área da Bitola (mm²):</label>
+            <input type="number" id="areaBitola" step="0.01" readonly>
+
+            <label for="tipoEsforco">Tipo de Esforço:</label>
+            <select id="tipoEsforco" required>
+                <option value="flexaoSimples">Flexão Simples</option>
+                <option value="flexaoComposta">Flexão Composta</option>
+                <option value="cisalhamento">Cisalhamento</option>
+                <option value="flambagem">Flambagem</option>
+                <option value="combinado">Combinado</option>
+            </select>
+
+            <label for="comprimentoEfeito">Comprimento de Efeito (mm, para flambagem):</label>
+            <input type="number" id="comprimentoEfeito" step="0.01">
+
+            <button type="button" onclick="calcular()">Calcular</button>
+        </form>
+        <div id="resultado" class="resultado"></div>
+    </div>
+
+    <script>
+        // Áreas das bitolas de aço em mm²
+        const areasBitola = {
+            8: 50.3,
+            10: 78.5,
+            12: 113.1,
+            16: 201.1,
+            20: 314.2,
+            25: 490.9,
+            32: 804.3,
+            40: 1256.6
+        };
+
+        function atualizarAreaBitola() {
+            const diametro = document.getElementById('diametroAco').value;
+            document.getElementById('areaBitola').value = areasBitola[diametro];
+        }
+
+        function calcular() {
+            const momentoFletor = parseFloat(document.getElementById('momentoFletor').value) * 1e6; // kN.m to N.mm
+            const forca = parseFloat(document.getElementById('forca').value) * 1e3; // kN to N
+            const cargaTransversal = parseFloat(document.getElementById('cargaTransversal').value) * 1e3; // kN to N
+            const altura = parseFloat(document.getElementById('altura').value);
+            const largura = parseFloat(document.getElementById('largura').value);
+            const cobrimento = parseFloat(document.getElementById('cobrimento').value);
+            const fck = parseFloat(document.getElementById('fck').value);
+            const tipoAco = parseFloat(document.getElementById('tipoAco').value);
+            const diametroAco = parseFloat(document.getElementById('diametroAco').value);
+            const areaBitola = areasBitola[diametroAco];
+            const comprimentoEfeito = parseFloat(document.getElementById('comprimentoEfeito').value);
+
+            // Constantes
+            const fyd = tipoAco; // Tensão de escoamento do aço (MPa)
+            const fcd = fck / 1.5; // Tensão de compressão do concreto (MPa)
+            const d = altura - cobrimento; // Altura útil da seção (mm)
+            let resultado = '';
+            let estagioCarregamento = '';
+
+            // Profundidade da linha neutra
+            const x = (momentoFletor / (0.87 * fyd * largura)) * 1000; // mm
+
+            // Cálculos baseados no tipo de esforço
+            switch (document.getElementById('tipoEsforco').value) {
+                case 'flexaoSimples':
+                    const AsSimples = momentoFletor / (0.87 * fyd * (d - x / 2)); // mm²
+                    const numBarrasSimples = Math.ceil(AsSimples / areaBitola);
+                    const Mcr = (0.87 * fyd * (d - x / 2)) / 1e6; // Momento crítico de ruptura (kN.m)
+                    const Pu = forca / 1e3; // Força axial (kN)
+
+                    resultado += `Momento Fletor: ${momentoFletor / 1e6} kN.m<br>`;
+                    resultado += `Área de Aço Necessária: ${AsSimples.toFixed(2)} mm²<br>`;
+                    resultado += `Número de Barras: ${numBarrasSimples}<br>`;
+                    resultado += `Profundidade da Linha Neutra: ${x.toFixed(2)} mm<br>`;
+                    
+                    // Estágio de Carregamento
+                    if (momentoFletor <= Mcr) {
+                        estagioCarregamento = 'Estádio I: Fase Elástica';
+                    } else if (momentoFletor > Mcr && momentoFletor <= Mcr * 1.1) {
+                        estagioCarregamento = 'Estádio II: Fase de Fissuração no Concreto';
+                    } else {
+                        estagioCarregamento = 'Estádio III: Ruptura do Aço e do Concreto';
+                    }
+                    break;
+
+                case 'flexaoComposta':
+                    const AsComposta = momentoFletor / (0.87 * fyd * (d - x / 2)); // mm²
+                    const numBarrasComposta = Math.ceil(AsComposta / areaBitola);
+                    const McrComposta = (0.87 * fyd * (d - x / 2)) / 1e6; // Momento crítico de ruptura (kN.m)
+                    const PuComposta = forca / 1e3; // Força axial (kN)
+
+                    resultado += `Momento Fletor: ${momentoFletor / 1e6} kN.m<br>`;
+                    resultado += `Área de Aço Necessária: ${AsComposta.toFixed(2)} mm²<br>`;
+                    resultado += `Número de Barras: ${numBarrasComposta}<br>`;
+                    resultado += `Profundidade da Linha Neutra: ${x.toFixed(2)} mm<br>`;
+                    
+                    // Estágio de Carregamento
+                    if (momentoFletor <= Mcr) {
+                        estagioCarregamento = 'Estádio I: Fase Elástica';
+                    } else if (momentoFletor > Mcr && momentoFletor <= Mcr * 1.1) {
+                        estagioCarregamento = 'Estádio II: Fase de Fissuração no Concreto';
+                    } else {
+                        estagioCarregamento = 'Estádio III: Ruptura do Aço e do Concreto';
+                    }
+                    break;
+
+                case 'cisalhamento':
+                    const vrd = 0.6 * fcd * largura * altura / 1e6; // Resistência ao cisalhamento (kN)
+                    const AsCisalhamento = cargaTransversal / (0.87 * fyd * (d - altura / 2)); // mm²
+                    const numBarrasCisalhamento = Math.ceil(AsCisalhamento / areaBitola);
+
+                    resultado += `Resistência ao Cisalhamento: ${vrd.toFixed(2)} kN<br>`;
+                    resultado += `Área de Aço Necessária: ${AsCisalhamento.toFixed(2)} mm²<br>`;
+                    resultado += `Número de Barras: ${numBarrasCisalhamento}<br>`;
+                    
+                    // Estágio de Carregamento
+                    if (cargaTransversal <= vrd) {
+                        estagioCarregamento = 'Estádio I: Fase Elástica';
+                    } else if (cargaTransversal > vrd && cargaTransversal <= vrd * 1.1) {
+                        estagioCarregamento = 'Estádio II: Fase de Fissuração no Concreto';
+                    } else {
+                        estagioCarregamento = 'Estádio III: Ruptura do Aço e do Concreto';
+                    }
+                    break;
+
+                case 'flambagem':
+                    const I = (largura * Math.pow(altura, 3)) / 12; // Momento de inércia (mm^4)
+                    const leff = comprimentoEfeito; // Comprimento de flambagem efetivo (mm)
+                    const r = Math.sqrt(I / (largura * altura)); // Raio de giração
+                    const lambda = leff / r;
+                    const fcr = (Math.PI * Math.PI * 210000) / (lambda * lambda); // Tensão crítica de flambagem (MPa)
+                    const Aco = fcr * largura * altura / fyd; // Área de aço necessária (mm²)
+                    const numBarrasFlambagem = Math.ceil(Aco / areaBitola);
+
+                    resultado += `Tensão Crítica de Flambagem: ${fcr.toFixed(2)} MPa<br>`;
+                    resultado += `Área de Aço Necessária para Flambagem: ${Aco.toFixed(2)} mm²<br>`;
+                    resultado += `Número de Barras: ${numBarrasFlambagem}<br>`;
+                    
+                    // Estágio de Carregamento
+                    if (fcr <= 0.9 * fyd) {
+                        estagioCarregamento = 'Estádio I: Fase Elástica';
+                    } else if (fcr > 0.9 * fyd && fcr <= fyd) {
+                        estagioCarregamento = 'Estádio II: Fase de Fissuração no Concreto';
+                    } else {
+                        estagioCarregamento = 'Estádio III: Ruptura do Aço e do Concreto';
+                    }
+                    break;
+
+                case 'combinado':
+                    const MrdCombinado = (0.87 * fyd * (d - x / 2)) / 1e6; // Momento resistente (kN.m)
+                    const VrdCombinado = 0.6 * fcd * largura * altura / 1e6; // Resistência ao cisalhamento (kN)
+                    const AsCombinado = momentoFletor / (0.87 * fyd * (d - altura / 2)); // mm²
+                    const numBarrasCombinado = Math.ceil(AsCombinado / areaBitola);
+
+                    resultado += `Momento Resistente Combinado: ${MrdCombinado.toFixed(2)} kN.m<br>`;
+                    resultado += `Resistência ao Cisalhamento Combinado: ${VrdCombinado.toFixed(2)} kN<br>`;
+                    resultado += `Área de Aço Necessária: ${AsCombinado.toFixed(2)} mm²<br>`;
+                    resultado += `Número de Barras: ${numBarrasCombinado}<br>`;
+                    
+                    // Estágio de Carregamento
+                    if (momentoFletor <= MrdCombinado && cargaTransversal <= VrdCombinado) {
+                        estagioCarregamento = 'Estádio I: Fase Elástica';
+                    } else if (momentoFletor > MrdCombinado || cargaTransversal > VrdCombinado) {
+                        estagioCarregamento = 'Estádio II: Fase de Fissuração no Concreto';
+                    } else {
+                        estagioCarregamento = 'Estádio III: Ruptura do Aço e do Concreto';
+                    }
+                    break;
+            }
+
+            document.getElementById('resultado').innerHTML = resultado + '<br>' + estagioCarregamento;
+        }
+    </script>
+</body>
+</html>
