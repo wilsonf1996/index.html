@@ -33,6 +33,12 @@
             margin-top: 20px;
             font-size: 1.2em;
         }
+
+        .profile-description {
+            margin-top: 20px;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
     </style>
 </head>
 <body>
@@ -48,16 +54,13 @@
         <option value="c">Perfil C</option>
         <option value="i">Perfil I</option>
         <option value="h">Perfil H</option>
-        <option value="t">Perfil T</option>
-        <option value="vigaI">Viga I</option>
-        <option value="vigaC">Viga C</option>
-        <option value="vigaU">Viga U</option>
+        <option value="l">Perfil L</option>
+        <option value="cantoneira">Cantoneira</option>
         <option value="vigaT">Viga T</option>
-        <option value="vigaH">Viga H</option>
     </select>
 
     <div id="dimensao1-group">
-        <label for="dimensao1">Dimensão 1 (mm)</label>
+        <label for="dimensao1">Dimensão Principal (mm)</label>
         <input type="number" id="dimensao1" placeholder="Insira a dimensão principal">
     </div>
 
@@ -67,20 +70,28 @@
     </div>
 
     <div id="dimensao3-group" class="hidden">
-        <label for="dimensao3">Dimensão 2 (mm)</label>
-        <input type="number" id="dimensao3" placeholder="Insira a segunda dimensão">
+        <label for="dimensao3">Altura (mm)</label>
+        <input type="number" id="dimensao3" placeholder="Insira a altura">
+    </div>
+
+    <div id="dimensao4-group" class="hidden">
+        <label for="dimensao4">Largura (mm)</label>
+        <input type="number" id="dimensao4" placeholder="Insira a largura">
     </div>
 
     <button onclick="calcularPropriedades()">Calcular</button>
 
     <div id="desenho"></div>
     <div id="resultado"></div>
+    <div id="descricao" class="profile-description"></div>
 
     <script>
         const perfil = document.getElementById('perfil');
         const dimensao1Group = document.getElementById('dimensao1-group');
         const dimensao2Group = document.getElementById('dimensao2-group');
         const dimensao3Group = document.getElementById('dimensao3-group');
+        const dimensao4Group = document.getElementById('dimensao4-group');
+        const descricao = document.getElementById('descricao');
 
         perfil.addEventListener('change', function() {
             const tipoPerfil = perfil.value;
@@ -89,50 +100,68 @@
                     dimensao1Group.querySelector('label').innerText = 'Diâmetro (mm)';
                     dimensao2Group.classList.add('hidden');
                     dimensao3Group.classList.add('hidden');
+                    dimensao4Group.classList.add('hidden');
                     break;
                 case 'tubular':
                     dimensao1Group.querySelector('label').innerText = 'Diâmetro Externo (mm)';
                     dimensao2Group.querySelector('label').innerText = 'Espessura (mm)';
                     dimensao2Group.classList.remove('hidden');
                     dimensao3Group.classList.add('hidden');
+                    dimensao4Group.classList.add('hidden');
                     break;
                 case 'quadrado':
                     dimensao1Group.querySelector('label').innerText = 'Lado (mm)';
                     dimensao2Group.classList.add('hidden');
                     dimensao3Group.classList.add('hidden');
+                    dimensao4Group.classList.add('hidden');
                     break;
                 case 'quadradoVazado':
                     dimensao1Group.querySelector('label').innerText = 'Lado Externo (mm)';
                     dimensao2Group.querySelector('label').innerText = 'Espessura (mm)';
                     dimensao2Group.classList.remove('hidden');
                     dimensao3Group.classList.add('hidden');
+                    dimensao4Group.classList.add('hidden');
                     break;
                 case 'u':
                 case 'c':
                 case 'i':
                 case 'h':
-                case 'vigaI':
-                case 'vigaC':
-                case 'vigaU':
-                case 'vigaT':
-                case 'vigaH':
+                case 'l':
                     dimensao1Group.querySelector('label').innerText = 'Largura (mm)';
                     dimensao2Group.querySelector('label').innerText = 'Espessura (mm)';
                     dimensao3Group.querySelector('label').innerText = 'Altura (mm)';
                     dimensao2Group.classList.remove('hidden');
                     dimensao3Group.classList.remove('hidden');
+                    dimensao4Group.classList.add('hidden');
+                    break;
+                case 'cantoneira':
+                    dimensao1Group.querySelector('label').innerText = 'Lado (mm)';
+                    dimensao2Group.querySelector('label').innerText = 'Espessura (mm)';
+                    dimensao2Group.classList.remove('hidden');
+                    dimensao3Group.classList.add('hidden');
+                    dimensao4Group.classList.add('hidden');
+                    break;
+                case 'vigaT':
+                    dimensao1Group.querySelector('label').innerText = 'Base (mm)';
+                    dimensao2Group.querySelector('label').innerText = 'Altura (mm)';
+                    dimensao3Group.querySelector('label').innerText = 'Espessura (mm)';
+                    dimensao2Group.classList.remove('hidden');
+                    dimensao3Group.classList.remove('hidden');
+                    dimensao4Group.classList.remove('hidden');
                     break;
                 default:
                     dimensao2Group.classList.add('hidden');
                     dimensao3Group.classList.add('hidden');
+                    dimensao4Group.classList.add('hidden');
             }
         });
 
         function calcularPropriedades() {
             const tipoPerfil = perfil.value;
             const dimensao1 = parseFloat(document.getElementById('dimensao1').value);
-            const dimensao2 = parseFloat(document.getElementById('dimensao2').value) || dimensao1;
-            const dimensao3 = parseFloat(document.getElementById('dimensao3').value) || dimensao1;
+            const dimensao2 = parseFloat(document.getElementById('dimensao2').value) || 0;
+            const dimensao3 = parseFloat(document.getElementById('dimensao3').value) || 0;
+            const dimensao4 = parseFloat(document.getElementById('dimensao4').value) || 0;
 
             let area = 0;
             let inercia = 0;
@@ -160,153 +189,45 @@
                     inercia = (Math.pow(dimensao1, 4) - Math.pow(ladoInterno, 4)) / 12;
                     break;
                 case 'u':
-                case 'c':
-                    area = 2 * dimensao2 * dimensao3 + (dimensao1 - dimensao2) * dimensao2;
-                    inercia = ((dimensao3 * Math.pow(dimensao1, 3)) - ((dimensao3 - dimensao2) * Math.pow(dimensao1 - dimensao2 * 2, 3))) / 12;
-                    break;
-                case 'i':
-                case 'h':
-                    area = 2 * dimensao2 * dimensao3 + (dimensao1 - dimensao2) * dimensao2;
-                    inercia = ((dimensao3 * Math.pow(dimensao1, 3)) - ((dimensao3 - dimensao2) * Math.pow(dimensao1 - dimensao2 * 2, 3))) / 12;
-                    break;
-                case 'vigaI':
-                case 'vigaC':
-                case 'vigaU':
-                case 'vigaT':
-                case 'vigaH':
-                    area = dimensao1 * dimensao2 + 2 * dimensao3 * (dimensao1 - dimensao2);
-                    inercia = (dimensao1 * Math.pow(dimensao2, 3) - (dimensao1 - dimensao3) * Math.pow(dimensao3, 3)) / 12;
-                    break;
-                default:
-                    area = inercia = polar = 0;
-            }
-
-            document.getElementById('resultado').innerHTML = `
-                <p>Área: ${area.toFixed(2)} mm²</p>
-                <p>Inércia: ${inercia.toFixed(2)} mm⁴</p>
-                <p>Polar: ${polar.toFixed(2)} mm⁴</p>
-            `;
-
-            desenharPerfil(tipoPerfil, dimensao1, dimensao2, dimensao3);
-        }
-
-        function desenharPerfil(tipoPerfil, d1, d2, d3) {
-            let svgContent = '';
-            switch (tipoPerfil) {
-                case 'circular':
-                    svgContent = `
-                        <svg viewBox="0 0 200 200">
-                            <circle cx="100" cy="100" r="${d1 / 2}" stroke="black" stroke-width="3" fill="none" />
-                        </svg>
-                    `;
-                    break;
-                case 'tubular':
-                    svgContent = `
-                        <svg viewBox="0 0 200 200">
-                            <circle cx="100" cy="100" r="${d1 / 2}" stroke="black" stroke-width="3" fill="none" />
-                            <circle cx="100" cy="100" r="${(d1 - 2 * d2) / 2}" stroke="black" stroke-width="3" fill="none" />
-                        </svg>
-                    `;
-                    break;
-                case 'quadrado':
-                    svgContent = `
-                        <svg viewBox="0 0 ${d1 + 20} ${d1 + 20}">
-                            <rect x="10" y="10" width="${d1}" height="${d1}" stroke="black" stroke-width="3" fill="none" />
-                        </svg>
-                    `;
-                    break;
-                case 'quadradoVazado':
-                    svgContent = `
-                        <svg viewBox="0 0 ${d1 + 20} ${d1 + 20}">
-                            <rect x="10" y="10" width="${d1}" height="${d1}" stroke="black" stroke-width="3" fill="none" />
-                            <rect x="10 + ${d2}" y="10 + ${d2}" width="${d1 - 2 * d2}" height="${d1 - 2 * d2}" stroke="black" stroke-width="3" fill="none" />
-                        </svg>
-                    `;
-                    break;
-                case 'u':
-                    svgContent = `
-                        <svg viewBox="0 0 ${d1 + 20} ${d3 + 40}">
-                            <rect x="10" y="10" width="${d1 - d2}" height="${d2}" stroke="black" stroke-width="3" fill="none" />
-                            <rect x="10" y="${d2}" width="${d2}" height="${d3 - d2}" stroke="black" stroke-width="3" fill="none" />
-                            <rect x="10" y="${d3}" width="${d1 - d2}" height="${d2}" stroke="black" stroke-width="3" fill="none" />
-                        </svg>
-                    `;
+                    area = dimensao1 * dimensao3 - (dimensao1 - 2 * dimensao2) * (dimensao3 - 2 * dimensao2);
+                    inercia = ((dimensao1 * Math.pow(dimensao3, 3)) - (dimensao1 - 2 * dimensao2) * Math.pow(dimensao3 - 2 * dimensao2, 3)) / 12;
                     break;
                 case 'c':
-                    svgContent = `
-                        <svg viewBox="0 0 ${d1 + 20} ${d3 + 40}">
-                            <rect x="10" y="10" width="${d1}" height="${d2}" stroke="black" stroke-width="3" fill="none" />
-                            <rect x="10" y="${d2}" width="${d1 - d2}" height="${d3 - d2}" stroke="black" stroke-width="3" fill="none" />
-                        </svg>
-                    `;
-                    break;
                 case 'i':
-                    svgContent = `
-                        <svg viewBox="0 0 ${d1 + 20} ${d2 + 40}">
-                            <rect x="10" y="10" width="${d1}" height="${d2}" stroke="black" stroke-width="3" fill="none" />
-                            <rect x="10" y="10" width="${d1 / 2}" height="${d2 / 2}" stroke="black" stroke-width="3" fill="none" />
-                            <rect x="10" y="${d2 / 2}" width="${d1 / 2}" height="${d2 / 2}" stroke="black" stroke-width="3" fill="none" />
-                        </svg>
-                    `;
-                    break;
                 case 'h':
-                    svgContent = `
-                        <svg viewBox="0 0 ${d1 + 20} ${d2 + 40}">
-                            <rect x="10" y="10" width="${d1}" height="${d2}" stroke="black" stroke-width="3" fill="none" />
-                            <rect x="10" y="10" width="${d1 / 2}" height="${d2}" stroke="black" stroke-width="3" fill="none" />
-                            <rect x="${d1 / 2}" y="10" width="${d1 / 2}" height="${d2}" stroke="black" stroke-width="3" fill="none" />
-                        </svg>
-                    `;
+                case 'l':
+                    area = dimensao1 * dimensao3 - (dimensao1 - 2 * dimensao2) * (dimensao3 - 2 * dimensao2);
+                    inercia = ((dimensao1 * Math.pow(dimensao3, 3)) - (dimensao1 - 2 * dimensao2) * Math.pow(dimensao3 - 2 * dimensao2, 3)) / 12;
                     break;
-                case 'vigaI':
-                    svgContent = `
-                        <svg viewBox="0 0 ${d1 + 20} ${d3 + 40}">
-                            <rect x="10" y="10" width="${d1}" height="${d2}" stroke="black" stroke-width="3" fill="none" />
-                            <rect x="10" y="${d2}" width="${d1}" height="${d3 - d2}" stroke="black" stroke-width="3" fill="none" />
-                        </svg>
-                    `;
-                    break;
-                case 'vigaC':
-                    svgContent = `
-                        <svg viewBox="0 0 ${d1 + 20} ${d2 + 40}">
-                            <rect x="10" y="10" width="${d1}" height="${d2}" stroke="black" stroke-width="3" fill="none" />
-                            <rect x="10" y="${d2}" width="${d1 / 2}" height="${d2 / 2}" stroke="black" stroke-width="3" fill="none" />
-                            <rect x="${d1 / 2}" y="${d2}" width="${d1 / 2}" height="${d2 / 2}" stroke="black" stroke-width="3" fill="none" />
-                        </svg>
-                    `;
-                    break;
-                case 'vigaU':
-                    svgContent = `
-                        <svg viewBox="0 0 ${d1 + 20} ${d3 + 40}">
-                            <rect x="10" y="10" width="${d1 - d2}" height="${d2}" stroke="black" stroke-width="3" fill="none" />
-                            <rect x="10" y="${d2}" width="${d2}" height="${d3 - d2}" stroke="black" stroke-width="3" fill="none" />
-                            <rect x="10" y="${d3}" width="${d1 - d2}" height="${d2}" stroke="black" stroke-width="3" fill="none" />
-                        </svg>
-                    `;
+                case 'cantoneira':
+                    area = 2 * dimensao1 * dimensao2 - dimensao2 * dimensao2;
+                    inercia = (2 * Math.pow(dimensao1, 3) * dimensao2 - Math.pow(dimensao2, 3)) / 12;
                     break;
                 case 'vigaT':
-                    svgContent = `
-                        <svg viewBox="0 0 ${d1 + 20} ${d2 + 40}">
-                            <rect x="10" y="10" width="${d1}" height="${d2}" stroke="black" stroke-width="3" fill="none" />
-                            <rect x="10" y="10" width="${d2}" height="${d2}" stroke="black" stroke-width="3" fill="none" />
-                        </svg>
-                    `;
+                    area = dimensao1 * dimensao3 - (dimensao1 - 2 * dimensao2) * (dimensao3 - dimensao4);
+                    inercia = ((dimensao1 * Math.pow(dimensao3, 3)) - (dimensao1 - 2 * dimensao2) * Math.pow(dimensao3 - dimensao4, 3)) / 12;
                     break;
-                case 'vigaH':
-                    svgContent = `
-                        <svg viewBox="0 0 ${d1 + 20} ${d3 + 40}">
-                            <rect x="10" y="10" width="${d1}" height="${d2}" stroke="black" stroke-width="3" fill="none" />
-                            <rect x="10" y="${d2}" width="${d1 / 2}" height="${d3 - d2}" stroke="black" stroke-width="3" fill="none" />
-                            <rect x="${d1 / 2}" y="${d2}" width="${d1 / 2}" height="${d3 - d2}" stroke="black" stroke-width="3" fill="none" />
-                        </svg>
-                    `;
-                    break;
-                default:
-                    svgContent = '<p>Perfil não reconhecido</p>';
             }
 
-            document.getElementById('desenho').innerHTML = svgContent;
+            document.getElementById('resultado').innerText = `Área: ${area.toFixed(2)} mm²\nMomento de Inércia: ${inercia.toFixed(2)} mm^4\nMomento Polar: ${polar.toFixed(2)} mm^4`;
+
+            const descriptions = {
+                'circular': 'Perfil circular, ideal para colunas e tubos.',
+                'tubular': 'Perfil tubular, utilizado em estruturas metálicas e suportes.',
+                'quadrado': 'Perfil quadrado, comumente usado em estrutura de estruturas de apoio.',
+                'quadradoVazado': 'Perfil quadrado vazado, usado quando é necessário reduzir peso.',
+                'u': 'Perfil U, utilizado em suportes e estruturas com alta resistência.',
+                'c': 'Perfil C, conhecido por sua versatilidade em diversas aplicações.',
+                'i': 'Perfil I, amplamente utilizado em vigas e colunas.',
+                'h': 'Perfil H, oferece maior resistência e é utilizado em grandes estruturas.',
+                'l': 'Perfil L, comumente usado em suportes e reforços.',
+                'cantoneira': 'Cantoneira, ideal para reforços em ângulos.',
+                'vigaT': 'Viga T, utilizada para suportar cargas pesadas.'
+            };
+
+            descricao.innerText = descriptions[tipoPerfil] || 'Selecione um perfil para ver a descrição.';
         }
     </script>
 </body>
 </html>
+
