@@ -10,7 +10,7 @@
         fieldset { margin-bottom: 20px; padding: 15px; border-radius: 8px; }
         legend { font-size: 1.2em; font-weight: bold; }
         label { display: block; margin: 10px 0 5px; }
-        input { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        input, select { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
         button { padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; }
         button:hover { background: #218838; }
         .resultado-item { background: #e9ecef; padding: 10px; border-radius: 4px; margin-top: 10px; white-space: pre-wrap; }
@@ -25,6 +25,7 @@
             <button type="button" onclick="iniciarMonitoramento()">Iniciar Monitoramento</button>
 
             <div id="monitoramentoItems" style="display: none;">
+                <!-- Abastecimento e Calibração -->
                 <fieldset>
                     <legend>Calibração e Abastecimento</legend>
                     <label for="fracaoCombustivel">Fração Atual do Tanque de Combustível:</label>
@@ -50,15 +51,34 @@
                     </select>
                     <button type="button" onclick="calcularPneus()">Calcular Pneus</button>
                     <div id="resultadoPneus" class="resultado-item"></div>
-
-                    <label for="kmAbastecimento">Quilometragem do Último Abastecimento:</label>
-                    <input type="number" id="kmAbastecimento" step="0.1" required>
-                    <label for="volumeAbastecimento">Volume Abastecido (em litros):</label>
-                    <input type="number" id="volumeAbastecimento" step="0.1" required>
-                    <button type="button" onclick="calcularAbastecimento()">Calcular Abastecimento</button>
-                    <div id="resultadoAbastecimento" class="resultado-item"></div>
                 </fieldset>
 
+                <!-- Manutenção Preventiva -->
+                <fieldset>
+                    <legend>Manutenção Preventiva</legend>
+                    <label for="dataTrocaOleo">Data da Última Troca de Óleo:</label>
+                    <input type="datetime-local" id="dataTrocaOleo" required>
+                    <label for="kmTrocaOleo">Quilometragem da Última Troca de Óleo:</label>
+                    <input type="number" id="kmTrocaOleo" step="0.1" required>
+                    <button type="button" onclick="calcularTrocaOleo()">Calcular Troca de Óleo</button>
+                    <div id="resultadoOleo" class="resultado-item"></div>
+
+                    <label for="dataTrocaFiltroAr">Data da Última Troca do Filtro de Ar:</label>
+                    <input type="datetime-local" id="dataTrocaFiltroAr" required>
+                    <label for="kmTrocaFiltroAr">Quilometragem da Última Troca do Filtro de Ar:</label>
+                    <input type="number" id="kmTrocaFiltroAr" step="0.1" required>
+                    <button type="button" onclick="calcularTrocaFiltroAr()">Calcular Troca do Filtro de Ar</button>
+                    <div id="resultadoFiltroAr" class="resultado-item"></div>
+
+                    <label for="dataTrocaFluidoFreio">Data da Última Troca do Fluido de Freio:</label>
+                    <input type="datetime-local" id="dataTrocaFluidoFreio" required>
+                    <label for="kmTrocaFluidoFreio">Quilometragem da Última Troca do Fluido de Freio:</label>
+                    <input type="number" id="kmTrocaFluidoFreio" step="0.1" required>
+                    <button type="button" onclick="calcularTrocaFluidoFreio()">Calcular Troca do Fluido de Freio</button>
+                    <div id="resultadoFluidoFreio" class="resultado-item"></div>
+                </fieldset>
+
+                <!-- Troca de Freios e Suspensão -->
                 <fieldset>
                     <legend>Troca de Freios e Suspensão</legend>
                     <label for="dataTrocaFreios">Data da Última Troca de Freios:</label>
@@ -78,8 +98,12 @@
             </div>
         </form>
     </div>
+
     <script>
         const PADROES = {
+            trocaOleo: { km: 10000, dias: 180 }, // Quilometragem e tempo padrão para troca de óleo
+            trocaFiltroAr: { km: 20000, dias: 365 }, // Quilometragem e tempo padrão para troca do filtro de ar
+            trocaFluidoFreio: { km: 40000, dias: 730 }, // Quilometragem e tempo padrão para troca do fluido de freio
             trocaFreios: { km: 30000, dias: 365 }, // Quilometragem e tempo padrão para troca de freios
             trocaSuspensao: { km: 50000, dias: 730 }, // Quilometragem e tempo padrão para troca de suspensão
             consumoMedio: 10, // Consumo médio do veículo em km/litro
@@ -101,21 +125,74 @@
 
             const kmRestante = (volumeRestante * PADROES.consumoMedio).toFixed(1);
 
-            let resultado = `Volume Atual: ${fracaoAtual * 100}% de ${volumePadrão} litros\n`;
-            resultado += `Volume Restante: ${volumeRestante} litros\n`;
-            resultado += `Quilometragem Restante antes de Abastecimento: ${kmRestante} km\n`;
+            let resultado = `Volume Atual: ${fracaoAtual * 100}% de ${volumePadrão} L (${volumeRestante} L)\n`;
+            resultado += `Quilometragem Restante Estimada: ${kmRestante} km\n`;
             document.getElementById('resultadoCombustivel').textContent = resultado;
         }
 
         function calcularPneus() {
-            const pressaoIdeal = PADROES.pressaoPneus;
             const fracaoAtual = parseFloat(document.getElementById('fracaoPneus').value);
-            const pressaoAtual = (pressaoIdeal * fracaoAtual).toFixed(1);
+            const pressaoRestante = (PADROES.pressaoPneus * fracaoAtual).toFixed(1);
 
-            let resultado = `Pressão Ideal dos Pneus: ${pressaoIdeal} psi\n`;
-            resultado += `Pressão Atual: ${pressaoAtual} psi\n`;
-            resultado += `Recomendação: Verifique a pressão dos pneus ao atingir ${pressaoIdeal * 0.5} psi\n`;
+            let resultado = `Pressão Atual: ${pressaoRestante} psi (${fracaoAtual * 100}% da pressão padrão)\n`;
             document.getElementById('resultadoPneus').textContent = resultado;
+        }
+
+        function calcularTrocaOleo() {
+            const dataTroca = new Date(document.getElementById('dataTrocaOleo').value);
+            const kmTroca = parseFloat(document.getElementById('kmTrocaOleo').value);
+            const intervalo = PADROES.trocaOleo.km;
+            const diasMaximo = PADROES.trocaOleo.dias;
+            const agora = new Date();
+
+            const proximaTrocaKm = kmTroca + intervalo;
+            const kmRestantes = proximaTrocaKm - kmInicial;
+
+            const proximaTrocaData = new Date(dataTroca);
+            proximaTrocaData.setDate(proximaTrocaData.getDate() + diasMaximo);
+            const diasRestantes = Math.round((proximaTrocaData - agora) / (1000 * 60 * 60 * 24));
+
+            let resultado = `Próxima Troca: Em ${diasRestantes} dias ou após mais ${kmRestantes} km, o que ocorrer primeiro.\n`;
+            resultado += `Data Estimada para Troca: ${proximaTrocaData.toLocaleDateString()}\n`;
+            document.getElementById('resultadoOleo').textContent = resultado;
+        }
+
+        function calcularTrocaFiltroAr() {
+            const dataTroca = new Date(document.getElementById('dataTrocaFiltroAr').value);
+            const kmTroca = parseFloat(document.getElementById('kmTrocaFiltroAr').value);
+            const intervalo = PADROES.trocaFiltroAr.km;
+            const diasMaximo = PADROES.trocaFiltroAr.dias;
+            const agora = new Date();
+
+            const proximaTrocaKm = kmTroca + intervalo;
+            const kmRestantes = proximaTrocaKm - kmInicial;
+
+            const proximaTrocaData = new Date(dataTroca);
+            proximaTrocaData.setDate(proximaTrocaData.getDate() + diasMaximo);
+            const diasRestantes = Math.round((proximaTrocaData - agora) / (1000 * 60 * 60 * 24));
+
+            let resultado = `Próxima Troca: Em ${diasRestantes} dias ou após mais ${kmRestantes} km, o que ocorrer primeiro.\n`;
+            resultado += `Data Estimada para Troca: ${proximaTrocaData.toLocaleDateString()}\n`;
+            document.getElementById('resultadoFiltroAr').textContent = resultado;
+        }
+
+        function calcularTrocaFluidoFreio() {
+            const dataTroca = new Date(document.getElementById('dataTrocaFluidoFreio').value);
+            const kmTroca = parseFloat(document.getElementById('kmTrocaFluidoFreio').value);
+            const intervalo = PADROES.trocaFluidoFreio.km;
+            const diasMaximo = PADROES.trocaFluidoFreio.dias;
+            const agora = new Date();
+
+            const proximaTrocaKm = kmTroca + intervalo;
+            const kmRestantes = proximaTrocaKm - kmInicial;
+
+            const proximaTrocaData = new Date(dataTroca);
+            proximaTrocaData.setDate(proximaTrocaData.getDate() + diasMaximo);
+            const diasRestantes = Math.round((proximaTrocaData - agora) / (1000 * 60 * 60 * 24));
+
+            let resultado = `Próxima Troca: Em ${diasRestantes} dias ou após mais ${kmRestantes} km, o que ocorrer primeiro.\n`;
+            resultado += `Data Estimada para Troca: ${proximaTrocaData.toLocaleDateString()}\n`;
+            document.getElementById('resultadoFluidoFreio').textContent = resultado;
         }
 
         function calcularFreios() {
