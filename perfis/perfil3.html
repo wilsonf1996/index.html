@@ -1,1 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Estruturas de Concreto</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: auto;
+        }
+
+        label, input, select, button {
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .radio-group, .select-group {
+            margin-bottom: 20px;
+        }
+
+        .radio-group label, .select-group label {
+            display: inline-block;
+            margin-right: 20px;
+        }
+
+        button {
+            font-size: 1.2em;
+            padding: 10px;
+        }
+
+        #resultado {
+            margin-top: 20px;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <h1>Calculadora de Estruturas de Concreto</h1>
+
+    <div class="radio-group">
+        <p>Selecione o tipo de perfil:</p>
+        <label><input type="radio" name="perfil" value="retangular" checked> Perfil Retangular</label>
+        <label><input type="radio" name="perfil" value="vigaT"> Viga T</label>
+        <label><input type="radio" name="perfil" value="circular"> Pilar Circular</label>
+    </div>
+
+    <label for="momentoFletor">Momento Fletor (kNm):</label>
+    <input type="number" id="momentoFletor" placeholder="Insira o momento fletor">
+
+    <label for="forca">Força (kN):</label>
+    <input type="number" id="forca" placeholder="Insira a força">
+
+    <label for="area">Área (mm²):</label>
+    <input type="number" id="area" placeholder="Insira a área">
+
+    <label for="inercia">Momento de Inércia (mm⁴):</label>
+    <input type="number" id="inercia" placeholder="Insira o momento de inércia">
+
+    <label for="altura">Altura (mm):</label>
+    <input type="number" id="altura" placeholder="Insira a altura">
+
+    <label for="largura">Largura (mm):</label>
+    <input type="number" id="largura" placeholder="Insira a largura">
+
+    <div class="radio-group">
+        <p>Selecione o tipo de aço:</p>
+        <label><input type="radio" name="tipoAco" value="500" checked> Aço CA-50 (500 MPa)</label>
+        <label><input type="radio" name="tipoAco" value="400"> Aço CA-40 (400 MPa)</label>
+        <label><input type="radio" name="tipoAco" value="300"> Aço CA-30 (300 MPa)</label>
+    </div>
+
+    <label for="fck">Resistência do Concreto (fck) (MPa):</label>
+    <input type="number" id="fck" placeholder="Insira a resistência do concreto">
+
+    <div class="select-group">
+        <p>Selecione a bitola do aço:</p>
+        <label><input type="radio" name="bitolaAco" value="8" checked> Ø8 mm</label>
+        <label><input type="radio" name="bitolaAco" value="10"> Ø10 mm</label>
+        <label><input type="radio" name="bitolaAco" value="12"> Ø12 mm</label>
+        <label><input type="radio" name="bitolaAco" value="16"> Ø16 mm</label>
+        <label><input type="radio" name="bitolaAco" value="20"> Ø20 mm</label>
+        <label><input type="radio" name="bitolaAco" value="25"> Ø25 mm</label>
+        <label><input type="radio" name="bitolaAco" value="32"> Ø32 mm</label>
+        <label><input type="radio" name="bitolaAco" value="40"> Ø40 mm</label>
+        <label><input type="radio" name="bitolaAco" value="50"> Ø50 mm</label>
+    </div>
+
+    <button onclick="calcular()">Calcular</button>
+
+    <div id="resultado"></div>
+
+    <script>
+        function calcular() {
+            const perfil = document.querySelector('input[name="perfil"]:checked').value;
+            const momentoFletor = parseFloat(document.getElementById('momentoFletor').value) || 0;
+            const forca = parseFloat(document.getElementById('forca').value) || 0;
+            const area = parseFloat(document.getElementById('area').value) || 0;
+            const inercia = parseFloat(document.getElementById('inercia').value) || 0;
+            const altura = parseFloat(document.getElementById('altura').value) || 0;
+            const largura = parseFloat(document.getElementById('largura').value) || 0;
+            const tipoAco = document.querySelector('input[name="tipoAco"]:checked').value;
+            const fck = parseFloat(document.getElementById('fck').value) || 25; // valor padrão 25 MPa
+            const bitolaAco = parseFloat(document.querySelector('input[name="bitolaAco"]:checked').value) || 10; // valor padrão Ø10 mm
+
+            let fcd = fck / 1.4; // resistência do concreto (fcd)
+            let es = 200000; // módulo de elasticidade do aço (MPa)
+
+            if (tipoAco === '400') {
+                es = 200000; // Módulo de elasticidade do aço CA-40
+            } else if (tipoAco === '300') {
+                es = 200000; // Módulo de elasticidade do aço CA-30
+            }
+
+            // Área da seção transversal da bitola (mm²)
+            const areaBitola = Math.PI * Math.pow(bitolaAco / 2, 2);
+
+            let resultadoHtml = '';
+
+            switch (perfil) {
+                case 'retangular':
+                    resultadoHtml = calcularRetangular(momentoFletor, forca, area, inercia, altura, largura, fcd, es, areaBitola);
+                    break;
+                case 'vigaT':
+                    resultadoHtml = calcularVigaT(momentoFletor, forca, area, inercia, altura, largura, fcd, es, areaBitola);
+                    break;
+                case 'circular':
+                    resultadoHtml = calcularCircular(momentoFletor, forca, area, inercia, altura, largura, fcd, es, areaBitola);
+                    break;
+            }
+
+            document.getElementById('resultado').innerHTML = resultadoHtml;
+        }
+
+        function calcularRetangular(momentoFletor, forca, area, inercia, altura, largura, fcd, es, areaBitola) {
+            const Msd = momentoFletor * 1e6; // conversão para N.mm
+            const As = Msd / (0.87 * fcd * altura * (1 - (fcd / es))); // fórmula simplificada para flexão
+
+            // Considerar também compressão e tração
+            const AsCompression = forca / (0.87 * fcd * largura);
+            const AsTraction = forca / (0.87 * es);
+
+            const numBarras = Math.ceil(As / areaBitola);
+
+            return `
+                <p>Área de Armadura Necessária para Flexão: ${As.toFixed(2)} mm²</p>
+                <p>Área de Armadura Necessária para Compressão: ${AsCompression.toFixed(2)} mm²</p>
+                <p>Área de Armadura Necessária para Tração: ${AsTraction.toFixed(2)} mm²</p>
+                <p>Quantidade de Barras de Aço (Ø${bitolaAco} mm): ${numBarras}</p>
+            `;
+        }
+
+        function calcularVigaT(momentoFletor, forca, area, inercia, altura, largura, fcd, es, areaBitola) {
+            const Msd = momentoFletor * 1e6; // conversão para N.mm
+            const As = Msd / (0.87 * fcd * altura * (1 - (fcd / es))); // fórmula simplificada para flexão
+
+            // Considerar também compressão e tração
+            const AsCompression = forca / (0.87 * fcd * largura);
+            const AsTraction = forca / (0.87 * es);
+
+            const numBarras = Math.ceil(As / areaBitola);
+
+            return `
+                <p>Área de Armadura Necessária para Flexão: ${As.toFixed(2)} mm²</p>
+                <p>Área de Armadura Necessária para Compressão: ${AsCompression.toFixed(2)} mm²</p>
+                <p>Área de Armadura Necessária para Tração: ${AsTraction.toFixed(2)} mm²</p>
+                <p>Quantidade de Barras de Aço (Ø${bitolaAco} mm): ${numBarras}</p>
+            `;
+        }
+
+        function calcularCircular(momentoFletor, forca, area, inercia, altura, largura, fcd, es, areaBitola) {
+            const Msd = momentoFletor * 1e6; // conversão para N.mm
+            const As = Msd / (0.87 * fcd * altura * (1 - (fcd / es))); // fórmula simplificada para flexão
+
+            // Considerar também compressão e tração
+            const AsCompression = forca / (0.87 * fcd * largura);
+            const AsTraction = forca / (0.87 * es);
+
+            const numBarras = Math.ceil(As / areaBitola);
+
+            return `
+                <p>Área de Armadura Necessária para Flexão: ${As.toFixed(2)} mm²</p>
+                <p>Área de Armadura Necessária para Compressão: ${AsCompression.toFixed(2)} mm²</p>
+                <p>Área de Armadura Necessária para Tração: ${AsTraction.toFixed(2)} mm²</p>
+                <p>Quantidade de Barras de Aço (Ø${bitolaAco} mm): ${numBarras}</p>
+            `;
+        }
+    </script>
+</body>
+</html>
 
