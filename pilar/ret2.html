@@ -171,16 +171,18 @@
         }
 
         function calcularFlexaoSimples(M, h, b, cobrimento, fcd, As, fyd) {
-            const d = h - cobrimento; // Distância do centroide da seção
-            const Asmin = 0.0018 * b * h; // Área mínima de aço (mm²)
+            const d = h - cobrimento;
+            const dmin = 0.95 * d; // Distância mínima ao centroide
+            const Asmin = 0.0018 * b * d; // Área mínima de aço (mm²)
             const x = M / (0.87 * fyd * b * d); // Profundidade da linha neutra (mm)
+            const AsNecessaria = M / (0.87 * fyd * (d - x / 2)); // Área de aço necessária (mm²)
             const Mrd = As * fyd * (d - x / 2) / 1e6; // Momento resistente (kN.m)
 
             let resultado = '';
             resultado += `Momento Fletor: ${M / 1e6} kN.m<br>`;
-            resultado += `Área de Aço Necessária: ${As} mm²<br>`;
-            resultado += `Área de Aço Utilizada: ${As} mm²<br>`;
-            resultado += `Profundidade do Centroide: ${x.toFixed(2)} mm<br>`;
+            resultado += `Área de Aço Necessária: ${AsNecessaria.toFixed(2)} mm²<br>`;
+            resultado += `Área de Aço Utilizada: ${As.toFixed(2)} mm²<br>`;
+            resultado += `Profundidade da Linha Neutra: ${x.toFixed(2)} mm<br>`;
             resultado += `Momento Resistente: ${Mrd.toFixed(2)} kN.m<br>`;
 
             return resultado;
@@ -188,20 +190,23 @@
 
         function calcularFlexaoComposta(M, N, h, b, cobrimento, fcd, As, fyd) {
             const d = h - cobrimento;
-            const e = d * (1 - 0.5 * (N / (0.85 * b * h * fcd))); // Distância do centroide ajustada
-            const Mrd = As * fyd * (d - 0.5 * e) / 1e6; // Momento resistente (kN.m)
+            const beta1 = 0.85; // Fator de redução para concreto (norma ACI)
+            const x = M / (0.85 * fcd * b * (d - d / 2)); // Profundidade da linha neutra
+            const Mrd = As * fyd * (d - x / 2) / 1e6; // Momento resistente (kN.m)
             const Nrd = 0.4 * b * h * fcd / 1e3; // Força resistente (kN)
 
             let resultado = '';
             resultado += `Momento Resistente: ${Mrd.toFixed(2)} kN.m<br>`;
             resultado += `Força Resistente: ${Nrd.toFixed(2)} kN<br>`;
+            resultado += `Área de Aço Necessária: ${As.toFixed(2)} mm²<br>`;
 
             return resultado;
         }
 
         function calcularCisalhamento(V, h, b, fcd, As, fyd) {
             const vrd2 = 0.6 * fcd * b * h / 1e6; // Resistência ao cisalhamento (kN)
-            const resultado = `Resistência ao Cisalhamento: ${vrd2.toFixed(2)} kN<br>`;
+            let resultado = `Resistência ao Cisalhamento: ${vrd2.toFixed(2)} kN<br>`;
+            resultado += `Área de Aço Necessária: ${As.toFixed(2)} mm²<br>`;
             return resultado;
         }
 
@@ -209,20 +214,21 @@
             const I = (b * Math.pow(h, 3)) / 12; // Momento de inércia (mm^4)
             const leff = l; // Comprimento de flambagem efetivo (mm)
             const lambda = leff / Math.sqrt(I / (b * h)); // Razão de flambagem
-            const fl = (Math.PI * Math.PI * 210000) / (lambda * lambda); // Tensão crítica de flambagem (MPa)
+            const fcr = (Math.PI * Math.PI * 210000) / (lambda * lambda); // Tensão crítica de flambagem (MPa)
 
-            const resultado = `Tensão Crítica de Flambagem: ${fl.toFixed(2)} MPa<br>`;
+            const resultado = `Tensão Crítica de Flambagem: ${fcr.toFixed(2)} MPa<br>`;
             return resultado;
         }
 
         function calcularCombinado(M, N, V, h, b, cobrimento, fcd, As, fyd) {
-            const d = h - cobrimento; // Distância do centroide da seção
+            const d = h - cobrimento; // Distância ao centroide
             const Mrd = As * fyd * (d - 0.5 * d) / 1e6; // Momento resistente (kN.m)
             const Vrd = 0.6 * fcd * b * h / 1e6; // Resistência ao cisalhamento (kN)
 
             let resultado = '';
             resultado += `Momento Resistente Combinado: ${Mrd.toFixed(2)} kN.m<br>`;
             resultado += `Resistência ao Cisalhamento Combinado: ${Vrd.toFixed(2)} kN<br>`;
+            resultado += `Área de Aço Necessária: ${As.toFixed(2)} mm²<br>`;
 
             return resultado;
         }
