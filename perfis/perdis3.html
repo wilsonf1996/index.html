@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Perfis de Concreto</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: auto;
+        }
+
+        label, input, select {
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        svg {
+            display: block;
+            margin: 20px auto;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #resultado {
+            margin-top: 20px;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <h1>Calculadora de Perfis de Concreto</h1>
+
+    <label for="perfil">Selecione o tipo de perfil:</label>
+    <select id="perfil">
+        <option value="retangular">Perfil Retangular</option>
+        <option value="vigaT">Viga T</option>
+        <option value="circular">Pilar Circular</option>
+        <option value="perfilI">Perfil I</option>
+    </select>
+
+    <div id="dimensao1-group">
+        <label for="dimensao1">Largura (mm)</label>
+        <input type="number" id="dimensao1" placeholder="Insira a largura">
+    </div>
+
+    <div id="dimensao2-group" class="hidden">
+        <label for="dimensao2">Altura (mm)</label>
+        <input type="number" id="dimensao2" placeholder="Insira a altura">
+    </div>
+
+    <div id="dimensao3-group" class="hidden">
+        <label for="dimensao3">Espessura da Alma (mm)</label>
+        <input type="number" id="dimensao3" placeholder="Insira a espessura da alma">
+    </div>
+
+    <div id="dimensao4-group" class="hidden">
+        <label for="dimensao4">Espessura da Mesa (mm)</label>
+        <input type="number" id="dimensao4" placeholder="Insira a espessura da mesa">
+    </div>
+
+    <label for="densidade">Densidade do Concreto (kg/m³)</label>
+    <input type="number" id="densidade" value="2500" placeholder="Insira a densidade">
+
+    <button onclick="calcularPropriedades()">Calcular</button>
+
+    <div id="desenho"></div>
+    <div id="resultado"></div>
+
+    <script>
+        const perfil = document.getElementById('perfil');
+        const dimensao1Group = document.getElementById('dimensao1-group');
+        const dimensao2Group = document.getElementById('dimensao2-group');
+        const dimensao3Group = document.getElementById('dimensao3-group');
+        const dimensao4Group = document.getElementById('dimensao4-group');
+        const densidadeInput = document.getElementById('densidade');
+
+        perfil.addEventListener('change', function() {
+            const tipoPerfil = perfil.value;
+            switch (tipoPerfil) {
+                case 'retangular':
+                    dimensao1Group.querySelector('label').innerText = 'Largura (mm)';
+                    dimensao2Group.querySelector('label').innerText = 'Altura (mm)';
+                    dimensao3Group.classList.add('hidden');
+                    dimensao4Group.classList.add('hidden');
+                    dimensao2Group.classList.remove('hidden');
+                    dimensao1Group.classList.remove('hidden');
+                    break;
+                case 'vigaT':
+                    dimensao1Group.querySelector('label').innerText = 'Largura da Mesa (mm)';
+                    dimensao2Group.querySelector('label').innerText = 'Altura Total (mm)';
+                    dimensao3Group.querySelector('label').innerText = 'Espessura da Alma (mm)';
+                    dimensao4Group.querySelector('label').innerText = 'Espessura da Mesa (mm)';
+                    dimensao3Group.classList.remove('hidden');
+                    dimensao4Group.classList.remove('hidden');
+                    dimensao2Group.classList.remove('hidden');
+                    dimensao1Group.classList.remove('hidden');
+                    break;
+                case 'circular':
+                    dimensao1Group.querySelector('label').innerText = 'Diâmetro (mm)';
+                    dimensao2Group.classList.add('hidden');
+                    dimensao3Group.classList.add('hidden');
+                    dimensao4Group.classList.add('hidden');
+                    dimensao1Group.classList.remove('hidden');
+                    break;
+                case 'perfilI':
+                    dimensao1Group.querySelector('label').innerText = 'Largura da Mesa (mm)';
+                    dimensao2Group.querySelector('label').innerText = 'Altura Total (mm)';
+                    dimensao3Group.querySelector('label').innerText = 'Espessura da Alma (mm)';
+                    dimensao4Group.querySelector('label').innerText = 'Espessura da Mesa (mm)';
+                    dimensao3Group.classList.remove('hidden');
+                    dimensao4Group.classList.remove('hidden');
+                    dimensao2Group.classList.remove('hidden');
+                    dimensao1Group.classList.remove('hidden');
+                    break;
+                default:
+                    dimensao1Group.classList.add('hidden');
+                    dimensao2Group.classList.add('hidden');
+                    dimensao3Group.classList.add('hidden');
+                    dimensao4Group.classList.add('hidden');
+            }
+        });
+
+        function calcularPropriedades() {
+            const tipoPerfil = perfil.value;
+            const largura = parseFloat(document.getElementById('dimensao1').value);
+            const altura = parseFloat(document.getElementById('dimensao2').value) || largura;
+            const espessuraAlma = parseFloat(document.getElementById('dimensao3').value) || 0;
+            const espessuraMesa = parseFloat(document.getElementById('dimensao4').value) || 0;
+            const densidade = parseFloat(densidadeInput.value) || 2500; // valor padrão: 2500 kg/m³
+
+            let area = 0;
+            let inercia = 0;
+            let peso = 0;
+
+            switch (tipoPerfil) {
+                case 'retangular':
+                    area = largura * altura;
+                    inercia = (largura * Math.pow(altura, 3)) / 12;
+                    peso = area * densidade / 1e6; // conversão de mm² para m²
+                    break;
+                case 'vigaT':
+                    area = largura * espessuraMesa + (altura - espessuraMesa) * espessuraAlma;
+                    inercia = ((altura * Math.pow(largura, 3)) - ((altura - espessuraMesa) * Math.pow(largura - espessuraAlma * 2, 3))) / 12;
+                    peso = area * densidade / 1e6; // conversão de mm² para m²
+                    break;
+                case 'circular':
+                    area = Math.PI * Math.pow(largura / 2, 2);
+                    inercia = (Math.PI * Math.pow(largura / 2, 4)) / 4;
+                    peso = area * densidade / 1e6; // conversão de mm² para m²
+                    break;
+                case 'perfilI':
+                    const larguraMesaI = largura;
+                    const alturaTotalI = altura;
+                    const espessuraAlmaI = espessuraAlma;
+                    const espessuraMesaI = espessuraMesa;
+                    
+                    // Área total
+                    area = (larguraMesaI * espessuraMesaI * 2) + ((alturaTotalI - 2 * espessuraMesaI) * espessuraAlmaI);
+                    
+                    // Momento de Inércia
+                    const h = alturaTotalI;
+                    const b = larguraMesaI;
+                    const t_w = espessuraAlmaI;
+                    const t_f = espessuraMesaI;
+                    
+                    const Iy_flange = (b * Math.pow(t_f, 3)) / 12;
+                    const Iy_web = (t_w * Math.pow(h - 2 * t_f, 3)) / 12;
+                    const A_flange = b * t_f;
+                    const A_web = t_w * (h - 2 * t_f);
+                    const y_f = (h / 2 - t_f / 2);
+                    const y_web = (h / 2);
+                    
+                    inercia = (Iy_flange * 2 + Iy_web + A_flange * Math.pow(y_f, 2) + A_web * Math.pow(y_web, 2));
+                    
+                    peso = area * densidade / 1e6; // conversão de mm² para m²
+                    break;
+                default:
+                    alert('Tipo de perfil não selecionado.');
+                    return;
+            }
+
+            document.getElementById('resultado').innerHTML = `
+                <h2>Resultado:</h2>
+                <p>Área: ${area.toFixed(2)} mm²</p>
+                <p>Momento de Inércia: ${inercia.toFixed(2)} mm⁴</p>
+                <p>Peso: ${peso.toFixed(2)} kg/m</p>
+            `;
+            desenharPerfil();
+        }
+
+        function desenharPerfil() {
+            const tipoPerfil = perfil.value;
+            let svgContent = '';
+
+            switch (tipoPerfil) {
+                case 'retangular':
+                    const largura = parseFloat(document.getElementById('dimensao1').value);
+                    const altura = parseFloat(document.getElementById('dimensao2').value);
+                    svgContent = `
+                        <svg width="100%" height="200" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="10" y="10" width="${largura}" height="${altura}" fill="lightblue" stroke="black" stroke-width="2"/>
+                            <text x="${largura / 2}" y="${altura / 2}" text-anchor="middle" alignment-baseline="middle" font-size="20" fill="black">Perfil Retangular</text>
+                        </svg>
+                    `;
+                    break;
+                case 'vigaT':
+                    const larguraMesa = parseFloat(document.getElementById('dimensao1').value);
+                    const alturaTotal = parseFloat(document.getElementById('dimensao2').value);
+                    const espessuraAlma = parseFloat(document.getElementById('dimensao3').value);
+                    const espessuraMesa = parseFloat(document.getElementById('dimensao4').value);
+                    svgContent = `
+                        <svg width="100%" height="200" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="10" y="10" width="${larguraMesa}" height="${espessuraMesa}" fill="lightblue" stroke="black" stroke-width="2"/>
+                            <rect x="10" y="${espessuraMesa + (alturaTotal - espessuraMesa - espessuraAlma)}" width="${larguraMesa}" height="${espessuraAlma}" fill="lightblue" stroke="black" stroke-width="2"/>
+                            <rect x="${10 + (larguraMesa - espessuraAlma) / 2}" y="${espessuraMesa}" width="${espessuraAlma}" height="${alturaTotal - espessuraMesa - espessuraAlma}" fill="lightblue" stroke="black" stroke-width="2"/>
+                            <text x="${larguraMesa / 2}" y="${alturaTotal / 2}" text-anchor="middle" alignment-baseline="middle" font-size="20" fill="black">Viga T</text>
+                        </svg>
+                    `;
+                    break;
+                case 'circular':
+                    const diametro = parseFloat(document.getElementById('dimensao1').value);
+                    svgContent = `
+                        <svg width="100%" height="200" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="100" cy="100" r="${diametro / 2}" fill="lightblue" stroke="black" stroke-width="2"/>
+                            <text x="100" y="100" text-anchor="middle" alignment-baseline="middle" font-size="20" fill="black">Pilar Circular</text>
+                        </svg>
+                    `;
+                    break;
+                case 'perfilI':
+                    const larguraMesaI = parseFloat(document.getElementById('dimensao1').value);
+                    const alturaTotalI = parseFloat(document.getElementById('dimensao2').value);
+                    const espessuraAlmaI = parseFloat(document.getElementById('dimensao3').value);
+                    const espessuraMesaI = parseFloat(document.getElementById('dimensao4').value);
+                    svgContent = `
+                        <svg width="100%" height="200" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="10" y="10" width="${larguraMesaI}" height="${espessuraMesaI}" fill="lightblue" stroke="black" stroke-width="2"/>
+                            <rect x="10" y="${espessuraMesaI + (alturaTotalI - espessuraMesaI)}" width="${larguraMesaI}" height="${espessuraMesaI}" fill="lightblue" stroke="black" stroke-width="2"/>
+                            <rect x="10" y="${espessuraMesaI}" width="${espessuraAlmaI}" height="${alturaTotalI - 2 * espessuraMesaI}" fill="lightblue" stroke="black" stroke-width="2"/>
+                            <text x="${larguraMesaI / 2}" y="${alturaTotalI / 2}" text-anchor="middle" alignment-baseline="middle" font-size="20" fill="black">Perfil I</text>
+                        </svg>
+                    `;
+                    break;
+                default:
+                    svgContent = '';
+            }
+
+            document.getElementById('desenho').innerHTML = svgContent;
+        }
+
+        // Inicializar a visualização correta ao carregar a página
+        perfil.dispatchEvent(new Event('change'));
+    </script>
+</body>
+</html>
