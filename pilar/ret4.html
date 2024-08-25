@@ -194,6 +194,9 @@
             const comprimentoEfeito = parseFloat(document.getElementById('comprimentoEfeito').value); // mm
             const tipoEsforco = document.getElementById('tipoEsforco').value;
             const areaBitola = areasBitola[diametroAco];
+            const d = altura - 50; // Profundidade útil assumida (mm) para exemplo
+            const d_eff = d - (parseFloat(document.getElementById('diametroAco').value) / 2); // profundidade efetiva (mm)
+            const capacidadeMaxima = 0.87 * tipoAco * d_eff * (altura / 2); // Exemplo de capacidade máxima da viga
 
             const fyd = tipoAco; // Tensão de escoamento do aço em MPa
             const fcd = fck / 1.5; // Tensão de compressão do concreto em MPa (fcd = fck / γc)
@@ -285,20 +288,21 @@
                     break;
             }
 
-            // Determinar o estágio de carregamento
-            const momentoFletorCrítico = 0.9 * fyd * (d - altura / 2); // kN.m
-            const cargaTransversalCrítica = 0.75 * fcd * largura * altura / 1e6; // kN
+            // Determinação do Estágio de Carregamento
+        let estagio;
+        const momentoFletorPercentual = momentoFletor / capacidadeMaxima;
 
-            if (momentoFletor <= momentoFletorCrítico && cargaTransversal <= cargaTransversalCrítica) {
-                estagioCarregamento = 'Estádio I: Fase Elástica';
-            } else if (momentoFletor > momentoFletorCrítico || cargaTransversal > cargaTransversalCrítica) {
-                estagioCarregamento = 'Estádio II: Fase de Fissuração no Concreto';
-            } else {
-                estagioCarregamento = 'Estádio III: Ruptura do Aço e do Concreto';
-            }
+        // Ajustar os limites de acordo com a norma americana
+        if (momentoFletorPercentual <= 0.60) {
+            estagio = 'Estágio I - Carregamento Normal';
+        } else if (momentoFletorPercentual <= 0.90) {
+            estagio = 'Estágio II - Carregamento Crítico';
+        } else {
+            estagio = 'Estágio III - Carregamento Excessivo';
+        }
 
-            document.getElementById('resultado').innerHTML = resultado;
-            document.getElementById('estagioCarregamento').innerHTML = `Estágio de Carregamento: ${estagioCarregamento}`;
+        document.getElementById('estagioCarregamento').innerHTML = `Estágio de Carregamento: ${estagio}.`;
+    }
         }
     </script>
 </body>
