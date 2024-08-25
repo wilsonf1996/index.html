@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Estruturas de Concreto</title>
+    <title>Calculadora de Aço para Concreto</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -11,28 +11,23 @@
             max-width: 800px;
             margin: auto;
         }
-
         label, input, select, button {
             display: block;
             width: 100%;
             margin-bottom: 10px;
             font-size: 1.2em;
         }
-
         .select-group {
             margin-bottom: 20px;
         }
-
         .select-group label {
             display: inline-block;
             margin-right: 20px;
         }
-
         button {
             font-size: 1.2em;
             padding: 10px;
         }
-
         #resultado {
             margin-top: 20px;
             font-size: 1.2em;
@@ -40,7 +35,7 @@
     </style>
 </head>
 <body>
-    <h1>Calculadora de Estruturas de Concreto</h1>
+    <h1>Calculadora de Aço para Concreto</h1>
 
     <div class="select-group">
         <label for="perfil">Selecione o tipo de perfil:</label>
@@ -51,23 +46,35 @@
         </select>
     </div>
 
+    <div class="select-group">
+        <label for="tipoEsforco">Selecione o tipo de esforço:</label>
+        <select id="tipoEsforco">
+            <option value="flexaoSimples">Flexão Simples</option>
+            <option value="flexaoComposta">Flexão Composta</option>
+            <option value="flambagem">Flambagem</option>
+            <option value="cisalhamento">Cisalhamento</option>
+            <option value="outros">Outro Esforço</option>
+            <option value="combinado">Esforço Combinado</option>
+        </select>
+    </div>
+
     <label for="momentoFletor">Momento Fletor (kNm):</label>
     <input type="number" id="momentoFletor" placeholder="Insira o momento fletor">
 
     <label for="forca">Força (kN):</label>
     <input type="number" id="forca" placeholder="Insira a força">
 
-    <label for="area">Área (mm²):</label>
-    <input type="number" id="area" placeholder="Insira a área">
-
-    <label for="inercia">Momento de Inércia (mm⁴):</label>
-    <input type="number" id="inercia" placeholder="Insira o momento de inércia">
-
     <label for="altura">Altura (mm):</label>
     <input type="number" id="altura" placeholder="Insira a altura">
 
     <label for="largura">Largura (mm):</label>
     <input type="number" id="largura" placeholder="Insira a largura">
+
+    <label for="inercia">Momento de Inércia (mm⁴):</label>
+    <input type="number" id="inercia" placeholder="Insira o momento de inércia">
+
+    <label for="area">Área da Seção (mm²):</label>
+    <input type="number" id="area" placeholder="Insira a área da seção">
 
     <div class="select-group">
         <label for="tipoAco">Selecione o tipo de aço:</label>
@@ -96,103 +103,198 @@
         </select>
     </div>
 
+    <div id="opcoesFlambagem" style="display: none;">
+        <label for="comprimentoEfeito">Comprimento Efetivo (m):</label>
+        <input type="number" id="comprimentoEfeito" placeholder="Insira o comprimento efetivo">
+
+        <label for="moduloElasticidade">Módulo de Elasticidade do Aço (MPa):</label>
+        <input type="number" id="moduloElasticidade" placeholder="Insira o módulo de elasticidade">
+    </div>
+
     <button onclick="calcular()">Calcular</button>
 
     <div id="resultado"></div>
 
     <script>
+        document.getElementById('tipoEsforco').addEventListener('change', function() {
+            const tipoEsforco = this.value;
+            const opcoesFlambagem = document.getElementById('opcoesFlambagem');
+            if (tipoEsforco === 'flambagem') {
+                opcoesFlambagem.style.display = 'block';
+            } else {
+                opcoesFlambagem.style.display = 'none';
+            }
+        });
+
         function calcular() {
             const perfil = document.getElementById('perfil').value;
+            const tipoEsforco = document.getElementById('tipoEsforco').value;
             const momentoFletor = parseFloat(document.getElementById('momentoFletor').value) || 0;
             const forca = parseFloat(document.getElementById('forca').value) || 0;
-            const area = parseFloat(document.getElementById('area').value) || 0;
-            const inercia = parseFloat(document.getElementById('inercia').value) || 0;
             const altura = parseFloat(document.getElementById('altura').value) || 0;
             const largura = parseFloat(document.getElementById('largura').value) || 0;
+            const inercia = parseFloat(document.getElementById('inercia').value) || 0;
+            const area = parseFloat(document.getElementById('area').value) || 0;
             const tipoAco = document.getElementById('tipoAco').value;
             const fck = parseFloat(document.getElementById('fck').value) || 25; // valor padrão 25 MPa
             const bitolaAco = parseFloat(document.getElementById('bitolaAco').value) || 10; // valor padrão Ø10 mm
 
-            let fcd = fck / 1.4; // resistência do concreto (fcd)
-            let es = 200000; // módulo de elasticidade do aço (MPa)
-
-            if (tipoAco === '400') {
-                es = 200000; // Módulo de elasticidade do aço CA-40
-            } else if (tipoAco === '300') {
-                es = 200000; // Módulo de elasticidade do aço CA-30
-            }
+            const fcd = fck / 1.4; // resistência do concreto (fcd)
+            const es = (tipoAco === '400') ? 200000 : (tipoAco === '300') ? 200000 : 200000; // Módulo de elasticidade do aço
 
             // Área da seção transversal da bitola (mm²)
             const areaBitola = Math.PI * Math.pow(bitolaAco / 2, 2);
+
+            let comprimentoEfeito = parseFloat(document.getElementById('comprimentoEfeito').value) || 0;
+            let moduloElasticidade = parseFloat(document.getElementById('moduloElasticidade').value) || es;
 
             let resultadoHtml = '';
 
             switch (perfil) {
                 case 'retangular':
-                    resultadoHtml = calcularRetangular(momentoFletor, forca, area, inercia, altura, largura, fcd, es, areaBitola);
+                    resultadoHtml = calcularRetangular(momentoFletor, forca, altura, largura, fcd, es, areaBitola, tipoEsforco);
                     break;
                 case 'vigaT':
-                    resultadoHtml = calcularVigaT(momentoFletor, forca, area, inercia, altura, largura, fcd, es, areaBitola);
+                    resultadoHtml = calcularVigaT(momentoFletor, forca, altura, largura, fcd, es, areaBitola, tipoEsforco);
                     break;
                 case 'circular':
-                    resultadoHtml = calcularCircular(momentoFletor, forca, area, inercia, altura, largura, fcd, es, areaBitola);
+                    resultadoHtml = calcularCircular(momentoFletor, forca, altura, fcd, es, areaBitola, tipoEsforco);
                     break;
+            }
+
+            if (tipoEsforco === 'flambagem') {
+                resultadoHtml += calcularFlambagem(comprimentoEfeito, moduloElasticidade, altura, largura, fcd);
             }
 
             document.getElementById('resultado').innerHTML = resultadoHtml;
         }
 
-        function calcularRetangular(momentoFletor, forca, area, inercia, altura, largura, fcd, es, areaBitola) {
+        function calcularRetangular(momentoFletor, forca, altura, largura, fcd, es, areaBitola, tipoEsforco) {
             const Msd = momentoFletor * 1e6; // conversão para N.mm
-            const As = Msd / (0.87 * fcd * altura * (1 - (fcd / es))); // fórmula simplificada para flexão
+            let As, numBarras;
 
-            // Considerar também compressão e tração
-            const AsCompression = forca / (0.87 * fcd * largura);
-            const AsTraction = forca / (0.87 * es);
+            switch (tipoEsforco) {
+                case 'flexaoSimples':
+                    As = Msd / (0.87 * fcd * altura); // fórmula simplificada para flexão simples
+                    break;
+                case 'flexaoComposta':
+                    As = Msd / (0.87 * fcd * altura); // fórmula para flexão composta
+                    break;
+                case 'flambagem':
+                    // Simplificação para flambagem, normalmente envolve cálculos mais complexos
+                    As = Msd / (0.87 * fcd * altura);
+                    break;
+                case 'cisalhamento':
+                    // Simplificação para cisalhamento
+                    As = forca / (0.87 * fcd * largura);
+                    break;
+                case 'combinado':
+                    // Considerar esforço combinado
+                    As = Msd / (0.87 * fcd * altura) + forca / (0.87 * fcd * largura);
+                    break;
+                case 'outros':
+                default:
+                    // Outros esforços podem ser personalizados aqui
+                    As = Msd / (0.87 * fcd * altura);
+                    break;
+            }
 
-            const numBarras = Math.ceil(As / areaBitola);
+            numBarras = Math.ceil(As / areaBitola);
 
             return `
-                <p>Área de Armadura Necessária para Flexão: ${As.toFixed(2)} mm²</p>
-                <p>Área de Armadura Necessária para Compressão: ${AsCompression.toFixed(2)} mm²</p>
-                <p>Área de Armadura Necessária para Tração: ${AsTraction.toFixed(2)} mm²</p>
+                <p>Área de Armadura Necessária: ${As.toFixed(2)} mm²</p>
                 <p>Quantidade de Barras de Aço (Ø${bitolaAco} mm): ${numBarras}</p>
             `;
         }
 
-        function calcularVigaT(momentoFletor, forca, area, inercia, altura, largura, fcd, es, areaBitola) {
+        function calcularVigaT(momentoFletor, forca, altura, largura, fcd, es, areaBitola, tipoEsforco) {
             const Msd = momentoFletor * 1e6; // conversão para N.mm
-            const As = Msd / (0.87 * fcd * altura * (1 - (fcd / es))); // fórmula simplificada para flexão
+            let As, numBarras;
 
-            // Considerar também compressão e tração
-            const AsCompression = forca / (0.87 * fcd * largura);
-            const AsTraction = forca / (0.87 * es);
+            switch (tipoEsforco) {
+                case 'flexaoSimples':
+                    As = Msd / (0.87 * fcd * altura); // fórmula simplificada para flexão simples
+                    break;
+                case 'flexaoComposta':
+                    As = Msd / (0.87 * fcd * altura); // fórmula para flexão composta
+                    break;
+                case 'flambagem':
+                    // Simplificação para flambagem, normalmente envolve cálculos mais complexos
+                    As = Msd / (0.87 * fcd * altura);
+                    break;
+                case 'cisalhamento':
+                    // Simplificação para cisalhamento
+                    As = forca / (0.87 * fcd * largura);
+                    break;
+                case 'combinado':
+                    // Considerar esforço combinado
+                    As = Msd / (0.87 * fcd * altura) + forca / (0.87 * fcd * largura);
+                    break;
+                case 'outros':
+                default:
+                    // Outros esforços podem ser personalizados aqui
+                    As = Msd / (0.87 * fcd * altura);
+                    break;
+            }
 
-            const numBarras = Math.ceil(As / areaBitola);
+            numBarras = Math.ceil(As / areaBitola);
 
             return `
-                <p>Área de Armadura Necessária para Flexão: ${As.toFixed(2)} mm²</p>
-                <p>Área de Armadura Necessária para Compressão: ${AsCompression.toFixed(2)} mm²</p>
-                <p>Área de Armadura Necessária para Tração: ${AsTraction.toFixed(2)} mm²</p>
+                <p>Área de Armadura Necessária: ${As.toFixed(2)} mm²</p>
                 <p>Quantidade de Barras de Aço (Ø${bitolaAco} mm): ${numBarras}</p>
             `;
         }
 
-        function calcularCircular(momentoFletor, forca, area, inercia, altura, largura, fcd, es, areaBitola) {
+        function calcularCircular(momentoFletor, forca, altura, fcd, es, areaBitola, tipoEsforco) {
             const Msd = momentoFletor * 1e6; // conversão para N.mm
-            const As = Msd / (0.87 * fcd * altura * (1 - (fcd / es))); // fórmula simplificada para flexão
+            let As, numBarras;
 
-            // Considerar também compressão e tração
-            const AsCompression = forca / (0.87 * fcd * largura);
-            const AsTraction = forca / (0.87 * es);
+            switch (tipoEsforco) {
+                case 'flexaoSimples':
+                    As = Msd / (0.87 * fcd * altura); // fórmula simplificada para flexão simples
+                    break;
+                case 'flexaoComposta':
+                    As = Msd / (0.87 * fcd * altura); // fórmula para flexão composta
+                    break;
+                case 'flambagem':
+                    // Simplificação para flambagem, normalmente envolve cálculos mais complexos
+                    As = Msd / (0.87 * fcd * altura);
+                    break;
+                case 'cisalhamento':
+                    // Simplificação para cisalhamento
+                    As = forca / (0.87 * fcd * altura);
+                    break;
+                case 'combinado':
+                    // Considerar esforço combinado
+                    As = Msd / (0.87 * fcd * altura) + forca / (0.87 * fcd * altura);
+                    break;
+                case 'outros':
+                default:
+                    // Outros esforços podem ser personalizados aqui
+                    As = Msd / (0.87 * fcd * altura);
+                    break;
+            }
 
-            const numBarras = Math.ceil(As / areaBitola);
+            numBarras = Math.ceil(As / areaBitola);
 
             return `
-                <p>Área de Armadura Necessária para Flexão: ${As.toFixed(2)} mm²</p>
-                <p>Área de Armadura Necessária para Compressão: ${AsCompression.toFixed(2)} mm²</p>
-                <p>Área de Armadura Necessária para Tração: ${AsTraction.toFixed(2)} mm²</p>
+                <p>Área de Armadura Necessária: ${As.toFixed(2)} mm²</p>
                 <p>Quantidade de Barras de Aço (Ø${bitolaAco} mm): ${numBarras}</p>
+            `;
+        }
+
+        function calcularFlambagem(comprimentoEfeito, moduloElasticidade, altura, largura, fcd) {
+            // Fórmula simplificada para flambagem, considerando algumas simplificações
+            const A = altura * largura; // Área da seção
+            const I = inercia; // Momento de inércia
+            const lambda = comprimentoEfeito / (Math.sqrt(I / A)); // Razão de flambagem
+
+            // Coeficiente de flambagem (simplificado)
+            const k = 1; // Valor típico de coeficiente, pode variar
+            const Mcr = (Math.PI * Math.PI * moduloElasticidade * I) / (k * comprimentoEfeito * comprimentoEfeito);
+
+            return `
+                <p>Momento Crítico de Flambagem: ${Mcr.toFixed(2)} N.mm</p>
             `;
         }
     </script>
