@@ -120,7 +120,19 @@
                     dimensao2Group.classList.remove('hidden');
                     dimensao1Group.classList.remove('hidden');
                     break;
-               
+                case 'pilarI':
+                    dimensao1Group.querySelector('label').innerText = 'Largura da Mesa Superior (mm)';
+                    dimensao2Group.querySelector('label').innerText = 'Altura Total (mm)';
+                    dimensao3Group.querySelector('label').innerText = 'Espessura da Alma (mm)';
+                    dimensao4Group.querySelector('label').innerText = 'Espessura da Mesa Inferior (mm)';
+                    dimensao5Group.querySelector('label').innerText = 'Largura da Mesa Inferior (mm)';
+                    dimensao6Group.classList.add('hidden');
+                    dimensao1Group.classList.remove('hidden');
+                    dimensao2Group.classList.remove('hidden');
+                    dimensao3Group.classList.remove('hidden');
+                    dimensao4Group.classList.remove('hidden');
+                    dimensao5Group.classList.remove('hidden');
+                    break;
                 case 'circular':
                     dimensao6Group.querySelector('label').innerText = 'Diâmetro (mm)';
                     dimensao1Group.classList.add('hidden');
@@ -128,21 +140,6 @@
                     dimensao3Group.classList.add('hidden');
                     dimensao4Group.classList.add('hidden');
                     dimensao5Group.classList.add('hidden');
-                    dimensao6Group.classList.remove('hidden');
-                    break;
-
-                    case 'pilarI':
-                    dimensao1Group.querySelector('label').innerText = 'Largura da Mesa Superior (mm)';
-                    dimensao2Group.querySelector('label').innerText = 'Largura da Mesa Inferior (mm)';
-                    dimensao3Group.querySelector('label').innerText = 'Altura Total (mm)';
-                    dimensao4Group.querySelector('label').innerText = 'Espessura da Mesa Superior (mm)';
-                    dimensao5Group.querySelector('label').innerText = 'Espessura da Mesa Inferior (mm)';
-                    dimensao6Group.querySelector('label').innerText = 'Espessura da Alma (mm)';
-                    dimensao1Group.classList.remove('hidden');
-                    dimensao2Group.classList.remove('hidden');
-                    dimensao3Group.classList.remove('hidden');
-                    dimensao4Group.classList.remove('hidden');
-                    dimensao5Group.classList.remove('hidden');
                     dimensao6Group.classList.remove('hidden');
                     break;
                 default:
@@ -176,15 +173,15 @@
                     peso = area * densidade / 1e6; // conversão de mm² para m²
                     break;
                 case 'vigaT':
-                    area = larguraSuperior * espessuraAlma + (alturaTotal - espessuraAlma) * espessuraAlma;
-                    inercia = ((alturaTotal * Math.pow(larguraSuperior, 3)) - ((alturaTotal - espessuraAlma) * Math.pow(larguraSuperior - espessuraAlma * 2, 3))) / 12;
+                    // Cálculos para Viga T
+                    area = larguraSuperior * alturaTotal - (larguraSuperior - espessuraAlma) * (alturaTotal - espessuraMesaSuperior);
+                    inercia = (larguraSuperior * Math.pow(alturaTotal, 3) - (larguraSuperior - espessuraAlma) * Math.pow(alturaTotal - espessuraMesaSuperior, 3)) / 12;
                     peso = area * densidade / 1e6; // conversão de mm² para m²
                     break;
                 case 'pilarI':
-                    // Cálculo da área da seção
-                    area = (larguraMesaSuperior * espessuraMesaSuperior) +
-                           (larguraMesaInferior * espessuraMesaInferior) +
-                           (espessuraAlma * (alturaTotal - espessuraMesaSuperior - espessuraMesaInferior));
+                    // Cálculos para Pilar I
+                    area = larguraSuperior * alturaTotal - (larguraSuperior - espessuraAlma) * (alturaTotal - espessuraMesaInferior);
+                    inercia = (larguraSuperior * Math.pow(alturaTotal, 3) - (larguraSuperior - espessuraAlma) * Math.pow(alturaTotal - espessuraMesaInferior, 3)) / 12;
                     peso = area * densidade / 1e6; // conversão de mm² para m²
                     break;
                 case 'circular':
@@ -192,61 +189,66 @@
                     inercia = (Math.PI * Math.pow(diametro, 4)) / 64;
                     peso = area * densidade / 1e6; // conversão de mm² para m²
                     break;
+                default:
+                    alert('Selecione um tipo de perfil válido.');
+                    return;
             }
 
             document.getElementById('resultado').innerHTML = `
-                <p><strong>Área:</strong> ${area.toFixed(2)} mm²</p>
-                <p><strong>Inércia:</strong> ${inercia.toFixed(2)} mm⁴</p>
-                <p><strong>Peso:</strong> ${peso.toFixed(2)} kg</p>
+                <p>Área: ${area.toFixed(2)} mm²</p>
+                <p>Inércia: ${inercia.toFixed(2)} mm⁴</p>
+                <p>Peso: ${peso.toFixed(2)} kg</p>
             `;
 
             desenharPerfil(tipoPerfil, larguraSuperior, alturaTotal, espessuraAlma, espessuraMesaSuperior, espessuraMesaInferior, diametro);
         }
 
         function desenharPerfil(tipoPerfil, larguraSuperior, alturaTotal, espessuraAlma, espessuraMesaSuperior, espessuraMesaInferior, diametro) {
-            const desenho = document.getElementById('desenho');
-            desenho.innerHTML = '';
+            let svgContent = '';
+            const scale = 0.5; // Fator de escala para ajustar o tamanho do SVG
 
             switch (tipoPerfil) {
                 case 'retangular':
-                    desenho.innerHTML = `
-                        <svg width="200" height="100" viewBox="0 0 200 100">
-                            <rect x="10" y="10" width="${larguraSuperior}" height="${alturaTotal}" fill="lightgrey" stroke="black" />
+                    svgContent = `
+                        <svg viewBox="0 0 ${larguraSuperior * scale} ${alturaTotal * scale}" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="0" y="${alturaTotal * scale - alturaTotal * scale}" width="${larguraSuperior * scale}" height="${alturaTotal * scale}" stroke="black" fill="lightgray"/>
                         </svg>
                     `;
                     break;
                 case 'vigaT':
-                    desenho.innerHTML = `
-                        <svg width="200" height="100" viewBox="0 0 200 100">
-                            <rect x="10" y="10" width="${larguraSuperior}" height="${espessuraAlma}" fill="darkgrey" stroke="black" />
-                            <rect x="10" y="${espessuraAlma + 10}" width="${larguraSuperior}" height="${alturaTotal - espessuraAlma}" fill="grey" stroke="black" />
+                    svgContent = `
+                        <svg viewBox="0 0 ${larguraSuperior * scale} ${alturaTotal * scale}" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="0" y="${alturaTotal * scale - espessuraMesaSuperior * scale}" width="${larguraSuperior * scale}" height="${espessuraMesaSuperior * scale}" stroke="black" fill="lightgray"/>
+                            <rect x="${espessuraAlma * scale}" y="${alturaTotal * scale - espessuraMesaSuperior * scale - (alturaTotal - espessuraMesaSuperior - espessuraAlma) * scale}" width="${(larguraSuperior - 2 * espessuraAlma) * scale}" height="${(alturaTotal - espessuraMesaSuperior - espessuraAlma) * scale}" stroke="black" fill="darkgray"/>
+                            <rect x="0" y="${alturaTotal * scale - alturaTotal * scale}" width="${larguraSuperior * scale}" height="${alturaTotal * scale}" stroke="black" fill="none"/>
                         </svg>
                     `;
                     break;
-                
-               case 'pilarI':
-                    const alturaAlma = alturaTotal - espessuraMesaSuperior - espessuraMesaInferior;
-                    svg.innerHTML = `
-                        <svg width="500" height="500" xmlns="http://www.w3.org/2000/svg">
-                            <!-- Mesa Superior -->
-                            <rect x="100" y="50" width="${larguraMesaSuperior}" height="${espessuraMesaSuperior}" fill="gray" />
-                            <!-- Alma -->
-                            <rect x="100" y="${50 + espessuraMesaSuperior}" width="${espessuraAlma}" height="${alturaAlma}" fill="gray" />
-                            <!-- Mesa Inferior -->
-                            <rect x="100" y="${50 + espessuraMesaSuperior + alturaAlma}" width="${larguraMesaInferior}" height="${espessuraMesaInferior}" fill="gray" />
+                case 'pilarI':
+                    svgContent = `
+                        <svg viewBox="0 0 ${larguraSuperior * scale} ${alturaTotal * scale}" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="0" y="${alturaTotal * scale - espessuraAlma * scale}" width="${larguraSuperior * scale}" height="${espessuraAlma * scale}" stroke="black" fill="lightgray"/>
+                            <rect x="${espessuraAlma * scale}" y="${alturaTotal * scale - espessuraAlma * scale - (alturaTotal - espessuraAlma) * scale}" width="${(larguraSuperior - 2 * espessuraAlma) * scale}" height="${(alturaTotal - espessuraAlma) * scale}" stroke="black" fill="darkgray"/>
+                            <rect x="0" y="${alturaTotal * scale - alturaTotal * scale}" width="${larguraSuperior * scale}" height="${alturaTotal * scale}" stroke="black" fill="none"/>
                         </svg>
                     `;
                     break;
                 case 'circular':
-                    desenho.innerHTML = `
-                        <svg width="200" height="200" viewBox="0 0 200 200">
-                            <circle cx="100" cy="100" r="${diametro / 2}" fill="lightgrey" stroke="black" />
+                    svgContent = `
+                        <svg viewBox="0 0 ${diametro * scale} ${diametro * scale}" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="${diametro / 2 * scale}" cy="${diametro / 2 * scale}" r="${diametro / 2 * scale}" stroke="black" fill="lightgray"/>
                         </svg>
                     `;
                     break;
+                default:
+                    svgContent = '<p>Selecione um tipo de perfil válido.</p>';
             }
+
+            document.getElementById('desenho').innerHTML = svgContent;
         }
+
+        // Inicializa o formulário com o tipo de perfil padrão
+        perfil.dispatchEvent(new Event('change'));
     </script>
 </body>
 </html>
-
