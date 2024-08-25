@@ -1,133 +1,172 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
-
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Listagem de Localizações com Nota</title>
+    <title>Registro de Localização</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
     <style>
         body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f4f4f4;
-            color: #333;
-            margin: 30px;
+            font-family: 'Roboto', sans-serif;
+            text-align: center;
+            margin: 20px;
+            background-color: #f5f5f5;
         }
 
         h1 {
             color: #333;
         }
 
-        ul {
-            list-style-type: none;
-            padding: 0;
+        form {
+            margin-bottom: 20px;
         }
 
-        li {
-            background-color: #fff;
+        input, select {
             padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
-            cursor: pointer;
-        }
-
-        li:hover {
-            background-color: #eee;
-        }
-
-        .details {
-            display: none;
-            margin-top: 10px;
-            background-color: #f9f9f9;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-
-        .details p {
-            margin: 5px 0;
-        }
-
-        #noteInput {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
+            margin: 5px;
             border-radius: 5px;
             border: 1px solid #ddd;
         }
 
-        #addButton {
+        button {
             padding: 10px 20px;
-            background-color: #333;
-            color: white;
             border: none;
             border-radius: 5px;
+            background-color: #007bff;
+            color: #fff;
             cursor: pointer;
         }
 
-        #addButton:hover {
-            background-color: #555;
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            background-color: #fff;
+        }
+
+        .list-item button {
+            background-color: #dc3545;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .list-item button:hover {
+            background-color: #c82333;
         }
     </style>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
 </head>
-
 <body>
-    <h1>Adicionar Localização e Nota</h1>
-    <textarea id="noteInput" placeholder="Escreva sua nota aqui..."></textarea>
-    <button id="addButton">Adicionar Localização</button>
+    <h1>Registro de Localização</h1>
 
-    <h2>Lista de Localizações</h2>
-    <ul id="locationList"></ul>
+    <form id="location-form">
+        <input type="text" id="place-name" placeholder="Nome do Local" required>
+        <input type="number" id="rating" placeholder="Nota (1-10)" min="1" max="10" required>
+        <input type="date" id="date" required>
+        <input type="time" id="time" required>
+        <input type="number" id="temperature" placeholder="Temperatura (°C)" step="0.1" required>
+        <input type="text" id="coordinates" placeholder="Coordenadas (latitude, longitude)" required>
+        <button type="submit">Adicionar Registro</button>
+    </form>
+
+    <div id="location-list"></div>
 
     <script>
-        document.getElementById('addButton').addEventListener('click', function () {
-            const note = document.getElementById('noteInput').value;
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+            measurementId: "G-CVBQ54PERH"
+        };
 
-            if (note.trim() === '') {
-                alert('Por favor, insira uma nota.');
-                return;
-            }
+        // Inicializa o Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
 
-            // Obter data e hora atuais
-            const date = new Date();
-            const dateString = `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+        // Referência ao formulário e à lista de localizações
+        const form = document.getElementById('location-form');
+        const locationList = document.getElementById('location-list');
 
-            // Obter localização atual do usuário
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(function (position) {
-                    const latitude = position.coords.latitude;
-                    const longitude = position.coords.longitude;
+        // Adiciona um novo registro ao Firebase
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
 
-                    // Criar um novo item na lista
-                    const itemHTML = `
-                    <li onclick="toggleDetails(${locationList.children.length})">
-                        <strong>Localização ${locationList.children.length + 1}</strong>
-                        <div class="details" id="details${locationList.children.length}">
-                            <p><strong>Local:</strong> Latitude: ${latitude}, Longitude: ${longitude}</p>
-                            <p><strong>Horário:</strong> ${dateString}</p>
-                            <p><strong>Nota:</strong> ${note}</p>
-                        </div>
-                    </li>`;
+            const placeName = document.getElementById('place-name').value;
+            const rating = document.getElementById('rating').value;
+            const date = document.getElementById('date').value;
+            const time = document.getElementById('time').value;
+            const temperature = document.getElementById('temperature').value;
+            const coordinates = document.getElementById('coordinates').value;
 
-                    document.getElementById('locationList').insertAdjacentHTML('beforeend', itemHTML);
+            const newRecord = {
+                placeName,
+                rating,
+                date,
+                time,
+                temperature,
+                coordinates
+            };
 
-                    // Limpar campo de nota
-                    document.getElementById('noteInput').value = '';
-                }, function (error) {
-                    alert('Erro ao obter localização: ' + error.message);
-                });
-            } else {
-                alert('Geolocalização não é suportada neste navegador.');
-            }
+            const newRecordRef = database.ref('locations').push();
+            newRecordRef.set(newRecord)
+                .then(() => {
+                    form.reset();
+                    loadRecords();
+                })
+                .catch(error => console.error('Erro ao adicionar registro: ', error));
         });
 
-        function toggleDetails(index) {
-            const details = document.getElementById('details' + index);
-            const isVisible = details.style.display === 'block';
-            details.style.display = isVisible ? 'none' : 'block';
+        // Carrega e exibe os registros da Firebase
+        function loadRecords() {
+            database.ref('locations').on('value', (snapshot) => {
+                locationList.innerHTML = '';
+                snapshot.forEach((childSnapshot) => {
+                    const data = childSnapshot.val();
+                    const key = childSnapshot.key;
+                    const listItem = document.createElement('div');
+                    listItem.className = 'list-item';
+                    listItem.innerHTML = `
+                        <div>
+                            <strong>${data.placeName}</strong><br>
+                            Nota: ${data.rating}<br>
+                            Data: ${data.date}<br>
+                            Hora: ${data.time}<br>
+                            Temp: ${data.temperature}°C<br>
+                            Coord: ${data.coordinates}
+                        </div>
+                        <button onclick="deleteRecord('${key}')">Excluir</button>
+                    `;
+                    locationList.appendChild(listItem);
+                });
+            });
         }
+
+        // Exclui um registro específico
+        function deleteRecord(key) {
+            database.ref(`locations/${key}`).remove()
+                .then(() => {
+                    loadRecords();
+                })
+                .catch(error => console.error('Erro ao excluir registro: ', error));
+        }
+
+        // Carregar registros ao iniciar
+        loadRecords();
     </script>
 </body>
-
 </html>
-
