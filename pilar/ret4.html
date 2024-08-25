@@ -180,3 +180,101 @@
             let momentoResistente = '';
             let cisalhamentoResistente = '';
             let flambagemResistente = '';
+
+            
+            switch (tipoEsforco) {
+                case 'flexaoSimples':
+                    // Cálculo para flexão simples
+                    const AsFlexaoSimples = momentoFletor / (0.9 * fyd * (d - (altura / 2)));
+                    const numeroBarrasFlexaoSimples = Math.ceil(AsFlexaoSimples / areaBitola);
+                    profundidadeLinhaNeutra = d / 2; // Aproximação
+
+                    // Esforço resistente para flexão simples
+                    momentoResistente = 0.9 * fyd * d * (altura - d / 2) * 1e-6; // kN.m
+                    resultado = `Área de Aço para Flexão Simples: ${AsFlexaoSimples.toFixed(2)} mm²<br>
+                                 Número de Barras: ${numeroBarrasFlexaoSimples}<br>
+                                 Profundidade da Linha Neutra: ${profundidadeLinhaNeutra.toFixed(2)} mm<br>
+                                 Momento Resistente: ${momentoResistente.toFixed(2)} kN.m`;
+                    break;
+
+                case 'flexaoComposta':
+                    // Cálculo para flexão composta
+                    const aComposta = d / 2; // Aproximação
+                    const AsFlexaoComposta = momentoFletor / (0.9 * fyd * (d - aComposta / 2));
+                    const numeroBarrasFlexaoComposta = Math.ceil(AsFlexaoComposta / areaBitola);
+                    profundidadeLinhaNeutra = d / 2; // Aproximação
+
+                    // Esforço resistente para flexão composta
+                    momentoResistente = 0.9 * fyd * d * (altura - d / 2) * 1e-6; // kN.m
+                    resultado = `Área de Aço para Flexão Composta: ${AsFlexaoComposta.toFixed(2)} mm²<br>
+                                 Número de Barras: ${numeroBarrasFlexaoComposta}<br>
+                                 Profundidade da Linha Neutra: ${profundidadeLinhaNeutra.toFixed(2)} mm<br>
+                                 Momento Resistente: ${momentoResistente.toFixed(2)} kN.m`;
+                    break;
+
+                case 'cisalhamento':
+                    // Cálculo para cisalhamento
+                    const Vc = 0.17 * Math.sqrt(fck) * largura * altura / 1e6; // kN
+                    const AsCisalhamento = Math.max(0, cargaTransversal - Vc) / (0.9 * fyd); // mm²
+                    const numeroBarrasCisalhamento = Math.ceil(AsCisalhamento / areaBitola);
+
+                    // Esforço resistente para cisalhamento
+                    cisalhamentoResistente = Vc; // kN
+                    resultado = `Área de Aço para Cisalhamento: ${AsCisalhamento.toFixed(2)} mm²<br>
+                                 Número de Barras: ${numeroBarrasCisalhamento}<br>
+                                 Cisalhamento Resistente: ${cisalhamentoResistente.toFixed(2)} kN`;
+                    break;
+
+                case 'flambagem':
+                    // Cálculo para flambagem
+                    const fcr = fyd / (1.4 * comprimentoEfeito / altura); // MPa
+                    const AsFlambagem = forca / (0.9 * fcr); // mm²
+                    const numeroBarrasFlambagem = Math.ceil(AsFlambagem / areaBitola);
+
+                    // Esforço resistente para flambagem
+                    flambagemResistente = 0.9 * fcr * altura; // kN
+                    resultado = `Área de Aço para Flambagem: ${AsFlambagem.toFixed(2)} mm²<br>
+                                 Número de Barras: ${numeroBarrasFlambagem}<br>
+                                 Flambagem Resistente: ${flambagemResistente.toFixed(2)} kN`;
+                    break;
+
+                case 'combinado':
+                    // Cálculo para combinação de esforços
+                    const AsCombinado = momentoFletor / (0.9 * fyd * (d - altura / 2)); // mm²
+                    const numeroBarrasCombinado = Math.ceil(AsCombinado / areaBitola);
+
+                    // Esforço resistente para combinado
+                    momentoResistente = 0.9 * fyd * d * (altura - d / 2) * 1e-6; // kN.m
+                    resultado = `Área de Aço Combinada: ${AsCombinado.toFixed(2)} mm²<br>
+                                 Número de Barras: ${numeroBarrasCombinado}<br>
+                                 Momento Resistente: ${momentoResistente.toFixed(2)} kN.m`;
+                    break;
+
+                default:
+                    resultado = 'Tipo de esforço não reconhecido.';
+                    profundidadeLinhaNeutra = '';
+                    numeroBarras = '';
+                    momentoResistente = '';
+                    cisalhamentoResistente = '';
+                    flambagemResistente = '';
+                    break;
+            }
+
+            // Determinar o estágio de carregamento
+            const momentoFletorCrítico = 0.9 * fyd * (d - altura / 2); // kN.m
+            const cargaTransversalCrítica = 0.75 * fcd * largura * altura / 1e6; // kN
+
+            if (momentoFletor <= momentoFletorCrítico && cargaTransversal <= cargaTransversalCrítica) {
+                estagioCarregamento = 'Estádio I: Fase Elástica';
+            } else if (momentoFletor > momentoFletorCrítico || cargaTransversal > cargaTransversalCrítica) {
+                estagioCarregamento = 'Estádio II: Fase de Fissuração no Concreto';
+            } else {
+                estagioCarregamento = 'Estádio III: Ruptura do Aço e do Concreto';
+            }
+
+            document.getElementById('resultado').innerHTML = resultado;
+            document.getElementById('estagioCarregamento').innerHTML = `Estágio de Carregamento: ${estagioCarregamento}`;
+        }
+    </script>
+</body>
+</html>
