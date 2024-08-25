@@ -122,12 +122,13 @@
         function calcularPropriedades() {
             const tipoPerfil = perfil.value;
             const dimensao1 = parseFloat(document.getElementById('dimensao1').value);
-            const dimensao2 = parseFloat(document.getElementById('dimensao2').value) || dimensao1;
-            const dimensao3 = parseFloat(document.getElementById('dimensao3').value) || dimensao1;
+            const dimensao2 = parseFloat(document.getElementById('dimensao2').value) || 0;
+            const dimensao3 = parseFloat(document.getElementById('dimensao3').value) || 0;
 
             let area = 0;
             let inercia = 0;
             let polar = 0;
+            const densidadeAco = 7850; // kg/m³
 
             switch (tipoPerfil) {
                 case 'circular':
@@ -166,10 +167,8 @@
                     break;
             }
 
-            // Cálculo do peso
-            const densidadeAco = 7850; // kg/m³
-            const areaM2 = area / 1e6; // mm² para m²
-            const peso = areaM2 * densidadeAco; // kg
+            const areaMetros = area / 1e6; // mm² para m²
+            const peso = areaMetros * densidadeAco; // Peso em kg
 
             mostrarResultado(area, inercia, polar, tipoPerfil, peso);
             desenharPerfil(tipoPerfil, dimensao1, dimensao2, dimensao3);
@@ -179,67 +178,67 @@
             let resultadoHtml = `<p>Área: ${area.toFixed(2)} mm²</p>`;
             resultadoHtml += `<p>Momento de Inércia: ${inercia.toFixed(2)} mm⁴</p>`;
             if (tipoPerfil === 'circular' || tipoPerfil === 'tubular') {
-                resultadoHtml += `<p>Momento Polar: ${polar.toFixed(2)} mm⁴</p>`;
+                resultadoHtml += `<p>Momento de Inércia Polar: ${polar.toFixed(2)} mm⁴</p>`;
             }
             resultadoHtml += `<p>Peso: ${peso.toFixed(2)} kg</p>`;
             document.getElementById('resultado').innerHTML = resultadoHtml;
         }
 
-        function desenharPerfil(tipoPerfil, dimensao1, dimensao2, dimensao3) {
-            let svgContent = '';
-            switch (tipoPerfil) {
+        function desenharPerfil(tipo, dimensao1, dimensao2, dimensao3) {
+            let svg = '';
+            const svgWidth = 300;
+            const svgHeight = 300;
+            const margin = 10;
+            const scale = svgWidth / (dimensao1 * 2 + margin);
+
+            switch (tipo) {
                 case 'circular':
-                    svgContent = `
-                        <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="100" cy="100" r="${dimensao1 / 2}" stroke="black" stroke-width="2" fill="none" />
-                        </svg>`;
+                    svg = `<svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">
+                        <circle cx="${svgWidth / 2}" cy="${svgHeight / 2}" r="${dimensao1 * scale / 2}" stroke="black" stroke-width="2" fill="none" />
+                    </svg>`;
                     break;
                 case 'tubular':
-                    svgContent = `
-                        <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="100" cy="100" r="${dimensao1 / 2}" stroke="black" stroke-width="2" fill="none" />
-                            <circle cx="100" cy="100" r="${(dimensao1 - 2 * dimensao2) / 2}" stroke="black" stroke-width="2" fill="none" />
-                        </svg>`;
+                    const diametroInterno = dimensao1 - 2 * dimensao2;
+                    svg = `<svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">
+                        <circle cx="${svgWidth / 2}" cy="${svgHeight / 2}" r="${dimensao1 * scale / 2}" stroke="black" stroke-width="2" fill="none" />
+                        <circle cx="${svgWidth / 2}" cy="${svgHeight / 2}" r="${diametroInterno * scale / 2}" stroke="black" stroke-width="2" fill="white" />
+                    </svg>`;
                     break;
                 case 'quadrado':
-                    svgContent = `
-                        <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="50" y="50" width="${dimensao1}" height="${dimensao1}" stroke="black" stroke-width="2" fill="none" />
-                        </svg>`;
+                    svg = `<svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">
+                        <rect x="${margin}" y="${margin}" width="${dimensao1 * scale}" height="${dimensao1 * scale}" stroke="black" stroke-width="2" fill="none" />
+                    </svg>`;
                     break;
                 case 'quadradoVazado':
-                    svgContent = `
-                        <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="50" y="50" width="${dimensao1}" height="${dimensao1}" stroke="black" stroke-width="2" fill="none" />
-                            <rect x="${50 + dimensao2}" y="${50 + dimensao2}" width="${dimensao1 - 2 * dimensao2}" height="${dimensao1 - 2 * dimensao2}" stroke="black" stroke-width="2" fill="none" />
-                        </svg>`;
+                    const ladoInterno = dimensao1 - 2 * dimensao2;
+                    svg = `<svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">
+                        <rect x="${margin}" y="${margin}" width="${dimensao1 * scale}" height="${dimensao1 * scale}" stroke="black" stroke-width="2" fill="none" />
+                        <rect x="${(dimensao1 - ladoInterno) * scale / 2 + margin}" y="${(dimensao1 - ladoInterno) * scale / 2 + margin}" width="${ladoInterno * scale}" height="${ladoInterno * scale}" stroke="black" stroke-width="2" fill="white" />
+                    </svg>`;
                     break;
                 case 'u':
                 case 'c':
-                    svgContent = `
-                        <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="20" y="50" width="${dimensao1}" height="${dimensao2}" stroke="black" stroke-width="2" fill="none" />
-                            <rect x="20" y="${50 + dimensao2}" width="${dimensao1}" height="${dimensao3 - dimensao2}" stroke="black" stroke-width="2" fill="none" />
-                        </svg>`;
+                    svg = `<svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">
+                        <rect x="${margin}" y="${margin + dimensao2 * scale}" width="${(dimensao1 - dimensao2) * scale}" height="${dimensao2 * scale}" stroke="black" stroke-width="2" fill="none" />
+                        <rect x="${margin}" y="${margin}" width="${dimensao2 * scale}" height="${dimensao3 * scale}" stroke="black" stroke-width="2" fill="none" />
+                        <rect x="${(dimensao1 - dimensao2) * scale + margin}" y="${margin}" width="${dimensao2 * scale}" height="${dimensao3 * scale}" stroke="black" stroke-width="2" fill="none" />
+                    </svg>`;
                     break;
                 case 'i':
                 case 'h':
-                    svgContent = `
-                        <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="20" y="50" width="${dimensao1}" height="${dimensao2}" stroke="black" stroke-width="2" fill="none" />
-                            <rect x="20" y="${50 + dimensao2}" width="${dimensao1}" height="${dimensao3 - dimensao2}" stroke="black" stroke-width="2" fill="none" />
-                        </svg>`;
+                    svg = `<svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">
+                        <rect x="${margin}" y="${margin}" width="${dimensao1 * scale}" height="${dimensao2 * scale}" stroke="black" stroke-width="2" fill="none" />
+                        <rect x="${margin}" y="${margin + dimensao2 * scale}" width="${(dimensao1 - dimensao2 * 2) * scale}" height="${dimensao3 * scale}" stroke="black" stroke-width="2" fill="none" />
+                        <rect x="${(dimensao1 - dimensao2) * scale + margin}" y="${margin + dimensao2 * scale + dimensao3 * scale}" width="${dimensao2 * scale}" height="${dimensao2 * scale}" stroke="black" stroke-width="2" fill="none" />
+                    </svg>`;
                     break;
                 case 'l':
-                    svgContent = `
-                        <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="20" y="50" width="${dimensao1}" height="${dimensao2}" stroke="black" stroke-width="2" fill="none" />
-                        </svg>`;
+                    svg = `<svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">
+                        <rect x="${margin}" y="${margin}" width="${dimensao1 * scale}" height="${dimensao2 * scale}" stroke="black" stroke-width="2" fill="none" />
+                    </svg>`;
                     break;
-                default:
-                    svgContent = '<p>Tipo de perfil não suportado para desenho.</p>';
             }
-            document.getElementById('desenho').innerHTML = svgContent;
+            document.getElementById('desenho').innerHTML = svg;
         }
     </script>
 </body>
