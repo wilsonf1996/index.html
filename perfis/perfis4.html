@@ -22,7 +22,7 @@
         svg {
             display: block;
             margin: 20px auto;
-            max-width: 100%;
+            width: 100%;
             height: auto;
         }
 
@@ -127,11 +127,11 @@
                     dimensao4Group.querySelector('label').innerText = 'Espessura da Mesa Inferior (mm)';
                     dimensao5Group.querySelector('label').innerText = 'Largura da Mesa Inferior (mm)';
                     dimensao6Group.classList.add('hidden');
-                    dimensao1Group.classList.remove('hidden');
-                    dimensao2Group.classList.remove('hidden');
                     dimensao3Group.classList.remove('hidden');
                     dimensao4Group.classList.remove('hidden');
                     dimensao5Group.classList.remove('hidden');
+                    dimensao2Group.classList.remove('hidden');
+                    dimensao1Group.classList.remove('hidden');
                     break;
                 case 'circular':
                     dimensao6Group.querySelector('label').innerText = 'Diâmetro (mm)';
@@ -173,30 +173,28 @@
                     peso = area * densidade / 1e6; // conversão de mm² para m²
                     break;
                 case 'vigaT':
-                    // Cálculos para Viga T
-                    area = larguraSuperior * alturaTotal - (larguraSuperior - espessuraAlma) * (alturaTotal - espessuraMesaSuperior);
-                    inercia = (larguraSuperior * Math.pow(alturaTotal, 3) - (larguraSuperior - espessuraAlma) * Math.pow(alturaTotal - espessuraMesaSuperior, 3)) / 12;
+                    area = larguraSuperior * espessuraAlma + (alturaTotal - espessuraAlma) * espessuraAlma;
+                    inercia = ((alturaTotal * Math.pow(larguraSuperior, 3)) - ((alturaTotal - espessuraAlma) * Math.pow(larguraSuperior - espessuraAlma * 2, 3))) / 12;
                     peso = area * densidade / 1e6; // conversão de mm² para m²
                     break;
                 case 'pilarI':
-                    // Cálculos para Pilar I
-                    area = larguraSuperior * alturaTotal - (larguraSuperior - espessuraAlma) * (alturaTotal - espessuraMesaInferior);
-                    inercia = (larguraSuperior * Math.pow(alturaTotal, 3) - (larguraSuperior - espessuraAlma) * Math.pow(alturaTotal - espessuraMesaInferior, 3)) / 12;
+                    area = (larguraSuperior * espessuraMesaSuperior) +
+                           (larguraInferior * espessuraMesaInferior) +
+                           ((alturaTotal - espessuraMesaSuperior - espessuraMesaInferior) * espessuraAlma);
+                    inercia = ((alturaTotal * Math.pow(larguraSuperior, 3)) - (espessuraAlma * Math.pow(larguraInferior, 3))) / 12;
                     peso = area * densidade / 1e6; // conversão de mm² para m²
                     break;
                 case 'circular':
-                    area = Math.PI * Math.pow(diametro / 2, 2);
-                    inercia = (Math.PI * Math.pow(diametro, 4)) / 64;
+                    area = (Math.PI / 4) * Math.pow(diametro, 2);
+                    inercia = (Math.PI / 64) * Math.pow(diametro, 4);
                     peso = area * densidade / 1e6; // conversão de mm² para m²
                     break;
-                default:
-                    alert('Selecione um tipo de perfil válido.');
-                    return;
             }
 
             document.getElementById('resultado').innerHTML = `
+                <h2>Resultados:</h2>
                 <p>Área: ${area.toFixed(2)} mm²</p>
-                <p>Inércia: ${inercia.toFixed(2)} mm⁴</p>
+                <p>Momento de Inércia: ${inercia.toFixed(2)} mm⁴</p>
                 <p>Peso: ${peso.toFixed(2)} kg</p>
             `;
 
@@ -204,51 +202,107 @@
         }
 
         function desenharPerfil(tipoPerfil, larguraSuperior, alturaTotal, espessuraAlma, espessuraMesaSuperior, espessuraMesaInferior, diametro) {
-            let svgContent = '';
-            const scale = 0.5; // Fator de escala para ajustar o tamanho do SVG
+            const svg = document.getElementById('desenho');
+            svg.innerHTML = ''; // Limpa o conteúdo do SVG
+
+            let xmlns = "http://www.w3.org/2000/svg";
+            let svgns = xmlns;
+            let svgElement = document.createElementNS(svgns, "svg");
+            svgElement.setAttribute('width', '500');
+            svgElement.setAttribute('height', '500');
+            svgElement.setAttribute('viewBox', '0 0 500 500');
+            svg.appendChild(svgElement);
 
             switch (tipoPerfil) {
                 case 'retangular':
-                    svgContent = `
-                        <svg viewBox="0 0 ${larguraSuperior * scale} ${alturaTotal * scale}" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="0" y="${alturaTotal * scale - alturaTotal * scale}" width="${larguraSuperior * scale}" height="${alturaTotal * scale}" stroke="black" fill="lightgray"/>
-                        </svg>
-                    `;
+                    desenharPerfilRetangular(svgElement, larguraSuperior, alturaTotal);
                     break;
                 case 'vigaT':
-                    svgContent = `
-                        <svg viewBox="0 0 ${larguraSuperior * scale} ${alturaTotal * scale}" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="0" y="${alturaTotal * scale - espessuraMesaSuperior * scale}" width="${larguraSuperior * scale}" height="${espessuraMesaSuperior * scale}" stroke="black" fill="lightgray"/>
-                            <rect x="${espessuraAlma * scale}" y="${alturaTotal * scale - espessuraMesaSuperior * scale - (alturaTotal - espessuraMesaSuperior - espessuraAlma) * scale}" width="${(larguraSuperior - 2 * espessuraAlma) * scale}" height="${(alturaTotal - espessuraMesaSuperior - espessuraAlma) * scale}" stroke="black" fill="darkgray"/>
-                            <rect x="0" y="${alturaTotal * scale - alturaTotal * scale}" width="${larguraSuperior * scale}" height="${alturaTotal * scale}" stroke="black" fill="none"/>
-                        </svg>
-                    `;
+                    desenharPerfilVigaT(svgElement, larguraSuperior, alturaTotal, espessuraAlma, espessuraMesaSuperior);
                     break;
                 case 'pilarI':
-                    svgContent = `
-                        <svg viewBox="0 0 ${larguraSuperior * scale} ${alturaTotal * scale}" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="0" y="${alturaTotal * scale - espessuraAlma * scale}" width="${larguraSuperior * scale}" height="${espessuraAlma * scale}" stroke="black" fill="lightgray"/>
-                            <rect x="${espessuraAlma * scale}" y="${alturaTotal * scale - espessuraAlma * scale - (alturaTotal - espessuraAlma) * scale}" width="${(larguraSuperior - 2 * espessuraAlma) * scale}" height="${(alturaTotal - espessuraAlma) * scale}" stroke="black" fill="darkgray"/>
-                            <rect x="0" y="${alturaTotal * scale - alturaTotal * scale}" width="${larguraSuperior * scale}" height="${alturaTotal * scale}" stroke="black" fill="none"/>
-                        </svg>
-                    `;
+                    desenharPerfilPilarI(svgElement, larguraSuperior, alturaTotal, espessuraAlma, espessuraMesaSuperior, espessuraMesaInferior);
                     break;
                 case 'circular':
-                    svgContent = `
-                        <svg viewBox="0 0 ${diametro * scale} ${diametro * scale}" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="${diametro / 2 * scale}" cy="${diametro / 2 * scale}" r="${diametro / 2 * scale}" stroke="black" fill="lightgray"/>
-                        </svg>
-                    `;
+                    desenharPerfilCircular(svgElement, diametro);
                     break;
-                default:
-                    svgContent = '<p>Selecione um tipo de perfil válido.</p>';
             }
-
-            document.getElementById('desenho').innerHTML = svgContent;
         }
 
-        // Inicializa o formulário com o tipo de perfil padrão
-        perfil.dispatchEvent(new Event('change'));
+        function desenharPerfilRetangular(svg, largura, altura) {
+            let xmlns = "http://www.w3.org/2000/svg";
+            let rect1 = document.createElementNS(xmlns, "rect");
+            rect1.setAttribute('x', '50');
+            rect1.setAttribute('y', '50');
+            rect1.setAttribute('width', largura);
+            rect1.setAttribute('height', altura);
+            rect1.setAttribute('stroke', 'black');
+            rect1.setAttribute('fill', 'none');
+            svg.appendChild(rect1);
+        }
+
+        function desenharPerfilVigaT(svg, larguraSuperior, alturaTotal, espessuraAlma, espessuraMesaSuperior) {
+            let xmlns = "http://www.w3.org/2000/svg";
+            let rect1 = document.createElementNS(xmlns, "rect");
+            rect1.setAttribute('x', '50');
+            rect1.setAttribute('y', '50');
+            rect1.setAttribute('width', larguraSuperior);
+            rect1.setAttribute('height', espessuraMesaSuperior);
+            rect1.setAttribute('stroke', 'black');
+            rect1.setAttribute('fill', 'none');
+            svg.appendChild(rect1);
+
+            let rect2 = document.createElementNS(xmlns, "rect");
+            rect2.setAttribute('x', '50' + espessuraAlma / 2);
+            rect2.setAttribute('y', '50' + espessuraMesaSuperior);
+            rect2.setAttribute('width', larguraSuperior - espessuraAlma);
+            rect2.setAttribute('height', alturaTotal - espessuraMesaSuperior);
+            rect2.setAttribute('stroke', 'black');
+            rect2.setAttribute('fill', 'none');
+            svg.appendChild(rect2);
+        }
+
+        function desenharPerfilPilarI(svg, larguraSuperior, alturaTotal, espessuraAlma, espessuraMesaSuperior, espessuraMesaInferior) {
+            let xmlns = "http://www.w3.org/2000/svg";
+
+            let rect1 = document.createElementNS(xmlns, "rect");
+            rect1.setAttribute('x', '50');
+            rect1.setAttribute('y', '50');
+            rect1.setAttribute('width', larguraSuperior);
+            rect1.setAttribute('height', espessuraMesaSuperior);
+            rect1.setAttribute('stroke', 'black');
+            rect1.setAttribute('fill', 'none');
+            svg.appendChild(rect1);
+
+            let rect2 = document.createElementNS(xmlns, "rect");
+            rect2.setAttribute('x', '50');
+            rect2.setAttribute('y', '50' + espessuraMesaSuperior);
+            rect2.setAttribute('width', larguraSuperior);
+            rect2.setAttribute('height', alturaTotal - espessuraMesaSuperior - espessuraMesaInferior);
+            rect2.setAttribute('stroke', 'black');
+            rect2.setAttribute('fill', 'none');
+            svg.appendChild(rect2);
+
+            let rect3 = document.createElementNS(xmlns, "rect");
+            rect3.setAttribute('x', '50');
+            rect3.setAttribute('y', '50' + alturaTotal - espessuraMesaInferior);
+            rect3.setAttribute('width', larguraSuperior);
+            rect3.setAttribute('height', espessuraMesaInferior);
+            rect3.setAttribute('stroke', 'black');
+            rect3.setAttribute('fill', 'none');
+            svg.appendChild(rect3);
+        }
+
+        function desenharPerfilCircular(svg, diametro) {
+            let xmlns = "http://www.w3.org/2000/svg";
+            let circle = document.createElementNS(xmlns, "circle");
+            circle.setAttribute('cx', '250');
+            circle.setAttribute('cy', '250');
+            circle.setAttribute('r', diametro / 2);
+            circle.setAttribute('stroke', 'black');
+            circle.setAttribute('fill', 'none');
+            svg.appendChild(circle);
+        }
     </script>
 </body>
 </html>
