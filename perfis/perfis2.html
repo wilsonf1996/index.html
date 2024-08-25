@@ -3,311 +3,355 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Perfis Estruturais</title>
+    <title>Calculadora de Perfis de Aço - Gerdau</title>
     <style>
-        body { font-family: Arial, sans-serif; }
-        .container { max-width: 800px; margin: 0 auto; }
-        form { margin-bottom: 20px; }
-        label { display: block; margin: 10px 0 5px; }
-        input { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; }
-        button { padding: 10px 15px; font-size: 16px; }
-        canvas { border: 1px solid #000; margin-top: 20px; }
-        .error { color: red; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f4f4;
+        }
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 20px auto;
+            background: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .form-group input[type="number"] {
+            width: calc(100% - 20px);
+        }
+        .form-group button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .form-group button:hover {
+            background-color: #0056b3;
+        }
+        #perfilCanvas {
+            border: 1px solid #ddd;
+            background-color: #fff;
+            width: 100%;
+            height: 400px;
+        }
+        #resultados {
+            margin-top: 20px;
+            white-space: pre-wrap;
+            background-color: #f1f1f1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        #errorMessage {
+            color: red;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Calculadora de Perfis Estruturais</h1>
-
+        <h1>Calculadora de Perfis de Aço - Gerdau</h1>
         <form id="perfilForm">
-            <label for="perfilType">Tipo de Perfil:</label>
-            <select id="perfilType" name="perfilType" required>
-                <option value="">Selecione um tipo</option>
-                <option value="i">Perfil I</option>
-                <option value="h">Perfil H</option>
-                <option value="u">Perfil U</option>
-                <option value="c">Perfil C</option>
-                <option value="l">Perfil L</option>
-                <option value="t">Perfil T</option>
-                <option value="ct">Tubular Circular</option>
-                <option value="qt">Tubular Quadrado</option>
-            </select>
-
-            <div id="inputFields">
-                <!-- Campos de entrada dinamicamente gerados -->
+            <div class="form-group">
+                <label for="perfilType">Tipo de Perfil</label>
+                <select id="perfilType" name="perfilType" required>
+                    <option value="">Selecione</option>
+                    <option value="i">Perfil I</option>
+                    <option value="h">Perfil H</option>
+                    <option value="u">Perfil U</option>
+                    <option value="c">Perfil C</option>
+                    <option value="l">Perfil L</option>
+                    <option value="t">Perfil T</option>
+                    <option value="ct">Perfil Circular</option>
+                    <option value="qt">Perfil Quadrado</option>
+                </select>
             </div>
-
-            <button type="submit">Calcular</button>
-            <div id="errorMessage" class="error"></div>
+            <div id="inputFields">
+                <!-- Campos dinâmicos serão inseridos aqui -->
+            </div>
+            <div class="form-group">
+                <button type="submit">Calcular</button>
+            </div>
         </form>
-
-        <canvas id="perfilCanvas" width="600" height="400"></canvas>
-        <pre id="resultados"></pre>
+        <canvas id="perfilCanvas"></canvas>
+        <div id="resultados"></div>
+        <div id="errorMessage"></div>
     </div>
 
     <script>
         const perfilForm = document.getElementById('perfilForm');
-        const inputFields = document.getElementById('inputFields');
         const perfilCanvas = document.getElementById('perfilCanvas');
-        const ctx = perfilCanvas.getContext('2d');
-        const errorMessage = document.getElementById('errorMessage');
         const resultados = document.getElementById('resultados');
+        const errorMessage = document.getElementById('errorMessage');
 
         function gerarCamposEntrada(tipo) {
-            let campos = '';
+            const inputFields = document.getElementById('inputFields');
+            inputFields.innerHTML = '';
 
-            switch (tipo) {
-                case 'i':
-                case 'h':
-                case 'u':
-                    campos += `
-                        <label for="height">Altura (h):</label>
-                        <input type="number" id="height" name="height" step="any" min="0" required>
-                        <label for="width">Largura da aba (b):</label>
-                        <input type="number" id="width" name="width" step="any" min="0" required>
-                        <label for="thicknessFlange">Espessura da aba (t):</label>
-                        <input type="number" id="thicknessFlange" name="thicknessFlange" step="any" min="0" required>
-                        <label for="thicknessWeb">Espessura da alma (s):</label>
-                        <input type="number" id="thicknessWeb" name="thicknessWeb" step="any" min="0" required>
-                    `;
-                    break;
-                case 'c':
-                    campos += `
-                        <label for="heightC">Altura (h):</label>
-                        <input type="number" id="heightC" name="heightC" step="any" min="0" required>
-                        <label for="widthC">Largura da aba (b):</label>
-                        <input type="number" id="widthC" name="widthC" step="any" min="0" required>
-                        <label for="thicknessFlangeC">Espessura da aba (t):</label>
-                        <input type="number" id="thicknessFlangeC" name="thicknessFlangeC" step="any" min="0" required>
-                        <label for="thicknessWebC">Espessura da alma (s):</label>
-                        <input type="number" id="thicknessWebC" name="thicknessWebC" step="any" min="0" required>
-                    `;
-                    break;
-                case 'l':
-                    campos += `
-                        <label for="length1">Comprimento do lado 1 (a1):</label>
-                        <input type="number" id="length1" name="length1" step="any" min="0" required>
-                        <label for="length2">Comprimento do lado 2 (a2):</label>
-                        <input type="number" id="length2" name="length2" step="any" min="0" required>
-                        <label for="thicknessL">Espessura (t):</label>
-                        <input type="number" id="thicknessL" name="thicknessL" step="any" min="0" required>
-                    `;
-                    break;
-                case 't':
-                    campos += `
-                        <label for="heightT">Altura (h):</label>
-                        <input type="number" id="heightT" name="heightT" step="any" min="0" required>
-                        <label for="widthT">Largura da aba (b):</label>
-                        <input type="number" id="widthT" name="widthT" step="any" min="0" required>
-                        <label for="thicknessT">Espessura (t):</label>
-                        <input type="number" id="thicknessT" name="thicknessT" step="any" min="0" required>
-                    `;
-                    break;
-                case 'ct':
-                    campos += `
-                        <label for="diameter">Diâmetro Externo (d):</label>
-                        <input type="number" id="diameter" name="diameter" step="any" min="0" required>
-                        <label for="innerDiameter">Diâmetro Interno (d_i):</label>
-                        <input type="number" id="innerDiameter" name="innerDiameter" step="any" min="0" required>
-                    `;
-                    break;
-                case 'qt':
-                    campos += `
-                        <label for="side">Lado Externo (d):</label>
-                        <input type="number" id="side" name="side" step="any" min="0" required>
-                        <label for="innerSide">Lado Interno (d_i):</label>
-                        <input type="number" id="innerSide" name="innerSide" step="any" min="0" required>
-                    `;
-                    break;
-            }
+            const camposComuns = `
+                <div class="form-group">
+                    <label for="peso">Peso (kg/m)</label>
+                    <input type="number" id="peso" step="any" min="0">
+                </div>
+            `;
 
-            inputFields.innerHTML = campos;
+            const camposEspecificos = {
+                i: `
+                    <div class="form-group">
+                        <label for="altura">Altura (mm)</label>
+                        <input type="number" id="altura" step="any" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="largura">Largura (mm)</label>
+                        <input type="number" id="largura" step="any" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="espessuraWeb">Espessura da Web (mm)</label>
+                        <input type="number" id="espessuraWeb" step="any" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="espessuraFlange">Espessura da Flange (mm)</label>
+                        <input type="number" id="espessuraFlange" step="any" min="0">
+                    </div>
+                `,
+                c: `
+                    <div class="form-group">
+                        <label for="alturaC">Altura (mm)</label>
+                        <input type="number" id="alturaC" step="any" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="larguraC">Largura (mm)</label>
+                        <input type="number" id="larguraC" step="any" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="espessuraFlangeC">Espessura da Flange (mm)</label>
+                        <input type="number" id="espessuraFlangeC" step="any" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="espessuraWebC">Espessura da Web (mm)</label>
+                        <input type="number" id="espessuraWebC" step="any" min="0">
+                    </div>
+                `,
+                l: `
+                    <div class="form-group">
+                        <label for="comprimento1">Comprimento 1 (mm)</label>
+                        <input type="number" id="comprimento1" step="any" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="comprimento2">Comprimento 2 (mm)</label>
+                        <input type="number" id="comprimento2" step="any" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="espessuraL">Espessura (mm)</label>
+                        <input type="number" id="espessuraL" step="any" min="0">
+                    </div>
+                `,
+                t: `
+                    <div class="form-group">
+                        <label for="alturaT">Altura (mm)</label>
+                        <input type="number" id="alturaT" step="any" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="larguraT">Largura (mm)</label>
+                        <input type="number" id="larguraT" step="any" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="espessuraT">Espessura (mm)</label>
+                        <input type="number" id="espessuraT" step="any" min="0">
+                    </div>
+                `,
+                ct: `
+                    <div class="form-group">
+                        <label for="diametro">Diâmetro (mm)</label>
+                        <input type="number" id="diametro" step="any" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="espessuraCT">Espessura (mm)</label>
+                        <input type="number" id="espessuraCT" step="any" min="0">
+                    </div>
+                `,
+                qt: `
+                    <div class="form-group">
+                        <label for="lado">Lado (mm)</label>
+                        <input type="number" id="lado" step="any" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="espessuraQT">Espessura (mm)</label>
+                        <input type="number" id="espessuraQT" step="any" min="0">
+                    </div>
+                `
+            };
+
+            inputFields.innerHTML = camposComuns + (camposEspecificos[tipo] || '');
         }
 
         function validarEntradas(data, tipo) {
-            if (data.height < 0 || data.width < 0 || data.thicknessFlange < 0 || data.thicknessWeb < 0 ||
-                data.heightC < 0 || data.widthC < 0 || data.thicknessFlangeC < 0 || data.thicknessWebC < 0 ||
-                data.length1 < 0 || data.length2 < 0 || data.thicknessL < 0 ||
-                data.heightT < 0 || data.widthT < 0 || data.thicknessT < 0 ||
-                data.diameter < 0 || data.innerDiameter < 0 ||
-                data.side < 0 || data.innerSide < 0) {
-                return 'Os valores devem ser maiores ou iguais a zero.';
+            const camposObrigatorios = {
+                i: ['altura', 'largura', 'espessuraFlange', 'espessuraWeb'],
+                c: ['alturaC', 'larguraC', 'espessuraFlangeC', 'espessuraWebC'],
+                l: ['comprimento1', 'comprimento2', 'espessuraL'],
+                t: ['alturaT', 'larguraT', 'espessuraT'],
+                ct: ['diametro', 'espessuraCT'],
+                qt: ['lado', 'espessuraQT']
+            };
+
+            const campos = camposObrigatorios[tipo] || [];
+            let valido = true;
+            let mensagem = '';
+
+            campos.forEach(campo => {
+                if (!data[campo] || isNaN(data[campo])) {
+                    mensagem += `Campo "${campo}" é obrigatório e deve ser um número.\n`;
+                    valido = false;
+                }
+            });
+
+            if (!valido) {
+                errorMessage.textContent = mensagem;
+            } else {
+                errorMessage.textContent = '';
             }
-            if (tipo === 'ct' && data.diameter <= data.innerDiameter) {
-                return 'O diâmetro interno deve ser menor que o diâmetro externo.';
-            }
-            if (tipo === 'qt' && data.innerSide >= data.side) {
-                return 'O lado interno deve ser menor que o lado externo.';
-            }
-            return '';
+
+            return valido;
         }
 
-        function calcularPerfilI(height, width, thicknessFlange, thicknessWeb) {
-            const area = (width * thicknessFlange) + ((height - 2 * thicknessFlange) * thicknessWeb);
-            const inertia = (width * Math.pow(height, 3) - (width - 2 * thicknessWeb) * Math.pow(height - 2 * thicknessFlange, 3)) / 12;
-            return { area, inertia };
-        }
-
-        function calcularPerfilC(height, width, thicknessFlange, thicknessWeb) {
-            const area = (2 * width * thicknessFlange) + ((height - 2 * thicknessFlange) * thicknessWeb);
-            const inertia = (width * Math.pow(height, 3) - (width - 2 * thicknessWeb) * Math.pow(height - 2 * thicknessFlange, 3)) / 12;
-            return { area, inertia };
-        }
-
-        function calcularPerfilL(length1, length2, thicknessL) {
-            const area = length1 * thicknessL + length2 * thicknessL;
-            const inertia = (length1 * Math.pow(thicknessL, 3)) / 12 + (length2 * Math.pow(thicknessL, 3)) / 12;
-            return { area, inertia };
-        }
-
-        function calcularPerfilT(height, width, thickness) {
-            const area = (width * thickness) + ((height - 2 * thickness) * thickness);
-            const inertia = (width * Math.pow(height, 3) - (width - 2 * thickness) * Math.pow(height - 2 * thickness, 3)) / 12;
-            return { area, inertia };
-        }
-
-        function calcularPerfilCircular(diameter, innerDiameter) {
-            const area = (Math.PI / 4) * (Math.pow(diameter, 2) - Math.pow(innerDiameter, 2));
-            const inertia = (Math.PI / 64) * (Math.pow(diameter, 4) - Math.pow(innerDiameter, 4));
-            return { area, inertia };
-        }
-
-        function calcularPerfilQuadrado(side, innerSide) {
-            const area = Math.pow(side, 2) - Math.pow(innerSide, 2);
-            const inertia = (Math.pow(side, 4) - Math.pow(innerSide, 4)) / 12;
-            return { area, inertia };
-        }
-
-        function desenharPerfilI(ctx, height, width, thicknessFlange, thicknessWeb) {
+        function desenharPerfil(tipo, dados) {
+            const ctx = perfilCanvas.getContext('2d');
             ctx.clearRect(0, 0, perfilCanvas.width, perfilCanvas.height);
-            ctx.beginPath();
-            ctx.rect(50, 50, width, thicknessFlange);
-            ctx.rect(50, 50 + thicknessFlange + height - thicknessWeb, width, thicknessWeb);
-            ctx.rect(50, 50 + thicknessFlange, thicknessWeb, height - thicknessFlange - thicknessWeb);
-            ctx.rect(50 + width - thicknessWeb, 50 + thicknessFlange, thicknessWeb, height - thicknessFlange - thicknessWeb);
-            ctx.stroke();
-        }
 
-        function desenharPerfilC(ctx, height, width, thicknessFlange, thicknessWeb) {
-            ctx.clearRect(0, 0, perfilCanvas.width, perfilCanvas.height);
-            ctx.beginPath();
-            ctx.rect(50, 50, width, thicknessFlange);
-            ctx.rect(50, 50 + height - thicknessFlange, width, thicknessFlange);
-            ctx.rect(50 + width - thicknessWeb, 50 + thicknessFlange, thicknessWeb, height - 2 * thicknessFlange);
-            ctx.stroke();
-        }
-
-        function desenharPerfilL(ctx, length1, length2, thicknessL) {
-            ctx.clearRect(0, 0, perfilCanvas.width, perfilCanvas.height);
-            ctx.beginPath();
-            ctx.rect(50, 50, length1, thicknessL);
-            ctx.rect(50, 50 + thicknessL, thicknessL, length2 - thicknessL);
-            ctx.stroke();
-        }
-
-        function desenharPerfilT(ctx, height, width, thickness) {
-            ctx.clearRect(0, 0, perfilCanvas.width, perfilCanvas.height);
-            ctx.beginPath();
-            ctx.rect(50, 50, width, thickness);
-            ctx.rect(50 + (width - thickness) / 2, 50 + thickness, thickness, height - thickness);
-            ctx.stroke();
-        }
-
-        function desenharPerfilCircular(ctx, diameter, innerDiameter) {
-            ctx.clearRect(0, 0, perfilCanvas.width, perfilCanvas.height);
-            ctx.beginPath();
-            ctx.arc(150, 150, diameter / 2, 0, 2 * Math.PI);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.arc(150, 150, innerDiameter / 2, 0, 2 * Math.PI);
-            ctx.stroke();
-        }
-
-        function desenharPerfilQuadrado(ctx, side, innerSide) {
-            ctx.clearRect(0, 0, perfilCanvas.width, perfilCanvas.height);
-            ctx.beginPath();
-            ctx.rect(50, 50, side, side);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.rect(50 + (side - innerSide) / 2, 50 + (side - innerSide) / 2, innerSide, innerSide);
-            ctx.stroke();
-        }
-
-        function calcularPerfil(tipo, data) {
-            let resultados = {};
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
 
             switch (tipo) {
                 case 'i':
-                    resultados = calcularPerfilI(data.height, data.width, data.thicknessFlange, data.thicknessWeb);
-                    break;
-                case 'h':
-                    resultados = calcularPerfilI(data.height, data.width, data.thicknessFlange, data.thicknessWeb); // Considerando o perfil H como igual ao I
-                    break;
-                case 'u':
-                    resultados = calcularPerfilI(data.height, data.width, data.thicknessFlange, data.thicknessWeb); // Considerando o perfil U como igual ao I
+                    ctx.beginPath();
+                    ctx.rect(50, 50, dados.largura, dados.altura);
+                    ctx.rect(50 + dados.espessuraWeb, 50 + dados.espessuraFlange, dados.largura - 2 * dados.espessuraWeb, dados.altura - 2 * dados.espessuraFlange);
+                    ctx.stroke();
                     break;
                 case 'c':
-                    resultados = calcularPerfilC(data.heightC, data.widthC, data.thicknessFlangeC, data.thicknessWebC);
+                    ctx.beginPath();
+                    ctx.rect(50, 50, dados.larguraC, dados.alturaC);
+                    ctx.stroke();
                     break;
                 case 'l':
-                    resultados = calcularPerfilL(data.length1, data.length2, data.thicknessL);
+                    ctx.beginPath();
+                    ctx.moveTo(50, 50);
+                    ctx.lineTo(50 + dados.comprimento1, 50);
+                    ctx.lineTo(50 + dados.comprimento1, 50 + dados.espessuraL);
+                    ctx.lineTo(50 + dados.comprimento2, 50 + dados.espessuraL);
+                    ctx.lineTo(50 + dados.comprimento2, 50 + dados.comprimento2);
+                    ctx.lineTo(50, 50 + dados.comprimento2);
+                    ctx.closePath();
+                    ctx.stroke();
                     break;
                 case 't':
-                    resultados = calcularPerfilT(data.heightT, data.widthT, data.thicknessT);
+                    ctx.beginPath();
+                    ctx.rect(50, 50, dados.larguraT, dados.alturaT);
+                    ctx.stroke();
                     break;
                 case 'ct':
-                    resultados = calcularPerfilCircular(data.diameter, data.innerDiameter);
+                    ctx.beginPath();
+                    ctx.arc(50 + dados.diametro / 2, 50 + dados.diametro / 2, dados.diametro / 2, 0, Math.PI * 2);
+                    ctx.stroke();
                     break;
                 case 'qt':
-                    resultados = calcularPerfilQuadrado(data.side, data.innerSide);
+                    ctx.beginPath();
+                    ctx.rect(50, 50, dados.lado, dados.lado);
+                    ctx.stroke();
                     break;
+                default:
+                    errorMessage.textContent = 'Tipo de perfil não suportado.';
             }
-
-            return resultados;
         }
 
-        perfilForm.addEventListener('submit', function (event) {
-            event.preventDefault();
-            errorMessage.textContent = '';
+        function calcularPropriedades(tipo, dados) {
+            let propriedades = '';
+            switch (tipo) {
+                case 'i':
+                    const areaI = dados.largura * dados.altura - 2 * (dados.largura - 2 * dados.espessuraWeb) * (dados.altura - 2 * dados.espessuraFlange);
+                    const momentoInerciaI = (dados.largura * Math.pow(dados.altura, 3) / 12) - ((dados.largura - 2 * dados.espessuraWeb) * Math.pow(dados.altura - 2 * dados.espessuraFlange, 3) / 12);
+                    propriedades = `Área: ${areaI.toFixed(2)} mm²\nMomento de Inércia: ${momentoInerciaI.toFixed(2)} mm⁴`;
+                    break;
+                case 'c':
+                    const areaC = dados.larguraC * dados.alturaC;
+                    const momentoInerciaC = (dados.larguraC * Math.pow(dados.alturaC, 3)) / 12;
+                    propriedades = `Área: ${areaC.toFixed(2)} mm²\nMomento de Inércia: ${momentoInerciaC.toFixed(2)} mm⁴`;
+                    break;
+                case 'l':
+                    const areaL = (dados.comprimento1 * dados.espessuraL) + (dados.comprimento2 * dados.espessuraL);
+                    const momentoInerciaL = (dados.comprimento1 * Math.pow(dados.espessuraL, 3)) / 12;
+                    propriedades = `Área: ${areaL.toFixed(2)} mm²\nMomento de Inércia: ${momentoInerciaL.toFixed(2)} mm⁴`;
+                    break;
+                case 't':
+                    const areaT = dados.larguraT * dados.alturaT;
+                    const momentoInerciaT = (dados.larguraT * Math.pow(dados.alturaT, 3)) / 12;
+                    propriedades = `Área: ${areaT.toFixed(2)} mm²\nMomento de Inércia: ${momentoInerciaT.toFixed(2)} mm⁴`;
+                    break;
+                case 'ct':
+                    const areaCT = Math.PI * Math.pow(dados.diametro / 2, 2);
+                    const momentoInerciaCT = (Math.PI * Math.pow(dados.diametro, 4)) / 64;
+                    propriedades = `Área: ${areaCT.toFixed(2)} mm²\nMomento de Inércia: ${momentoInerciaCT.toFixed(2)} mm⁴`;
+                    break;
+                case 'qt':
+                    const areaQT = Math.pow(dados.lado, 2);
+                    const momentoInerciaQT = (Math.pow(dados.lado, 4)) / 12;
+                    propriedades = `Área: ${areaQT.toFixed(2)} mm²\nMomento de Inércia: ${momentoInerciaQT.toFixed(2)} mm⁴`;
+                    break;
+                default:
+                    propriedades = 'Tipo de perfil não suportado.';
+            }
+            return propriedades;
+        }
+
+        perfilForm.addEventListener('submit', function(e) {
+            e.preventDefault();
 
             const tipo = document.getElementById('perfilType').value;
-            const data = {
-                height: parseFloat(document.getElementById('height')?.value || 0),
-                width: parseFloat(document.getElementById('width')?.value || 0),
-                thicknessFlange: parseFloat(document.getElementById('thicknessFlange')?.value || 0),
-                thicknessWeb: parseFloat(document.getElementById('thicknessWeb')?.value || 0),
-                heightC: parseFloat(document.getElementById('heightC')?.value || 0),
-                widthC: parseFloat(document.getElementById('widthC')?.value || 0),
-                thicknessFlangeC: parseFloat(document.getElementById('thicknessFlangeC')?.value || 0),
-                thicknessWebC: parseFloat(document.getElementById('thicknessWebC')?.value || 0),
-                length1: parseFloat(document.getElementById('length1')?.value || 0),
-                length2: parseFloat(document.getElementById('length2')?.value || 0),
-                thicknessL: parseFloat(document.getElementById('thicknessL')?.value || 0),
-                heightT: parseFloat(document.getElementById('heightT')?.value || 0),
-                widthT: parseFloat(document.getElementById('widthT')?.value || 0),
-                thicknessT: parseFloat(document.getElementById('thicknessT')?.value || 0),
-                diameter: parseFloat(document.getElementById('diameter')?.value || 0),
-                innerDiameter: parseFloat(document.getElementById('innerDiameter')?.value || 0),
-                side: parseFloat(document.getElementById('side')?.value || 0),
-                innerSide: parseFloat(document.getElementById('innerSide')?.value || 0)
-            };
+            const data = {};
 
-            const erro = validarEntradas(data, tipo);
-            if (erro) {
-                errorMessage.textContent = erro;
-                return;
+            const campos = document.querySelectorAll('#inputFields input');
+            campos.forEach(campo => {
+                data[campo.id] = parseFloat(campo.value);
+            });
+
+            if (validarEntradas(data, tipo)) {
+                resultados.textContent = `Cálculo para perfil tipo ${tipo}:\n` +
+                    calcularPropriedades(tipo, data);
+                
+                desenharPerfil(tipo, data);
             }
-
-            const resultadosCalculados = calcularPerfil(tipo, data);
-            resultados.textContent = JSON.stringify(resultadosCalculados, null, 2);
-            desenharPerfil(tipo, data);
         });
 
-        document.getElementById('perfilType').addEventListener('change', function () {
+        document.getElementById('perfilType').addEventListener('change', function() {
             gerarCamposEntrada(this.value);
         });
-
-        gerarCamposEntrada(document.getElementById('perfilType').value);
     </script>
 </body>
 </html>
