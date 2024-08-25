@@ -148,8 +148,29 @@
                     peso = area * densidade / 1e6; // conversão de mm² para m²
                     break;
                 case 'vigaT':
-                    area = largura * espessuraMesa + (altura - espessuraMesa) * espessuraAlma;
-                    inercia = ((altura * Math.pow(largura, 3)) - ((altura - espessuraMesa) * Math.pow(largura - espessuraAlma * 2, 3))) / 12;
+                    const larguraMesa = largura;
+                    const alturaTotal = altura;
+                    const espessuraAlmaT = espessuraAlma;
+                    const espessuraMesaT = espessuraMesa;
+
+                    // Área total
+                    area = larguraMesa * espessuraMesaT + (alturaTotal - espessuraMesaT) * espessuraAlmaT;
+                    
+                    // Momento de Inércia
+                    const h = alturaTotal;
+                    const b = larguraMesa;
+                    const t_w = espessuraAlmaT;
+                    const t_f = espessuraMesaT;
+                    
+                    const Iy_flange = (b * Math.pow(t_f, 3)) / 12;
+                    const Iy_web = (t_w * Math.pow(h - 2 * t_f, 3)) / 12;
+                    const A_flange = b * t_f;
+                    const A_web = t_w * (h - 2 * t_f);
+                    const y_f = (h / 2 - t_f / 2);
+                    const y_web = (h / 2);
+                    
+                    inercia = (Iy_flange * 2 + Iy_web + A_flange * Math.pow(y_f, 2) + A_web * Math.pow(y_web, 2));
+                    
                     peso = area * densidade / 1e6; // conversão de mm² para m²
                     break;
                 case 'circular':
@@ -184,8 +205,14 @@
                     peso = area * densidade / 1e6; // conversão de mm² para m²
                     break;
                 default:
-                    alert('Tipo de perfil não selecionado.');
-                    return;
+                    area = 0;
+                    inercia = 0;
+                    peso = 0;
+            }
+
+            if (isNaN(area) || isNaN(inercia) || isNaN(peso)) {
+                document.getElementById('resultado').innerHTML = 'Erro nos cálculos. Verifique as dimensões.';
+                return;
             }
 
             document.getElementById('resultado').innerHTML = `
@@ -217,14 +244,13 @@
                     const alturaTotal = parseFloat(document.getElementById('dimensao2').value);
                     const espessuraAlma = parseFloat(document.getElementById('dimensao3').value);
                     const espessuraMesa = parseFloat(document.getElementById('dimensao4').value);
+
                     svgContent = `
                         <svg width="100%" height="200" xmlns="http://www.w3.org/2000/svg">
                             <!-- Mesa Superior -->
                             <rect x="10" y="10" width="${larguraMesa}" height="${espessuraMesa}" fill="lightblue" stroke="black" stroke-width="2"/>
                             <!-- Alma -->
                             <rect x="10 + (${larguraMesa} - ${espessuraAlma}) / 2" y="10 + ${espessuraMesa}" width="${espessuraAlma}" height="${alturaTotal - espessuraMesa}" fill="lightblue" stroke="black" stroke-width="2"/>
-                            <!-- Mesa Inferior -->
-                            <rect x="10" y="10 + ${alturaTotal - espessuraMesa}" width="${larguraMesa}" height="${espessuraMesa}" fill="lightblue" stroke="black" stroke-width="2"/>
                             <!-- Texto -->
                             <text x="${10 + larguraMesa / 2}" y="${10 + alturaTotal / 2}" text-anchor="middle" alignment-baseline="middle" font-size="20" fill="black">Viga T</text>
                         </svg>
@@ -256,10 +282,10 @@
                         <svg width="100%" height="200" xmlns="http://www.w3.org/2000/svg">
                             <!-- Mesa Superior -->
                             <rect x="${xOffset}" y="${yOffset}" width="${larguraFlange}" height="${alturaFlange}" fill="lightblue" stroke="black" stroke-width="2"/>
-                            <!-- Mesa Inferior -->
-                            <rect x="${xOffset}" y="${yOffset + alturaTotalI - alturaFlange}" width="${larguraFlange}" height="${alturaFlange}" fill="lightblue" stroke="black" stroke-width="2"/>
                             <!-- Alma -->
                             <rect x="${xOffset + (larguraFlange - larguraAlma) / 2}" y="${yOffset + alturaFlange}" width="${larguraAlma}" height="${alturaAlma}" fill="lightblue" stroke="black" stroke-width="2"/>
+                            <!-- Mesa Inferior -->
+                            <rect x="${xOffset}" y="${yOffset + alturaFlange + alturaAlma}" width="${larguraFlange}" height="${alturaFlange}" fill="lightblue" stroke="black" stroke-width="2"/>
                             <!-- Texto -->
                             <text x="${xOffset + larguraFlange / 2}" y="${yOffset + alturaTotalI / 2}" text-anchor="middle" alignment-baseline="middle" font-size="20" fill="black">Perfil I</text>
                         </svg>
