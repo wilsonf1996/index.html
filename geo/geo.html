@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -21,7 +21,7 @@
             margin-bottom: 20px;
         }
 
-        input, select {
+        input, textarea {
             padding: 10px;
             margin: 5px;
             border-radius: 5px;
@@ -70,13 +70,8 @@
     <h1>Registro de Localização</h1>
 
     <form id="location-form">
-        <input type="text" id="place-name" placeholder="Nome do Local" required>
-        <input type="number" id="rating" placeholder="Nota (1-10)" min="1" max="10" required>
-        <input type="date" id="date" required>
-        <input type="time" id="time" required>
-        <input type="number" id="temperature" placeholder="Temperatura (°C)" step="0.1" required>
-        <input type="text" id="coordinates" placeholder="Coordenadas (latitude, longitude)" required>
-        <button type="submit">Adicionar Registro</button>
+        <textarea id="note" placeholder="Digite uma nota" rows="4" required></textarea>
+        <button type="button" onclick="addLocation()">Adicionar Registro</button>
     </form>
 
     <div id="location-list"></div>
@@ -103,33 +98,39 @@
         const locationList = document.getElementById('location-list');
 
         // Adiciona um novo registro ao Firebase
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
+        function addLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    const currentDate = new Date().toISOString().slice(0, 10); // Data no formato YYYY-MM-DD
+                    const currentTime = new Date().toISOString().slice(11, 16); // Hora no formato HH:MM
+                    const temperature = "Desconhecida"; // Você pode substituir isso por um valor real se tiver acesso a uma API de temperatura
 
-            const placeName = document.getElementById('place-name').value;
-            const rating = document.getElementById('rating').value;
-            const date = document.getElementById('date').value;
-            const time = document.getElementById('time').value;
-            const temperature = document.getElementById('temperature').value;
-            const coordinates = document.getElementById('coordinates').value;
+                    const note = document.getElementById('note').value;
 
-            const newRecord = {
-                placeName,
-                rating,
-                date,
-                time,
-                temperature,
-                coordinates
-            };
+                    const newRecord = {
+                        note,
+                        date: currentDate,
+                        time: currentTime,
+                        temperature,
+                        coordinates: `${lat}, ${lon}`
+                    };
 
-            const newRecordRef = database.ref('locations').push();
-            newRecordRef.set(newRecord)
-                .then(() => {
-                    form.reset();
-                    loadRecords();
-                })
-                .catch(error => console.error('Erro ao adicionar registro: ', error));
-        });
+                    const newRecordRef = database.ref('locations').push();
+                    newRecordRef.set(newRecord)
+                        .then(() => {
+                            form.reset();
+                            loadRecords();
+                        })
+                        .catch(error => console.error('Erro ao adicionar registro: ', error));
+                }, (error) => {
+                    alert('Não foi possível obter a localização. Verifique suas permissões de localização.');
+                });
+            } else {
+                alert('Geolocalização não é suportada por este navegador.');
+            }
+        }
 
         // Carrega e exibe os registros da Firebase
         function loadRecords() {
@@ -142,12 +143,11 @@
                     listItem.className = 'list-item';
                     listItem.innerHTML = `
                         <div>
-                            <strong>${data.placeName}</strong><br>
-                            Nota: ${data.rating}<br>
-                            Data: ${data.date}<br>
-                            Hora: ${data.time}<br>
-                            Temp: ${data.temperature}°C<br>
-                            Coord: ${data.coordinates}
+                            <strong>Nota:</strong> ${data.note}<br>
+                            <strong>Data:</strong> ${data.date}<br>
+                            <strong>Hora:</strong> ${data.time}<br>
+                            <strong>Temp:</strong> ${data.temperature}°C<br>
+                            <strong>Coord:</strong> ${data.coordinates}
                         </div>
                         <button onclick="deleteRecord('${key}')">Excluir</button>
                     `;
