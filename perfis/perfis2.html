@@ -33,20 +33,6 @@
             margin-top: 20px;
             font-size: 1.2em;
         }
-
-        button {
-            font-size: 1.2em;
-            padding: 10px;
-            background-color: #007BFF;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background-color: #0056b3;
-        }
     </style>
 </head>
 <body>
@@ -66,7 +52,7 @@
     </select>
 
     <div id="dimensao1-group">
-        <label for="dimensao1">Diâmetro / Lado (mm)</label>
+        <label for="dimensao1">Diâmetro (mm)</label>
         <input type="number" id="dimensao1" placeholder="Insira a dimensão principal">
     </div>
 
@@ -80,8 +66,10 @@
         <input type="number" id="dimensao3" placeholder="Insira a altura">
     </div>
 
-    <label for="comprimento">Comprimento (m):</label>
-    <input type="number" id="comprimento" placeholder="Insira o comprimento">
+    <div id="densidade-group">
+        <label for="densidade">Densidade do Aço (kg/m³)</label>
+        <input type="number" id="densidade" value="7850" placeholder="Insira a densidade do aço">
+    </div>
 
     <button onclick="calcularPropriedades()">Calcular</button>
 
@@ -93,6 +81,7 @@
         const dimensao1Group = document.getElementById('dimensao1-group');
         const dimensao2Group = document.getElementById('dimensao2-group');
         const dimensao3Group = document.getElementById('dimensao3-group');
+        const densidadeGroup = document.getElementById('densidade-group');
 
         perfil.addEventListener('change', function() {
             const tipoPerfil = perfil.value;
@@ -141,8 +130,7 @@
             const dimensao1 = parseFloat(document.getElementById('dimensao1').value);
             const dimensao2 = parseFloat(document.getElementById('dimensao2').value) || dimensao1;
             const dimensao3 = parseFloat(document.getElementById('dimensao3').value) || dimensao1;
-            const comprimento = parseFloat(document.getElementById('comprimento').value);
-            const densidade = 7850; // kg/m³ (densidade do aço)
+            const densidade = parseFloat(document.getElementById('densidade').value) || 7850;
 
             let area = 0;
             let inercia = 0;
@@ -151,117 +139,196 @@
 
             switch (tipoPerfil) {
                 case 'circular':
-                    area = Math.PI * Math.pow(dimensao1 / 2, 2) / 1e6; // m²
-                    inercia = (Math.PI * Math.pow(dimensao1 / 2, 4)) / (4 * 1e12); // m⁴
-                    polar = (Math.PI * Math.pow(dimensao1 / 2, 4)) / (2 * 1e12); // m⁴
+                    area = Math.PI * Math.pow(dimensao1 / 2, 2);
+                    inercia = (Math.PI * Math.pow(dimensao1 / 2, 4)) / 4;
+                    polar = (Math.PI * Math.pow(dimensao1 / 2, 4)) / 2;
                     break;
                 case 'tubular':
                     const diametroInterno = dimensao1 - 2 * dimensao2;
-                    area = (Math.PI * (Math.pow(dimensao1 / 2, 2) - Math.pow(diametroInterno / 2, 2))) / 1e6; // m²
-                    inercia = (Math.PI * (Math.pow(dimensao1 / 2, 4) - Math.pow(diametroInterno / 2, 4))) / (4 * 1e12); // m⁴
-                    polar = (Math.PI * (Math.pow(dimensao1 / 2, 4) - Math.pow(diametroInterno / 2, 4))) / (2 * 1e12); // m⁴
+                    area = Math.PI * (Math.pow(dimensao1 / 2, 2) - Math.pow(diametroInterno / 2, 2));
+                    inercia = (Math.PI * (Math.pow(dimensao1 / 2, 4) - Math.pow(diametroInterno / 2, 4))) / 4;
+                    polar = (Math.PI * (Math.pow(dimensao1 / 2, 4) - Math.pow(diametroInterno / 2, 4))) / 2;
                     break;
                 case 'quadrado':
-                    area = Math.pow(dimensao1, 2) / 1e6; // m²
-                    inercia = Math.pow(dimensao1, 4) / (12 * 1e12); // m⁴
+                    area = Math.pow(dimensao1, 2);
+                    inercia = Math.pow(dimensao1, 4) / 12;
                     break;
                 case 'quadradoVazado':
                     const ladoInterno = dimensao1 - 2 * dimensao2;
-                    area = (Math.pow(dimensao1, 2) - Math.pow(ladoInterno, 2)) / 1e6; // m²
-                    inercia = (Math.pow(dimensao1, 4) - Math.pow(ladoInterno, 4)) / (12 * 1e12); // m⁴
+                    area = Math.pow(dimensao1, 2) - Math.pow(ladoInterno, 2);
+                    inercia = (Math.pow(dimensao1, 4) - Math.pow(ladoInterno, 4)) / 12;
                     break;
                 case 'u':
                 case 'c':
-                    area = (2 * dimensao2 * dimensao3 + (dimensao1 - dimensao2) * dimensao2) / 1e6; // m²
-                    inercia = ((dimensao3 * Math.pow(dimensao1, 3)) - ((dimensao3 - dimensao2) * Math.pow(dimensao1 - dimensao2 * 2, 3))) / (12 * 1e12); // m⁴
+                    area = 2 * dimensao2 * dimensao3 + (dimensao1 - dimensao2) * dimensao2;
+                    inercia = ((dimensao3 * Math.pow(dimensao1, 3)) - ((dimensao3 - dimensao2) * Math.pow(dimensao1 - dimensao2 * 2, 3))) / 12;
                     break;
                 case 'i':
                 case 'h':
-                    area = (2 * dimensao2 * dimensao3 + (dimensao1 - dimensao2 * 2) * dimensao2) / 1e6; // m²
-                    inercia = ((dimensao3 * Math.pow(dimensao1, 3)) - ((dimensao3 - dimensao2) * Math.pow(dimensao1 - dimensao2 * 2, 3))) / (12 * 1e12); // m⁴
+                    area = 2 * dimensao2 * dimensao3 + (dimensao1 - dimensao2) * dimensao2;
+                    inercia = ((dimensao3 * Math.pow(dimensao1, 3)) - ((dimensao3 - dimensao2) * Math.pow(dimensao1 - dimensao2 * 2, 3))) / 12;
                     break;
                 case 'l':
-                    area = dimensao1 * dimensao2 / 1e6; // m²
-                    inercia = (dimensao1 * Math.pow(dimensao2, 3)) / (12 * 1e12); // m⁴
+                    area = dimensao1 * dimensao2;
+                    inercia = (dimensao1 * Math.pow(dimensao2, 3)) / 12;
                     break;
-                default:
-                    area = 0;
             }
 
-            peso = area * comprimento * densidade; // kg
+            // Calcula o peso (kg) com base na área e densidade
+            peso = (area * densidade) / 1_000_000; // Área em mm² e densidade em kg/m³
 
-            const resultadoHtml = `
-                <p>Área: ${area.toFixed(4)} m²</p>
-                <p>Inércia: ${inercia.toFixed(6)} m⁴</p>
-                <p>Polar: ${polar.toFixed(6)} m⁴</p>
-                <p>Peso: ${peso.toFixed(2)} kg</p>
-            `;
-
+            mostrarResultado(area, inercia, polar, tipoPerfil, peso);
             desenharPerfil(tipoPerfil, dimensao1, dimensao2, dimensao3);
-            document.getElementById('resultado').innerHTML = resultadoHtml;
         }
 
-        function desenharPerfil(tipoPerfil, dimensao1, dimensao2, dimensao3) {
-            let desenhoSvg = '';
+        function mostrarResultado(area, inercia, polar, tipoPerfil, peso) {
+            const resultado = document.getElementById('resultado');
+            resultado.innerHTML = `
+                <h2>Resultados</h2>
+                <p><strong>Tipo de Perfil:</strong> ${tipoPerfil}</p>
+                <p><strong>Área:</strong> ${area.toFixed(2)} mm²</p>
+                <p><strong>Inércia:</strong> ${inercia.toFixed(2)} mm⁴</p>
+                <p><strong>Momento Polar:</strong> ${polar.toFixed(2)} mm⁴</p>
+                <p><strong>Peso:</strong> ${peso.toFixed(2)} kg</p>
+            `;
+        }
+
+        function desenharPerfil(tipoPerfil, d1, d2, d3) {
+            const desenho = document.getElementById('desenho');
+            desenho.innerHTML = ''; // Limpar o conteúdo existente
+
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', '200');
+            svg.setAttribute('height', '200');
+            svg.setAttribute('viewBox', '0 0 200 200');
 
             switch (tipoPerfil) {
                 case 'circular':
-                    desenhoSvg = `<svg width="200" height="200" viewBox="0 0 200 200">
-                        <circle cx="100" cy="100" r="${dimensao1 / 2}" stroke="black" stroke-width="2" fill="none"/>
-                    </svg>`;
+                    const r = d1 / 2;
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', '100');
+                    circle.setAttribute('cy', '100');
+                    circle.setAttribute('r', r);
+                    circle.setAttribute('stroke', 'black');
+                    circle.setAttribute('stroke-width', '2');
+                    circle.setAttribute('fill', 'none');
+                    svg.appendChild(circle);
                     break;
                 case 'tubular':
-                    const diametroInterno = dimensao1 - 2 * dimensao2;
-                    desenhoSvg = `<svg width="200" height="200" viewBox="0 0 200 200">
-                        <circle cx="100" cy="100" r="${dimensao1 / 2}" stroke="black" stroke-width="2" fill="none"/>
-                        <circle cx="100" cy="100" r="${diametroInterno / 2}" stroke="black" stroke-width="2" fill="none"/>
-                    </svg>`;
+                    const rExt = d1 / 2;
+                    const rInt = (d1 - 2 * d2) / 2;
+                    const outerCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    outerCircle.setAttribute('cx', '100');
+                    outerCircle.setAttribute('cy', '100');
+                    outerCircle.setAttribute('r', rExt);
+                    outerCircle.setAttribute('stroke', 'black');
+                    outerCircle.setAttribute('stroke-width', '2');
+                    outerCircle.setAttribute('fill', 'none');
+                    svg.appendChild(outerCircle);
+
+                    const innerCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    innerCircle.setAttribute('cx', '100');
+                    innerCircle.setAttribute('cy', '100');
+                    innerCircle.setAttribute('r', rInt);
+                    innerCircle.setAttribute('stroke', 'black');
+                    innerCircle.setAttribute('stroke-width', '2');
+                    innerCircle.setAttribute('fill', 'none');
+                    svg.appendChild(innerCircle);
                     break;
                 case 'quadrado':
-                    desenhoSvg = `<svg width="200" height="200" viewBox="0 0 200 200">
-                        <rect x="50" y="50" width="${dimensao1}" height="${dimensao1}" stroke="black" stroke-width="2" fill="none"/>
-                    </svg>`;
+                    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    rect.setAttribute('x', '50');
+                    rect.setAttribute('y', '50');
+                    rect.setAttribute('width', d1);
+                    rect.setAttribute('height', d1);
+                    rect.setAttribute('stroke', 'black');
+                    rect.setAttribute('stroke-width', '2');
+                    rect.setAttribute('fill', 'none');
+                    svg.appendChild(rect);
                     break;
                 case 'quadradoVazado':
-                    const ladoInterno = dimensao1 - 2 * dimensao2;
-                    desenhoSvg = `<svg width="200" height="200" viewBox="0 0 200 200">
-                        <rect x="50" y="50" width="${dimensao1}" height="${dimensao1}" stroke="black" stroke-width="2" fill="none"/>
-                        <rect x="50 + ${dimensao2}" y="50 + ${dimensao2}" width="${ladoInterno}" height="${ladoInterno}" stroke="black" stroke-width="2" fill="none"/>
-                    </svg>`;
+                    const outerRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    outerRect.setAttribute('x', '50');
+                    outerRect.setAttribute('y', '50');
+                    outerRect.setAttribute('width', d1);
+                    outerRect.setAttribute('height', d1);
+                    outerRect.setAttribute('stroke', 'black');
+                    outerRect.setAttribute('stroke-width', '2');
+                    outerRect.setAttribute('fill', 'none');
+                    svg.appendChild(outerRect);
+
+                    const innerRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    innerRect.setAttribute('x', '50' + d2);
+                    innerRect.setAttribute('y', '50' + d2);
+                    innerRect.setAttribute('width', d1 - 2 * d2);
+                    innerRect.setAttribute('height', d1 - 2 * d2);
+                    innerRect.setAttribute('stroke', 'black');
+                    innerRect.setAttribute('stroke-width', '2');
+                    innerRect.setAttribute('fill', 'none');
+                    svg.appendChild(innerRect);
                     break;
                 case 'u':
-                    desenhoSvg = `<svg width="200" height="200" viewBox="0 0 200 200">
-                        <rect x="50" y="50" width="${dimensao1}" height="${dimensao3}" stroke="black" stroke-width="2" fill="none"/>
-                        <rect x="50" y="50" width="${dimensao2}" height="${dimensao3 - dimensao2}" stroke="black" stroke-width="2" fill="none"/>
-                    </svg>`;
-                    break;
                 case 'c':
-                    desenhoSvg = `<svg width="200" height="200" viewBox="0 0 200 200">
-                        <rect x="50" y="50" width="${dimensao1}" height="${dimensao3}" stroke="black" stroke-width="2" fill="none"/>
-                        <rect x="50" y="50" width="${dimensao2}" height="${dimensao3 - dimensao2}" stroke="black" stroke-width="2" fill="none"/>
-                    </svg>`;
+                    const uRect1 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    uRect1.setAttribute('x', '50');
+                    uRect1.setAttribute('y', '50');
+                    uRect1.setAttribute('width', d1);
+                    uRect1.setAttribute('height', d2);
+                    uRect1.setAttribute('stroke', 'black');
+                    uRect1.setAttribute('stroke-width', '2');
+                    uRect1.setAttribute('fill', 'none');
+                    svg.appendChild(uRect1);
+
+                    const uRect2 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    uRect2.setAttribute('x', '50');
+                    uRect2.setAttribute('y', '50' + d2);
+                    uRect2.setAttribute('width', d2);
+                    uRect2.setAttribute('height', d3 - d2);
+                    uRect2.setAttribute('stroke', 'black');
+                    uRect2.setAttribute('stroke-width', '2');
+                    uRect2.setAttribute('fill', 'none');
+                    svg.appendChild(uRect2);
                     break;
                 case 'i':
-                    desenhoSvg = `<svg width="200" height="200" viewBox="0 0 200 200">
-                        <rect x="50" y="50" width="${dimensao1}" height="${dimensao3}" stroke="black" stroke-width="2" fill="none"/>
-                        <rect x="50" y="50" width="${dimensao2}" height="${dimensao3 - dimensao2}" stroke="black" stroke-width="2" fill="none"/>
-                    </svg>`;
-                    break;
                 case 'h':
-                    desenhoSvg = `<svg width="200" height="200" viewBox="0 0 200 200">
-                        <rect x="50" y="50" width="${dimensao1}" height="${dimensao3}" stroke="black" stroke-width="2" fill="none"/>
-                        <rect x="50" y="50" width="${dimensao2}" height="${dimensao3 - dimensao2}" stroke="black" stroke-width="2" fill="none"/>
-                    </svg>`;
+                    const iRect1 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    iRect1.setAttribute('x', '50');
+                    iRect1.setAttribute('y', '50');
+                    iRect1.setAttribute('width', d1);
+                    iRect1.setAttribute('height', d2);
+                    iRect1.setAttribute('stroke', 'black');
+                    iRect1.setAttribute('stroke-width', '2');
+                    iRect1.setAttribute('fill', 'none');
+                    svg.appendChild(iRect1);
+
+                    const iRect2 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    iRect2.setAttribute('x', '50' + d2);
+                    iRect2.setAttribute('y', '50');
+                    iRect2.setAttribute('width', d1 - 2 * d2);
+                    iRect2.setAttribute('height', d3 - d2);
+                    iRect2.setAttribute('stroke', 'black');
+                    iRect2.setAttribute('stroke-width', '2');
+                    iRect2.setAttribute('fill', 'none');
+                    svg.appendChild(iRect2);
                     break;
                 case 'l':
-                    desenhoSvg = `<svg width="200" height="200" viewBox="0 0 200 200">
-                        <rect x="50" y="50" width="${dimensao1}" height="${dimensao2}" stroke="black" stroke-width="2" fill="none"/>
-                    </svg>`;
+                    const lRect1 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    lRect1.setAttribute('x', '50');
+                    lRect1.setAttribute('y', '50');
+                    lRect1.setAttribute('width', d1);
+                    lRect1.setAttribute('height', d2);
+                    lRect1.setAttribute('stroke', 'black');
+                    lRect1.setAttribute('stroke-width', '2');
+                    lRect1.setAttribute('fill', 'none');
+                    svg.appendChild(lRect1);
                     break;
             }
 
-            document.getElementById('desenho').innerHTML = desenhoSvg;
+            desenho.appendChild(svg);
         }
+
+        // Inicializa o formulário para perfil padrão
+        perfil.dispatchEvent(new Event('change'));
     </script>
 </body>
 </html>
