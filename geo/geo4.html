@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Localização</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        form {
+            margin-bottom: 20px;
+        }
+
+        input, textarea {
+            padding: 10px;
+            margin: 5px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            width: calc(100% - 22px);
+            box-sizing: border-box;
+        }
+
+        textarea {
+            resize: vertical;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: #fff;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .list-item {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            background-color: #fff;
+            text-align: left;
+        }
+
+        .list-item button {
+            background-color: #dc3545;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .list-item button:hover {
+            background-color: #c82333;
+        }
+
+        .file-link {
+            display: block;
+            margin-top: 5px;
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .file-link:hover {
+            text-decoration: underline;
+        }
+
+        .download-all {
+            display: block;
+            margin-top: 10px;
+            background-color: #28a745;
+        }
+
+        .download-all:hover {
+            background-color: #218838;
+        }
+
+        @media (max-width: 600px) {
+            input, textarea {
+                width: calc(100% - 12px);
+            }
+
+            button {
+                width: 100%;
+                margin: 5px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Registro de Localização</h1>
+
+    <form id="location-form">
+        <textarea id="note" placeholder="Digite uma nota" rows="4" required></textarea>
+        <input type="file" id="file-upload" multiple />
+        <button type="button" onclick="addLocation()">Adicionar Registro</button>
+    </form>
+
+    <div id="location-list"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+            measurementId: "G-CVBQ54PERH"
+        };
+
+        // Inicializa o Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const storage = firebase.storage();
+
+        // Referência ao formulário e à lista de localizações
+        const form = document.getElementById('location-form');
+        const locationList = document.getElementById('location-list');
+
+        // Adiciona um novo registro ao Firebase
+        async function addLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(async (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    const currentDate = new Date().toISOString().slice(0, 10); // Data no formato YYYY-MM-DD
+                    const currentTime = new Date().toLocaleString('pt-BR', { timeZone: 'UTC', hour12: false }); // Hora local
+
+                    const note = document.getElementById('note').value;
+
+                    try {
+                        const weatherData = await getWeather(lat, lon);
+                        const temperature = weatherData.main.temp;
+                        const weatherDescription = weatherData.weather[0].description;
+                        const locationName = weatherData.name;
+
+                        const files = document.getElementById('file-upload').files;
+                        const fileUrls = [];
+
+                        // Faz o upload de arquivos
+                        for (let file of files) {
+                            const storageRef = storage.ref().child(`files/${file.name}`);
+                            await storageRef.put(file);
+                            const fileUrl = await storageRef.getDownloadURL();
+                            fileUrls.push({ name: file.name, url: fileUrl });
+                        }
+
+                        const newRecord = {
+                            note,
+                            date: currentDate,
+                            time: currentTime,
+                            temperature: `${temperature}°C`,
+                            weather: weatherDescription,
+                            location: locationName,
+                            coordinates: `${lat}, ${lon}`,
+                            files: fileUrls
+                        };
+
+                        const newRecordRef = database.ref('locations').push();
+                        await newRecordRef.set(newRecord);
+
+                        form.reset();
+                        loadRecords();
+                    } catch (error) {
+                        console.error('Erro ao obter dados do clima:', error);
+                    }
+                }, (error) => {
+                    alert('Não foi possível obter a localização. Verifique suas permissões de localização.');
+                });
+            } else {
+                alert('Geolocalização não é suportada por este navegador.');
+            }
+        }
+
+        // Função para obter dados do clima usando a API do OpenWeatherMap
+        async function getWeather(lat, lon) {
+            const apiKey = 'e18e61a7e515eb3b92b588155acd3bc1';
+            const apiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`;
+
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                throw new Error('Erro na resposta da API do OpenWeatherMap');
+            }
+            return await response.json();
+        }
+
+        // Carrega e exibe os registros da Firebase
+        function loadRecords() {
+            database.ref('locations').on('value', (snapshot) => {
+                locationList.innerHTML = '';
+                snapshot.forEach((childSnapshot) => {
+                    const data = childSnapshot.val();
+                    const key = childSnapshot.key;
+                    const listItem = document.createElement('div');
+                    listItem.className = 'list-item';
+                    listItem.innerHTML = `
+                        <div>
+                            <strong>Nota:</strong> ${data.note}<br>
+                            <strong>Data:</strong> ${data.date}<br>
+                            <strong>Hora:</strong> ${data.time}<br>
+                            <strong>Temp:</strong> ${data.temperature}<br>
+                            <strong>Clima:</strong> ${data.weather}<br>
+                            <strong>Local:</strong> ${data.location}<br>
+                            <strong>Coord:</strong> ${data.coordinates}<br>
+                            ${data.files && data.files.length > 0 ? `
+                                <strong>Arquivos:</strong><br>
+                                ${data.files.map(file => `
+                                    <a class="file-link" href="${file.url}" download>${file.name}</a>
+                                `).join('<br>')}
+                                <button class="download-all" onclick="downloadFiles('${key}')">Baixar Todos os Arquivos</button>` : ''}
+                        </div>
+                        <button onclick="deleteRecord('${key}')">Excluir</button>
+                    `;
+                    locationList.appendChild(listItem);
+                });
+            });
+        }
+
+        // Função para baixar todos os arquivos individualmente
+        function downloadFiles(recordKey) {
+            const recordRef = database.ref(`locations/${recordKey}`);
+            recordRef.once('value').then(snapshot => {
+                const record = snapshot.val();
+                if (record.files && record.files.length > 0) {
+                    const zip = new JSZip();
+                    record.files.forEach(file => {
+                        fetch(file.url)
+                            .then(response => response.blob())
+                            .then(blob => {
+                                zip.file(file.name, blob);
+                                if (zip.files.length === record.files.length) {
+                                    zip.generateAsync({ type: 'blob' })
+                                        .then(content => {
+                                            saveAs(content, `arquivos_${recordKey}.zip`);
+                                        });
+                                }
+                            });
+                    });
+                }
+            });
+        }
+
+        // Função para excluir um registro
+        function deleteRecord(recordKey) {
+            const recordRef = database.ref(`locations/${recordKey}`);
+            recordRef.remove()
+                .then(() => {
+                    loadRecords();
+                })
+                .catch((error) => {
+                    console.error('Erro ao excluir o registro:', error);
+                });
+        }
+
+        // Carrega os registros quando a página é carregada
+        window.onload = loadRecords;
+    </script>
+</body>
+</html>
