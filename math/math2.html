@@ -57,15 +57,15 @@
         .formulario input {
             margin-bottom: 10px;
         }
+        .notacao {
+            font-size: 1.2em;
+            font-family: 'Times New Roman', Times, serif;
+            margin-bottom: 10px;
+        }
         .math-formula {
             font-size: 1.2em;
             font-family: 'Courier New', Courier, monospace;
             white-space: pre;
-            margin-bottom: 10px;
-        }
-        .notacao {
-            font-size: 1.2em;
-            font-family: 'Times New Roman', Times, serif;
             margin-bottom: 10px;
         }
     </style>
@@ -96,8 +96,8 @@
 
             for (let i = 1; i <= numVariaveis; i++) {
                 formulario.innerHTML += `
-                    <div class="notacao">Equação ${i} (no formato \\(a_1x_1 + a_2x_2 + ... = b\\)):</div>
-                    <input type="text" id="eq${i}" placeholder="Exemplo: 2x_1 + 3x_2 = 7" />
+                    <div class="notacao">Equação ${i} (no formato \\(a_1 x_1 + a_2 x_2 + ... = b\\)):</div>
+                    <input type="text" id="eq${i}" placeholder="Exemplo: 2 3 ... = 7" />
                 `;
             }
             MathJax.Hub.Queue(["Typeset", MathJax.Hub, "formulario"]);
@@ -119,7 +119,7 @@
                     equacoes.push(eq);
                 }
 
-                const sistema = resolverSistemaEquacoes(equacoes);
+                const sistema = resolverSistemaEquacoes(equacoes, numVariaveis);
                 const resultadoTexto = Object.entries(sistema)
                     .map(([variavel, valor]) => `${variavel} = ${valor.toFixed(2)}`)
                     .join(', ');
@@ -130,8 +130,7 @@
             }
         }
 
-        function resolverSistemaEquacoes(equacoes) {
-            const numVariaveis = equacoes.length;
+        function resolverSistemaEquacoes(equacoes, numVariaveis) {
             const matriz = [];
             const resultados = [];
 
@@ -144,12 +143,7 @@
 
                 const linha = [];
                 for (let i = 0; i < numVariaveis; i++) {
-                    const regex = new RegExp(`([+-]?\\d*\\.?\\d*)x_${i+1}`, 'g');
-                    let coef = 0;
-                    let match;
-                    while ((match = regex.exec(esquerda)) !== null) {
-                        coef += parseFloat(match[1]) || 1;
-                    }
+                    const coef = parseFloat(esquerda.split(' ')[i]) || 0;
                     linha.push(coef);
                 }
 
@@ -158,7 +152,7 @@
             });
 
             const solucao = math.lusolve(matriz, resultados);
-            const variaveis = ['x_1', 'x_2', 'x_3', 'x_4', 'x_5', 'x_6'].slice(0, numVariaveis);
+            const variaveis = Array.from({ length: numVariaveis }, (_, i) => `x_${i + 1}`);
             const resultado = {};
 
             variaveis.forEach((variavel, i) => {
