@@ -105,11 +105,17 @@
     </div>
 
     <div class="input-group">
-        <label for="applyValues">Aplicar valores às variáveis (opcional)</label>
-        <input type="checkbox" id="applyValues" onchange="toggleValueInputs()">
+        <label for="useValues">Incluir valores para variáveis?</label>
+        <select id="useValues" onchange="toggleValuesFields()">
+            <option value="no">Não</option>
+            <option value="yes">Sim</option>
+        </select>
     </div>
 
-    <div id="valueInputs"></div>
+    <div id="valuesSection" style="display: none;">
+        <h3>Valores das variáveis</h3>
+        <div id="valuesForm"></div>
+    </div>
 
     <button onclick="calculateDerivative()">Calcular Derivada</button>
 
@@ -134,7 +140,9 @@
     function updateForm() {
         const numVars = document.getElementById('numVars').value;
         const variablesForm = document.getElementById('variablesForm');
+        const valuesForm = document.getElementById('valuesForm');
         variablesForm.innerHTML = '';
+        valuesForm.innerHTML = '';
 
         for (let i = 1; i <= numVars; i++) {
             variablesForm.innerHTML += `
@@ -147,6 +155,13 @@
                     <input type="number" id="expVar${i}" placeholder="Expoente de x${i}">
                 </div>
             `;
+
+            valuesForm.innerHTML += `
+                <div class="input-group">
+                    <label for="valueVar${i}">Valor para variável ${i}</label>
+                    <input type="number" id="valueVar${i}" placeholder="Valor de x${i}">
+                </div>
+            `;
         }
 
         variablesForm.innerHTML += `
@@ -156,7 +171,12 @@
             </div>
         `;
 
-        updateValueInputs(numVars);
+        valuesForm.innerHTML += `
+            <div class="input-group">
+                <label for="constantValue">Valor da constante</label>
+                <input type="number" id="constantValue" placeholder="Valor da constante">
+            </div>
+        `;
     }
 
     function updateNumeratorForm() {
@@ -183,8 +203,6 @@
                 <input type="number" id="constantNumerator" placeholder="Constante (Ex: 5)">
             </div>
         `;
-
-        updateValueInputs(numVarsNumerator, true);
     }
 
     function updateDenominatorForm() {
@@ -211,114 +229,97 @@
                 <input type="number" id="constantDenominator" placeholder="Constante (Ex: 5)">
             </div>
         `;
-
-        updateValueInputs(numVarsDenominator, true);
     }
 
-    function updateValueInputs(numVars, isFraction = false) {
-        const valueInputs = document.getElementById('valueInputs');
-        valueInputs.innerHTML = '';
-
-        if (document.getElementById('applyValues').checked) {
-            for (let i = 1; i <= numVars; i++) {
-                valueInputs.innerHTML += `
-                    <div class="input-group">
-                        <label for="valueVar${i}">Valor de x${i}</label>
-                        <input type="number" id="valueVar${i}" placeholder="Valor de x${i}">
-                    </div>
-                `;
-            }
+    function buildFunction(numVars, type) {
+        let func = '';
+        for (let i = 1; i <= numVars; i++) {
+            const coef = document.getElementById(`coefVar${type}${i}`).value || 1;
+            const exp = document.getElementById(`expVar${type}${i}`).value || 1;
+            func += `${coef} * x${i}^${exp} + `;
         }
+        const constant = document.getElementById(`constant${type}`).value || 0;
+        func += constant;
+        return func;
+    }
+
+    function getValues(numVars) {
+        let values = {};
+        for (let i = 1; i <= numVars; i++) {
+            values[`x${i}`] = parseFloat(document.getElementById(`valueVar${i}`).value) || 0;
+        }
+        values['constant'] = parseFloat(document.getElementById('constantValue').value) || 0;
+        return values;
     }
 
     function calculateDerivative() {
-        const derivType = document.getElementById('derivType').value;
         const derivVar = document.getElementById('derivVar').value;
+        const derivType = document.getElementById('derivType').value;
+        const useValues = document.getElementById('useValues').value;
         let result = '';
+        let functionLatex = '';
 
         if (derivType === 'single') {
             const numVars = document.getElementById('numVars').value;
-            let expression = '';
-            let values = {};
+            const func = buildFunction(numVars, '');
 
-            for (let i = 1; i <= numVars; i++) {
-                const coef = document.getElementById(`coefVar${i}`).value || 1;
-                const exp = document.getElementById(`expVar${i}`).value || 1;
-                expression += `(${coef}*x${i}^${exp})`;
-                if (i < numVars) {
-                    expression += ' + ';
+            try {
+                const expression = math.parse(func);
+                const derivative = math.derivative(expression, derivVar); // Derivando em relação à variável selecionada
+                result = derivative.toString();
+                functionLatex = `\\frac{d}{d${derivVar}} (${math.simplify(func).toTex()})`;
+                
+                if (useValues === 'yes') {
+                    const values = getValues(numVars);
+                    const funcWithValues = math.evaluate(func, values);
+                    result = math.evaluate(derivative.toString(), values);
+                    functionLatex += ` = ${math.simplify(funcWithValues).toTex()}`;
                 }
-                values[`x${i}`] = parseFloat(document.getElementById(`valueVar${i}`).value) || 0;
+            } catch (error) {
+                document.getElementById('result').innerHTML = `<p style="color: red;">Erro ao calcular a derivada: ${error.message}</p>`;
+                return;
             }
-
-            const constant = parseFloat(document.getElementById('constant').value) || 0;
-            expression += ` + ${constant}`;
-
-            const derivative = math.derivative(expression, derivVar).toString();
-            result = `A derivada da função ${expression} em relação a ${derivVar} é: ${derivative}`;
-
-            for (let i = 1; i <= numVars; i++) {
-                result += `<br>Substituindo x${i} = ${values[`x${i}`]}`;
-            }
-            result += `<br>Resultado final: ${math.evaluate(derivative, values)}`;
-        } else if (derivType === 'fraction') {
+        } else {
             const numVarsNumerator = document.getElementById('numVarsNumerator').value;
             const numVarsDenominator = document.getElementById('numVarsDenominator').value;
+            const numeratorFunc = buildFunction(numVarsNumerator, 'Numerator');
+            const denominatorFunc = buildFunction(numVarsDenominator, 'Denominator');
+            const func = `(${numeratorFunc}) / (${denominatorFunc})`;
 
-            let numerator = '';
-            let denominator = '';
-            let values = {};
+            try {
+                const expression = math.parse(func);
+                const derivative = math.derivative(expression, derivVar); // Derivando em relação à variável selecionada
+                result = derivative.toString();
+                functionLatex = `\\frac{d}{d${derivVar}} \\left(\\frac{${math.simplify(numeratorFunc).toTex()}}{${math.simplify(denominatorFunc).toTex()}}\\right)`;
 
-            // Build numerator
-            for (let i = 1; i <= numVarsNumerator; i++) {
-                const coef = document.getElementById(`coefVarNumerator${i}`).value || 1;
-                const exp = document.getElementById(`expVarNumerator${i}`).value || 1;
-                numerator += `(${coef}*x${i}^${exp})`;
-                if (i < numVarsNumerator) {
-                    numerator += ' + ';
+                if (useValues === 'yes') {
+                    const values = getValues(numVarsNumerator + numVarsDenominator);
+                    const funcWithValues = math.evaluate(func, values);
+                    result = math.evaluate(derivative.toString(), values);
+                    functionLatex += ` = ${math.simplify(funcWithValues).toTex()}`;
                 }
-                values[`x${i}`] = parseFloat(document.getElementById(`valueVarNumerator${i}`).value) || 0;
+            } catch (error) {
+                document.getElementById('result').innerHTML = `<p style="color: red;">Erro ao calcular a derivada: ${error.message}</p>`;
+                return;
             }
-            const constantNumerator = parseFloat(document.getElementById('constantNumerator').value) || 0;
-            numerator += ` + ${constantNumerator}`;
-
-            // Build denominator
-            for (let i = 1; i <= numVarsDenominator; i++) {
-                const coef = document.getElementById(`coefVarDenominator${i}`).value || 1;
-                const exp = document.getElementById(`expVarDenominator${i}`).value || 1;
-                denominator += `(${coef}*x${i}^${exp})`;
-                if (i < numVarsDenominator) {
-                    denominator += ' + ';
-                }
-                values[`x${i}`] = parseFloat(document.getElementById(`valueVarDenominator${i}`).value) || 0;
-            }
-            const constantDenominator = parseFloat(document.getElementById('constantDenominator').value) || 0;
-            denominator += ` + ${constantDenominator}`;
-
-            const expression = `(${numerator}) / (${denominator})`;
-            const derivative = math.derivative(expression, derivVar).toString();
-            result = `A derivada da função (${numerator}) / (${denominator}) em relação a ${derivVar} é: ${derivative}`;
-
-            for (let i = 1; i <= numVarsNumerator; i++) {
-                result += `<br>Substituindo x${i} = ${values[`x${i}`]}`;
-            }
-            result += `<br>Resultado final: ${math.evaluate(derivative, values)}`;
         }
 
-        document.getElementById('result').innerHTML = result;
+        document.getElementById('result').innerHTML = `
+            <p><strong>Função:</strong> ${math.parse(func).toString()}</p>
+            <p><strong>Derivada:</strong> ${result}</p>
+        `;
+
+        MathJax.typesetPromise();
     }
 
-    function toggleValueInputs() {
-        const applyValues = document.getElementById('applyValues').checked;
-        const numVars = document.getElementById('numVars')?.value || 0;
-        const numVarsNumerator = document.getElementById('numVarsNumerator')?.value || 0;
-        const numVarsDenominator = document.getElementById('numVarsDenominator')?.value || 0;
+    function toggleValuesFields() {
+        const useValues = document.getElementById('useValues').value;
+        const valuesSection = document.getElementById('valuesSection');
 
-        if (document.getElementById('derivType').value === 'single') {
-            updateValueInputs(numVars);
+        if (useValues === 'yes') {
+            valuesSection.style.display = 'block';
         } else {
-            updateValueInputs(numVarsNumerator, true);
-            updateValueInputs(numVarsDenominator, true);
+            valuesSection.style.display = 'none';
         }
     }
 </script>
