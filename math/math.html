@@ -1,1 +1,311 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora Avançada de Funções</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.0.0/math.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #444;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            color: #333;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007BFF;
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .result {
+            margin-top: 20px;
+        }
+
+        .result h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .error-message {
+            color: red;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .theme-toggle {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .theme-toggle button {
+            background-color: #333;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .theme-toggle button:hover {
+            background-color: #555;
+        }
+
+        .dark-theme {
+            background-color: #333;
+            color: white;
+        }
+
+        .dark-theme .container {
+            background-color: #444;
+            box-shadow: 0 0 25px rgba(0, 0, 0, 0.7);
+        }
+
+        .dark-theme input, .dark-theme textarea, .dark-theme select {
+            background-color: #555;
+            border: 1px solid #777;
+            color: white;
+        }
+
+        .dark-theme label {
+            color: #ddd;
+        }
+
+        .dark-theme button {
+            background-color: #555;
+        }
+
+        .dark-theme .result h3 {
+            color: #ddd;
+        }
+
+        .expandable {
+            display: none;
+        }
+
+        .expandable.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Calculadora Avançada de Funções</h1>
+
+    <label for="expression">Função:</label>
+    <input type="text" id="expression" placeholder="Ex: x^2 + y^2">
+
+    <label for="variables">Variáveis (separadas por vírgula):</label>
+    <input type="text" id="variables" placeholder="Ex: x, y">
+
+    <label for="operation">Operação:</label>
+    <select id="operation">
+        <option value="integral">Integral</option>
+        <option value="derivative">Derivada</option>
+    </select>
+
+    <div id="integrationOptions" class="expandable">
+        <label for="integrationType">Tipo de Integral:</label>
+        <select id="integrationType">
+            <option value="indefinida">Indefinida</option>
+            <option value="definida">Definida</option>
+        </select>
+
+        <div id="limitsContainer">
+            <!-- Inputs for limits will be added here dynamically -->
+        </div>
+    </div>
+
+    <label for="fractionalOrder">Ordem Fracionária (opcional):</label>
+    <input type="text" id="fractionalOrder" placeholder="Ex: 0.5 para ordem fracionária">
+
+    <button onclick="calculate()">Calcular</button>
+
+    <div class="error-message" id="errorMessage"></div>
+
+    <div class="result">
+        <h3>Resultado:</h3>
+        <textarea id="result" rows="8" readonly></textarea>
+    </div>
+
+    <div class="theme-toggle">
+        <button onclick="toggleTheme()">Alterar Tema</button>
+    </div>
+</div>
+
+<script>
+    let isDarkTheme = false;
+
+    function addLimitInput() {
+        const limitContainer = document.getElementById('limitsContainer');
+        const variableCount = document.getElementById('variables').value.trim().split(',').length;
+
+        if (variableCount === 0) {
+            alert("Por favor, defina as variáveis antes de adicionar limites.");
+            return;
+        }
+
+        limitContainer.innerHTML = ''; // Clear existing inputs
+
+        for (let i = 0; i < variableCount; i++) {
+            const div = document.createElement('div');
+            div.innerHTML = `<label for="limit${i}">Limites para ${i + 1}ª variável:</label>
+                              <input type="text" id="limit${i}" placeholder="Ex: 0,1 para limites de ${i + 1}ª variável">`;
+            limitContainer.appendChild(div);
+        }
+    }
+
+    function calculate() {
+        const expression = document.getElementById("expression").value.trim();
+        const variables = document.getElementById("variables").value.trim().split(',').map(v => v.trim());
+        const operation = document.getElementById("operation").value;
+        const integrationType = document.getElementById("integrationType") ? document.getElementById("integrationType").value : null;
+        const fractionalOrder = parseFloat(document.getElementById("fractionalOrder").value.trim()) || 1;
+        const errorMessage = document.getElementById("errorMessage");
+        const resultArea = document.getElementById("result");
+        let result = '';
+
+        errorMessage.textContent = '';
+
+        if (!expression || !variables || variables.length === 0) {
+            errorMessage.textContent = "Por favor, insira uma função e as variáveis!";
+            return;
+        }
+
+        try {
+            // Use math.js for basic calculations
+            let expr = math.parse(expression);
+            let scope = {};
+            variables.forEach(v => {
+                scope[v] = math.symbol(v);
+            });
+
+            if (operation === 'integral') {
+                if (integrationType === 'indefinida') {
+                    result = calculateIndefiniteIntegral(expr, variables);
+                } else if (integrationType === 'definida') {
+                    result = calculateDefiniteIntegral(expr, variables);
+                }
+            } else if (operation === 'derivative') {
+                result = calculateDerivative(expr, variables, fractionalOrder);
+            }
+        } catch (error) {
+            errorMessage.textContent = "Erro ao calcular: " + error.message;
+        }
+
+        resultArea.value = result;
+    }
+
+    function calculateIndefiniteIntegral(expr, variables) {
+        try {
+            let result = expr.integrate(variables[0]).toString();
+            return result;
+        } catch (error) {
+            return "Erro: " + error.message;
+        }
+    }
+
+    function calculateDefiniteIntegral(expr, variables) {
+        try {
+            const limits = [];
+            for (let i = 0; i < variables.length; i++) {
+                const limitInput = document.getElementById(`limit${i}`).value;
+                if (limitInput) {
+                    limits.push(limitInput.split(',').map(Number));
+                }
+            }
+
+            if (limits.length !== variables.length) {
+                throw new Error("Número de limites não corresponde ao número de variáveis.");
+            }
+
+            let integral = expr.integrate(variables[0]);
+            for (let i = 1; i < variables.length; i++) {
+                integral = integral.integrate(variables[i]);
+            }
+
+            let result = integral.eval({ [variables[0]]: limits[0][0] });
+            return result.toString();
+        } catch (error) {
+            return "Erro: " + error.message;
+        }
+    }
+
+    function calculateDerivative(expr, variables, order) {
+        try {
+            let result = expr.derivative(variables[0], order).toString();
+            return result;
+        } catch (error) {
+            return "Erro: " + error.message;
+        }
+    }
+
+    document.getElementById('operation').addEventListener('change', function() {
+        const operation = this.value;
+        const integrationOptions = document.getElementById('integrationOptions');
+        if (operation === 'integral') {
+            integrationOptions.classList.add('active');
+            addLimitInput();
+        } else {
+            integrationOptions.classList.remove('active');
+        }
+    });
+
+    function toggleTheme() {
+        isDarkTheme = !isDarkTheme;
+        document.body.classList.toggle('dark-theme', isDarkTheme);
+    }
+</script>
+
+</body>
+</html>
 
