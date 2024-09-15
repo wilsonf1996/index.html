@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Resolução de Sistemas de Equações</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.9.1/math.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js?config=TeX-MML-AM_CHTML"></script>
     <style>
         body {
@@ -23,6 +24,11 @@
             text-align: center;
             color: #333;
         }
+        label {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            display: block;
+        }
         select, button {
             margin: 10px 0;
             padding: 12px;
@@ -40,7 +46,7 @@
         button:hover {
             background-color: #0056b3;
         }
-        .resultado {
+        .resultado, .erro {
             margin-top: 20px;
             font-size: 1.2em;
             text-align: center;
@@ -48,7 +54,6 @@
         }
         .erro {
             color: red;
-            text-align: center;
         }
         .formulario {
             display: flex;
@@ -60,7 +65,7 @@
             margin-bottom: 10px;
             flex-wrap: wrap;
         }
-        .formulario .equacao input {
+        .formulario .equacao input, .formulario .equacao select {
             margin: 0 5px;
             width: 60px;
             text-align: center;
@@ -69,57 +74,77 @@
             margin: 0 5px;
             font-size: 1.2em;
         }
-        .math-formula {
-            font-size: 1.2em;
-            font-family: 'Courier New', Courier, monospace;
-            white-space: pre;
-            margin-bottom: 10px;
+        .formulario .equacao .exp-input {
+            width: 30px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Resolução de Sistemas de Equações</h1>
-        <label for="numVariaveis">Número de Variáveis (1-6):</label>
+        <label for="tipoSistema">Tipo de Sistema:</label>
+        <select id="tipoSistema" onchange="atualizarFormulario()">
+            <option value="linear">Linear</option>
+            <option value="exponencial">Exponencial</option>
+        </select>
+        
+        <label for="numVariaveis">Número de Variáveis (1-4):</label>
         <select id="numVariaveis" onchange="atualizarFormulario()">
             <option value="2">2</option>
             <option value="3">3</option>
             <option value="4">4</option>
-            <option value="5">5</option>
-            <option value="6">6</option>
         </select>
+
         <div id="formulario" class="formulario"></div>
         <button onclick="resolver()">Resolver</button>
         <div class="resultado" id="resultado"></div>
         <div class="erro" id="erro"></div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.9.1/math.min.js"></script>
     <script>
         function atualizarFormulario() {
+            const tipoSistema = document.getElementById('tipoSistema').value;
             const numVariaveis = parseInt(document.getElementById('numVariaveis').value);
             const formulario = document.getElementById('formulario');
             formulario.innerHTML = '';
 
             const variaveis = Array.from({ length: numVariaveis }, (_, i) => `x_${i + 1}`);
 
-            for (let i = 1; i <= numVariaveis; i++) {
-                const coeficientesInputs = variaveis.map((_, index) => 
-                    `<input type="number" id="a${i}_${index}" placeholder="${index + 1}" />`
-                ).join(' + ');
+            if (tipoSistema === 'linear') {
+                for (let i = 1; i <= numVariaveis; i++) {
+                    const termosInputs = variaveis.map((variavel, index) => `
+                        <input type="number" id="a${i}_${index}" placeholder="Coef" />
+                        <span>${variavel}</span>
+                    `).join(' + ');
 
-                formulario.innerHTML += `
-                    <div class="equacao">
-                        ${coeficientesInputs} <span>=</span>
-                        <input type="number" id="b${i}" placeholder="Constante ${i}" />
-                    </div>
-                `;
+                    formulario.innerHTML += `
+                        <div class="equacao">
+                            ${termosInputs} <span>=</span>
+                            <input type="number" id="b${i}" placeholder="Constante ${i}" />
+                        </div>
+                    `;
+                }
+            } else if (tipoSistema === 'exponencial') {
+                for (let i = 1; i <= numVariaveis; i++) {
+                    const termosInputs = variaveis.map((variavel, index) => `
+                        <input type="number" id="a${i}_${index}" placeholder="Coef" />
+                        <span>${variavel}<sup><input type="number" id="exp${i}_${index}" class="exp-input" placeholder="Exp" /></sup></span>
+                    `).join(' + ');
+
+                    formulario.innerHTML += `
+                        <div class="equacao">
+                            ${termosInputs} <span>=</span>
+                            <input type="number" id="b${i}" placeholder="Constante ${i}" />
+                        </div>
+                    `;
+                }
             }
 
             MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
         }
 
         function resolver() {
+            const tipoSistema = document.getElementById('tipoSistema').value;
             const numVariaveis = parseInt(document.getElementById('numVariaveis').value);
             const resultadoDiv = document.getElementById('resultado');
             const erroDiv = document.getElementById('erro');
@@ -130,16 +155,24 @@
             try {
                 const equacoes = [];
                 for (let i = 1; i <= numVariaveis; i++) {
-                    const coeficientes = Array.from({ length: numVariaveis }, (_, j) => 
-                        parseFloat(document.getElementById(`a${i}_${j}`).value) || 0
-                    );
+                    const coeficientes = Array.from({ length: numVariaveis }, (_, j) => {
+                        const coef = parseFloat(document.getElementById(`a${i}_${j}`).value) || 0;
+                        const exp = tipoSistema === 'exponencial' ? (parseFloat(document.getElementById(`exp${i}_${j}`).value) || 1) : 1;
+                        return { coef, exp };
+                    });
                     const constante = parseFloat(document.getElementById(`b${i}`).value) || 0;
 
                     equacoes.push({ coeficientes, constante });
                 }
 
-                const sistema = resolverSistemaEquacoes(equacoes, numVariaveis);
-                const resultadoTexto = Object.entries(sistema)
+                let resultado;
+                if (tipoSistema === 'linear') {
+                    resultado = resolverSistemaLinear(equacoes, numVariaveis);
+                } else if (tipoSistema === 'exponencial') {
+                    resultado = resolverSistemaExponencial(equacoes, numVariaveis);
+                }
+
+                const resultadoTexto = Object.entries(resultado)
                     .map(([variavel, valor]) => `${variavel} = ${valor.toFixed(2)}`)
                     .join(', ');
 
@@ -149,27 +182,67 @@
             }
         }
 
-        function resolverSistemaEquacoes(equacoes, numVariaveis) {
-            const matriz = [];
-            const resultados = [];
+        function resolverSistemaLinear(equacoes, numVariaveis) {
+            const A = [];
+            const B = [];
 
-            equacoes.forEach(eq => {
-                matriz.push(eq.coeficientes);
-                resultados.push(eq.constante);
-            });
+            for (const eq of equacoes) {
+                const row = Array(numVariaveis).fill(0);
+                for (let j = 0; j < numVariaveis; j++) {
+                    row[j] = eq.coeficientes[j].coef;
+                }
+                A.push(row);
+                B.push(eq.constante);
+            }
 
-            const solucao = math.lusolve(matriz, resultados);
-            const variaveis = Array.from({ length: numVariaveis }, (_, i) => `x_${i + 1}`);
-            const resultado = {};
+            const A_matrix = math.matrix(A);
+            const B_matrix = math.matrix(B);
 
-            variaveis.forEach((variavel, i) => {
-                resultado[variavel] = solucao[i];
-            });
+            try {
+                const solution = math.lusolve(A_matrix, B_matrix);
+                const resultado = {};
 
-            return resultado;
+                for (let i = 0; i < numVariaveis; i++) {
+                    resultado[`x_${i + 1}`] = solution.valueOf()[i];
+                }
+
+                return resultado;
+            } catch (error) {
+                throw new Error('Não foi possível resolver o sistema de equações.');
+            }
         }
 
-        // Inicializa o formulário com a seleção padrão
+        function resolverSistemaExponencial(equacoes, numVariaveis) {
+            // Adaptação necessária para resolver sistemas exponenciais
+            const A = [];
+            const B = [];
+
+            for (const eq of equacoes) {
+                const row = Array(numVariaveis).fill(0);
+                for (let j = 0; j < numVariaveis; j++) {
+                    row[j] = eq.coeficientes[j].coef * Math.pow(10, eq.coeficientes[j].exp);
+                }
+                A.push(row);
+                B.push(eq.constante);
+            }
+
+            const A_matrix = math.matrix(A);
+            const B_matrix = math.matrix(B);
+
+            try {
+                const solution = math.lusolve(A_matrix, B_matrix);
+                const resultado = {};
+
+                for (let i = 0; i < numVariaveis; i++) {
+                    resultado[`x_${i + 1}`] = solution.valueOf()[i];
+                }
+
+                return resultado;
+            } catch (error) {
+                throw new Error('Não foi possível resolver o sistema de equações.');
+            }
+        }
+
         atualizarFormulario();
     </script>
 </body>
