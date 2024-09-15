@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora Matemática Avançada</title>
+    <title>Resolução de Sistemas de Equações</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -49,58 +49,105 @@
             color: red;
             text-align: center;
         }
+        .formulario {
+            display: flex;
+            flex-direction: column;
+        }
+        .formulario input {
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Calculadora Matemática Avançada</h1>
-        <input type="text" id="funcaoInput" placeholder="Insira a função (ex: x^2 + y)" />
-        <input type="text" id="variaveisInput" placeholder="Insira as variáveis (ex: x=5, y=10)" />
-        <button onclick="calcular()">Calcular</button>
+        <h1>Resolução de Sistemas de Equações</h1>
+        <label for="numVariaveis">Número de Variáveis (1-6):</label>
+        <input type="number" id="numVariaveis" min="1" max="6" value="2" onchange="atualizarFormulario()">
+        <div id="formulario" class="formulario"></div>
+        <button onclick="resolver()">Resolver</button>
         <div class="resultado" id="resultado"></div>
         <div class="erro" id="erro"></div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.9.1/math.min.js"></script>
     <script>
-        function calcular() {
-            const funcao = document.getElementById('funcaoInput').value.trim();
-            const variaveis = document.getElementById('variaveisInput').value.trim();
+        function atualizarFormulario() {
+            const numVariaveis = parseInt(document.getElementById('numVariaveis').value);
+            const formulario = document.getElementById('formulario');
+            formulario.innerHTML = '';
+
+            for (let i = 1; i <= numVariaveis; i++) {
+                formulario.innerHTML += `<label for="eq${i}">Equação ${i}:</label>`;
+                formulario.innerHTML += `<input type="text" id="eq${i}" placeholder="Insira a equação ${i} (ex: 2x1 + 3x2 = 7)" />`;
+            }
+        }
+
+        function resolver() {
+            const numVariaveis = parseInt(document.getElementById('numVariaveis').value);
             const resultadoDiv = document.getElementById('resultado');
             const erroDiv = document.getElementById('erro');
 
             resultadoDiv.textContent = '';
             erroDiv.textContent = '';
 
-            if (!funcao) {
-                erroDiv.textContent = 'A função não pode estar vazia.';
-                return;
-            }
-
-            // Criação do objeto de variáveis
-            const variaveisObj = {};
             try {
-                variaveis.split(',').forEach(item => {
-                    const [variavel, valor] = item.split('=');
-                    if (!variavel || isNaN(valor)) {
-                        throw new Error('Formato de variável inválido.');
-                    }
-                    variaveisObj[variavel.trim()] = parseFloat(valor.trim());
-                });
-
-                // Substituição das variáveis na função
-                let funcaoModificada = funcao;
-                for (const [variavel, valor] of Object.entries(variaveisObj)) {
-                    funcaoModificada = funcaoModificada.replace(new RegExp(variavel, 'g'), valor);
+                const equacoes = [];
+                for (let i = 1; i <= numVariaveis; i++) {
+                    const eq = document.getElementById(`eq${i}`).value.trim();
+                    if (!eq) throw new Error('Todas as equações devem ser preenchidas.');
+                    equacoes.push(eq);
                 }
 
-                // Avaliação da função
-                const resultado = math.evaluate(funcaoModificada);
-                resultadoDiv.textContent = `Resultado: ${math.format(resultado, { precision: 14 })}`;
+                const sistema = resolverSistemaEquacoes(equacoes);
+                const resultadoTexto = Object.entries(sistema)
+                    .map(([variavel, valor]) => `${variavel} = ${valor}`)
+                    .join(', ');
+
+                resultadoDiv.textContent = `Resultados: ${resultadoTexto}`;
             } catch (error) {
                 erroDiv.textContent = `Erro: ${error.message}`;
             }
         }
+
+        function resolverSistemaEquacoes(equacoes) {
+            // Construindo a matriz de coeficientes e o vetor de resultados
+            const matriz = [];
+            const resultados = [];
+
+            equacoes.forEach(eq => {
+                const partes = eq.match(/([\d\w]+)([\+\-]\d*)?/g);
+                if (!partes) throw new Error('Formato de equação inválido.');
+                
+                const linha = [];
+                let resultado = 0;
+                
+                partes.forEach(parte => {
+                    const [variavel, coeficiente] = parte.split(/([+-]\d*)/);
+                    const coef = coeficiente ? parseFloat(coeficiente) : 1;
+                    const variavelNome = variavel.trim();
+
+                    linha.push(coef);
+                    resultado -= coef * parseFloat(variavelNome);
+                });
+
+                matriz.push(linha);
+                resultados.push(resultado);
+            });
+
+            const solucao = math.lusolve(matriz, resultados);
+            const variaveis = ['x1', 'x2', 'x3', 'x4', 'x5', 'x6'].slice(0, equacoes.length);
+            const resultado = {};
+
+            variaveis.forEach((variavel, i) => {
+                resultado[variavel] = solucao[i];
+            });
+
+            return resultado;
+        }
+
+        // Inicializa o formulário com a seleção padrão
+        atualizarFormulario();
     </script>
 </body>
 </html>
+
