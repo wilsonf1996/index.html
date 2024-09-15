@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Perfil de Sondagem e Cálculos Geotécnicos</title>
+    <title>Perfil Geotécnico - Ensaio SPT</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -22,7 +22,7 @@
         .form-group label {
             display: block;
         }
-        input[type="number"], input[type="text"] {
+        input[type="number"], input[type="text"], select {
             width: 100%;
             padding: 8px;
             margin-top: 5px;
@@ -53,33 +53,50 @@
 </head>
 <body>
 
-<h1>Perfil de Sondagem e Cálculos Geotécnicos</h1>
+<h1>Perfil Geotécnico e Cálculos - Ensaio SPT</h1>
 
 <div class="container">
     <form id="sptForm">
         <div class="form-group">
             <label for="depth">Profundidade (m):</label>
-            <input type="number" id="depth" placeholder="Ex: 5">
+            <input type="number" id="depth" placeholder="Ex: 5" required>
         </div>
         <div class="form-group">
-            <label for="blows">Número de golpes (NSPT):</label>
-            <input type="number" id="blows" placeholder="Ex: 30">
+            <label for="soilType">Descrição do Solo (Areia, Argila, Silte, etc.):</label>
+            <select id="soilType" required>
+                <option value="Areia">Areia</option>
+                <option value="Argila">Argila</option>
+                <option value="Silte">Silte</option>
+                <option value="Aterro">Aterro</option>
+                <option value="Rocha">Rocha</option>
+                <option value="Pedregulhos">Pedregulhos</option>
+            </select>
         </div>
         <div class="form-group">
-            <label for="soilType">Descrição do Solo:</label>
-            <input type="text" id="soilType" placeholder="Ex: Argila arenosa">
+            <label for="blows">Número de golpes NSPT (por metro):</label>
+            <input type="number" id="blows" placeholder="Ex: 30" required>
+        </div>
+        <div class="form-group">
+            <label for="energyCorrection">Correção de Energia (%) - Norma Brasileira (default 60%):</label>
+            <input type="number" id="energyCorrection" placeholder="Ex: 60" value="60" required>
         </div>
         <div class="form-group">
             <label for="waterLevel">Nível de água (m):</label>
-            <input type="number" id="waterLevel" placeholder="Ex: 3">
+            <input type="number" id="waterLevel" placeholder="Ex: 3" required>
         </div>
         <div class="form-group">
             <label for="fill">Presença de aterro? (Sim ou Não):</label>
-            <input type="text" id="fill" placeholder="Ex: Sim">
+            <select id="fill" required>
+                <option value="Sim">Sim</option>
+                <option value="Não">Não</option>
+            </select>
         </div>
         <div class="form-group">
             <label for="rock">Presença de rocha? (Sim ou Não):</label>
-            <input type="text" id="rock" placeholder="Ex: Não">
+            <select id="rock" required>
+                <option value="Sim">Sim</option>
+                <option value="Não">Não</option>
+            </select>
         </div>
         <button type="button" onclick="calculate()">Calcular</button>
     </form>
@@ -93,17 +110,21 @@
         let depth = parseFloat(document.getElementById("depth").value);
         let blows = parseFloat(document.getElementById("blows").value);
         let soilType = document.getElementById("soilType").value;
+        let energyCorrection = parseFloat(document.getElementById("energyCorrection").value);
         let waterLevel = parseFloat(document.getElementById("waterLevel").value);
         let fill = document.getElementById("fill").value;
         let rock = document.getElementById("rock").value;
 
-        // Calculando propriedades básicas
-        let capacidadeCarga = blows * 10; // Exemplo de correlação simples
-        let coesao = blows * 0.15; // Exemplo de correlação para coesão (kPa)
-        let anguloAtrito = blows * 0.5; // Exemplo de correlação para ângulo de atrito (graus)
-        let recalque = blows * 0.02; // Correlação para recalque (m)
-        let moduloElasticidade = blows * 1000; // Exemplo de módulo de elasticidade (kPa)
-        let densidadeRelativa = blows * 0.2; // Densidade relativa (%) 
+        // Correção do NSPT conforme a energia aplicada
+        let nCorrected = blows * (60 / energyCorrection);
+
+        // Cálculos de propriedades geotécnicas básicas
+        let capacidadeCarga = nCorrected * 10; // Correlação básica
+        let coesao = nCorrected * 0.15; // Correlação para coesão (kPa)
+        let anguloAtrito = nCorrected * 0.5; // Ângulo de atrito (graus)
+        let recalque = nCorrected * 0.02; // Correlação para recalque (m)
+        let moduloElasticidade = nCorrected * 1000; // Módulo de elasticidade (kPa)
+        let densidadeRelativa = nCorrected * 0.2; // Densidade relativa (%) 
 
         // Gerando HTML para os resultados
         let resultsHTML = `
@@ -118,8 +139,8 @@
                 <td>${depth}</td>
             </tr>
             <tr>
-                <td>NSPT</td>
-                <td>${blows}</td>
+                <td>NSPT Corrigido (N₆₀)</td>
+                <td>${nCorrected.toFixed(2)}</td>
             </tr>
             <tr>
                 <td>Descrição do Solo</td>
@@ -161,9 +182,10 @@
                 <td>Rocha</td>
                 <td>${rock}</td>
             </tr>
-        </table>`;
+        </table>
+        `;
 
-        // Exibindo os resultados na página
+        // Exibe os resultados
         document.getElementById("results").innerHTML = resultsHTML;
     }
 </script>
