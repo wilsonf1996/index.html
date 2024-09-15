@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Integrais com Múltiplas Variáveis</title>
+    <title>Calculadora de Integrais</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.6.4/math.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@sympy/sympy@1.11.1/sympy.min.js"></script>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
@@ -107,10 +108,10 @@
     <div class="input-group">
         <label for="integralVar">Selecione a variável para integrar</label>
         <select id="integralVar">
-            <option value="x1">x1</option>
-            <option value="x2">x2</option>
-            <option value="x3">x3</option>
-            <option value="x4">x4</option>
+            <option value="x">x</option>
+            <option value="y">y</option>
+            <option value="z">z</option>
+            <option value="t">t</option>
         </select>
     </div>
 
@@ -260,7 +261,7 @@
         return values;
     }
 
-    function calculateIntegral() {
+    async function calculateIntegral() {
         const integralVar = document.getElementById('integralVar').value;
         const integralType = document.getElementById('integralType').value;
         const valuesOption = document.getElementById('valuesOption').value;
@@ -273,17 +274,16 @@
                 const numVars = document.getElementById('numVars').value;
                 const func = buildFunction(numVars, '');
 
-                const expression = math.parse(func);
-                const integral = math.integral(expression, integralVar);
+                const expression = sympy.parse(func);
+                const integral = sympy.integrate(expression, integralVar);
 
                 result = integral.toString();
-                functionLatex = `\\int ${math.simplify(func).toTex()} \\, d${integralVar}`;
+                functionLatex = `\\int ${sympy.simplify(func).toTex()} \\, d${integralVar}`;
 
                 if (valuesOption === 'yes') {
                     const values = buildValueMap(numVars);
-                    const funcValue = math.evaluate(func, values);
-                    // Note: For definite integrals, you'll need limits, which are not handled here.
-                    finalResult = `A integral da função é: ${math.evaluate(integral.toString(), values)}`;
+                    const funcValue = sympy.eval(func, values);
+                    finalResult = `A integral da função é: ${sympy.eval(integral.toString(), values)}`;
                 }
             } else {
                 const numVarsNumerator = document.getElementById('numVarsNumerator').value;
@@ -292,24 +292,24 @@
                 const numerator = buildFunction(numVarsNumerator, 'Numerator');
                 const denominator = buildFunction(numVarsDenominator, 'Denominator');
 
-                const numeratorExpr = math.parse(numerator);
-                const denominatorExpr = math.parse(denominator);
+                const numeratorExpr = sympy.parse(numerator);
+                const denominatorExpr = sympy.parse(denominator);
+                const fractionExpr = numeratorExpr / denominatorExpr;
 
-                // For fractions, integral computation is more complex and not directly supported in this code.
-                result = 'Cálculo de integral para frações não suportado diretamente aqui.';
-                functionLatex = `\\int \\frac{${math.simplify(numerator).toTex()}}{${math.simplify(denominator).toTex()}} \\, d${integralVar}`;
+                const integral = sympy.integrate(fractionExpr, integralVar);
+                result = integral.toString();
+                functionLatex = `\\int \\frac{${sympy.simplify(numerator).toTex()}}{${sympy.simplify(denominator).toTex()}} \\, d${integralVar}`;
 
                 if (valuesOption === 'yes') {
                     const numVars = Math.max(numVarsNumerator, numVarsDenominator);
                     const values = buildValueMap(numVars);
-                    // Calculation of integral for fractions is complex and typically requires more advanced methods.
-                    finalResult = 'A integral da fração é complexa e não calculada diretamente.';
+                    finalResult = 'A integral da fração é complexa e pode exigir análise adicional.';
                 }
             }
 
             document.getElementById('result').innerHTML = `
                 <h3>Resultado</h3>
-                <p>\\(${functionLatex} = ${math.simplify(result).toTex()}\\)</p>
+                <p>\\(${functionLatex} = ${sympy.simplify(result).toTex()}\\)</p>
                 <p>${finalResult}</p>
             `;
 
