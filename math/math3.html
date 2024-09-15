@@ -1,1 +1,307 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Limites com Múltiplas Variáveis</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.6.4/math.min.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+        }
+        h2 {
+            text-align: center;
+        }
+        .input-group {
+            margin-bottom: 10px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Calculadora de Limites</h2>
+    
+    <div class="input-group">
+        <label for="limitType">Selecione o tipo de limite</label>
+        <select id="limitType" onchange="toggleFractionFields()">
+            <option value="single">Limite de uma função</option>
+            <option value="fraction">Limite de uma fração de funções</option>
+        </select>
+    </div>
+
+    <div id="fractionSection" style="display: none;">
+        <h3>Função no numerador</h3>
+        <div class="input-group">
+            <label for="numVarsNumerator">Número de variáveis no numerador</label>
+            <select id="numVarsNumerator" onchange="updateNumeratorForm()">
+                <option value="1">1 variável</option>
+                <option value="2">2 variáveis</option>
+                <option value="3">3 variáveis</option>
+                <option value="4">4 variáveis</option>
+            </select>
+        </div>
+        <div id="numeratorForm"></div>
+
+        <h3>Função no denominador</h3>
+        <div class="input-group">
+            <label for="numVarsDenominator">Número de variáveis no denominador</label>
+            <select id="numVarsDenominator" onchange="updateDenominatorForm()">
+                <option value="1">1 variável</option>
+                <option value="2">2 variáveis</option>
+                <option value="3">3 variáveis</option>
+                <option value="4">4 variáveis</option>
+            </select>
+        </div>
+        <div id="denominatorForm"></div>
+    </div>
+
+    <div id="singleFunctionSection">
+        <div class="input-group">
+            <label for="numVars">Selecione o número de variáveis</label>
+            <select id="numVars" onchange="updateForm()">
+                <option value="1">1 variável</option>
+                <option value="2">2 variáveis</option>
+                <option value="3">3 variáveis</option>
+                <option value="4">4 variáveis</option>
+            </select>
+        </div>
+
+        <div id="variablesForm"></div>
+    </div>
+
+    <button onclick="calculateLimit()">Calcular Limite</button>
+
+    <div id="result" class="result"></div>
+</div>
+
+<script>
+    function toggleFractionFields() {
+        const limitType = document.getElementById('limitType').value;
+        const fractionSection = document.getElementById('fractionSection');
+        const singleFunctionSection = document.getElementById('singleFunctionSection');
+
+        if (limitType === 'fraction') {
+            fractionSection.style.display = 'block';
+            singleFunctionSection.style.display = 'none';
+        } else {
+            fractionSection.style.display = 'none';
+            singleFunctionSection.style.display = 'block';
+        }
+    }
+
+    function updateForm() {
+        const numVars = document.getElementById('numVars').value;
+        const variablesForm = document.getElementById('variablesForm');
+        variablesForm.innerHTML = '';
+
+        for (let i = 1; i <= numVars; i++) {
+            variablesForm.innerHTML += `
+                <div class="input-group">
+                    <label for="coefVar${i}">Coeficiente de variável ${i} (Ex: 2 para 2x)</label>
+                    <input type="number" id="coefVar${i}" placeholder="Coeficiente de x${i}">
+                </div>
+                <div class="input-group">
+                    <label for="expVar${i}">Expoente de variável ${i} (Ex: 2 para x^2)</label>
+                    <input type="number" id="expVar${i}" placeholder="Expoente de x${i}">
+                </div>
+                <div class="input-group">
+                    <label for="limitVar${i}">Valor limite para variável ${i}</label>
+                    <input type="number" id="limitVar${i}" placeholder="Valor limite de x${i}">
+                </div>
+            `;
+        }
+        
+        variablesForm.innerHTML += `
+            <div class="input-group">
+                <label for="constant">Constante da função</label>
+                <input type="number" id="constant" placeholder="Constante (Ex: 5)">
+            </div>
+        `;
+    }
+
+    function updateNumeratorForm() {
+        const numVarsNumerator = document.getElementById('numVarsNumerator').value;
+        const numeratorForm = document.getElementById('numeratorForm');
+        numeratorForm.innerHTML = '';
+
+        for (let i = 1; i <= numVarsNumerator; i++) {
+            numeratorForm.innerHTML += `
+                <div class="input-group">
+                    <label for="coefVarNumerator${i}">Coeficiente de variável ${i} no numerador</label>
+                    <input type="number" id="coefVarNumerator${i}" placeholder="Coeficiente de x${i}">
+                </div>
+                <div class="input-group">
+                    <label for="expVarNumerator${i}">Expoente de variável ${i} no numerador</label>
+                    <input type="number" id="expVarNumerator${i}" placeholder="Expoente de x${i}">
+                </div>
+                <div class="input-group">
+                    <label for="limitVarNumerator${i}">Valor limite para variável ${i} no numerador</label>
+                    <input type="number" id="limitVarNumerator${i}" placeholder="Valor limite de x${i}">
+                </div>
+            `;
+        }
+
+        numeratorForm.innerHTML += `
+            <div class="input-group">
+                <label for="constantNumerator">Constante no numerador</label>
+                <input type="number" id="constantNumerator" placeholder="Constante (Ex: 5)">
+            </div>
+        `;
+    }
+
+    function updateDenominatorForm() {
+        const numVarsDenominator = document.getElementById('numVarsDenominator').value;
+        const denominatorForm = document.getElementById('denominatorForm');
+        denominatorForm.innerHTML = '';
+
+        for (let i = 1; i <= numVarsDenominator; i++) {
+            denominatorForm.innerHTML += `
+                <div class="input-group">
+                    <label for="coefVarDenominator${i}">Coeficiente de variável ${i} no denominador</label>
+                    <input type="number" id="coefVarDenominator${i}" placeholder="Coeficiente de x${i}">
+                </div>
+                <div class="input-group">
+                    <label for="expVarDenominator${i}">Expoente de variável ${i} no denominador</label>
+                    <input type="number" id="expVarDenominator${i}" placeholder="Expoente de x${i}">
+                </div>
+                <div class="input-group">
+                    <label for="limitVarDenominator${i}">Valor limite para variável ${i} no denominador</label>
+                    <input type="number" id="limitVarDenominator${i}" placeholder="Valor limite de x${i}">
+                </div>
+            `;
+        }
+
+        denominatorForm.innerHTML += `
+            <div class="input-group">
+                <label for="constantDenominator">Constante no denominador</label>
+                <input type="number" id="constantDenominator" placeholder="Constante (Ex: 5)">
+            </div>
+        `;
+    }
+
+    function buildFunction(numVars, type) {
+        let func = '';
+        for (let i = 1; i <= numVars; i++) {
+            const coef = document.getElementById(`coefVar${type}${i}`).value || 1;
+            const exp = document.getElementById(`expVar${type}${i}`).value || 1;
+            func += `${coef} * x${i}^${exp} + `;
+        }
+        const constant = document.getElementById(`constant${type}`).value || 0;
+        func += `${constant}`;
+        return func;
+    }
+
+    function calculateLimit() {
+        let result;
+        let functionLatex;
+
+        const limitType = document.getElementById('limitType').value;
+
+        if (limitType === 'single') {
+            const numVars = document.getElementById('numVars').value;
+            const func = buildFunction(numVars, '');
+
+            let limits = {};
+            for (let i = 1; i <= numVars; i++) {
+                const limitValue = parseFloat(document.getElementById(`limitVar${i}`).value);
+                limits[`x${i}`] = limitValue;
+            }
+
+            try {
+                const expression = math.parse(func);
+                const compiled = expression.compile();
+                result = compiled.evaluate(limits);
+                functionLatex = `\\lim_{`;
+                for (let i = 1; i <= numVars; i++) {
+                    functionLatex += `x_${i} \\to ${limits[`x${i}`]}, `;
+                }
+                functionLatex = functionLatex.slice(0, -2); // Remove última vírgula
+                functionLatex += `} (${math.simplify(func).toTex()})`;
+            } catch (error) {
+                document.getElementById('result').innerHTML = `<p style="color: red;">Erro ao calcular o limite: ${error.message}</p>`;
+                return;
+            }
+        } else {
+            const numVarsNumerator = document.getElementById('numVarsNumerator').value;
+            const numVarsDenominator = document.getElementById('numVarsDenominator').value;
+
+            const numeratorFunc = buildFunction(numVarsNumerator, 'Numerator');
+            const denominatorFunc = buildFunction(numVarsDenominator, 'Denominator');
+
+            let limitsNumerator = {};
+            for (let i = 1; i <= numVarsNumerator; i++) {
+                limitsNumerator[`x${i}`] = parseFloat(document.getElementById(`limitVarNumerator${i}`).value);
+            }
+
+            let limitsDenominator = {};
+            for (let i = 1; i <= numVarsDenominator; i++) {
+                limitsDenominator[`x${i}`] = parseFloat(document.getElementById(`limitVarDenominator${i}`).value);
+            }
+
+            try {
+                const numeratorExpression = math.parse(numeratorFunc);
+                const denominatorExpression = math.parse(denominatorFunc);
+
+                const numeratorCompiled = numeratorExpression.compile();
+                const denominatorCompiled = denominatorExpression.compile();
+
+                const numeratorResult = numeratorCompiled.evaluate(limitsNumerator);
+                const denominatorResult = denominatorCompiled.evaluate(limitsDenominator);
+
+                result = numeratorResult / denominatorResult;
+
+                functionLatex = `\\lim_{`;
+                for (let i = 1; i <= Math.max(numVarsNumerator, numVarsDenominator); i++) {
+                    functionLatex += `x_${i} \\to ${limitsNumerator[`x${i}`] || limitsDenominator[`x${i}`]}, `;
+                }
+                functionLatex = functionLatex.slice(0, -2); // Remove última vírgula
+                functionLatex += `} \\left( \\frac{${math.simplify(numeratorFunc).toTex()}}{${math.simplify(denominatorFunc).toTex()}} \\right)`;
+            } catch (error) {
+                document.getElementById('result').innerHTML = `<p style="color: red;">Erro ao calcular o limite: ${error.message}</p>`;
+                return;
+            }
+        }
+
+        document.getElementById('result').innerHTML = `
+            <h3>Resultado</h3>
+            <p>\\(${functionLatex} = ${result}\\)</p>
+        `;
+
+        MathJax.typeset();
+    }
+
+    window.onload = function() {
+        updateForm();
+        updateNumeratorForm();
+        updateDenominatorForm();
+    }
+</script>
+
+</body>
+</html>
 
