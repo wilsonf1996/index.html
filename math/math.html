@@ -1,202 +1,154 @@
-<<!DOCTYPE html>
-<html lang="pt-BR">
+<!DOCTYPE html>
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora Avançada de Limites</title>
+    <title>Calculadora de Limites com Múltiplas Variáveis</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.6.4/math.min.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f4f4f4;
+            margin: 20px;
         }
         .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: auto;
         }
-        h1 {
+        h2 {
             text-align: center;
-            margin-bottom: 20px;
         }
-        .form-group {
-            margin-bottom: 15px;
+        .input-group {
+            margin-bottom: 10px;
         }
-        .form-group label {
+        label {
             display: block;
             margin-bottom: 5px;
         }
-        .form-group input, .form-group select {
+        input, select, button {
             width: 100%;
             padding: 8px;
+            margin-bottom: 10px;
+            border-radius: 4px;
             border: 1px solid #ccc;
-            border-radius: 4px;
         }
-        .form-group button {
-            width: 100%;
-            padding: 10px;
-            background-color: #007BFF;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .form-group button:hover {
-            background-color: #0056b3;
-        }
-        #result {
+        .result {
             margin-top: 20px;
-        }
-        .math-output {
-            font-size: 1.2em;
-            font-family: 'Times New Roman', serif;
-        }
-        .fraction {
-            display: inline-block;
-            vertical-align: middle;
-        }
-        .fraction .top, .fraction .bottom {
-            display: block;
-            text-align: center;
-        }
-        .fraction .top {
-            border-bottom: 1px solid #000;
-            padding: 0 5px;
-        }
-        .fraction .bottom {
-            padding: 0 5px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Calculadora Avançada de Limites</h1>
 
-        <!-- Número de Variáveis -->
-        <div class="form-group">
-            <label for="variables">Número de Variáveis:</label>
-            <select id="variables" onchange="updateFields()">
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-            </select>
-        </div>
-
-        <!-- Fração -->
-        <div class="form-group">
-            <label for="fraction">Tem Fração:</label>
-            <select id="fraction" onchange="updateFields()">
-                <option value="no">Não</option>
-                <option value="yes">Sim</option>
-            </select>
-        </div>
-
-        <!-- Campos Dinâmicos -->
-        <div id="fields"></div>
-
-        <!-- Ponto do Limite -->
-        <div class="form-group">
-            <label for="limitPoint">Ponto do Limite:</label>
-            <input type="text" id="limitPoint" placeholder="Digite o ponto do limite">
-        </div>
-
-        <!-- Botão de Calcular -->
-        <button onclick="calculateLimit()">Calcular Limite</button>
-
-        <!-- Resultado -->
-        <div id="result"></div>
+<div class="container">
+    <h2>Calculadora de Limites</h2>
+    
+    <div class="input-group">
+        <label for="numVars">Selecione o número de variáveis</label>
+        <select id="numVars" onchange="updateForm()">
+            <option value="1">1 variável</option>
+            <option value="2">2 variáveis</option>
+            <option value="3">3 variáveis</option>
+            <option value="4">4 variáveis</option>
+        </select>
     </div>
 
-    <script>
-        function updateFields() {
-            const numVars = document.getElementById('variables').value;
-            const isFraction = document.getElementById('fraction').value === 'yes';
-            const fieldsContainer = document.getElementById('fields');
-            fieldsContainer.innerHTML = '';  // Clear previous fields
+    <div id="variablesForm"></div>
 
-            if (isFraction) {
-                fieldsContainer.innerHTML += '<h2>Função no Numerador:</h2>';
-                for (let i = 1; i <= numVars; i++) {
-                    fieldsContainer.innerHTML += `
-                        <div class="form-group">
-                            <label for="coefNum${i}">Coeficiente para x${i} (Numerador):</label>
-                            <input type="text" id="coefNum${i}" placeholder="Coeficiente para x${i}">
-                            <label for="expNum${i}">Expoente para x${i} (Numerador):</label>
-                            <input type="text" id="expNum${i}" placeholder="Expoente para x${i}">
-                        </div>`;
-                }
+    <button onclick="calculateLimit()">Calcular Limite</button>
 
-                fieldsContainer.innerHTML += '<h2>Função no Denominador:</h2>';
-                for (let i = 1; i <= numVars; i++) {
-                    fieldsContainer.innerHTML += `
-                        <div class="form-group">
-                            <label for="coefDen${i}">Coeficiente para x${i} (Denominador):</label>
-                            <input type="text" id="coefDen${i}" placeholder="Coeficiente para x${i}">
-                            <label for="expDen${i}">Expoente para x${i} (Denominador):</label>
-                            <input type="text" id="expDen${i}" placeholder="Expoente para x${i}">
-                        </div>`;
-                }
-            } else {
-                for (let i = 1; i <= numVars; i++) {
-                    fieldsContainer.innerHTML += `
-                        <div class="form-group">
-                            <label for="coef${i}">Coeficiente para x${i}:</label>
-                            <input type="text" id="coef${i}" placeholder="Coeficiente para x${i}">
-                            <label for="exp${i}">Expoente para x${i}:</label>
-                            <input type="text" id="exp${i}" placeholder="Expoente para x${i}">
-                        </div>`;
-                }
-            }
+    <div id="result" class="result"></div>
+</div>
+
+<script>
+    function updateForm() {
+        const numVars = document.getElementById('numVars').value;
+        const variablesForm = document.getElementById('variablesForm');
+        variablesForm.innerHTML = '';
+
+        for (let i = 1; i <= numVars; i++) {
+            variablesForm.innerHTML += `
+                <div class="input-group">
+                    <label for="coefVar${i}">Coeficiente de variável ${i} (Ex: 2 para 2x)</label>
+                    <input type="number" id="coefVar${i}" placeholder="Coeficiente de x${i}">
+                </div>
+                <div class="input-group">
+                    <label for="expVar${i}">Expoente de variável ${i} (Ex: 2 para x^2)</label>
+                    <input type="number" id="expVar${i}" placeholder="Expoente de x${i}">
+                </div>
+                <div class="input-group">
+                    <label for="limitVar${i}">Valor limite para variável ${i}</label>
+                    <input type="number" id="limitVar${i}" placeholder="Valor limite de x${i}">
+                </div>
+            `;
+        }
+        
+        variablesForm.innerHTML += `
+            <div class="input-group">
+                <label for="constant">Constante da função</label>
+                <input type="number" id="constant" placeholder="Constante (Ex: 5)">
+            </div>
+        `;
+    }
+
+    function buildFunction(numVars) {
+        let func = '';
+        for (let i = 1; i <= numVars; i++) {
+            const coef = document.getElementById(`coefVar${i}`).value || 1;
+            const exp = document.getElementById(`expVar${i}`).value || 1;
+            func += `${coef} * x${i}^${exp} + `;
         }
 
-        function calculateLimit() {
-            const numVars = document.getElementById('variables').value;
-            const isFraction = document.getElementById('fraction').value === 'yes';
-            const limitPoint = parseFloat(document.getElementById('limitPoint').value);
-            let result = '';
+        const constant = document.getElementById('constant').value || 0;
+        func += `${constant}`;
+        return func;
+    }
 
-            // Prepare the functions
-            let numerator = '';
-            let denominator = '';
-
-            if (isFraction) {
-                numerator = buildFunction(numVars, 'Num');
-                denominator = buildFunction(numVars, 'Den');
-                result = `O limite de <div class="fraction"><span class="top">${numerator}</span><span class="bottom">${denominator}</span></div> no ponto ${limitPoint} é ${calculateFractionLimit(numerator, denominator, limitPoint)}`;
-            } else {
-                numerator = buildFunction(numVars);
-                result = `O limite de ${numerator} no ponto ${limitPoint} é ${calculateLimit(numerator, limitPoint)}`;
-            }
-
-            document.getElementById('result').innerHTML = result;
+    function calculateLimit() {
+        const numVars = document.getElementById('numVars').value;
+        const func = buildFunction(numVars);
+        
+        let limits = {};
+        for (let i = 1; i <= numVars; i++) {
+            const limitValue = parseFloat(document.getElementById(`limitVar${i}`).value);
+            limits[`x${i}`] = limitValue;
         }
 
-        function buildFunction(numVars, type = '') {
-            let func = '';
-            for (let i = 1; i <= numVars; i++) {
-                const coef = document.getElementById(`coef${type}${i}`)?.value || 0;
-                const exp = document.getElementById(`exp${type}${i}`)?.value || 1;
-                func += `${coef}*x${i}<sup>${exp}</sup> + `;
-            }
-            return func.slice(0, -3);  // Remove last '+'
-        }
+        try {
+            // Usar MathJS para compilar a função e calcular o limite
+            const expression = math.parse(func);
+            const compiled = expression.compile();
+            const result = compiled.evaluate(limits);
 
-        function calculateLimit(func, point) {
-            // Simple parsing and evaluation - consider using a library for complex cases
-            return eval(func.replace(/x/g, `(${point})`));
-        }
+            // Exibir o resultado com notação correta
+            document.getElementById('result').innerHTML = `
+                <h3>Resultado</h3>
+                <p>\\( \\lim_{{x_1 \\to ${limits.x1}, x_2 \\to ${limits.x2 || ''}, x_3 \\to ${limits.x3 || ''}, x_4 \\to ${limits.x4 || ''}}} ${mathjsToLatex(func)} = ${result} \\)</p>
+            `;
 
-        function calculateFractionLimit(numerator, denominator, point) {
-            // Simple parsing and evaluation - consider using a library for complex cases
-            const num = calculateLimit(numerator, point);
-            const den = calculateLimit(denominator, point);
-            return den !== 0 ? (num / den) : 'Indeterminado';
+            MathJax.typeset();
+        } catch (error) {
+            document.getElementById('result').innerHTML = `<p style="color: red;">Erro ao calcular o limite: ${error.message}</p>`;
         }
-    </script>
+    }
+
+    function mathjsToLatex(mathjsExpr) {
+        try {
+            const node = math.parse(mathjsExpr);
+            return node ? node.toTex() : '';
+        } catch (error) {
+            return '';
+        }
+    }
+
+    // Inicializa o formulário com 1 variável ao carregar a página
+    window.onload = function() {
+        updateForm();
+    }
+</script>
+
 </body>
 </html>
