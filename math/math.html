@@ -63,6 +63,27 @@
             white-space: pre-wrap;
             margin-top: 10px;
         }
+        .example {
+            font-size: 0.9em;
+            color: #555;
+        }
+        .fraction {
+            display: inline-block;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .fraction .numerator {
+            border-bottom: 1px solid #333;
+            padding: 0 4px;
+            display: block;
+        }
+        .fraction .denominator {
+            padding: 0 4px;
+            display: block;
+        }
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -70,13 +91,31 @@
 <h1>Calculadora Avançada de Limites</h1>
 
 <div class="input-area">
-    <label for="numVars">Número de Variáveis (1 a 4):</label>
-    <input type="number" id="numVars" min="1" max="4" value="1" onchange="updateForm()">
+    <label>Tipo de Função:</label>
+    <select id="functionType" onchange="updateForm()">
+        <option value="single">Função Única</option>
+        <option value="fraction">Função com Fração</option>
+    </select>
 
     <div id="variableInputs"></div>
 
-    <label for="limitPoint">Ponto do Limite (formato: x1,x2,x3,x4):</label>
-    <input type="text" id="limitPoint" placeholder="Ex: 1,2,3,4" oninput="updateOutput()">
+    <div id="numeratorContainer" class="hidden">
+        <label for="numerator">Função Numerador:</label>
+        <input type="text" id="numerator" placeholder="Ex: 2*x1 + x2^2" oninput="updateOutput()">
+    </div>
+
+    <div id="denominatorContainer" class="hidden">
+        <label for="denominator">Função Denominador:</label>
+        <input type="text" id="denominator" placeholder="Ex: x1 + x2" oninput="updateOutput()">
+    </div>
+
+    <div id="singleFunctionContainer">
+        <label for="singleFunction">Função Única:</label>
+        <input type="text" id="singleFunction" placeholder="Ex: 2*x1 + x2^2" oninput="updateOutput()">
+    </div>
+
+    <label for="limitPoint">Ponto do Limite:</label>
+    <input type="number" id="limitPoint" placeholder="Ex: 1" oninput="updateOutput()">
 
     <button onclick="calculateLimit()">Calcular Limite</button>
 </div>
@@ -84,10 +123,31 @@
 <div id="result">
     <h2>Resultado:</h2>
     <p class="math-output" id="output"></p>
+    <p class="example" id="example"></p>
 </div>
 
 <script>
     function updateForm() {
+        const functionType = document.getElementById('functionType').value;
+        const singleFunctionContainer = document.getElementById('singleFunctionContainer');
+        const numeratorContainer = document.getElementById('numeratorContainer');
+        const denominatorContainer = document.getElementById('denominatorContainer');
+        const variableInputs = document.getElementById('variableInputs');
+
+        if (functionType === 'fraction') {
+            singleFunctionContainer.classList.add('hidden');
+            numeratorContainer.classList.remove('hidden');
+            denominatorContainer.classList.remove('hidden');
+        } else {
+            singleFunctionContainer.classList.remove('hidden');
+            numeratorContainer.classList.add('hidden');
+            denominatorContainer.classList.add('hidden');
+        }
+
+        updateVariableInputs();
+    }
+
+    function updateVariableInputs() {
         const numVars = parseInt(document.getElementById('numVars').value);
         const variableInputs = document.getElementById('variableInputs');
         variableInputs.innerHTML = '';
@@ -97,7 +157,7 @@
             inputRow.className = 'input-row';
             inputRow.innerHTML = `
                 <label for="coef_${i}">Coeficiente para x${i}:</label>
-                <input type="number" id="coef_${i}" step="any" placeholder="Coeficiente" oninput="updateOutput()">
+                <input type="text" id="coef_${i}" placeholder="Coeficiente" oninput="updateOutput()">
             `;
             variableInputs.appendChild(inputRow);
         }
@@ -106,19 +166,35 @@
     }
 
     function updateOutput() {
+        const functionType = document.getElementById('functionType').value;
         const numVars = parseInt(document.getElementById('numVars').value);
         const coefficients = [];
         for (let i = 1; i <= numVars; i++) {
-            const coef = parseFloat(document.getElementById(`coef_${i}`).value) || 0;
+            const coef = document.getElementById(`coef_${i}`).value.trim();
             coefficients.push(coef);
         }
 
-        const limitPoints = document.getElementById('limitPoint').value.split(',').map(parseFloat);
-        if (coefficients.length > 0 && limitPoints.length === numVars) {
+        const limitPoint = parseFloat(document.getElementById('limitPoint').value);
+        let numerator = document.getElementById('numerator')?.value || '';
+        let denominator = document.getElementById('denominator')?.value || '';
+        const singleFunction = document.getElementById('singleFunction')?.value || '';
+
+        let formula;
+        if (functionType === 'fraction') {
+            formula = buildFraction(numerator, denominator);
+        } else {
+            formula = singleFunction;
+        }
+
+        if ((functionType === 'fraction' && numerator && denominator || functionType === 'single' && singleFunction) && !isNaN(limitPoint)) {
             try {
-                const result = calculateLimit(coefficients, limitPoints);
-                const formula = buildFormula(coefficients, numVars);
-                document.getElementById('output').textContent = `O limite de ${formula} no ponto (${limitPoints.join(', ')}) é ${result}`;
+                const result = functionType === 'fraction' 
+                    ? calculateFractionLimit(numerator, denominator, limitPoint) 
+                    : calculateSingleLimit(singleFunction, limitPoint);
+                
+                document.getElementById('output').innerHTML = 
+                    `O limite de <span>${formula}</span> \n` +
+                    `no ponto ${limitPoint} é ${result}`;
             } catch (error) {
                 document.getElementById('output').textContent = `Erro: ${error.message}`;
             }
@@ -127,45 +203,50 @@
         }
     }
 
-    function buildFormula(coefficients, numVars) {
-        let formula = '';
-        for (let i = 0; i < numVars; i++) {
-            if (i > 0) formula += ' + ';
-            formula += coefficients[i] + (i > 0 ? ` * x${i + 1}` : '');
-        }
-        return formula;
+    function buildFraction(numerator, denominator) {
+        return `<div class="fraction">
+                    <div class="numerator">${numerator}</div>
+                    <div class="denominator">${denominator}</div>
+                </div>`;
     }
 
-    function calculateLimit(coefficients, limitPoints) {
+    function calculateFractionLimit(numerator, denominator, limitPoint) {
         try {
-            // Função polinomial multivariada simples
-            if (!coefficients || !limitPoints) throw new Error("Coeficientes ou pontos do limite não definidos");
-            let result = 0;
-            for (let i = 0; i < coefficients.length; i++) {
-                result += coefficients[i] * limitPoints[i];
+            const numFunc = new Function('x', 'return ' + numerator.replace(/x(\d+)/g, 'x$1'));
+            const denFunc = new Function('x', 'return ' + denominator.replace(/x(\d+)/g, 'x$1'));
+
+            const numResult = numFunc(limitPoint);
+            const denResult = denFunc(limitPoint);
+
+            if (denResult === 0) {
+                throw new Error("Denominador não pode ser zero");
             }
-            return result;
+
+            return numResult / denResult;
+        } catch (error) {
+            throw new Error("Erro ao calcular o limite: " + error.message);
+        }
+    }
+
+    function calculateSingleLimit(singleFunction, limitPoint) {
+        try {
+            const func = new Function('x', 'return ' + singleFunction.replace(/x(\d+)/g, 'x$1'));
+            return func(limitPoint);
         } catch (error) {
             throw new Error("Erro ao calcular o limite: " + error.message);
         }
     }
 
     function setExample() {
-        document.getElementById('numVars').value = 2;
-        updateForm(); // Atualiza o formulário com 2 variáveis
+        document.getElementById('functionType').value = 'fraction';
+        updateForm(); // Atualiza o formulário com a opção de fração
 
-        const exampleCoefficients = [1, 2];
-        exampleCoefficients.forEach((coef, index) => {
-            document.getElementById(`coef_${index + 1}`).value = coef;
-        });
-        
-        document.getElementById('limitPoint').value = "1,2";
+        document.getElementById('numerator').value = "2*x1 + x2^2";
+        document.getElementById('denominator').value = "x1 + x2";
+        document.getElementById('limitPoint').value = "1";
+
         updateOutput(); // Atualiza a saída com o exemplo
     }
-
-    // Inicializa o formulário e define um exemplo
-    updateForm();
-    setExample();
 </script>
 
 </body>
