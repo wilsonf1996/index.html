@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Derivadas com Múltiplas Variáveis</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.6.4/math.min.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+        }
+        h2 {
+            text-align: center;
+        }
+        .input-group {
+            margin-bottom: 10px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Calculadora de Derivadas</h2>
+    
+    <div class="input-group">
+        <label for="derivType">Selecione o tipo de derivada</label>
+        <select id="derivType" onchange="toggleFractionFields()">
+            <option value="single">Derivada de uma função</option>
+            <option value="fraction">Derivada de uma fração de funções</option>
+        </select>
+    </div>
+
+    <div id="fractionSection" style="display: none;">
+        <h3>Função no numerador</h3>
+        <div class="input-group">
+            <label for="numVarsNumerator">Número de variáveis no numerador</label>
+            <select id="numVarsNumerator" onchange="updateNumeratorForm()">
+                <option value="1">1 variável</option>
+                <option value="2">2 variáveis</option>
+                <option value="3">3 variáveis</option>
+                <option value="4">4 variáveis</option>
+            </select>
+        </div>
+        <div id="numeratorForm"></div>
+
+        <h3>Função no denominador</h3>
+        <div class="input-group">
+            <label for="numVarsDenominator">Número de variáveis no denominador</label>
+            <select id="numVarsDenominator" onchange="updateDenominatorForm()">
+                <option value="1">1 variável</option>
+                <option value="2">2 variáveis</option>
+                <option value="3">3 variáveis</option>
+                <option value="4">4 variáveis</option>
+            </select>
+        </div>
+        <div id="denominatorForm"></div>
+    </div>
+
+    <div id="singleFunctionSection">
+        <div class="input-group">
+            <label for="numVars">Selecione o número de variáveis</label>
+            <select id="numVars" onchange="updateForm()">
+                <option value="1">1 variável</option>
+                <option value="2">2 variáveis</option>
+                <option value="3">3 variáveis</option>
+                <option value="4">4 variáveis</option>
+            </select>
+        </div>
+
+        <div id="variablesForm"></div>
+    </div>
+
+    <div class="input-group">
+        <label for="derivVar">Selecione a variável para derivar</label>
+        <select id="derivVar">
+            <option value="x1">x1</option>
+            <option value="x2">x2</option>
+            <option value="x3">x3</option>
+            <option value="x4">x4</option>
+        </select>
+    </div>
+
+    <button onclick="calculateDerivative()">Calcular Derivada</button>
+
+    <div id="result" class="result"></div>
+</div>
+
+<script>
+    function toggleFractionFields() {
+        const derivType = document.getElementById('derivType').value;
+        const fractionSection = document.getElementById('fractionSection');
+        const singleFunctionSection = document.getElementById('singleFunctionSection');
+
+        if (derivType === 'fraction') {
+            fractionSection.style.display = 'block';
+            singleFunctionSection.style.display = 'none';
+        } else {
+            fractionSection.style.display = 'none';
+            singleFunctionSection.style.display = 'block';
+        }
+    }
+
+    function updateForm() {
+        const numVars = document.getElementById('numVars').value;
+        const variablesForm = document.getElementById('variablesForm');
+        variablesForm.innerHTML = '';
+
+        for (let i = 1; i <= numVars; i++) {
+            variablesForm.innerHTML += `
+                <div class="input-group">
+                    <label for="coefVar${i}">Coeficiente de variável ${i} (Ex: 2 para 2x)</label>
+                    <input type="number" id="coefVar${i}" placeholder="Coeficiente de x${i}">
+                </div>
+                <div class="input-group">
+                    <label for="expVar${i}">Expoente de variável ${i} (Ex: 2 para x^2)</label>
+                    <input type="number" id="expVar${i}" placeholder="Expoente de x${i}">
+                </div>
+            `;
+        }
+
+        variablesForm.innerHTML += `
+            <div class="input-group">
+                <label for="constant">Constante da função</label>
+                <input type="number" id="constant" placeholder="Constante (Ex: 5)">
+            </div>
+        `;
+    }
+
+    function updateNumeratorForm() {
+        const numVarsNumerator = document.getElementById('numVarsNumerator').value;
+        const numeratorForm = document.getElementById('numeratorForm');
+        numeratorForm.innerHTML = '';
+
+        for (let i = 1; i <= numVarsNumerator; i++) {
+            numeratorForm.innerHTML += `
+                <div class="input-group">
+                    <label for="coefVarNumerator${i}">Coeficiente de variável ${i} no numerador</label>
+                    <input type="number" id="coefVarNumerator${i}" placeholder="Coeficiente de x${i}">
+                </div>
+                <div class="input-group">
+                    <label for="expVarNumerator${i}">Expoente de variável ${i} no numerador</label>
+                    <input type="number" id="expVarNumerator${i}" placeholder="Expoente de x${i}">
+                </div>
+            `;
+        }
+
+        numeratorForm.innerHTML += `
+            <div class="input-group">
+                <label for="constantNumerator">Constante no numerador</label>
+                <input type="number" id="constantNumerator" placeholder="Constante (Ex: 5)">
+            </div>
+        `;
+    }
+
+    function updateDenominatorForm() {
+        const numVarsDenominator = document.getElementById('numVarsDenominator').value;
+        const denominatorForm = document.getElementById('denominatorForm');
+        denominatorForm.innerHTML = '';
+
+        for (let i = 1; i <= numVarsDenominator; i++) {
+            denominatorForm.innerHTML += `
+                <div class="input-group">
+                    <label for="coefVarDenominator${i}">Coeficiente de variável ${i} no denominador</label>
+                    <input type="number" id="coefVarDenominator${i}" placeholder="Coeficiente de x${i}">
+                </div>
+                <div class="input-group">
+                    <label for="expVarDenominator${i}">Expoente de variável ${i} no denominador</label>
+                    <input type="number" id="expVarDenominator${i}" placeholder="Expoente de x${i}">
+                </div>
+            `;
+        }
+
+        denominatorForm.innerHTML += `
+            <div class="input-group">
+                <label for="constantDenominator">Constante no denominador</label>
+                <input type="number" id="constantDenominator" placeholder="Constante (Ex: 5)">
+            </div>
+        `;
+    }
+
+    function buildFunction(numVars, type) {
+        let func = '';
+        for (let i = 1; i <= numVars; i++) {
+            const coef = document.getElementById(`coefVar${type}${i}`).value || 1;
+            const exp = document.getElementById(`expVar${type}${i}`).value || 1;
+            func += `${coef} * x${i}^${exp} + `;
+        }
+        const constant = document.getElementById(`constant${type}`).value || 0;
+        func += constant;
+        return func;
+    }
+
+    function calculateDerivative() {
+        const derivVar = document.getElementById('derivVar').value;
+        const derivType = document.getElementById('derivType').value;
+        let result = '';
+        let functionLatex = '';
+
+        if (derivType === 'single') {
+            const numVars = document.getElementById('numVars').value;
+            const func = buildFunction(numVars, '');
+
+            try {
+                const expression = math.parse(func);
+                const derivative = math.derivative(expression, derivVar); // Derivando em relação à variável selecionada
+                result = derivative.toString();
+                functionLatex = `\\frac{d}{d${derivVar}} (${math.simplify(func).toTex()})`;
+            } catch (error) {
+                document.getElementById('result').innerHTML = `<p style="color: red;">Erro ao calcular a derivada: ${error.message}</p>`;
+                return;
+            }
+        } else {
+            const numVarsNumerator = document.getElementById('numVarsNumerator').value;
+            const numVarsDenominator = document.getElementById('numVarsDenominator').value;
+
+            const numerator = buildFunction(numVarsNumerator, 'Numerator');
+            const denominator = buildFunction(numVarsDenominator, 'Denominator');
+
+            try {
+                const numeratorExpr = math.parse(numerator);
+                const denominatorExpr = math.parse(denominator);
+
+                const derivNumerator = math.derivative(numeratorExpr, derivVar);
+                const derivDenominator = math.derivative(denominatorExpr, derivVar);
+
+                const quotientRule = `((${derivNumerator} * ${denominator}) - (${numerator} * ${derivDenominator})) / (${denominator})^2`;
+                result = quotientRule;
+                functionLatex = `\\frac{d}{d${derivVar}} \\left( \\frac{${math.simplify(numerator).toTex()}}{${math.simplify(denominator).toTex()}} \\right)`;
+            } catch (error) {
+                document.getElementById('result').innerHTML = `<p style="color: red;">Erro ao calcular a derivada da fração: ${error.message}</p>`;
+                return;
+            }
+        }
+
+        document.getElementById('result').innerHTML = `
+            <h3>Resultado</h3>
+            <p>\\(${functionLatex} = ${math.simplify(result).toTex()}\\)</p>
+        `;
+
+        MathJax.typeset();
+    }
+
+    window.onload = function() {
+        updateForm();
+        updateNumeratorForm();
+        updateDenominatorForm();
+    }
+</script>
+
+</body>
+</html>
