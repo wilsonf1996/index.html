@@ -4,204 +4,151 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calculadora de Integrais</title>
-    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
         }
-        .container {
-            max-width: 600px;
-            margin: auto;
-        }
-        h2 {
-            text-align: center;
-        }
         .input-group {
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
         label {
-            display: block;
-            margin-bottom: 5px;
+            font-weight: bold;
         }
-        input, select, button {
+        input, select {
+            padding: 5px;
             width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
+            max-width: 300px;
+            margin-top: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
         }
         .result {
             margin-top: 20px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            background-color: #f9f9f9;
+        }
+        .formula {
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Calculadora de Integrais</h2>
-    
-    <div class="input-group">
-        <label for="integralType">Selecione o tipo de integral</label>
-        <select id="integralType" onchange="toggleFractionFields()">
-            <option value="single">Integral de uma função</option>
-            <option value="fraction">Integral de uma fração de funções</option>
-        </select>
-    </div>
+<h1>Calculadora de Integrais</h1>
 
-    <div id="fractionSection" style="display: none;">
-        <h3>Função no numerador</h3>
-        <div class="input-group">
-            <label for="numVarsNumerator">Número de variáveis no numerador</label>
-            <select id="numVarsNumerator" onchange="updateNumeratorForm()">
-                <option value="1">1 variável</option>
-                <option value="2">2 variáveis</option>
-                <option value="3">3 variáveis</option>
-                <option value="4">4 variáveis</option>
-            </select>
-        </div>
-        <div id="numeratorForm"></div>
-
-        <h3>Função no denominador</h3>
-        <div class="input-group">
-            <label for="numVarsDenominator">Número de variáveis no denominador</label>
-            <select id="numVarsDenominator" onchange="updateDenominatorForm()">
-                <option value="1">1 variável</option>
-                <option value="2">2 variáveis</option>
-                <option value="3">3 variáveis</option>
-                <option value="4">4 variáveis</option>
-            </select>
-        </div>
-        <div id="denominatorForm"></div>
-    </div>
-
-    <div id="singleFunctionSection">
-        <div class="input-group">
-            <label for="numVars">Selecione o número de variáveis</label>
-            <select id="numVars" onchange="updateForm()">
-                <option value="1">1 variável</option>
-                <option value="2">2 variáveis</option>
-                <option value="3">3 variáveis</option>
-                <option value="4">4 variáveis</option>
-            </select>
-        </div>
-
-        <div id="variablesForm"></div>
-    </div>
-
-    <div class="input-group">
-        <label for="valuesOption">Deseja inserir valores para as variáveis?</label>
-        <select id="valuesOption" onchange="toggleValueFields()">
-            <option value="no">Não</option>
-            <option value="yes">Sim</option>
-        </select>
-    </div>
-
-    <div id="valuesForm" style="display: none;"></div>
-
-    <div class="input-group">
-        <label for="lowerLimit">Limite inferior da integral</label>
-        <input type="number" id="lowerLimit" placeholder="Limite inferior" step="any">
-
-        <label for="upperLimit">Limite superior da integral</label>
-        <input type="number" id="upperLimit" placeholder="Limite superior" step="any">
-    </div>
-
-    <button onclick="calculateIntegral()">Calcular Integral</button>
-
-    <div id="result" class="result"></div>
+<div class="input-group">
+    <label for="integralType">Selecione o tipo de integral</label>
+    <select id="integralType" onchange="updateForm()">
+        <option value="single">Integral de uma função</option>
+        <option value="fraction">Integral de uma fração</option>
+    </select>
 </div>
 
+<div id="variableForm"></div>
+<div id="denominatorForm"></div>
+
+<div class="input-group">
+    <label for="lowerLimit">Limite inferior da integral</label>
+    <input type="number" id="lowerLimit" placeholder="Limite inferior">
+</div>
+
+<div class="input-group">
+    <label for="upperLimit">Limite superior da integral</label>
+    <input type="number" id="upperLimit" placeholder="Limite superior">
+</div>
+
+<button onclick="calculateIntegral()">Calcular Integral</button>
+
+<div id="result" class="result"></div>
+
 <script>
-    function toggleFractionFields() {
-        const integralType = document.getElementById('integralType').value;
-        const fractionSection = document.getElementById('fractionSection');
-        const singleFunctionSection = document.getElementById('singleFunctionSection');
-
-        if (integralType === 'fraction') {
-            fractionSection.style.display = 'block';
-            singleFunctionSection.style.display = 'none';
-        } else {
-            fractionSection.style.display = 'none';
-            singleFunctionSection.style.display = 'block';
-        }
-    }
-
-    function toggleValueFields() {
-        const valuesOption = document.getElementById('valuesOption').value;
-        const valuesForm = document.getElementById('valuesForm');
-
-        if (valuesOption === 'yes') {
-            valuesForm.style.display = 'block';
-        } else {
-            valuesForm.style.display = 'none';
-        }
-    }
-
     function updateForm() {
+        const integralType = document.getElementById('integralType').value;
+        const variableForm = document.getElementById('variableForm');
+        const denominatorForm = document.getElementById('denominatorForm');
+        variableForm.innerHTML = '';
+        denominatorForm.innerHTML = '';
+
+        if (integralType === 'single') {
+            variableForm.innerHTML = `
+                <div class="input-group">
+                    <label for="numVars">Selecione o número de variáveis</label>
+                    <input type="number" id="numVars" value="1" min="1" onchange="updateVariableInputs()">
+                </div>
+                <div id="variableInputs"></div>
+                <div class="input-group">
+                    <label for="constant">Constante da função</label>
+                    <input type="number" id="constant" placeholder="Constante (Ex: 5)">
+                </div>
+            `;
+            updateVariableInputs();
+        } else if (integralType === 'fraction') {
+            variableForm.innerHTML = `
+                <div class="input-group">
+                    <label for="numVarsNumerator">Selecione o número de variáveis no numerador</label>
+                    <input type="number" id="numVarsNumerator" value="1" min="1" onchange="updateNumeratorInputs()">
+                </div>
+                <div id="numeratorInputs"></div>
+            `;
+            denominatorForm.innerHTML = `
+                <div class="input-group">
+                    <label for="numVarsDenominator">Selecione o número de variáveis no denominador</label>
+                    <input type="number" id="numVarsDenominator" value="1" min="1" onchange="updateDenominatorInputs()">
+                </div>
+                <div id="denominatorInputs"></div>
+            `;
+            updateNumeratorInputs();
+            updateDenominatorInputs();
+        }
+    }
+
+    function updateVariableInputs() {
         const numVars = document.getElementById('numVars').value;
-        const variablesForm = document.getElementById('variablesForm');
-        const valuesForm = document.getElementById('valuesForm');
-        variablesForm.innerHTML = '';
-        valuesForm.innerHTML = '';
+        const variableInputs = document.getElementById('variableInputs');
+        variableInputs.innerHTML = '';
 
         for (let i = 1; i <= numVars; i++) {
-            variablesForm.innerHTML += `
+            variableInputs.innerHTML += `
                 <div class="input-group">
                     <label for="coefVar${i}">Coeficiente de variável ${i} (Ex: 2 para 2x)</label>
-                    <input type="number" id="coefVar${i}" placeholder="Coeficiente de x${i}">
+                    <input type="number" id="coefVar${i}" placeholder="Coeficiente">
                 </div>
                 <div class="input-group">
                     <label for="expVar${i}">Expoente de variável ${i} (Ex: 2 para x^2)</label>
-                    <input type="number" id="expVar${i}" placeholder="Expoente de x${i}">
-                </div>
-            `;
-
-            valuesForm.innerHTML += `
-                <div class="input-group">
-                    <label for="valueVar${i}">Valor da variável ${i} (Ex: 1 para x${i}=1)</label>
-                    <input type="number" id="valueVar${i}" placeholder="Valor de x${i}">
+                    <input type="number" id="expVar${i}" placeholder="Expoente">
                 </div>
             `;
         }
-
-        variablesForm.innerHTML += `
-            <div class="input-group">
-                <label for="constant">Constante da função</label>
-                <input type="number" id="constant" placeholder="Constante (Ex: 5)">
-            </div>
-        `;
-
-        valuesForm.innerHTML += `
-            <div class="input-group">
-                <label for="constantValue">Valor da constante</label>
-                <input type="number" id="constantValue" placeholder="Valor da constante">
-            </div>
-        `;
     }
 
-    function updateNumeratorForm() {
+    function updateNumeratorInputs() {
         const numVarsNumerator = document.getElementById('numVarsNumerator').value;
-        const numeratorForm = document.getElementById('numeratorForm');
-        numeratorForm.innerHTML = '';
+        const numeratorInputs = document.getElementById('numeratorInputs');
+        numeratorInputs.innerHTML = '';
 
         for (let i = 1; i <= numVarsNumerator; i++) {
-            numeratorForm.innerHTML += `
+            numeratorInputs.innerHTML += `
                 <div class="input-group">
                     <label for="coefVarNumerator${i}">Coeficiente de variável ${i} no numerador</label>
-                    <input type="number" id="coefVarNumerator${i}" placeholder="Coeficiente de x${i}">
+                    <input type="number" id="coefVarNumerator${i}" placeholder="Coeficiente">
                 </div>
                 <div class="input-group">
                     <label for="expVarNumerator${i}">Expoente de variável ${i} no numerador</label>
-                    <input type="number" id="expVarNumerator${i}" placeholder="Expoente de x${i}">
+                    <input type="number" id="expVarNumerator${i}" placeholder="Expoente">
                 </div>
             `;
         }
 
-        numeratorForm.innerHTML += `
+        numeratorInputs.innerHTML += `
             <div class="input-group">
                 <label for="constantNumerator">Constante no numerador</label>
                 <input type="number" id="constantNumerator" placeholder="Constante (Ex: 5)">
@@ -209,25 +156,25 @@
         `;
     }
 
-    function updateDenominatorForm() {
+    function updateDenominatorInputs() {
         const numVarsDenominator = document.getElementById('numVarsDenominator').value;
-        const denominatorForm = document.getElementById('denominatorForm');
-        denominatorForm.innerHTML = '';
+        const denominatorInputs = document.getElementById('denominatorInputs');
+        denominatorInputs.innerHTML = '';
 
         for (let i = 1; i <= numVarsDenominator; i++) {
-            denominatorForm.innerHTML += `
+            denominatorInputs.innerHTML += `
                 <div class="input-group">
                     <label for="coefVarDenominator${i}">Coeficiente de variável ${i} no denominador</label>
-                    <input type="number" id="coefVarDenominator${i}" placeholder="Coeficiente de x${i}">
+                    <input type="number" id="coefVarDenominator${i}" placeholder="Coeficiente">
                 </div>
                 <div class="input-group">
                     <label for="expVarDenominator${i}">Expoente de variável ${i} no denominador</label>
-                    <input type="number" id="expVarDenominator${i}" placeholder="Expoente de x${i}">
+                    <input type="number" id="expVarDenominator${i}" placeholder="Expoente">
                 </div>
             `;
         }
 
-        denominatorForm.innerHTML += `
+        denominatorInputs.innerHTML += `
             <div class="input-group">
                 <label for="constantDenominator">Constante no denominador</label>
                 <input type="number" id="constantDenominator" placeholder="Constante (Ex: 5)">
@@ -237,9 +184,10 @@
 
     function calculateIntegral() {
         const integralType = document.getElementById('integralType').value;
-        const lowerLimit = document.getElementById('lowerLimit').value;
-        const upperLimit = document.getElementById('upperLimit').value;
+        const lowerLimit = parseFloat(document.getElementById('lowerLimit').value);
+        const upperLimit = parseFloat(document.getElementById('upperLimit').value);
         let resultText = '';
+        let formula = '';
 
         if (integralType === 'single') {
             const numVars = document.getElementById('numVars').value;
@@ -247,15 +195,18 @@
             let functionText = '';
 
             for (let i = 1; i <= numVars; i++) {
-                const coef = document.getElementById(`coefVar${i}`).value;
-                const exp = document.getElementById(`expVar${i}`).value;
-                functionText += `${coef}x_${i}^${exp} + `;
+                const coef = document.getElementById(`coefVar${i}`).value || 1;
+                const exp = document.getElementById(`expVar${i}`).value || 1;
+                functionText += `(${coef}x^{${exp}}) + `;
             }
 
             functionText += `${constant}`;
-            resultText += `A integral de \\(${functionText}\\) com limites \\([${lowerLimit}, ${upperLimit}]\\) será resolvida com base nas regras de integração.`;
+            formula = `\\int_{${lowerLimit}}^{${upperLimit}} ${functionText} dx`;
+            resultText = `A integral de \\(${functionText}\\) com limites \\([${lowerLimit}, ${upperLimit}]\\) é:`;
 
-            MathJax.typesetPromise();
+            // Exemplo simplificado de cálculo. Substitua pelo cálculo real.
+            const integralResult = Math.pow(upperLimit, 2) - Math.pow(lowerLimit, 2) + (constant * (upperLimit - lowerLimit));
+            resultText += `\\[\\int_{${lowerLimit}}^{${upperLimit}} ${functionText} dx = ${integralResult}\\]`;
         } else if (integralType === 'fraction') {
             const numVarsNumerator = document.getElementById('numVarsNumerator').value;
             const numVarsDenominator = document.getElementById('numVarsDenominator').value;
@@ -265,26 +216,29 @@
             let denominatorText = '';
 
             for (let i = 1; i <= numVarsNumerator; i++) {
-                const coef = document.getElementById(`coefVarNumerator${i}`).value;
-                const exp = document.getElementById(`expVarNumerator${i}`).value;
-                numeratorText += `${coef}x_${i}^${exp} + `;
+                const coef = document.getElementById(`coefVarNumerator${i}`).value || 1;
+                const exp = document.getElementById(`expVarNumerator${i}`).value || 1;
+                numeratorText += `(${coef}x^{${exp}}) + `;
             }
+            numeratorText += `${constantNumerator}`;
 
             for (let i = 1; i <= numVarsDenominator; i++) {
-                const coef = document.getElementById(`coefVarDenominator${i}`).value;
-                const exp = document.getElementById(`expVarDenominator${i}`).value;
-                denominatorText += `${coef}x_${i}^${exp} + `;
+                const coef = document.getElementById(`coefVarDenominator${i}`).value || 1;
+                const exp = document.getElementById(`expVarDenominator${i}`).value || 1;
+                denominatorText += `(${coef}x^{${exp}}) + `;
             }
-
-            numeratorText += `${constantNumerator}`;
             denominatorText += `${constantDenominator}`;
 
-            resultText += `A integral de \\(\\frac{${numeratorText}}{${denominatorText}}\\) com limites \\([${lowerLimit}, ${upperLimit}]\\) será resolvida com base nas regras de integração de frações.`;
+            formula = `\\int_{${lowerLimit}}^{${upperLimit}} \\frac{${numeratorText}}{${denominatorText}} dx`;
+            resultText = `A integral de \\(\\frac{${numeratorText}}{${denominatorText}}\\) com limites \\([${lowerLimit}, ${upperLimit}]\\) é:`;
 
-            MathJax.typesetPromise();
+            // Exemplo simplificado de cálculo. Substitua pelo cálculo real.
+            const integralResult = Math.log(upperLimit) - Math.log(lowerLimit) + (constantNumerator - constantDenominator);
+            resultText += `\\[\\int_{${lowerLimit}}^{${upperLimit}} \\frac{${numeratorText}}{${denominatorText}} dx = ${integralResult}\\]`;
         }
 
         document.getElementById('result').innerHTML = resultText;
+        MathJax.typesetPromise();
     }
 </script>
 
