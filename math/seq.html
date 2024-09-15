@@ -36,7 +36,7 @@
             border: 1px solid #ddd;
             background-color: #f9f9f9;
         }
-        .operation-result {
+        .operation-result, .interval-result {
             margin-top: 20px;
             padding: 10px;
             border: 1px solid #ddd;
@@ -89,10 +89,21 @@
         <input type="number" id="operationValue" placeholder="Ex: 2">
     </div>
 
+    <div class="input-group">
+        <label for="intervalStart">Início do intervalo (inclusive)</label>
+        <input type="number" id="intervalStart" placeholder="Ex: 1">
+    </div>
+
+    <div class="input-group">
+        <label for="intervalEnd">Fim do intervalo (inclusive)</label>
+        <input type="number" id="intervalEnd" placeholder="Ex: 10">
+    </div>
+
     <button onclick="calculateSequence()">Calcular Sequência</button>
 
     <div id="sequenceResult" class="result"></div>
     <div id="operationResult" class="operation-result"></div>
+    <div id="intervalResult" class="interval-result"></div>
 </div>
 
 <script>
@@ -103,22 +114,28 @@
         const n = parseInt(document.getElementById('numTerms').value);
         const operation = document.getElementById('operation').value;
         const operationValue = parseFloat(document.getElementById('operationValue').value);
+        const intervalStart = parseInt(document.getElementById('intervalStart').value);
+        const intervalEnd = parseInt(document.getElementById('intervalEnd').value);
         
         let sequence = '';
         let operationResult = '';
-        
+        let intervalResult = '';
+
         if (sequenceType === 'pa') {
             sequence = calculatePA(a1, r, n);
         } else if (sequenceType === 'pg') {
             sequence = calculatePG(a1, r, n);
         }
-        
+
         if (operation !== 'none') {
             operationResult = applyOperation(sequence, operation, operationValue);
         }
-        
+
+        intervalResult = calculateInterval(a1, r, n, sequenceType, operation, operationValue, intervalStart, intervalEnd);
+
         document.getElementById('sequenceResult').innerHTML = sequence;
         document.getElementById('operationResult').innerHTML = operationResult;
+        document.getElementById('intervalResult').innerHTML = intervalResult;
     }
 
     function calculatePA(a1, r, n) {
@@ -158,8 +175,43 @@
         });
         return `Resultado após operação: ${result.join(', ')}`;
     }
+
+    function calculateInterval(a1, r, n, sequenceType, operation, value, start, end) {
+        let sequenceArray = [];
+        if (sequenceType === 'pa') {
+            sequenceArray = Array.from({ length: end }, (_, i) => a1 + i * r);
+        } else if (sequenceType === 'pg') {
+            sequenceArray = Array.from({ length: end }, (_, i) => a1 * Math.pow(r, i));
+        }
+
+        sequenceArray = sequenceArray.slice(start - 1, end); // Ajuste para intervalo 1-indexado
+        
+        if (sequenceArray.length === 0) {
+            return 'Erro: O intervalo não contém termos.';
+        }
+
+        let result = sequenceArray.map(num => {
+            switch (operation) {
+                case 'add':
+                    return num + value;
+                case 'subtract':
+                    return num - value;
+                case 'multiply':
+                    return num * value;
+                case 'divide':
+                    if (value === 0) {
+                        return 'Erro: Divisão por zero não é permitida.';
+                    }
+                    return num / value;
+                default:
+                    return num;
+            }
+        });
+        return `Resultado da operação no intervalo (${start} a ${end}): ${result.join(', ')}`;
+    }
 </script>
 
 </body>
 </html>
+
 
