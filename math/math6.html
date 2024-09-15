@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Integrais com Múltiplas Variáveis</title>
+    <title>Calculadora de Integrais</title>
     <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         body {
@@ -240,7 +240,13 @@
         const lowerLimit = parseFloat(document.getElementById('lowerLimit').value);
         const upperLimit = parseFloat(document.getElementById('upperLimit').value);
 
+        if (isNaN(lowerLimit) || isNaN(upperLimit)) {
+            document.getElementById('result').innerText = 'Por favor, insira limites válidos.';
+            return;
+        }
+
         let result = 0;
+        let integralEquation = '';
 
         if (integralType === 'single') {
             const numVars = document.getElementById('numVars').value;
@@ -254,13 +260,23 @@
                 coefficients.push(parseFloat(document.getElementById(`coefVar${i}`).value) || 0);
                 exponents.push(parseFloat(document.getElementById(`expVar${i}`).value) || 0);
             }
+
             if (valuesOption === 'yes') {
                 for (let i = 1; i <= numVars; i++) {
                     values.push(parseFloat(document.getElementById(`valueVar${i}`).value) || 0);
                 }
             }
 
-            // Método dos trapézios para a integral
+            // Função para a integral
+            const f = (x) => {
+                let sum = constant;
+                for (let i = 0; i < numVars; i++) {
+                    sum += coefficients[i] * Math.pow(x, exponents[i]);
+                }
+                return sum;
+            };
+
+            // Método dos trapézios
             const trapezoidal = (f, a, b, n) => {
                 const h = (b - a) / n;
                 let sum = (f(a) + f(b)) / 2;
@@ -270,17 +286,11 @@
                 return sum * h;
             };
 
-            const f = (x) => {
-                let sum = constant;
-                for (let i = 0; i < numVars; i++) {
-                    sum += coefficients[i] * Math.pow(x, exponents[i]);
-                }
-                return sum;
-            };
-
             result = trapezoidal(f, lowerLimit, upperLimit, 1000);
+
+            // Construir a equação da integral
+            integralEquation = `∫ ${coefficients.map((coef, idx) => `${coef}x^${exponents[idx]}`).join(' + ')} + ${constant} dx de ${lowerLimit} a ${upperLimit}`;
         } else if (integralType === 'fraction') {
-            // Integração de frações pode ser mais complexa e pode exigir métodos mais avançados
             const numVarsNumerator = document.getElementById('numVarsNumerator').value;
             const coefficientsNumerator = [];
             const exponentsNumerator = [];
@@ -301,7 +311,7 @@
                 exponentsDenominator.push(parseFloat(document.getElementById(`expVarDenominator${i}`).value) || 0);
             }
 
-            // Método dos trapézios para a integral de uma fração
+            // Funções para o numerador e denominador
             const fNumerator = (x) => {
                 let sum = constantNumerator;
                 for (let i = 0; i < numVarsNumerator; i++) {
@@ -323,9 +333,19 @@
             };
 
             result = trapezoidal(f, lowerLimit, upperLimit, 1000);
+
+            // Construir a equação da integral
+            const numeratorEquation = `${coefficientsNumerator.map((coef, idx) => `${coef}x^${exponentsNumerator[idx]}`).join(' + ')} + ${constantNumerator}`;
+            const denominatorEquation = `${coefficientsDenominator.map((coef, idx) => `${coef}x^${exponentsDenominator[idx]}`).join(' + ')} + ${constantDenominator}`;
+            integralEquation = `∫ (${numeratorEquation}) / (${denominatorEquation}) dx de ${lowerLimit} a ${upperLimit}`;
         }
 
-        document.getElementById('result').innerText = `Resultado da integral: ${result.toFixed(4)}`;
+        document.getElementById('result').innerHTML = `
+            <p>Equação da integral: ${integralEquation}</p>
+            <p>Resultado da integral: ${result.toFixed(4)}</p>
+        `;
+
+        MathJax.typeset(); // Recalcular MathJax para renderizar as equações
     }
 </script>
 
