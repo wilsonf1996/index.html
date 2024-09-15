@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Integrais</title>
+    <title>Calculadora de Integrais com Múltiplas Variáveis</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.6.4/math.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@sympy/sympy@1.11.1/sympy.min.js"></script>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
@@ -96,7 +95,7 @@
     </div>
 
     <div class="input-group">
-        <label for="valuesOption">Deseja inserir valores para as variáveis?</label>
+        <label for="valuesOption">Deseja inserir limites para as variáveis?</label>
         <select id="valuesOption" onchange="toggleValueFields()">
             <option value="no">Não</option>
             <option value="yes">Sim</option>
@@ -108,10 +107,10 @@
     <div class="input-group">
         <label for="integralVar">Selecione a variável para integrar</label>
         <select id="integralVar">
-            <option value="x">x</option>
-            <option value="y">y</option>
-            <option value="z">z</option>
-            <option value="t">t</option>
+            <option value="x1">x1</option>
+            <option value="x2">x2</option>
+            <option value="x3">x3</option>
+            <option value="x4">x4</option>
         </select>
     </div>
 
@@ -167,8 +166,12 @@
 
             valuesForm.innerHTML += `
                 <div class="input-group">
-                    <label for="valueVar${i}">Valor da variável ${i} (Ex: 1 para x${i}=1)</label>
-                    <input type="number" id="valueVar${i}" placeholder="Valor de x${i}">
+                    <label for="valueVar${i}">Limite inferior de x${i}</label>
+                    <input type="number" id="lowerLimitVar${i}" placeholder="Limite inferior de x${i}">
+                </div>
+                <div class="input-group">
+                    <label for="valueVar${i}">Limite superior de x${i}</label>
+                    <input type="number" id="upperLimitVar${i}" placeholder="Limite superior de x${i}">
                 </div>
             `;
         }
@@ -177,65 +180,6 @@
             <div class="input-group">
                 <label for="constant">Constante da função</label>
                 <input type="number" id="constant" placeholder="Constante (Ex: 5)">
-            </div>
-        `;
-
-        valuesForm.innerHTML += `
-            <div class="input-group">
-                <label for="constantValue">Valor da constante</label>
-                <input type="number" id="constantValue" placeholder="Valor da constante">
-            </div>
-        `;
-    }
-
-    function updateNumeratorForm() {
-        const numVarsNumerator = document.getElementById('numVarsNumerator').value;
-        const numeratorForm = document.getElementById('numeratorForm');
-        numeratorForm.innerHTML = '';
-
-        for (let i = 1; i <= numVarsNumerator; i++) {
-            numeratorForm.innerHTML += `
-                <div class="input-group">
-                    <label for="coefVarNumerator${i}">Coeficiente de variável ${i} no numerador</label>
-                    <input type="number" id="coefVarNumerator${i}" placeholder="Coeficiente de x${i}">
-                </div>
-                <div class="input-group">
-                    <label for="expVarNumerator${i}">Expoente de variável ${i} no numerador</label>
-                    <input type="number" id="expVarNumerator${i}" placeholder="Expoente de x${i}">
-                </div>
-            `;
-        }
-
-        numeratorForm.innerHTML += `
-            <div class="input-group">
-                <label for="constantNumerator">Constante no numerador</label>
-                <input type="number" id="constantNumerator" placeholder="Constante (Ex: 5)">
-            </div>
-        `;
-    }
-
-    function updateDenominatorForm() {
-        const numVarsDenominator = document.getElementById('numVarsDenominator').value;
-        const denominatorForm = document.getElementById('denominatorForm');
-        denominatorForm.innerHTML = '';
-
-        for (let i = 1; i <= numVarsDenominator; i++) {
-            denominatorForm.innerHTML += `
-                <div class="input-group">
-                    <label for="coefVarDenominator${i}">Coeficiente de variável ${i} no denominador</label>
-                    <input type="number" id="coefVarDenominator${i}" placeholder="Coeficiente de x${i}">
-                </div>
-                <div class="input-group">
-                    <label for="expVarDenominator${i}">Expoente de variável ${i} no denominador</label>
-                    <input type="number" id="expVarDenominator${i}" placeholder="Expoente de x${i}">
-                </div>
-            `;
-        }
-
-        denominatorForm.innerHTML += `
-            <div class="input-group">
-                <label for="constantDenominator">Constante no denominador</label>
-                <input type="number" id="constantDenominator" placeholder="Constante (Ex: 5)">
             </div>
         `;
     }
@@ -252,16 +196,7 @@
         return func;
     }
 
-    function buildValueMap(numVars) {
-        let values = {};
-        for (let i = 1; i <= numVars; i++) {
-            values[`x${i}`] = parseFloat(document.getElementById(`valueVar${i}`).value) || 0;
-        }
-        values['constant'] = parseFloat(document.getElementById('constantValue').value) || 0;
-        return values;
-    }
-
-    async function calculateIntegral() {
+    function calculateIntegral() {
         const integralVar = document.getElementById('integralVar').value;
         const integralType = document.getElementById('integralType').value;
         const valuesOption = document.getElementById('valuesOption').value;
@@ -274,56 +209,73 @@
                 const numVars = document.getElementById('numVars').value;
                 const func = buildFunction(numVars, '');
 
-                const expression = sympy.parse(func);
-                const integral = sympy.integrate(expression, integralVar);
+                const expression = math.parse(func);
+                const integral = math.integrate(expression, integralVar);
 
                 result = integral.toString();
-                functionLatex = `\\int ${sympy.simplify(func).toTex()} \\, d${integralVar}`;
+                functionLatex = `\\int (${math.simplify(func).toTex()}) d${integralVar}`;
 
                 if (valuesOption === 'yes') {
-                    const values = buildValueMap(numVars);
-                    const funcValue = sympy.eval(func, values);
-                    finalResult = `A integral da função é: ${sympy.eval(integral.toString(), values)}`;
+                    let limits = [];
+                    for (let i = 1; i <= numVars; i++) {
+                        limits.push([
+                            parseFloat(document.getElementById(`lowerLimitVar${i}`).value),
+                            parseFloat(document.getElementById(`upperLimitVar${i}`).value)
+                        ]);
+                    }
+                    finalResult = math.evaluate(integral, limits);
                 }
+
             } else {
                 const numVarsNumerator = document.getElementById('numVarsNumerator').value;
                 const numVarsDenominator = document.getElementById('numVarsDenominator').value;
+                const numeratorFunc = buildFunction(numVarsNumerator, 'Numerator');
+                const denominatorFunc = buildFunction(numVarsDenominator, 'Denominator');
 
-                const numerator = buildFunction(numVarsNumerator, 'Numerator');
-                const denominator = buildFunction(numVarsDenominator, 'Denominator');
+                const fraction = `(${numeratorFunc}) / (${denominatorFunc})`;
+                const expression = math.parse(fraction);
+                const integral = math.integrate(expression, integralVar);
 
-                const numeratorExpr = sympy.parse(numerator);
-                const denominatorExpr = sympy.parse(denominator);
-                const fractionExpr = numeratorExpr / denominatorExpr;
-
-                const integral = sympy.integrate(fractionExpr, integralVar);
                 result = integral.toString();
-                functionLatex = `\\int \\frac{${sympy.simplify(numerator).toTex()}}{${sympy.simplify(denominator).toTex()}} \\, d${integralVar}`;
+                functionLatex = `\\int \\frac{${math.simplify(numeratorFunc).toTex()}}{${math.simplify(denominatorFunc).toTex()}} d${integralVar}`;
 
                 if (valuesOption === 'yes') {
-                    const numVars = Math.max(numVarsNumerator, numVarsDenominator);
-                    const values = buildValueMap(numVars);
-                    finalResult = 'A integral da fração é complexa e pode exigir análise adicional.';
+                    let limitsNumerator = [];
+                    for (let i = 1; i <= numVarsNumerator; i++) {
+                        limitsNumerator.push([
+                            parseFloat(document.getElementById(`lowerLimitVarNumerator${i}`).value),
+                            parseFloat(document.getElementById(`upperLimitVarNumerator${i}`).value)
+                        ]);
+                    }
+                    let limitsDenominator = [];
+                    for (let i = 1; i <= numVarsDenominator; i++) {
+                        limitsDenominator.push([
+                            parseFloat(document.getElementById(`lowerLimitVarDenominator${i}`).value),
+                            parseFloat(document.getElementById(`upperLimitVarDenominator${i}`).value)
+                        ]);
+                    }
+
+                    const limits = [...limitsNumerator, ...limitsDenominator];
+                    finalResult = math.evaluate(integral, limits);
                 }
             }
 
+            if (finalResult !== '') {
+                result += ` = ${finalResult}`;
+            }
+
             document.getElementById('result').innerHTML = `
-                <h3>Resultado</h3>
-                <p>\\(${functionLatex} = ${sympy.simplify(result).toTex()}\\)</p>
-                <p>${finalResult}</p>
+                <h3>Resultado da Integral:</h3>
+                <p>Resultado: ${result}</p>
+                <p>Forma Latex: ${functionLatex}</p>
             `;
-
+            MathJax.typeset();
         } catch (error) {
-            document.getElementById('result').innerHTML = `<p style="color: red;">Erro ao calcular a integral: ${error.message}</p>`;
+            document.getElementById('result').innerHTML = `
+                <h3>Erro no cálculo:</h3>
+                <p>${error.message}</p>
+            `;
         }
-
-        MathJax.typeset();
-    }
-
-    window.onload = function() {
-        updateForm();
-        updateNumeratorForm();
-        updateDenominatorForm();
     }
 </script>
 
