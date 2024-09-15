@@ -22,7 +22,7 @@
             text-align: center;
             color: #333;
         }
-        input, button {
+        select, input, button {
             margin: 10px 0;
             padding: 12px;
             width: calc(100% - 24px);
@@ -56,13 +56,25 @@
         .formulario input {
             margin-bottom: 10px;
         }
+        .math-formula {
+            font-size: 1.2em;
+            font-family: 'Courier New', Courier, monospace;
+            white-space: pre;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Resolução de Sistemas de Equações</h1>
         <label for="numVariaveis">Número de Variáveis (1-6):</label>
-        <input type="number" id="numVariaveis" min="1" max="6" value="2" onchange="atualizarFormulario()">
+        <select id="numVariaveis" onchange="atualizarFormulario()">
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+        </select>
         <div id="formulario" class="formulario"></div>
         <button onclick="resolver()">Resolver</button>
         <div class="resultado" id="resultado"></div>
@@ -77,8 +89,10 @@
             formulario.innerHTML = '';
 
             for (let i = 1; i <= numVariaveis; i++) {
-                formulario.innerHTML += `<label for="eq${i}">Equação ${i}:</label>`;
-                formulario.innerHTML += `<input type="text" id="eq${i}" placeholder="Insira a equação ${i} (ex: 2x1 + 3x2 = 7)" />`;
+                formulario.innerHTML += `
+                    <div class="math-formula">Equação ${i}:</div>
+                    <input type="text" id="eq${i}" placeholder="Insira a equação ${i} (ex: 2x1 + 3x2 = 7)" />
+                `;
             }
         }
 
@@ -115,20 +129,14 @@
             const resultados = [];
 
             equacoes.forEach(eq => {
-                const partes = eq.match(/([\d\w]+)([\+\-]\d*)?/g);
-                if (!partes) throw new Error('Formato de equação inválido.');
-                
+                const partes = eq.match(/([+-]?\d*\.?\d*)x\d+/g);
+                const resultado = parseFloat(eq.match(/=[\s]*([\d\.]+)/)[1]);
                 const linha = [];
-                let resultado = 0;
-                
-                partes.forEach(parte => {
-                    const [variavel, coeficiente] = parte.split(/([+-]\d*)/);
-                    const coef = coeficiente ? parseFloat(coeficiente) : 1;
-                    const variavelNome = variavel.trim();
 
-                    linha.push(coef);
-                    resultado -= coef * parseFloat(variavelNome);
-                });
+                for (let i = 0; i < equacoes.length; i++) {
+                    const coef = partes.find(parte => parte.includes(`x${i+1}`)) || '0';
+                    linha.push(parseFloat(coef.replace(/x\d+/, '').trim()) || 0);
+                }
 
                 matriz.push(linha);
                 resultados.push(resultado);
@@ -150,4 +158,3 @@
     </script>
 </body>
 </html>
-
