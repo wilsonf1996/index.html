@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calculadora Avançada de Limites</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.6.2/math.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -24,11 +22,11 @@
             margin-bottom: 5px;
         }
         .input-row label {
-            width: 150px;
+            width: 200px;
         }
         .input-row input {
             margin-right: 10px;
-            width: 100px;
+            width: 120px;
         }
         .math-output {
             font-size: 1.2em;
@@ -42,7 +40,7 @@
 
 <div class="input-area">
     <label for="numVars">Número de Variáveis (1 a 4):</label>
-    <input type="number" id="numVars" min="1" max="4" value="2" onchange="updateForm()">
+    <input type="number" id="numVars" min="1" max="4" value="1" onchange="updateForm()">
 
     <div id="variableInputs"></div>
 
@@ -87,17 +85,14 @@
         const point = parseFloat(document.getElementById('limitPoint').value);
         if (coefficients.length > 0 && !isNaN(point)) {
             try {
-                const result = calculateLimit(coefficients, point);
+                const result = calculateLimit(coefficients, point, numVars);
                 const formula = buildFormula(coefficients, numVars);
-                document.getElementById('output').innerHTML = `
-                    \\( \\lim_{{x \\to ${point}}} ${formula} = ${result} \\)
-                `;
-                MathJax.typeset(); // Renderiza a notação matemática
+                document.getElementById('output').textContent = `O limite de ${formula} no ponto ${point} é ${result}`;
             } catch (error) {
-                document.getElementById('output').innerHTML = `Erro: ${error.message}`;
+                document.getElementById('output').textContent = `Erro: ${error.message}`;
             }
         } else {
-            document.getElementById('output').innerHTML = '';
+            document.getElementById('output').textContent = '';
         }
     }
 
@@ -105,21 +100,18 @@
         let formula = '';
         for (let i = 0; i < numVars; i++) {
             if (i > 0) formula += ' + ';
-            formula += coefficients[i] + (i > 0 ? ` x_${i + 1}` : '');
+            formula += coefficients[i] + (i > 0 ? ` * x${i + 1}` : '');
         }
         return formula;
     }
 
-    function calculateLimit(coefficients, point) {
+    function calculateLimit(coefficients, point, numVars) {
         try {
-            const expr = coefficients.map((coef, index) => {
-                return coef + (index > 0 ? ` * x_${index + 1}` : '');
-            }).join(' + ');
-
-            const parsedExpr = math.parse(expr);
-            const compiledExpr = parsedExpr.compile();
-            const result = compiledExpr.evaluate({ x_1: point }); // Substitua x_1 pelo ponto do limite
-
+            // Cria uma função polinomial simples
+            let result = 0;
+            for (let i = 0; i < numVars; i++) {
+                result += coefficients[i] * Math.pow(point, i);
+            }
             return result;
         } catch (error) {
             throw new Error("Erro ao calcular o limite: " + error.message);
@@ -127,7 +119,6 @@
     }
 
     function setExample() {
-        // Define um exemplo de dados
         document.getElementById('numVars').value = 2;
         document.getElementById('limitPoint').value = 1;
         
@@ -136,7 +127,6 @@
             document.getElementById(`coef_${index + 1}`).value = coef;
         });
         
-        // Atualiza o formulário e calcula o exemplo
         updateForm();
         updateOutput();
     }
