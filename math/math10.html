@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Integrais</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #4CAF50;
+            text-align: center;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            font-weight: bold;
+            color: #555;
+        }
+
+        input, select {
+            padding: 10px;
+            width: 100%;
+            margin-top: 5px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        input:focus, select:focus {
+            border-color: #4CAF50;
+            outline: none;
+        }
+
+        button {
+            padding: 12px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .result {
+            margin-top: 30px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .formula {
+            margin-top: 10px;
+            font-size: 18px;
+        }
+
+        .input-group div {
+            margin-top: 10px;
+        }
+
+        .input-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .input-section > div {
+            flex: 1;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+                width: 100%;
+            }
+
+            button {
+                font-size: 14px;
+                padding: 10px;
+            }
+
+            h1 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Calculadora de Integrais</h1>
+
+    <div class="input-group">
+        <label for="integralOrder">Selecione o tipo de integral</label>
+        <select id="integralOrder" onchange="updateForm()">
+            <option value="single">Integral Simples</option>
+            <option value="double">Integral Dupla</option>
+            <option value="triple">Integral Tripla</option>
+        </select>
+    </div>
+
+    <div class="input-group">
+        <label for="integralType">Selecione o tipo de função</label>
+        <select id="integralType" onchange="updateFunctionForm()">
+            <option value="simple">Função Simples</option>
+            <option value="fraction">Função com Fração</option>
+        </select>
+    </div>
+
+    <div id="variableForm"></div>
+    <div id="denominatorForm"></div>
+
+    <div class="input-group">
+        <label for="lowerLimit">Limite inferior</label>
+        <input type="number" id="lowerLimit" placeholder="Limite inferior">
+    </div>
+
+    <div class="input-group">
+        <label for="upperLimit">Limite superior</label>
+        <input type="number" id="upperLimit" placeholder="Limite superior">
+    </div>
+
+    <div class="input-group" id="integrationVariableSection">
+        <label for="integrationVariable">Selecione a variável de integração</label>
+        <select id="integrationVariable">
+            <option value="x">x</option>
+            <option value="y">y</option>
+            <option value="z">z</option>
+        </select>
+    </div>
+
+    <button onclick="calculateIntegral()">Calcular Integral</button>
+
+    <div id="result" class="result"></div>
+</div>
+
+<script>
+    function updateForm() {
+        const integralOrder = document.getElementById('integralOrder').value;
+        const variableForm = document.getElementById('variableForm');
+        const denominatorForm = document.getElementById('denominatorForm');
+        variableForm.innerHTML = '';
+        denominatorForm.innerHTML = '';
+
+        if (integralOrder === 'single') {
+            document.getElementById('integrationVariableSection').style.display = 'block';
+            updateFunctionForm();
+        } else if (integralOrder === 'double') {
+            document.getElementById('integrationVariableSection').style.display = 'block';
+            variableForm.innerHTML = `
+                <div class="input-group">
+                    <label for="funcX">Função em x</label>
+                    <input type="text" id="funcX" placeholder="Função de x">
+                </div>
+                <div class="input-group">
+                    <label for="funcY">Função em y</label>
+                    <input type="text" id="funcY" placeholder="Função de y">
+                </div>
+                <div class="input-group">
+                    <label for="xLowerLimit">Limite inferior de x</label>
+                    <input type="number" id="xLowerLimit" placeholder="Limite inferior de x">
+                </div>
+                <div class="input-group">
+                    <label for="xUpperLimit">Limite superior de x</label>
+                    <input type="number" id="xUpperLimit" placeholder="Limite superior de x">
+                </div>
+                <div class="input-group">
+                    <label for="yLowerLimit">Limite inferior de y</label>
+                    <input type="number" id="yLowerLimit" placeholder="Limite inferior de y">
+                </div>
+                <div class="input-group">
+                    <label for="yUpperLimit">Limite superior de y</label>
+                    <input type="number" id="yUpperLimit" placeholder="Limite superior de y">
+                </div>
+            `;
+        } else if (integralOrder === 'triple') {
+            document.getElementById('integrationVariableSection').style.display = 'none';
+            variableForm.innerHTML = `
+                <div class="input-group">
+                    <label for="funcX">Função em x</label>
+                    <input type="text" id="funcX" placeholder="Função de x">
+                </div>
+                <div class="input-group">
+                    <label for="funcY">Função em y</label>
+                    <input type="text" id="funcY" placeholder="Função de y">
+                </div>
+                <div class="input-group">
+                    <label for="funcZ">Função em z</label>
+                    <input type="text" id="funcZ" placeholder="Função de z">
+                </div>
+                <div class="input-group">
+                    <label for="xLowerLimit">Limite inferior de x</label>
+                    <input type="number" id="xLowerLimit" placeholder="Limite inferior de x">
+                </div>
+                <div class="input-group">
+                    <label for="xUpperLimit">Limite superior de x</label>
+                    <input type="number" id="xUpperLimit" placeholder="Limite superior de x">
+                </div>
+                <div class="input-group">
+                    <label for="yLowerLimit">Limite inferior de y</label>
+                    <input type="number" id="yLowerLimit" placeholder="Limite inferior de y">
+                </div>
+                <div class="input-group">
+                    <label for="yUpperLimit">Limite superior de y</label>
+                    <input type="number" id="yUpperLimit" placeholder="Limite superior de y">
+                </div>
+                <div class="input-group">
+                    <label for="zLowerLimit">Limite inferior de z</label>
+                    <input type="number" id="zLowerLimit" placeholder="Limite inferior de z">
+                </div>
+                <div class="input-group">
+                    <label for="zUpperLimit">Limite superior de z</label>
+                    <input type="number" id="zUpperLimit" placeholder="Limite superior de z">
+                </div>
+            `;
+        }
+    }
+
+    function updateFunctionForm() {
+        const integralType = document.getElementById('integralType').value;
+        const variableForm = document.getElementById('variableForm');
+        const denominatorForm = document.getElementById('denominatorForm');
+        variableForm.innerHTML = '';
+        denominatorForm.innerHTML = '';
+
+        if (integralType === 'simple') {
+            variableForm.innerHTML = `
+                <div class="input-group">
+                    <label for="numVars">Número de variáveis</label>
+                    <input type="number" id="numVars" value="1" min="1" onchange="updateVariableInputs()">
+                </div>
+                <div id="variableInputs"></div>
+                <div class="input-group">
+                    <label for="constant">Constante da função</label>
+                    <input type="number" id="constant" placeholder="Constante (Ex: 5)">
+                </div>
+            `;
+            updateVariableInputs();
+        } else if (integralType === 'fraction') {
+            variableForm.innerHTML = `
+                <div class="input-group">
+                    <label for="numVarsNumerator">Número de variáveis no numerador</label>
+                    <input type="number" id="numVarsNumerator" value="1" min="1" onchange="updateNumeratorInputs()">
+                </div>
+                <div id="numeratorInputs"></div>
+            `;
+            denominatorForm.innerHTML = `
+                <div class="input-group">
+                    <label for="numVarsDenominator">Número de variáveis no denominador</label>
+                    <input type="number" id="numVarsDenominator" value="1" min="1" onchange="updateDenominatorInputs()">
+                </div>
+                <div id="denominatorInputs"></div>
+            `;
+            updateNumeratorInputs();
+            updateDenominatorInputs();
+        }
+    }
+
+    function updateVariableInputs() {
+        const numVars = document.getElementById('numVars').value;
+        const variableInputs = document.getElementById('variableInputs');
+        variableInputs.innerHTML = '';
+
+        for (let i = 1; i <= numVars; i++) {
+            variableInputs.innerHTML += `
+                <div class="input-group">
+                    <label for="coefVar${i}">Coeficiente da variável ${i} (Ex: 2 para 2x)</label>
+                    <input type="number" id="coefVar${i}" placeholder="Coeficiente">
+                </div>
+                <div class="input-group">
+                    <label for="expVar${i}">Expoente da variável ${i} (Ex: 2 para x^2)</label>
+                    <input type="number" id="expVar${i}" placeholder="Expoente">
+                </div>
+            `;
+        }
+    }
+
+    function updateNumeratorInputs() {
+        const numVarsNumerator = document.getElementById('numVarsNumerator').value;
+        const numeratorInputs = document.getElementById('numeratorInputs');
+        numeratorInputs.innerHTML = '';
+
+        for (let i = 1; i <= numVarsNumerator; i++) {
+            numeratorInputs.innerHTML += `
+                <div class="input-group">
+                    <label for="coefVarNumerator${i}">Coeficiente da variável ${i} no numerador</label>
+                    <input type="number" id="coefVarNumerator${i}" placeholder="Coeficiente">
+                </div>
+                <div class="input-group">
+                    <label for="expVarNumerator${i}">Expoente da variável ${i} no numerador</label>
+                    <input type="number" id="expVarNumerator${i}" placeholder="Expoente">
+                </div>
+            `;
+        }
+
+        numeratorInputs.innerHTML += `
+            <div class="input-group">
+                <label for="constantNumerator">Constante no numerador</label>
+                <input type="number" id="constantNumerator" placeholder="Constante (Ex: 5)">
+            </div>
+        `;
+    }
+
+    function updateDenominatorInputs() {
+        const numVarsDenominator = document.getElementById('numVarsDenominator').value;
+        const denominatorInputs = document.getElementById('denominatorInputs');
+        denominatorInputs.innerHTML = '';
+
+        for (let i = 1; i <= numVarsDenominator; i++) {
+            denominatorInputs.innerHTML += `
+                <div class="input-group">
+                    <label for="coefVarDenominator${i}">Coeficiente da variável ${i} no denominador</label>
+                    <input type="number" id="coefVarDenominator${i}" placeholder="Coeficiente">
+                </div>
+                <div class="input-group">
+                    <label for="expVarDenominator${i}">Expoente da variável ${i} no denominador</label>
+                    <input type="number" id="expVarDenominator${i}" placeholder="Expoente">
+                </div>
+            `;
+        }
+
+        denominatorInputs.innerHTML += `
+            <div class="input-group">
+                <label for="constantDenominator">Constante no denominador</label>
+                <input type="number" id="constantDenominator" placeholder="Constante (Ex: 5)">
+            </div>
+        `;
+    }
+
+    function calculateIntegral() {
+        const integralOrder = document.getElementById('integralOrder').value;
+        const integralType = document.getElementById('integralType').value;
+        const lowerLimit = parseFloat(document.getElementById('lowerLimit').value);
+        const upperLimit = parseFloat(document.getElementById('upperLimit').value);
+        const integrationVariable = document.getElementById('integrationVariable').value;
+        let resultText = '';
+
+        if (integralOrder === 'single') {
+            if (integralType === 'simple') {
+                const numVars = document.getElementById('numVars').value;
+                const constant = parseFloat(document.getElementById('constant').value) || 0;
+                let functionText = '';
+                let integralSteps = ''; // Para armazenar os passos da resolução
+
+                for (let i = 1; i <= numVars; i++) {
+                    const coef = parseFloat(document.getElementById(`coefVar${i}`).value) || 1;
+                    const exp = parseFloat(document.getElementById(`expVar${i}`).value) || 1;
+                    functionText += `(${coef}${integrationVariable}^{${exp}}) + `;
+                    integralSteps += `A integral de \\(${coef}${integrationVariable}^{${exp}}\\) é \\(\\frac{${coef}}{${exp + 1}}${integrationVariable}^{${exp + 1}}\\)<br>`;
+                }
+                functionText += `${constant}`;
+
+                integralSteps += `A integral da constante ${constant} é \\(${constant}${integrationVariable}\\)<br>`;
+
+                resultText = `A integral de \\(${functionText}\\) com limites \\([${lowerLimit}, ${upperLimit}]\\) é:<br>${integralSteps}<br>`;
+
+                const integralResult = Math.pow(upperLimit, 2) - Math.pow(lowerLimit, 2) + (constant * (upperLimit - lowerLimit));
+                resultText += `\\[\\int_{${lowerLimit}}^{${upperLimit}} ${functionText} d${integrationVariable} = ${integralResult}\\]`;
+            } else if (integralType === 'fraction') {
+                const numVarsNumerator = document.getElementById('numVarsNumerator').value;
+                const numVarsDenominator = document.getElementById('numVarsDenominator').value;
+                const constantNumerator = parseFloat(document.getElementById('constantNumerator').value) || 0;
+                const constantDenominator = parseFloat(document.getElementById('constantDenominator').value) || 0;
+                let numeratorText = '';
+                let denominatorText = '';
+                let integralSteps = '';
+
+                for (let i = 1; i <= numVarsNumerator; i++) {
+                    const coef = parseFloat(document.getElementById(`coefVarNumerator${i}`).value) || 1;
+                    const exp = parseFloat(document.getElementById(`expVarNumerator${i}`).value) || 1;
+                    numeratorText += `(${coef}${integrationVariable}^{${exp}}) + `;
+                }
+                numeratorText += `${constantNumerator}`;
+
+                for (let i = 1; i <= numVarsDenominator; i++) {
+                    const coef = parseFloat(document.getElementById(`coefVarDenominator${i}`).value) || 1;
+                    const exp = parseFloat(document.getElementById(`expVarDenominator${i}`).value) || 1;
+                    denominatorText += `(${coef}${integrationVariable}^{${exp}}) + `;
+                }
+                denominatorText += `${constantDenominator}`;
+
+                // Adicionando os passos da resolução da integral fracionada
+                integralSteps += `Simplificação da fração: \\(\\frac{${numeratorText}}{${denominatorText}}\\)<br>`;
+                integralSteps += `Aplicando regra da integral de frações:<br>`;
+                integralSteps += `A integral do numerador \\(${numeratorText}\\) e do denominador \\(${denominatorText}\\) será tratada separadamente.<br>`;
+                
+                // Aqui podemos detalhar mais os passos dependendo do método de integração usado, como substituição ou partes.
+
+                resultText = `A integral de \\(\\frac{${numeratorText}}{${denominatorText}}\\) com limites \\([${lowerLimit}, ${upperLimit}]\\) é:<br>${integralSteps}<br>`;
+
+                // Como exemplo simplificado, usaremos logaritmos para a solução
+                const integralResult = Math.log(upperLimit) - Math.log(lowerLimit) + (constantNumerator - constantDenominator);
+                resultText += `\\[\\int_{${lowerLimit}}^{${upperLimit}} \\frac{${numeratorText}}{${denominatorText}} d${integrationVariable} = ${integralResult}\\]`;
+            }
+        } else if (integralOrder === 'double') {
+            const xLowerLimit = parseFloat(document.getElementById('xLowerLimit').value);
+            const xUpperLimit = parseFloat(document.getElementById('xUpperLimit').value);
+            const yLowerLimit = parseFloat(document.getElementById('yLowerLimit').value);
+            const yUpperLimit = parseFloat(document.getElementById('yUpperLimit').value);
+            // Implementar cálculo de integral dupla aqui
+        } else if (integralOrder === 'triple') {
+            const xLowerLimit = parseFloat(document.getElementById('xLowerLimit').value);
+            const xUpperLimit = parseFloat(document.getElementById('xUpperLimit').value);
+            const yLowerLimit = parseFloat(document.getElementById('yLowerLimit').value);
+            const yUpperLimit = parseFloat(document.getElementById('yUpperLimit').value);
+            const zLowerLimit = parseFloat(document.getElementById('zLowerLimit').value);
+            const zUpperLimit = parseFloat(document.getElementById('zUpperLimit').value);
+            // Implementar cálculo de integral tripla aqui
+        }
+
+        document.getElementById('result').innerHTML = resultText;
+        MathJax.typesetPromise();
+    }
+</script>
+
+</body>
+</html>
