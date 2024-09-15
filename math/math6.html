@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calculadora de Integrais com Múltiplas Variáveis</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.6.4/math.min.js"></script>
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         body {
@@ -95,7 +93,7 @@
     </div>
 
     <div class="input-group">
-        <label for="valuesOption">Deseja inserir limites para as variáveis?</label>
+        <label for="valuesOption">Deseja inserir valores para as variáveis?</label>
         <select id="valuesOption" onchange="toggleValueFields()">
             <option value="no">Não</option>
             <option value="yes">Sim</option>
@@ -105,13 +103,11 @@
     <div id="valuesForm" style="display: none;"></div>
 
     <div class="input-group">
-        <label for="integralVar">Selecione a variável para integrar</label>
-        <select id="integralVar">
-            <option value="x1">x1</option>
-            <option value="x2">x2</option>
-            <option value="x3">x3</option>
-            <option value="x4">x4</option>
-        </select>
+        <label for="lowerLimit">Limite inferior da integral</label>
+        <input type="number" id="lowerLimit" placeholder="Limite inferior" step="any">
+
+        <label for="upperLimit">Limite superior da integral</label>
+        <input type="number" id="upperLimit" placeholder="Limite superior" step="any">
     </div>
 
     <button onclick="calculateIntegral()">Calcular Integral</button>
@@ -166,12 +162,8 @@
 
             valuesForm.innerHTML += `
                 <div class="input-group">
-                    <label for="valueVar${i}">Limite inferior de x${i}</label>
-                    <input type="number" id="lowerLimitVar${i}" placeholder="Limite inferior de x${i}">
-                </div>
-                <div class="input-group">
-                    <label for="valueVar${i}">Limite superior de x${i}</label>
-                    <input type="number" id="upperLimitVar${i}" placeholder="Limite superior de x${i}">
+                    <label for="valueVar${i}">Valor da variável ${i} (Ex: 1 para x${i}=1)</label>
+                    <input type="number" id="valueVar${i}" placeholder="Valor de x${i}">
                 </div>
             `;
         }
@@ -182,102 +174,161 @@
                 <input type="number" id="constant" placeholder="Constante (Ex: 5)">
             </div>
         `;
+
+        valuesForm.innerHTML += `
+            <div class="input-group">
+                <label for="constantValue">Valor da constante</label>
+                <input type="number" id="constantValue" placeholder="Valor da constante">
+            </div>
+        `;
     }
 
-    function buildFunction(numVars, type) {
-        let func = '';
-        for (let i = 1; i <= numVars; i++) {
-            const coef = document.getElementById(`coefVar${type}${i}`).value || 1;
-            const exp = document.getElementById(`expVar${type}${i}`).value || 1;
-            func += `${coef} * x${i}^${exp} + `;
+    function updateNumeratorForm() {
+        const numVarsNumerator = document.getElementById('numVarsNumerator').value;
+        const numeratorForm = document.getElementById('numeratorForm');
+        numeratorForm.innerHTML = '';
+
+        for (let i = 1; i <= numVarsNumerator; i++) {
+            numeratorForm.innerHTML += `
+                <div class="input-group">
+                    <label for="coefVarNumerator${i}">Coeficiente de variável ${i} no numerador</label>
+                    <input type="number" id="coefVarNumerator${i}" placeholder="Coeficiente de x${i}">
+                </div>
+                <div class="input-group">
+                    <label for="expVarNumerator${i}">Expoente de variável ${i} no numerador</label>
+                    <input type="number" id="expVarNumerator${i}" placeholder="Expoente de x${i}">
+                </div>
+            `;
         }
-        const constant = document.getElementById(`constant${type}`).value || 0;
-        func += constant;
-        return func;
+
+        numeratorForm.innerHTML += `
+            <div class="input-group">
+                <label for="constantNumerator">Constante no numerador</label>
+                <input type="number" id="constantNumerator" placeholder="Constante (Ex: 5)">
+            </div>
+        `;
+    }
+
+    function updateDenominatorForm() {
+        const numVarsDenominator = document.getElementById('numVarsDenominator').value;
+        const denominatorForm = document.getElementById('denominatorForm');
+        denominatorForm.innerHTML = '';
+
+        for (let i = 1; i <= numVarsDenominator; i++) {
+            denominatorForm.innerHTML += `
+                <div class="input-group">
+                    <label for="coefVarDenominator${i}">Coeficiente de variável ${i} no denominador</label>
+                    <input type="number" id="coefVarDenominator${i}" placeholder="Coeficiente de x${i}">
+                </div>
+                <div class="input-group">
+                    <label for="expVarDenominator${i}">Expoente de variável ${i} no denominador</label>
+                    <input type="number" id="expVarDenominator${i}" placeholder="Expoente de x${i}">
+                </div>
+            `;
+        }
+
+        denominatorForm.innerHTML += `
+            <div class="input-group">
+                <label for="constantDenominator">Constante no denominador</label>
+                <input type="number" id="constantDenominator" placeholder="Constante (Ex: 5)">
+            </div>
+        `;
     }
 
     function calculateIntegral() {
-        const integralVar = document.getElementById('integralVar').value;
         const integralType = document.getElementById('integralType').value;
-        const valuesOption = document.getElementById('valuesOption').value;
-        let result = '';
-        let functionLatex = '';
-        let finalResult = '';
+        const lowerLimit = parseFloat(document.getElementById('lowerLimit').value);
+        const upperLimit = parseFloat(document.getElementById('upperLimit').value);
 
-        try {
-            if (integralType === 'single') {
-                const numVars = document.getElementById('numVars').value;
-                const func = buildFunction(numVars, '');
+        let result = 0;
 
-                const expression = math.parse(func);
-                const integral = math.integrate(expression, integralVar);
+        if (integralType === 'single') {
+            const numVars = document.getElementById('numVars').value;
+            const coefficients = [];
+            const exponents = [];
+            const valuesOption = document.getElementById('valuesOption').value;
+            const values = [];
+            const constant = parseFloat(document.getElementById('constant').value);
 
-                result = integral.toString();
-                functionLatex = `\\int (${math.simplify(func).toTex()}) d${integralVar}`;
-
-                if (valuesOption === 'yes') {
-                    let limits = [];
-                    for (let i = 1; i <= numVars; i++) {
-                        limits.push([
-                            parseFloat(document.getElementById(`lowerLimitVar${i}`).value),
-                            parseFloat(document.getElementById(`upperLimitVar${i}`).value)
-                        ]);
-                    }
-                    finalResult = math.evaluate(integral, limits);
-                }
-
-            } else {
-                const numVarsNumerator = document.getElementById('numVarsNumerator').value;
-                const numVarsDenominator = document.getElementById('numVarsDenominator').value;
-                const numeratorFunc = buildFunction(numVarsNumerator, 'Numerator');
-                const denominatorFunc = buildFunction(numVarsDenominator, 'Denominator');
-
-                const fraction = `(${numeratorFunc}) / (${denominatorFunc})`;
-                const expression = math.parse(fraction);
-                const integral = math.integrate(expression, integralVar);
-
-                result = integral.toString();
-                functionLatex = `\\int \\frac{${math.simplify(numeratorFunc).toTex()}}{${math.simplify(denominatorFunc).toTex()}} d${integralVar}`;
-
-                if (valuesOption === 'yes') {
-                    let limitsNumerator = [];
-                    for (let i = 1; i <= numVarsNumerator; i++) {
-                        limitsNumerator.push([
-                            parseFloat(document.getElementById(`lowerLimitVarNumerator${i}`).value),
-                            parseFloat(document.getElementById(`upperLimitVarNumerator${i}`).value)
-                        ]);
-                    }
-                    let limitsDenominator = [];
-                    for (let i = 1; i <= numVarsDenominator; i++) {
-                        limitsDenominator.push([
-                            parseFloat(document.getElementById(`lowerLimitVarDenominator${i}`).value),
-                            parseFloat(document.getElementById(`upperLimitVarDenominator${i}`).value)
-                        ]);
-                    }
-
-                    const limits = [...limitsNumerator, ...limitsDenominator];
-                    finalResult = math.evaluate(integral, limits);
+            for (let i = 1; i <= numVars; i++) {
+                coefficients.push(parseFloat(document.getElementById(`coefVar${i}`).value) || 0);
+                exponents.push(parseFloat(document.getElementById(`expVar${i}`).value) || 0);
+            }
+            if (valuesOption === 'yes') {
+                for (let i = 1; i <= numVars; i++) {
+                    values.push(parseFloat(document.getElementById(`valueVar${i}`).value) || 0);
                 }
             }
 
-            if (finalResult !== '') {
-                result += ` = ${finalResult}`;
+            // Método dos trapézios para a integral
+            const trapezoidal = (f, a, b, n) => {
+                const h = (b - a) / n;
+                let sum = (f(a) + f(b)) / 2;
+                for (let i = 1; i < n; i++) {
+                    sum += f(a + i * h);
+                }
+                return sum * h;
+            };
+
+            const f = (x) => {
+                let sum = constant;
+                for (let i = 0; i < numVars; i++) {
+                    sum += coefficients[i] * Math.pow(x, exponents[i]);
+                }
+                return sum;
+            };
+
+            result = trapezoidal(f, lowerLimit, upperLimit, 1000);
+        } else if (integralType === 'fraction') {
+            // Integração de frações pode ser mais complexa e pode exigir métodos mais avançados
+            const numVarsNumerator = document.getElementById('numVarsNumerator').value;
+            const coefficientsNumerator = [];
+            const exponentsNumerator = [];
+            const constantNumerator = parseFloat(document.getElementById('constantNumerator').value);
+
+            for (let i = 1; i <= numVarsNumerator; i++) {
+                coefficientsNumerator.push(parseFloat(document.getElementById(`coefVarNumerator${i}`).value) || 0);
+                exponentsNumerator.push(parseFloat(document.getElementById(`expVarNumerator${i}`).value) || 0);
             }
 
-            document.getElementById('result').innerHTML = `
-                <h3>Resultado da Integral:</h3>
-                <p>Resultado: ${result}</p>
-                <p>Forma Latex: ${functionLatex}</p>
-            `;
-            MathJax.typeset();
-        } catch (error) {
-            document.getElementById('result').innerHTML = `
-                <h3>Erro no cálculo:</h3>
-                <p>${error.message}</p>
-            `;
+            const numVarsDenominator = document.getElementById('numVarsDenominator').value;
+            const coefficientsDenominator = [];
+            const exponentsDenominator = [];
+            const constantDenominator = parseFloat(document.getElementById('constantDenominator').value);
+
+            for (let i = 1; i <= numVarsDenominator; i++) {
+                coefficientsDenominator.push(parseFloat(document.getElementById(`coefVarDenominator${i}`).value) || 0);
+                exponentsDenominator.push(parseFloat(document.getElementById(`expVarDenominator${i}`).value) || 0);
+            }
+
+            // Método dos trapézios para a integral de uma fração
+            const fNumerator = (x) => {
+                let sum = constantNumerator;
+                for (let i = 0; i < numVarsNumerator; i++) {
+                    sum += coefficientsNumerator[i] * Math.pow(x, exponentsNumerator[i]);
+                }
+                return sum;
+            };
+
+            const fDenominator = (x) => {
+                let sum = constantDenominator;
+                for (let i = 0; i < numVarsDenominator; i++) {
+                    sum += coefficientsDenominator[i] * Math.pow(x, exponentsDenominator[i]);
+                }
+                return sum;
+            };
+
+            const f = (x) => {
+                return fNumerator(x) / fDenominator(x);
+            };
+
+            result = trapezoidal(f, lowerLimit, upperLimit, 1000);
         }
+
+        document.getElementById('result').innerText = `Resultado da integral: ${result.toFixed(4)}`;
     }
 </script>
 
 </body>
 </html>
+
