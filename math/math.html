@@ -3,11 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora Avançada de Derivadas e Integrais</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/algebrite/1.2.0/algebrite.all.min.js"></script>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <title>Calculadora de Limites Avançada</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.6.2/math.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -16,7 +14,7 @@
         .input-area {
             margin-bottom: 20px;
         }
-        label, input, select, button {
+        label, input, button {
             display: block;
             margin-bottom: 10px;
         }
@@ -25,11 +23,12 @@
             align-items: center;
             margin-bottom: 5px;
         }
+        .input-row label {
+            width: 150px;
+        }
         .input-row input {
             margin-right: 10px;
-        }
-        #plot {
-            margin-top: 30px;
+            width: 100px;
         }
         .math-output {
             font-size: 1.2em;
@@ -39,36 +38,18 @@
 </head>
 <body>
 
-<h1>Calculadora Avançada de Derivadas e Integrais</h1>
+<h1>Calculadora Avançada de Limites</h1>
 
 <div class="input-area">
-    <label for="operation">Escolha a operação:</label>
-    <select id="operation" onchange="updateForm()">
-        <option value="derivada">Derivada</option>
-        <option value="integral">Integral</option>
-    </select>
-
-    <label for="numVariables">Escolha o número de variáveis (1 a 6):</label>
-    <select id="numVariables" onchange="updateVariableInputs()">
-        <option value="1">1</option>
-        <option value="2">2</option>
-        <option value="3">3</option>
-        <option value="4">4</option>
-        <option value="5">5</option>
-        <option value="6">6</option>
-    </select>
+    <label for="numVars">Número de Variáveis (1 a 4):</label>
+    <input type="number" id="numVars" min="1" max="4" value="1" onchange="updateForm()">
 
     <div id="variableInputs"></div>
 
-    <div id="integralSection" style="display: none;">
-        <label for="limits">Limites (somente para integrais definidas, no formato a,b):</label>
-        <input type="text" id="limits" placeholder="Ex: 0,10" oninput="updateOutput()">
-    </div>
+    <label for="limitPoint">Ponto do Limite:</label>
+    <input type="number" id="limitPoint" step="any" placeholder="Ex: 1" oninput="updateOutput()">
 
-    <label for="order">Ordem (somente para derivadas):</label>
-    <input type="number" id="order" value="1" min="1" max="10" oninput="updateOutput()">
-
-    <button onclick="calculate()">Calcular</button>
+    <button onclick="calculateLimit()">Calcular Limite</button>
 </div>
 
 <div id="result">
@@ -76,138 +57,73 @@
     <p class="math-output" id="output"></p>
 </div>
 
-<div id="plot"></div>
-
 <script>
     function updateForm() {
-        const operation = document.getElementById('operation').value;
-        const integralSection = document.getElementById('integralSection');
-
-        if (operation === 'integral') {
-            integralSection.style.display = 'block';
-        } else {
-            integralSection.style.display = 'none';
-        }
-
-        updateVariableInputs(); // Atualiza os campos de variáveis conforme a seleção
-    }
-
-    function updateVariableInputs() {
-        const numVariables = parseInt(document.getElementById('numVariables').value, 10);
+        const numVars = parseInt(document.getElementById('numVars').value);
         const variableInputs = document.getElementById('variableInputs');
-        variableInputs.innerHTML = ''; // Limpa entradas anteriores
+        variableInputs.innerHTML = '';
 
-        let html = '';
-        for (let i = 0; i < numVariables; i++) {
-            html += `<div class="input-row">
-                        <label for="coeff${i}">Coeficiente para variável ${String.fromCharCode(120 + i)}:</label>
-                        <input type="number" id="coeff${i}" placeholder="Coeficiente ${i + 1}" oninput="updateOutput()">
-                    </div>`;
+        for (let i = 1; i <= numVars; i++) {
+            const inputRow = document.createElement('div');
+            inputRow.className = 'input-row';
+            inputRow.innerHTML = `
+                <label for="coef_${i}">Coeficiente para x${i}:</label>
+                <input type="number" id="coef_${i}" step="any" placeholder="Coeficiente">
+            `;
+            variableInputs.appendChild(inputRow);
         }
 
-        variableInputs.innerHTML = html;
-        updateOutput(); // Atualiza a visualização com as variáveis atuais
+        updateOutput();
     }
 
     function updateOutput() {
-        const operation = document.getElementById('operation').value;
-        const numVariables = parseInt(document.getElementById('numVariables').value, 10);
+        const numVars = parseInt(document.getElementById('numVars').value);
         const coefficients = [];
-        for (let i = 0; i < numVariables; i++) {
-            coefficients.push(parseFloat(document.getElementById(`coeff${i}`).value) || 0);
-        }
-        const order = parseInt(document.getElementById('order').value, 10);
-        const limits = document.getElementById('limits').value.split(',').map(c => parseFloat(c.trim()));
-        const variables = [];
-        for (let i = 0; i < numVariables; i++) {
-            variables.push(String.fromCharCode(120 + i)); // x, y, z, ...
+        for (let i = 1; i <= numVars; i++) {
+            const coef = parseFloat(document.getElementById(`coef_${i}`).value) || 0;
+            coefficients.push(coef);
         }
 
-        let expr = '';
-        for (let i = 0; i < coefficients.length; i++) {
-            expr += (coefficients[i] || 1) + (variables[i] ? '*' + variables[i] : '') + (i < coefficients.length - 1 ? ' + ' : '');
-        }
-
-        let result;
-        if (operation === 'integral') {
-            if (limits.length === 2 && !isNaN(limits[0]) && !isNaN(limits[1])) {
-                result = `\\int_{${limits[0]}}^{${limits[1]}} ${expr}`;
-            } else {
-                result = `\\int ${expr}`;
+        const point = parseFloat(document.getElementById('limitPoint').value);
+        if (coefficients.length > 0 && !isNaN(point)) {
+            try {
+                const result = calculateLimit(coefficients, point);
+                const formula = buildFormula(coefficients, numVars);
+                document.getElementById('output').innerHTML = `
+                    \\( \\lim_{{x \\to ${point}}} ${formula} = ${result} \\)
+                `;
+                MathJax.typeset(); // Renderiza a notação matemática
+            } catch (error) {
+                document.getElementById('output').innerHTML = `Erro: ${error.message}`;
             }
-        } else if (operation === 'derivada') {
-            result = expr;
-            for (let i = 0; i < numVariables; i++) {
-                for (let j = 0; j < order; j++) {
-                    result = Algebrite.diff(result, variables[i]).toString();
-                }
-            }
-            result = `\\frac{d^${order}}{d${variables[0]}^${order}} ${expr}`;
-        }
-
-        document.getElementById('output').innerHTML = `\\(${result}\\)`;
-        MathJax.typeset(); // Renderiza a notação matemática
-    }
-
-    function calculate() {
-        const operation = document.getElementById('operation').value;
-        const numVariables = parseInt(document.getElementById('numVariables').value, 10);
-        const coefficients = [];
-        for (let i = 0; i < numVariables; i++) {
-            coefficients.push(parseFloat(document.getElementById(`coeff${i}`).value) || 0);
-        }
-        const order = parseInt(document.getElementById('order').value, 10);
-        const limits = document.getElementById('limits').value.split(',').map(c => parseFloat(c.trim()));
-        const variables = [];
-        for (let i = 0; i < numVariables; i++) {
-            variables.push(String.fromCharCode(120 + i)); // x, y, z, ...
-        }
-
-        let expr = '';
-        for (let i = 0; i < coefficients.length; i++) {
-            expr += (coefficients[i] || 1) + (variables[i] ? '*' + variables[i] : '') + (i < coefficients.length - 1 ? ' + ' : '');
-        }
-
-        let result;
-        try {
-            if (operation === 'integral') {
-                result = calculateIntegral(expr, variables, limits);
-            } else if (operation === 'derivada') {
-                result = calculateDerivative(expr, variables, order);
-            }
-
-            document.getElementById('output').innerHTML = `\\(${result}\\)`;
-            MathJax.typeset(); // Renderiza a notação matemática
-        } catch (error) {
-            document.getElementById('output').innerHTML = `Erro: ${error.message}`;
+        } else {
+            document.getElementById('output').innerHTML = '';
         }
     }
 
-    function calculateIntegral(expr, variables, limits) {
+    function buildFormula(coefficients, numVars) {
+        let formula = '';
+        for (let i = 0; i < numVars; i++) {
+            if (i > 0) formula += ' + ';
+            formula += coefficients[i] + (i > 0 ? ` x${i + 1}` : '');
+        }
+        return formula;
+    }
+
+    function calculateLimit(coefficients, point) {
         try {
-            let result = expr;
-            if (limits.length === 2) {
-                result = Algebrite.integral(result, variables[0]).toString() + ` evaluated from ${limits[0]} to ${limits[1]}`;
-            } else {
-                result = Algebrite.integral(result, variables[0]).toString();
-            }
+            // Cria a expressão da função usando os coeficientes fornecidos
+            const expr = coefficients.map((coef, index) => {
+                return coef + (index > 0 ? ` * x${index + 1}` : '');
+            }).join(' + ');
+
+            const parsedExpr = math.parse(expr);
+            const compiledExpr = parsedExpr.compile();
+            const result = compiledExpr.evaluate({ x: point });
+
             return result;
         } catch (error) {
-            throw new Error("Erro na integral: " + error.message);
-        }
-    }
-
-    function calculateDerivative(expr, variables, order) {
-        try {
-            let result = expr;
-            for (let i = 0; i < variables.length; i++) {
-                for (let j = 0; j < order; j++) {
-                    result = Algebrite.diff(result, variables[i]).toString();
-                }
-            }
-            return `\\frac{d^${order}}{d${variables[0]}^${order}} ${result}`;
-        } catch (error) {
-            throw new Error("Erro na derivada: " + error.message);
+            throw new Error("Erro ao calcular o limite: " + error.message);
         }
     }
 
