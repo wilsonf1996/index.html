@@ -1,239 +1,284 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resolução de Sistemas de Equações</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.9.1/math.min.js"></script>
+    <title>Calculadora de Limites com Múltiplas Variáveis</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.6.4/math.min.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f5f5f5;
-            margin: 0;
-            padding: 0;
+            margin: 20px;
         }
         .container {
-            max-width: 900px;
-            margin: 50px auto;
-            padding: 20px;
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            margin: auto;
         }
-        h1 {
+        h2 {
             text-align: center;
-            color: #333;
-            margin-bottom: 20px;
+        }
+        .input-group {
+            margin-bottom: 10px;
         }
         label {
             display: block;
-            font-size: 1.1em;
             margin-bottom: 5px;
-            color: #555;
         }
-        select, button {
-            width: calc(100% - 22px);
-            padding: 10px;
-            margin-bottom: 20px;
+        input, select, button {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
             border-radius: 4px;
             border: 1px solid #ccc;
-            box-sizing: border-box;
         }
-        button {
-            background-color: #007BFF;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .formulario {
-            margin-bottom: 20px;
-        }
-        .formulario .equacao {
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .formulario .equacao input, .formulario .equacao select {
-            margin: 0 5px;
-            width: 50px;
-            text-align: center;
-        }
-        .formulario .equacao span {
-            margin: 0 5px;
-            font-size: 1.2em;
-            display: inline-block;
-            width: 40px;
-            text-align: center;
-        }
-        .resultado, .erro {
-            text-align: center;
-            font-size: 1.2em;
+        .result {
             margin-top: 20px;
-        }
-        .resultado {
-            color: #333;
-        }
-        .erro {
-            color: red;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Resolução de Sistemas de Equações</h1>
-        <label for="tipoSistema">Tipo de Sistema:</label>
-        <select id="tipoSistema" onchange="atualizarFormulario()">
-            <option value="linear">Linear</option>
-            <option value="exponencial">Exponencial</option>
-        </select>
-        
-        <label for="numVariaveis">Número de Variáveis (1-4):</label>
-        <select id="numVariaveis" onchange="atualizarFormulario()">
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-        </select>
 
-        <div id="formulario" class="formulario"></div>
-        <button onclick="resolver()">Resolver</button>
-        <div class="resultado" id="resultado"></div>
-        <div class="erro" id="erro"></div>
+<div class="container">
+    <h2>Calculadora de Limites</h2>
+    
+    <div class="input-group">
+        <label for="limitType">Selecione o tipo de limite</label>
+        <select id="limitType" onchange="toggleFractionFields()">
+            <option value="single">Limite de uma função</option>
+            <option value="fraction">Limite de uma fração de funções</option>
+        </select>
     </div>
 
-    <script>
-        function atualizarFormulario() {
-            const tipoSistema = document.getElementById('tipoSistema').value;
-            const numVariaveis = parseInt(document.getElementById('numVariaveis').value);
-            const formulario = document.getElementById('formulario');
-            formulario.innerHTML = '';
+    <div id="fractionSection" style="display: none;">
+        <h3>Função no numerador</h3>
+        <div class="input-group">
+            <label for="numVarsNumerator">Número de variáveis no numerador</label>
+            <select id="numVarsNumerator" onchange="updateNumeratorForm()">
+                <option value="1">1 variável</option>
+                <option value="2">2 variáveis</option>
+                <option value="3">3 variáveis</option>
+                <option value="4">4 variáveis</option>
+            </select>
+        </div>
+        <div id="numeratorForm"></div>
 
-            const variaveis = Array.from({ length: numVariaveis }, (_, i) => `x_${i + 1}`);
+        <h3>Função no denominador</h3>
+        <div class="input-group">
+            <label for="numVarsDenominator">Número de variáveis no denominador</label>
+            <select id="numVarsDenominator" onchange="updateDenominatorForm()">
+                <option value="1">1 variável</option>
+                <option value="2">2 variáveis</option>
+                <option value="3">3 variáveis</option>
+                <option value="4">4 variáveis</option>
+            </select>
+        </div>
+        <div id="denominatorForm"></div>
+    </div>
 
-            if (tipoSistema === 'linear') {
-                for (let i = 1; i <= numVariaveis; i++) {
-                    const termosInputs = variaveis.map((variavel, index) => `
-                        <input type="number" id="a${i}_${index}" placeholder="Coef" value="${index + 1}" />
-                        <span>${variavel}</span>
-                    `).join(' + ');
+    <div id="singleFunctionSection">
+        <div class="input-group">
+            <label for="numVars">Selecione o número de variáveis</label>
+            <select id="numVars" onchange="updateForm()">
+                <option value="1">1 variável</option>
+                <option value="2">2 variáveis</option>
+                <option value="3">3 variáveis</option>
+                <option value="4">4 variáveis</option>
+            </select>
+        </div>
 
-                    formulario.innerHTML += `
-                        <div class="equacao">
-                            ${termosInputs} <span>=</span>
-                            <input type="number" id="b${i}" placeholder="Constante ${i}" value="${i + 2}" />
-                        </div>
-                    `;
-                }
-            } else if (tipoSistema === 'exponencial') {
-                for (let i = 1; i <= numVariaveis; i++) {
-                    const termosInputs = variaveis.map((variavel, index) => `
-                        <input type="number" id="a${i}_${index}" placeholder="Coef" value="${index + 1}" />
-                        <span>${variavel}<sup><input type="number" id="exp${i}_${index}" class="exp-input" placeholder="Exp" value="${index + 1}" /></sup></span>
-                    `).join(' + ');
+        <div id="variablesForm"></div>
+    </div>
 
-                    formulario.innerHTML += `
-                        <div class="equacao">
-                            ${termosInputs} <span>=</span>
-                            <input type="number" id="b${i}" placeholder="Constante ${i}" value="${i + 2}" />
-                        </div>
-                    `;
-                }
-            }
+    <button onclick="calculateLimit()">Calcular Limite</button>
+
+    <div id="result" class="result"></div>
+</div>
+
+<script>
+    function toggleFractionFields() {
+        const limitType = document.getElementById('limitType').value;
+        const fractionSection = document.getElementById('fractionSection');
+        const singleFunctionSection = document.getElementById('singleFunctionSection');
+
+        if (limitType === 'fraction') {
+            fractionSection.style.display = 'block';
+            singleFunctionSection.style.display = 'none';
+        } else {
+            fractionSection.style.display = 'none';
+            singleFunctionSection.style.display = 'block';
+        }
+    }
+
+    function updateForm() {
+        const numVars = document.getElementById('numVars').value;
+        const variablesForm = document.getElementById('variablesForm');
+        variablesForm.innerHTML = '';
+
+        for (let i = 1; i <= numVars; i++) {
+            variablesForm.innerHTML += `
+                <div class="input-group">
+                    <label for="coefVar${i}">Coeficiente de variável ${i} (Ex: 2 para 2x)</label>
+                    <input type="number" id="coefVar${i}" placeholder="Coeficiente de x${i}">
+                </div>
+                <div class="input-group">
+                    <label for="expVar${i}">Expoente de variável ${i} (Ex: 2 para x^2)</label>
+                    <input type="number" id="expVar${i}" placeholder="Expoente de x${i}">
+                </div>
+                <div class="input-group">
+                    <label for="limitVar${i}">Valor limite para variável ${i}</label>
+                    <input type="number" id="limitVar${i}" placeholder="Valor limite de x${i}">
+                </div>
+            `;
+        }
+        
+        variablesForm.innerHTML += `
+            <div class="input-group">
+                <label for="constant">Constante da função</label>
+                <input type="number" id="constant" placeholder="Constante (Ex: 5)">
+            </div>
+        `;
+    }
+
+    function updateNumeratorForm() {
+        const numVarsNumerator = document.getElementById('numVarsNumerator').value;
+        const numeratorForm = document.getElementById('numeratorForm');
+        numeratorForm.innerHTML = '';
+
+        for (let i = 1; i <= numVarsNumerator; i++) {
+            numeratorForm.innerHTML += `
+                <div class="input-group">
+                    <label for="coefVarNumerator${i}">Coeficiente de variável ${i} no numerador</label>
+                    <input type="number" id="coefVarNumerator${i}" placeholder="Coeficiente de x${i}">
+                </div>
+                <div class="input-group">
+                    <label for="expVarNumerator${i}">Expoente de variável ${i} no numerador</label>
+                    <input type="number" id="expVarNumerator${i}" placeholder="Expoente de x${i}">
+                </div>
+            `;
         }
 
-        function resolver() {
-            const tipoSistema = document.getElementById('tipoSistema').value;
-            const numVariaveis = parseInt(document.getElementById('numVariaveis').value);
-            const resultadoDiv = document.getElementById('resultado');
-            const erroDiv = document.getElementById('erro');
+        numeratorForm.innerHTML += `
+            <div class="input-group">
+                <label for="constantNumerator">Constante no numerador</label>
+                <input type="number" id="constantNumerator" placeholder="Constante (Ex: 5)">
+            </div>
+        `;
+    }
 
-            resultadoDiv.textContent = '';
-            erroDiv.textContent = '';
+    function updateDenominatorForm() {
+        const numVarsDenominator = document.getElementById('numVarsDenominator').value;
+        const denominatorForm = document.getElementById('denominatorForm');
+        denominatorForm.innerHTML = '';
+
+        for (let i = 1; i <= numVarsDenominator; i++) {
+            denominatorForm.innerHTML += `
+                <div class="input-group">
+                    <label for="coefVarDenominator${i}">Coeficiente de variável ${i} no denominador</label>
+                    <input type="number" id="coefVarDenominator${i}" placeholder="Coeficiente de x${i}">
+                </div>
+                <div class="input-group">
+                    <label for="expVarDenominator${i}">Expoente de variável ${i} no denominador</label>
+                    <input type="number" id="expVarDenominator${i}" placeholder="Expoente de x${i}">
+                </div>
+            `;
+        }
+
+        denominatorForm.innerHTML += `
+            <div class="input-group">
+                <label for="constantDenominator">Constante no denominador</label>
+                <input type="number" id="constantDenominator" placeholder="Constante (Ex: 5)">
+            </div>
+        `;
+    }
+
+    function buildFunction(numVars, type) {
+        let func = '';
+        for (let i = 1; i <= numVars; i++) {
+            const coef = document.getElementById(`coefVar${type}${i}`).value || 1;
+            const exp = document.getElementById(`expVar${type}${i}`).value || 1;
+            func += `${coef} * x${i}^${exp} + `;
+        }
+
+        const constant = document.getElementById(`constant${type}`).value || 0;
+        func += `${constant}`;
+        return func;
+    }
+
+    function calculateLimit() {
+        const limitType = document.getElementById('limitType').value;
+        let result = '';
+
+        if (limitType === 'single') {
+            const numVars = document.getElementById('numVars').value;
+            const func = buildFunction(numVars, '');
+            
+            let limits = {};
+            for (let i = 1; i <= numVars; i++) {
+                const limitValue = parseFloat(document.getElementById(`limitVar${i}`).value);
+                limits[`x${i}`] = limitValue;
+            }
 
             try {
-                const equacoes = [];
-                for (let i = 1; i <= numVariaveis; i++) {
-                    const coeficientes = Array.from({ length: numVariaveis }, (_, j) => {
-                        const coef = parseFloat(document.getElementById(`a${i}_${j}`).value) || 0;
-                        const exp = tipoSistema === 'exponencial' ? (parseFloat(document.getElementById(`exp${i}_${j}`).value) || 1) : 1;
-                        return { coef, exp };
-                    });
-                    const constante = parseFloat(document.getElementById(`b${i}`).value) || 0;
-
-                    equacoes.push({ coeficientes, constante });
-                }
-
-                let resultado;
-                if (tipoSistema === 'linear') {
-                    resultado = resolverSistemaLinear(equacoes, numVariaveis);
-                } else if (tipoSistema === 'exponencial') {
-                    resultado = resolverSistemaExponencial(equacoes, numVariaveis);
-                }
-
-                const resultadoTexto = Object.entries(resultado)
-                    .map(([variavel, valor]) => `${variavel} = ${valor.toFixed(2)}`)
-                    .join(', ');
-
-                resultadoDiv.textContent = `Resultados: ${resultadoTexto}`;
+                const expression = math.parse(func);
+                const compiled = expression.compile();
+                result = compiled.evaluate(limits);
             } catch (error) {
-                erroDiv.textContent = `Erro: ${error.message}`;
+                document.getElementById('result').innerHTML = `<p style="color: red;">Erro ao calcular o limite: ${error.message}</p>`;
+                return;
             }
-        }
+        } else {
+            const numVarsNumerator = document.getElementById('numVarsNumerator').value;
+            const numVarsDenominator = document.getElementById('numVarsDenominator').value;
 
-        function resolverSistemaLinear(equacoes, numVariaveis) {
-            const A = [];
-            const B = [];
+            const numeratorFunc = buildFunction(numVarsNumerator, 'Numerator');
+            const denominatorFunc = buildFunction(numVarsDenominator, 'Denominator');
 
-            for (const eq of equacoes) {
-                const row = Array(numVariaveis).fill(0);
-                for (let j = 0; j < numVariaveis; j++) {
-                    row[j] = eq.coeficientes[j].coef;
-                }
-                A.push(row);
-                B.push(eq.constante);
+            let limitsNumerator = {};
+            for (let i = 1; i <= numVarsNumerator; i++) {
+                limitsNumerator[`x${i}`] = parseFloat(document.getElementById(`limitVarNumerator${i}`).value);
             }
 
-            const A_matrix = math.matrix(A);
-            const B_matrix = math.matrix(B);
+            let limitsDenominator = {};
+            for (let i = 1; i <= numVarsDenominator; i++) {
+                limitsDenominator[`x${i}`] = parseFloat(document.getElementById(`limitVarDenominator${i}`).value);
+            }
 
             try {
-                const solution = math.lusolve(A_matrix, B_matrix);
-                const resultado = {};
+                const numeratorExpression = math.parse(numeratorFunc);
+                const denominatorExpression = math.parse(denominatorFunc);
 
-                for (let i = 0; i < numVariaveis; i++) {
-                    resultado[`x_${i + 1}`] = solution.valueOf()[i];
-                }
+                const numeratorCompiled = numeratorExpression.compile();
+                const denominatorCompiled = denominatorExpression.compile();
 
-                return resultado;
+                const numeratorResult = numeratorCompiled.evaluate(limitsNumerator);
+                const denominatorResult = denominatorCompiled.evaluate(limitsDenominator);
+
+                result = numeratorResult / denominatorResult;
             } catch (error) {
-                throw new Error('Não foi possível resolver o sistema de equações.');
+                document.getElementById('result').innerHTML = `<p style="color: red;">Erro ao calcular o limite: ${error.message}</p>`;
+                return;
             }
         }
 
-        function resolverSistemaExponencial(equacoes, numVariaveis) {
-            // Esta função precisa ser implementada para resolver sistemas exponenciais
-            throw new Error('Resolução de sistemas exponenciais não implementada.');
-        }
+        document.getElementById('result').innerHTML = `
+            <h3>Resultado</h3>
+            <p>\\( \\lim ${result} \\)</p>
+        `;
 
-        // Preenche o formulário com um exemplo inicial ao carregar a página
-        window.onload = function() {
-            document.getElementById('tipoSistema').value = 'linear';
-            document.getElementById('numVariaveis').value = '2';
-            atualizarFormulario();
+        MathJax.typeset();
+    }
 
-            document.getElementById('a1_0').value = '1';
-            document.getElementById('a1_1').value = '2';
-            document.getElementById('b1').value = '3';
-            document.getElementById('a2_0').value = '1';
-            document.getElementById('a2_1').value = '2';
-            document.getElementById('b2').value = '4';
+    window.onload = function() {
+        updateForm();
+        updateNumeratorForm();
+        updateDenominatorForm();
+    }
+</script>
 
-            resolver();
-        };
-    </script>
 </body>
 </html>
-
