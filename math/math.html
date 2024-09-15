@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calculadora Avançada de Funções</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.0.0/math.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist@2.19.0"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js?config=TeX-MML-AM_CHTML"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -22,7 +24,7 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            max-width: 800px;
+            max-width: 1200px;
             width: 100%;
             overflow: auto;
         }
@@ -79,6 +81,15 @@
             font-weight: bold;
             text-align: center;
         }
+
+        .graph-container {
+            margin-top: 20px;
+        }
+
+        #plot {
+            width: 100%;
+            height: 400px;
+        }
     </style>
 </head>
 <body>
@@ -87,10 +98,10 @@
     <h1>Calculadora Avançada de Funções</h1>
 
     <label for="expression">Função:</label>
-    <input type="text" id="expression" placeholder="Ex: x^2 + y^2">
+    <input type="text" id="expression" placeholder="Ex: x^2 + y^2 + z">
 
-    <label for="variables">Variáveis (separadas por vírgula):</label>
-    <input type="text" id="variables" placeholder="Ex: x, y">
+    <label for="variables">Variáveis (separadas por vírgula, até 6):</label>
+    <input type="text" id="variables" placeholder="Ex: x, y, z">
 
     <label for="operation">Operação:</label>
     <select id="operation">
@@ -118,6 +129,11 @@
     <div class="result">
         <h3>Resultado:</h3>
         <textarea id="result" rows="8" readonly></textarea>
+    </div>
+
+    <div class="graph-container">
+        <h3>Gráfico:</h3>
+        <div id="plot"></div>
     </div>
 </div>
 
@@ -160,9 +176,11 @@
         const fractionalOrder = parseFloat(document.getElementById("fractionalOrder").value.trim()) || 1;
         const errorMessage = document.getElementById("errorMessage");
         const resultArea = document.getElementById("result");
+        const plotContainer = document.getElementById("plot");
         let result = '';
 
         errorMessage.textContent = '';
+        plotContainer.innerHTML = '';
 
         if (!expression || !variables || variables.length === 0) {
             errorMessage.textContent = "Por favor, insira uma função e as variáveis!";
@@ -184,6 +202,11 @@
                 }
             } else if (operation === 'derivative') {
                 result = calculateDerivative(expr, variables, fractionalOrder);
+            }
+
+            // Plot the result if it's a function of one variable
+            if (variables.length === 1) {
+                plotGraph(expr, variables[0]);
             }
         } catch (error) {
             errorMessage.textContent = "Erro ao calcular: " + error.message;
@@ -219,26 +242,64 @@
                 throw new Error("Número de limites não corresponde ao número de variáveis.");
             }
 
-            let result = expr.integrate(variables[0]).eval({ [variables[0]]: limits[0][0] });
+            let integral = expr;
+            for (let i = 0; i < variables.length; i++) {
+                integral = math.integral(integral, variables[i]);
+            }
+
+            let result = 0;
+            for (let i = 0; i < limits.length; i++) {
+                result += math.evaluate(integral, { [variables[i]]: limits[i][1] }) - math.evaluate(integral, { [variables[i]]: limits[i][0] });
+            }
+
             return result.toString();
         } catch (error) {
             return "Erro: " + error.message;
         }
     }
 
-    function calculateDerivative(expr, variables, order) {
+    function calculateDerivative(expr, variables, fractionalOrder) {
         try {
-            let result = expr.derivative(variables[0], order).toString();
+            let result = expr.derivative(variables[0]).toString();
             for (let i = 1; i < variables.length; i++) {
-                result = math.derivative(result, variables[i], order).toString();
+                result = math.derivative(result, variables[i]).toString();
             }
             return result;
         } catch (error) {
             return "Erro: " + error.message;
         }
     }
+
+    function plotGraph(expr, variable) {
+        try {
+            const xValues = [];
+            const yValues = [];
+            for (let x = -10; x <= 10; x += 0.1) {
+                xValues.push(x);
+                yValues.push(math.evaluate(expr, { [variable]: x }));
+            }
+
+            const trace = {
+                x: xValues,
+                y: yValues,
+                mode: 'lines',
+                type: 'scatter'
+            };
+
+            const data = [trace];
+
+            const layout = {
+                title: 'Gráfico da Função',
+                xaxis: { title: variable },
+                yaxis: { title: 'f(x)' }
+            };
+
+            Plotly.newPlot('plot', data, layout);
+        } catch (error) {
+            document.getElementById("errorMessage").textContent = "Erro ao gerar o gráfico: " + error.message;
+        }
+    }
 </script>
 
 </body>
 </html>
-
