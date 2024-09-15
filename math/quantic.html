@@ -3,26 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador de Portas Lógicas Quânticas</title>
+    <title>Calculadora Quântica</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f5f5f5;
+            background-color: #f4f4f9;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
         }
-        .container {
+        .calculator-container {
             background-color: white;
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
         }
         .qubit-display {
             font-size: 2em;
             margin-bottom: 20px;
             text-align: center;
+            color: #333;
         }
         .buttons {
             display: flex;
@@ -31,7 +37,7 @@
         }
         button {
             padding: 10px 20px;
-            font-size: 1em;
+            font-size: 16px;
             background-color: #6200ea;
             color: white;
             border: none;
@@ -41,38 +47,86 @@
         button:hover {
             background-color: #3700b3;
         }
+        .output {
+            margin-top: 20px;
+            font-size: 1.2em;
+            color: #555;
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>Simulador de Portas Lógicas Quânticas</h1>
-    <div class="qubit-display" id="qubitDisplay">|0⟩</div>
+<div class="calculator-container">
+    <h1>Calculadora Quântica</h1>
+    <div class="qubit-display" id="qubitDisplay">Estado do Qubit: |0⟩</div>
+    
     <div class="buttons">
-        <button onclick="applyGate('H')">Hadamard</button>
-        <button onclick="applyGate('X')">Pauli-X</button>
-        <button onclick="applyGate('Z')">Pauli-Z</button>
+        <button onclick="applyGate('H')">Porta Hadamard (H)</button>
+        <button onclick="applyGate('X')">Porta Pauli-X (X)</button>
+        <button onclick="applyGate('Z')">Porta Pauli-Z (Z)</button>
+        <button onclick="measureQubit()">Medir Qubit</button>
     </div>
+
     <div class="output" id="output"></div>
 </div>
 
 <script>
     let qubitState = "|0⟩";
+    let probabilityZero = 1; // Probabilidade de |0⟩
+    let probabilityOne = 0;  // Probabilidade de |1⟩
 
+    // Atualiza o estado visual do qubit
+    function updateDisplay() {
+        document.getElementById("qubitDisplay").innerText = `Estado do Qubit: ${qubitState}`;
+    }
+
+    // Aplica as portas quânticas
     function applyGate(gate) {
         if (gate === 'H') {
+            // Porta Hadamard: Superposição |0⟩ -> 1/√2(|0⟩ + |1⟩), |1⟩ -> 1/√2(|0⟩ - |1⟩)
             if (qubitState === "|0⟩") {
                 qubitState = "1/√2(|0⟩ + |1⟩)";
+                probabilityZero = 0.5;
+                probabilityOne = 0.5;
             } else if (qubitState === "|1⟩") {
                 qubitState = "1/√2(|0⟩ - |1⟩)";
+                probabilityZero = 0.5;
+                probabilityOne = 0.5;
             }
         } else if (gate === 'X') {
-            qubitState = qubitState === "|0⟩" ? "|1⟩" : "|0⟩";
+            // Porta Pauli-X: Inverte o estado |0⟩ <-> |1⟩
+            if (qubitState === "|0⟩") {
+                qubitState = "|1⟩";
+                probabilityZero = 0;
+                probabilityOne = 1;
+            } else if (qubitState === "|1⟩") {
+                qubitState = "|0⟩";
+                probabilityZero = 1;
+                probabilityOne = 0;
+            }
         } else if (gate === 'Z') {
-            qubitState = qubitState === "|0⟩" ? "|0⟩" : "-|1⟩";
+            // Porta Pauli-Z: Aplica uma fase ao estado |1⟩ (transforma em -|1⟩)
+            if (qubitState === "|1⟩") {
+                qubitState = "-|1⟩";
+            }
         }
-        document.getElementById("qubitDisplay").innerText = qubitState;
+        updateDisplay();
     }
+
+    // Função para medir o qubit (colapso para |0⟩ ou |1⟩)
+    function measureQubit() {
+        const randomValue = Math.random();
+        let measuredState;
+        if (randomValue < probabilityZero) {
+            measuredState = "|0⟩";
+        } else {
+            measuredState = "|1⟩";
+        }
+        document.getElementById("output").innerText = `Medição do Qubit: ${measuredState}`;
+    }
+
+    // Inicializa o estado visual
+    updateDisplay();
 </script>
 
 </body>
