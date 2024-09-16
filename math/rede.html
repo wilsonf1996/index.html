@@ -16,6 +16,9 @@
 <body>
     <h1>Informações do Dispositivo</h1>
     <div class="info">
+        <strong>Data e Hora:</strong> <span id="date-time"></span>
+    </div>
+    <div class="info">
         <strong>Navegador:</strong> <span id="browser"></span>
     </div>
     <div class="info">
@@ -25,7 +28,7 @@
         <strong>Resolução da Tela:</strong> <span id="screen-resolution"></span>
     </div>
     <div class="info">
-        <strong>Cor Profundidade:</strong> <span id="color-depth"></span>
+        <strong>Profundidade de Cor:</strong> <span id="color-depth"></span>
     </div>
     <div class="info">
         <strong>Plugins:</strong> <span id="plugins"></span>
@@ -39,7 +42,34 @@
     <div class="info">
         <strong>Localização:</strong> <span id="location"></span>
     </div>
+    <div class="info">
+        <strong>IP Público:</strong> <span id="ip"></span>
+    </div>
+    <div class="info">
+        <strong>IPs Locais:</strong> <span id="local-ips"></span>
+    </div>
+    <div class="info">
+        <strong>Uso da CPU:</strong> <span id="cpu"></span>
+    </div>
+    <div class="info">
+        <strong>Memória RAM:</strong> <span id="memory"></span>
+    </div>
+    <div class="info">
+        <strong>Armazenamento:</strong> <span id="storage"></span>
+    </div>
+    <div class="info">
+        <strong>Status da Bateria:</strong> <span id="battery-status"></span>
+    </div>
+    <div class="info">
+        <strong>GPU:</strong> <span id="gpu"></span>
+    </div>
+    <div class="info">
+        <strong>Tipo de Dispositivo:</strong> <span id="device-type"></span>
+    </div>
     <script>
+        // Data e Hora Atual
+        document.getElementById('date-time').textContent = new Date().toLocaleString();
+
         // Navegador
         document.getElementById('browser').textContent = navigator.userAgent;
 
@@ -75,7 +105,7 @@
         // Tipo de Conexão
         if ('connection' in navigator) {
             const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-            document.getElementById('connection-type').textContent = `${connection.effectiveType}`;
+            document.getElementById('connection-type').textContent = connection.effectiveType;
         }
 
         // Localização
@@ -84,6 +114,106 @@
         }, () => {
             document.getElementById('location').textContent = 'Não foi possível obter a localização';
         });
+
+        // IP Público
+        fetch('https://api.ipify.org?format=json')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('ip').textContent = data.ip;
+            })
+            .catch(() => {
+                document.getElementById('ip').textContent = 'Não foi possível obter IP';
+            });
+
+        // IPs Locais (WebRTC)
+        function getLocalIPs(callback) {
+            const ips = [];
+            const rtc = new RTCPeerConnection({ iceServers: [] });
+
+            rtc.createDataChannel('');
+            rtc.createOffer().then(offer => rtc.setLocalDescription(offer));
+
+            rtc.onicecandidate = event => {
+                if (event.candidate) {
+                    const ip = /([0-9]{1,3}\.){3}[0-9]{1,3}/.exec(event.candidate.candidate);
+                    if (ip) ips.push(ip[0]);
+                }
+            };
+
+            rtc.onicecandidate = () => {
+                if (ips.length > 0) {
+                    callback(ips);
+                }
+            };
+        }
+
+        getLocalIPs(ips => {
+            document.getElementById('local-ips').textContent = ips.join(', ');
+        });
+
+        // Uso da CPU (Experimental)
+        if (window.navigator && window.navigator.hardwareConcurrency) {
+            document.getElementById('cpu').textContent = `${navigator.hardwareConcurrency} núcleos`;
+        } else {
+            document.getElementById('cpu').textContent = 'Não disponível';
+        }
+
+        // Memória RAM
+        if (navigator.deviceMemory) {
+            document.getElementById('memory').textContent = `${navigator.deviceMemory} GB`;
+        } else {
+            document.getElementById('memory').textContent = 'Não disponível';
+        }
+
+        // Armazenamento (Estimativa)
+        if ('storage' in navigator && 'estimate' in navigator.storage) {
+            navigator.storage.estimate().then(estimate => {
+                const quota = estimate.quota / (1024 * 1024 * 1024); // GB
+                const usage = estimate.usage / (1024 * 1024 * 1024); // GB
+                document.getElementById('storage').textContent = `Armazenamento: ${usage.toFixed(2)} GB de ${quota.toFixed(2)} GB disponíveis`;
+            }).catch(() => {
+                document.getElementById('storage').textContent = 'Não foi possível obter o armazenamento';
+            });
+        } else {
+            document.getElementById('storage').textContent = 'Não disponível';
+        }
+
+        // Status da Bateria
+        if ('getBattery' in navigator) {
+            navigator.getBattery().then(battery => {
+                document.getElementById('battery-status').textContent = `Nível: ${battery.level * 100}%`;
+            }).catch(() => {
+                document.getElementById('battery-status').textContent = 'Não disponível';
+            });
+        }
+
+        // GPU (Informações limitadas)
+        function getWebGLInfo() {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl');
+            if (gl) {
+                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                if (debugInfo) {
+                    const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+                    const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+                    return `${vendor} - ${renderer}`;
+                }
+            }
+            return 'Não disponível';
+        }
+
+        document.getElementById('gpu').textContent = getWebGLInfo();
+
+        // Tipo de Dispositivo
+        function getDeviceType() {
+            const ua = navigator.userAgent;
+            if (/Mobile|Android|iP(hone|od|ad)|IEMobile|BlackBerry|Opera Mini|IEMobile|Windows Phone/.test(ua)) {
+                return 'Mobile';
+            }
+            return 'Desktop';
+        }
+
+        document.getElementById('device-type').textContent = getDeviceType();
     </script>
 </body>
 </html>
