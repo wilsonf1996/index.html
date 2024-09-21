@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Treino App</title>
+    <title>Autenticação - Treino App</title>
     <style>
-        /* Estilos básicos */
-        body { font-family: Arial, sans-serif; }
-        #auten-section, #workout-section { padding: 20px; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+        #auten-section { padding: 20px; }
+        input { margin-bottom: 10px; width: 100%; padding: 10px; }
+        button { padding: 10px; width: 100%; }
+        #auth-message { color: red; margin-top: 10px; }
     </style>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
@@ -15,7 +17,7 @@
 <body onload="initApp()">
 
 <div id="auten-section">
-    <h2>Auten</h2>
+    <h2>Autenticação</h2>
     <input type="email" id="email" placeholder="E-mail" required>
     <input type="password" id="password" placeholder="Senha" required>
     <button onclick="loginUser()">Login</button>
@@ -24,15 +26,10 @@
     <div id="auth-message"></div>
 </div>
 
-<div id="workout-section" style="display:none;">
-    <h2>Treino</h2>
-    <!-- Conteúdo do app de treino -->
-</div>
-
 <script>
     // Configuração do Firebase
     var firebaseConfig = {
-       apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+        apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
         authDomain: "agenda-6accc.firebaseapp.com",
         databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
         projectId: "agenda-6accc",
@@ -45,56 +42,76 @@
     function initApp() {
         firebase.auth().onAuthStateChanged(user => {
             if (user) {
-                // Usuário autenticado
-                document.getElementById("auten-section").style.display = "none";
-                document.getElementById("workout-section").style.display = "block";
-                // Carregar treino ou outras funções
-            } else {
-                // Usuário não autenticado
-                document.getElementById("auten-section").style.display = "block";
-                document.getElementById("workout-section").style.display = "none";
+                // Usuário autenticado, redirecionar para o app de treino
+                window.location.href = "treino-app.html"; // Substitua pelo URL do seu app de treino
             }
         });
     }
 
     function loginUser() {
-        const email = document.getElementById("email").value;
+        const email = document.getElementById("email").value.trim();
         const password = document.getElementById("password").value;
 
-        firebase.auth().signInWithEmailAndPassword(email, password)
-            .then(() => {
-                // Login bem-sucedido, a seção de treino será exibida automaticamente
-            })
-            .catch(error => {
-                document.getElementById("auth-message").innerText = error.message;
-            });
+        if (validateInput(email, password)) {
+            firebase.auth().signInWithEmailAndPassword(email, password)
+                .then(() => {
+                    // Login bem-sucedido, redireciona para o app de treino
+                    window.location.href = "treino-app.html"; // Substitua pelo URL do seu app de treino
+                })
+                .catch(error => {
+                    showAuthMessage(error.message);
+                });
+        }
     }
 
     function registerUser() {
-        const email = document.getElementById("email").value;
+        const email = document.getElementById("email").value.trim();
         const password = document.getElementById("password").value;
 
-        firebase.auth().createUserWithEmailAndPassword(email, password)
-            .then(() => {
-                document.getElementById("auth-message").innerText = "Cadastro bem-sucedido!";
-            })
-            .catch(error => {
-                document.getElementById("auth-message").innerText = error.message;
-            });
+        if (validateInput(email, password)) {
+            firebase.auth().createUserWithEmailAndPassword(email, password)
+                .then(() => {
+                    showAuthMessage("Cadastro bem-sucedido! Você pode fazer login.");
+                })
+                .catch(error => {
+                    showAuthMessage(error.message);
+                });
+        }
     }
 
     function sendPasswordReset() {
-        const email = document.getElementById("email").value;
+        const email = document.getElementById("email").value.trim();
 
-        firebase.auth().sendPasswordResetEmail(email)
-            .then(() => {
-                document.getElementById("auth-message").innerText = "E-mail de recuperação enviado!";
-            })
-            .catch(error => {
-                document.getElementById("auth-message").innerText = error.message;
-            });
+        if (email) {
+            firebase.auth().sendPasswordResetEmail(email)
+                .then(() => {
+                    showAuthMessage("E-mail de recuperação enviado!");
+                })
+                .catch(error => {
+                    showAuthMessage(error.message);
+                });
+        } else {
+            showAuthMessage("Por favor, insira seu e-mail.");
+        }
+    }
+
+    function validateInput(email, password) {
+        if (!email) {
+            showAuthMessage("E-mail não pode estar vazio.");
+            return false;
+        }
+        if (!password) {
+            showAuthMessage("Senha não pode estar vazia.");
+            return false;
+        }
+        return true;
+    }
+
+    function showAuthMessage(message) {
+        document.getElementById("auth-message").innerText = message;
     }
 </script>
 
 </body>
 </html>
+
