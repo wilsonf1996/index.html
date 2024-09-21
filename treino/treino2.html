@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Treino Semanal</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            margin: 20px;
+            background-color: #333; 
+            color: white; 
+            background-image: url('https://raw.githubusercontent.com/wilsonf1996/index.html/main/DALL%C2%B7E%202023-12-23%2002.59.48%20-%20impressionante%20imagem%20de%20fundo%20para%20aplicativo%20pessoal%20de%20engenheiro%20civil%20fundo%20preto%2C%20hiperrealista%20e%20com%20disgner%20moderno.png');
+            background-size: cover; 
+            background-position: center; 
+        }
+
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .calendar-day {
+            background-color: #444;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .calendar-day:hover {
+            background-color: #555;
+        }
+
+        .workout-options {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        button {
+            background-color: #555;
+            color: white;
+            padding: 10px;
+            margin-top: 10px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #aaa;
+        }
+
+        .workout-history {
+            margin-top: 20px;
+            color: #fff;
+        }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+</head>
+
+<body>
+    <h1>Treino Semanal</h1>
+
+    <div class="calendar" id="calendar"></div>
+
+    <div class="workout-options" id="workout-options">
+        <h3>Escolha o treino de hoje:</h3>
+        <button onclick="selectWorkout('Cardio')">Cardio</button>
+        <button onclick="selectWorkout('Peito e Tríceps')">Peito e Tríceps</button>
+        <button onclick="selectWorkout('Costas e Bíceps')">Costas e Bíceps</button>
+        <button onclick="selectWorkout('Ombro')">Ombro</button>
+        <button onclick="selectWorkout('Perna')">Perna</button>
+        <button onclick="selectWorkout('Alongamento')">Alongamento</button>
+    </div>
+
+    <div class="workout-history" id="workout-history"></div>
+
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+            measurementId: "G-CVBQ54PERH"
+        };
+
+        // Inicialização do Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        function loadCalendar() {
+            const calendar = document.getElementById('calendar');
+            for (let i = 1; i <= 30; i++) {
+                const dayDiv = document.createElement('div');
+                dayDiv.classList.add('calendar-day');
+                dayDiv.textContent = `Dia ${i}`;
+                dayDiv.onclick = () => loadWorkoutForDay(i);
+                calendar.appendChild(dayDiv);
+            }
+        }
+
+        function loadWorkoutForDay(day) {
+            const workoutOptions = document.getElementById('workout-options');
+            const workoutHistory = document.getElementById('workout-history');
+            workoutOptions.innerHTML = `<h3>Treinos para o Dia ${day}</h3>`;
+            workoutHistory.innerHTML = '';
+
+            // Recupera os treinos salvos do Firebase
+            database.ref(`treinos/dia${day}`).once('value', (snapshot) => {
+                if (snapshot.exists()) {
+                    const workoutData = snapshot.val();
+                    workoutHistory.innerHTML = `<p>Treino: ${workoutData.type}, Calorias: ${workoutData.calories}, Data: ${workoutData.date}</p>`;
+                } else {
+                    workoutHistory.innerHTML = `<p>Nenhum treino salvo para este dia.</p>`;
+                }
+            });
+        }
+
+        function selectWorkout(workoutType) {
+            const selectedDay = prompt('Selecione o dia (1-30):');
+            if (!selectedDay) return;
+
+            const calories = calculateCalories(workoutType);
+            saveWorkout(selectedDay, workoutType, calories);
+        }
+
+        function saveWorkout(day, workoutType, calories) {
+            const workoutData = {
+                type: workoutType,
+                calories: calories,
+                date: new Date().toLocaleString()
+            };
+            database.ref(`treinos/dia${day}`).set(workoutData);
+            alert(`Treino ${workoutType} salvo para o dia ${day} com ${calories} calorias.`);
+        }
+
+        function calculateCalories(workoutType) {
+            let calories;
+            switch (workoutType) {
+                case 'Cardio':
+                    calories = 300; // Exemplo de cálculo para 30 minutos de cardio
+                    break;
+                case 'Peito e Tríceps':
+                    calories = 200;
+                    break;
+                case 'Costas e Bíceps':
+                    calories = 250;
+                    break;
+                case 'Ombro':
+                    calories = 150;
+                    break;
+                case 'Perna':
+                    calories = 300; // Inclui exercícios de panturrilha, glúteo, coxa, etc.
+                    break;
+                case 'Alongamento':
+                    calories = 100;
+                    break;
+                default:
+                    calories = 0;
+            }
+            return calories;
+        }
+
+        loadCalendar();
+    </script>
+</body>
+
+</html>
