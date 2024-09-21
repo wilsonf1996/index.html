@@ -1,235 +1,234 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App de Treino</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <script type="module">
-        // Importando módulos do Firebase
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
-        import { getDatabase, ref, set, get, remove } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
-            authDomain: "agenda-6accc.firebaseapp.com",
-            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
-            projectId: "agenda-6accc",
-            storageBucket: "agenda-6accc.appspot.com",
-            messagingSenderId: "794262176773",
-            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
-            measurementId: "G-CVBQ54PERH"
-        };
-
-        // Inicialização do Firebase
-        const app = initializeApp(firebaseConfig);
-        const database = getDatabase(app);
-
-        window.workout = [];
-        window.muscleExercises = {
-            "Peito": ["Supino Reto", "Supino Inclinado", "Crossover", "Peck Deck", "Flexão de Braço", "Mergulho", "Pullover", "Supino com Halteres", "Chest Press", "Push Up com Peso"],
-            "Costas": ["Puxada na Barra", "Remada", "Levantamento Terra", "Barra Fixa", "Remada Curvada", "Puxada com Pegada Inversa", "Remada Unilateral", "Puxada na Polia", "Levantamento com Halteres", "Deadlift"],
-            "Ombro": ["Desenvolvimento", "Elevação Lateral", "Elevação Frontal", "Arnold Press", "Remada Alta", "Face Pull", "Elevação de Ombros", "Crucifixo Inverso", "Push Press", "Landmine Press"],
-            "Bíceps": ["Rosca Direta", "Rosca Alternada", "Rosca Scott", "Rosca Martelo", "Rosca Inversa", "Rosca Concentrada", "Rosca na Polia", "Rosca com Halteres", "Bíceps na Barra", "Preacher Curl"],
-            "Tríceps": ["Tríceps na Polia", "Mergulho", "Extensão de Tríceps", "Tríceps Francês", "Tríceps com Halteres", "Tríceps na Barra", "Kickback", "Tríceps com Corda", "Skull Crusher", "Close Grip Bench Press"],
-            "Perna": ["Agachamento", "Leg Press", "Cadeira Extensora", "Cadeira Abdutora", "Leg Curl", "Agachamento Sumô", "Passada", "Stiff", "Panturrilha em Pé", "Panturrilha Sentado"],
-            "Glúteo": ["Cadeira Abdutora", "Elevação de Quadril", "Agachamento com Peso", "Stiff com Halteres", "Ponte de Glúteo", "Afundo", "Kettlebell Swing", "Glute Bridge", "Single Leg Deadlift", "Step Up"],
-            "Abdome": ["Abdominal", "Prancha", "Elevação de Pernas", "Abdominal Inverso", "Bicycle Crunch", "Prancha Lateral", "Russian Twist", "Mountain Climbers", "Hanging Leg Raise", "V-Ups"]
-        };
-
-        window.showTab = function(tabId) {
-            document.querySelectorAll('.tab-pane').forEach(tab => {
-                tab.classList.remove('active', 'show');
-            });
-            document.getElementById(tabId).classList.add('active', 'show');
-        }
-
-        window.addCardioExercise = function() {
-            const exercise = document.getElementById('cardio-exercise').value;
-            const time = document.getElementById('cardio-time').value;
-            const speed = document.getElementById('cardio-speed').value;
-            if (time && speed) {
-                window.workout.push({ type: 'cardio', exercise, time, speed });
-                displayWorkout();
-            } else {
-                alert("Preencha todos os campos de cardio!");
-            }
-        }
-
-        window.addMuscleExercise = function(exercise) {
-            const load = prompt("Digite a carga em kg:");
-            const reps = prompt("Digite o número de repetições:");
-            const sets = prompt("Digite o número de séries:");
-            if (load && reps && sets) {
-                window.workout.push({ type: 'musculacao', exercise, load, reps, sets });
-                displayWorkout();
-            } else {
-                alert("Preencha todos os campos de musculação!");
-            }
-        }
-
-        window.loadMuscleExercises = function() {
-            const area = document.getElementById('muscle-area').value;
-            const exercisesDiv = document.getElementById('muscle-exercises');
-            exercisesDiv.innerHTML = '';
-            if (area) {
-                exercisesDiv.style.display = 'block';
-                window.muscleExercises[area].forEach(exercise => {
-                    const button = document.createElement('button');
-                    button.innerText = exercise;
-                    button.className = "btn btn-secondary m-1";
-                    button.onclick = () => addMuscleExercise(exercise);
-                    exercisesDiv.appendChild(button);
-                });
-            } else {
-                exercisesDiv.style.display = 'none';
-            }
-        }
-
-        window.displayWorkout = function() {
-            const workoutBody = document.getElementById('workout-body');
-            workoutBody.innerHTML = '';
-            window.workout.forEach((item, index) => {
-                const row = document.createElement('tr');
-                if (item.type === 'cardio') {
-                    row.innerHTML = `
-                        <td>${item.exercise}</td>
-                        <td>${item.time} min, ${item.speed} km/h</td>
-                        <td><input type="checkbox" onclick="this.parentNode.parentNode.classList.toggle('completed');"></td>
-                        <td><button class="btn btn-danger" onclick="removeExercise(${index})">Remover</button></td>
-                    `;
-                } else if (item.type === 'musculacao') {
-                    row.innerHTML = `
-                        <td>${item.exercise}</td>
-                        <td>${item.load} kg, ${item.reps} repetições, ${item.sets} séries</td>
-                        <td><input type="checkbox" onclick="this.parentNode.parentNode.classList.toggle('completed');"></td>
-                        <td><button class="btn btn-danger" onclick="removeExercise(${index})">Remover</button></td>
-                    `;
-                }
-                workoutBody.appendChild(row);
-            });
-        }
-
-        window.removeExercise = function(index) {
-            window.workout.splice(index, 1);
-            displayWorkout();
-        }
-
-        window.saveWorkout = function() {
-            const date = document.getElementById('date').value;
-            if (date) {
-                const reference = ref(database, 'workouts/' + date);
-                set(reference, window.workout);
-                alert('Treino salvo com sucesso!');
-            } else {
-                alert('Selecione uma data para salvar o treino.');
-            }
-        }
-
-        window.loadWorkout = function() {
-            const date = document.getElementById('date').value;
-            if (date) {
-                const reference = ref(database, 'workouts/' + date);
-                get(reference).then((snapshot) => {
-                    window.workout = snapshot.val() || [];
-                    displayWorkout();
-                });
-            }
-        }
-
-        window.clearTodayWorkouts = function() {
-            const date = document.getElementById('date').value;
-            if (date) {
-                const reference = ref(database, 'workouts/' + date);
-                remove(reference);
-                window.workout = [];
-                displayWorkout();
-                alert('Treinos limpos com sucesso!');
-            } else {
-                alert('Selecione uma data para limpar os treinos.');
-            }
-        }
-    </script>
+    <title>Treino App</title>
     <style>
-        .completed {
-            text-decoration: line-through;
-            color: gray;
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            color: #333;
         }
-        .tab-content {
+
+        h1, h2 {
+            color: #4CAF50;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
             margin-top: 20px;
         }
-        .date-input {
-            margin: 10px 0;
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        tbody tr:hover {
+            background-color: #f1f1f1;
         }
     </style>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js"></script>
 </head>
-
 <body>
-    <div class="container">
-        <h1>App de Treino</h1>
-        <div class="date-input">
-            <label for="date">Selecione a Data:</label>
-            <input type="date" id="date" onchange="loadWorkout()">
-        </div>
-        
-        <ul class="nav nav-tabs">
-            <li class="nav-item">
-                <a class="nav-link active" onclick="showTab('cardio')">Cardio</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" onclick="showTab('musculacao')">Musculação</a>
-            </li>
-        </ul>
 
-        <div class="tab-content">
-            <div id="cardio" class="tab-pane active">
-                <h2>Exercícios de Cardio</h2>
-                <select id="cardio-exercise">
-                    <option value="Corrida">Corrida</option>
-                    <option value="Ciclismo">Ciclismo</option>
-                    <option value="Natação">Natação</option>
-                    <option value="Pular Corda">Pular Corda</option>
-                </select>
-                <div>
-                    <label>Duração (min):</label>
-                    <input type="number" id="cardio-time" min="1">
-                    <label>Velocidade (km/h):</label>
-                    <input type="number" id="cardio-speed" min="1">
-                    <button class="btn btn-primary" onclick="addCardioExercise()">Adicionar Exercício</button>
-                </div>
-            </div>
-            
-            <div id="musculacao" class="tab-pane">
-                <h2>Exercícios de Musculação</h2>
-                <select id="muscle-area" onchange="loadMuscleExercises()">
-                    <option value="">Escolha uma área</option>
-                    <option value="Peito">Peito</option>
-                    <option value="Costas">Costas</option>
-                    <option value="Ombro">Ombro</option>
-                    <option value="Bíceps">Bíceps</option>
-                    <option value="Tríceps">Tríceps</option>
-                    <option value="Perna">Perna</option>
-                    <option value="Glúteo">Glúteo</option>
-                    <option value="Abdome">Abdome</option>
-                </select>
-                <div id="muscle-exercises" style="display: none;"></div>
-            </div>
-        </div>
+<h1>Treino App</h1>
 
-        <h2>Seu Treino</h2>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Exercício</th>
-                    <th>Detalhes</th>
-                    <th>Concluído</th>
-                    <th>Remover</th>
-                </tr>
-            </thead>
-            <tbody id="workout-body"></tbody>
-        </table>
-        <button class="btn btn-success" onclick="saveWorkout()">Salvar Treino</button>
-        <button class="btn btn-danger" onclick="clearTodayWorkouts()">Limpar Treinos</button>
-    </div>
+<label for="date">Selecione a Data:</label>
+<input type="date" id="date" onchange="loadWorkout()">
+
+<h2>Exercícios de Cardio</h2>
+<label for="cardio-exercise">Escolha um Exercício:</label>
+<select id="cardio-exercise">
+    <option value="Corrida">Corrida</option>
+    <option value="Bicicleta">Bicicleta</option>
+    <option value="Natação">Natação</option>
+</select>
+<label for="cardio-time">Duração (min):</label>
+<input type="number" id="cardio-time" min="1" required>
+<label for="cardio-speed">Velocidade (km/h):</label>
+<input type="number" id="cardio-speed" min="1" required>
+<button onclick="addCardioExercise()">Adicionar Cardio</button>
+
+<h2>Exercícios de Musculação</h2>
+<label for="muscle-exercise">Escolha um Exercício:</label>
+<select id="muscle-exercise">
+    <option value="Push Up">Push Up</option>
+    <option value="Agachamento">Agachamento</option>
+    <option value="Supino">Supino</option>
+    <option value="Puxada">Puxada</option>
+    <option value="Leg Press">Leg Press</option>
+    <option value="Cadeira Extensora">Cadeira Extensora</option>
+    <option value="Cadeira Flexora">Cadeira Flexora</option>
+    <option value="Levantamento Terra">Levantamento Terra</option>
+    <option value="Flexão de Braço">Flexão de Braço</option>
+    <option value="Tríceps na Barra">Tríceps na Barra</option>
+</select>
+<label for="muscle-load">Carga (kg):</label>
+<input type="number" id="muscle-load" min="1" required>
+<label for="muscle-reps">Repetições:</label>
+<input type="number" id="muscle-reps" min="1" required>
+<label for="muscle-sets">Séries:</label>
+<input type="number" id="muscle-sets" min="1" required>
+<button onclick="addMuscleExercise()">Adicionar Musculação</button>
+
+<h2>Seu Treino</h2>
+<table id="workout-table">
+    <thead>
+        <tr>
+            <th>Exercício</th>
+            <th>Detalhes</th>
+            <th>Concluído</th>
+            <th>Remover</th>
+        </tr>
+    </thead>
+    <tbody id="workout-body"></tbody>
+</table>
+
+<script>
+// Configuração do Firebase
+const firebaseConfig = {
+    apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+    authDomain: "agenda-6accc.firebaseapp.com",
+    databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+    projectId: "agenda-6accc",
+    storageBucket: "agenda-6accc.appspot.com",
+    messagingSenderId: "794262176773",
+    appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+    measurementId: "G-CVBQ54PERH"
+};
+
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+window.workout = [];
+
+// Função para carregar o treino
+function loadWorkout() {
+    const date = document.getElementById('date').value;
+    if (date) {
+        const reference = database.ref('workouts/' + date);
+        reference.get().then((snapshot) => {
+            window.workout = snapshot.val() || [];
+            if (!Array.isArray(window.workout)) {
+                window.workout = [];
+            }
+            displayWorkout();
+        }).catch((error) => {
+            console.error("Erro ao carregar treino:", error);
+            window.workout = [];
+            displayWorkout();
+        });
+    }
+}
+
+// Função para exibir o treino
+function displayWorkout() {
+    const tbody = document.getElementById('workout-body');
+    tbody.innerHTML = '';
+
+    window.workout.forEach((exercise, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${exercise.type === 'musculacao' ? exercise.exercise : exercise.exercise}</td>
+            <td>${exercise.type === 'musculacao' ? exercise.load + ' kg, ' + exercise.reps + ' repetições, ' + exercise.sets + ' séries' : exercise.time + ' min, ' + exercise.speed + ' km/h'}</td>
+            <td><input type="checkbox" onclick="markAsDone(${index})"></td>
+            <td><button onclick="removeExercise(${index})">Remover</button></td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Função para adicionar exercício de cardio
+function addCardioExercise() {
+    const exercise = document.getElementById('cardio-exercise').value;
+    const time = document.getElementById('cardio-time').value;
+    const speed = document.getElementById('cardio-speed').value;
+    if (time && speed) {
+        window.workout.push({ type: 'cardio', exercise, time, speed });
+        saveWorkout();
+        displayWorkout();
+    } else {
+        alert("Preencha todos os campos de cardio!");
+    }
+}
+
+// Função para adicionar exercício de musculação
+function addMuscleExercise() {
+    const exercise = document.getElementById('muscle-exercise').value;
+    const load = document.getElementById('muscle-load').value;
+    const reps = document.getElementById('muscle-reps').value;
+    const sets = document.getElementById('muscle-sets').value;
+    
+    if (load && reps && sets) {
+        window.workout.push({ type: 'musculacao', exercise, load, reps, sets });
+        saveWorkout();
+        displayWorkout();
+    } else {
+        alert("Preencha todos os campos de musculação!");
+    }
+}
+
+// Função para marcar exercício como concluído
+function markAsDone(index) {
+    alert("Exercício marcado como concluído!");
+}
+
+// Função para remover exercício
+function removeExercise(index) {
+    window.workout.splice(index, 1);
+    saveWorkout();
+    displayWorkout();
+}
+
+// Função para salvar treino no Firebase
+function saveWorkout() {
+    const date = document.getElementById('date').value;
+    if (date) {
+        database.ref('workouts/' + date).set(window.workout);
+    }
+}
+</script>
+
 </body>
 </html>
