@@ -1,1 +1,206 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Treino Diário</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: Arial, sans-serif;
+        }
+        .card {
+            margin: 20px 0;
+        }
+        .table {
+            margin-top: 20px;
+        }
+        .btn-custom {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-custom:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center">Treino do Dia</h1>
 
+        <div class="card">
+            <div class="card-body">
+                <h5>Escolha seus exercícios de Cardio:</h5>
+                <div id="cardio-exercises">
+                    <div class="form-group">
+                        <label for="cardio-type-1">Exercício Cardio 1:</label>
+                        <select class="form-control" id="cardio-type-1">
+                            <option value="Corrida">Corrida</option>
+                            <option value="Caminhada">Caminhada</option>
+                            <option value="Bicicleta">Bicicleta</option>
+                            <option value="HIIT">HIIT</option>
+                            <option value="Pular Corda">Pular Corda</option>
+                        </select>
+                        <label for="cardio-time-1">Duração (min):</label>
+                        <input type="number" class="form-control" id="cardio-time-1" placeholder="Minutos">
+                        <label for="cardio-speed-1">Velocidade (km/h):</label>
+                        <input type="number" class="form-control" id="cardio-speed-1" placeholder="Velocidade">
+                    </div>
+                </div>
+
+                <h5>Escolha a parte do corpo:</h5>
+                <select class="form-control" id="body-part" onchange="loadMuscleExercises()">
+                    <option value="">Selecione uma parte do corpo</option>
+                    <option value="Peito">Peito</option>
+                    <option value="Costas">Costas</option>
+                    <option value="Ombro">Ombro</option>
+                    <option value="Bíceps">Bíceps</option>
+                    <option value="Tríceps">Tríceps</option>
+                    <option value="Perna">Perna</option>
+                    <option value="Abdome">Abdome</option>
+                </select>
+
+                <div id="muscle-exercises" style="display:none;">
+                    <h5>Escolha seus exercícios de Musculação:</h5>
+                    <div id="exercise-list"></div>
+                </div>
+
+                <button class="btn btn-custom" onclick="saveWorkout()">Salvar Treino</button>
+            </div>
+        </div>
+
+        <h3>Treinos Salvos</h3>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Exercício</th>
+                    <th>Tipo</th>
+                    <th>Calorias</th>
+                    <th>Detalhes</th>
+                </tr>
+            </thead>
+            <tbody id="workout-body"></tbody>
+        </table>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+            measurementId: "G-CVBQ54PERH"
+        };
+
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        function loadMuscleExercises() {
+            const selectedPart = document.getElementById('body-part').value;
+            const exerciseList = document.getElementById('exercise-list');
+            exerciseList.innerHTML = '';
+
+            if (selectedPart) {
+                document.getElementById('muscle-exercises').style.display = 'block';
+                const exercises = getExercises(selectedPart);
+                exercises.forEach((exercise, index) => {
+                    exerciseList.innerHTML += `
+                        <div class="form-group">
+                            <label for="${selectedPart.toLowerCase()}-type-${index + 1}">${exercise}</label>
+                            <input type="number" class="form-control" id="${selectedPart.toLowerCase()}-load-${index + 1}" placeholder="Carga (kg)">
+                            <input type="number" class="form-control" id="${selectedPart.toLowerCase()}-reps-${index + 1}" placeholder="Repetições">
+                            <input type="number" class="form-control" id="${selectedPart.toLowerCase()}-sets-${index + 1}" placeholder="Séries">
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        function getExercises(part) {
+            const exercises = {
+                "Peito": ["Supino", "Flexão de Braços", "Cross Over", "Peck Deck", "Pullover", "Dumbbell Fly", "Barbell Bench Press"],
+                "Costas": ["Remada", "Puxada", "Levantamento Terra", "Pull-up", "Remada Unilateral", "Barra Fixa", "Deadlift"],
+                "Ombro": ["Desenvolvimento", "Elevação Lateral", "Elevação Frontal", "Face Pull", "Arnold Press", "Barbell Overhead Press", "Dumbbell Shoulder Press"],
+                "Bíceps": ["Rosca Direta", "Rosca Alternada", "Rosca Martelo", "Rosca Scott", "Concentração", "Cable Curl", "Zottman Curl"],
+                "Tríceps": ["Tríceps Testa", "Mergulho", "Tríceps Pulley", "Kickback", "Extension", "Dumbbell Tricep Extension", "Close Grip Bench Press"],
+                "Perna": ["Agachamento", "Leg Press", "Cadeira Extensora", "Cadeira Flexora", "Panturrilha", "Stiff", "Agachamento Sumô"],
+                "Abdome": ["Abdominal", "Prancha", "Abdominal Inverso", "Elevação de Pernas", "Crunch", "Russian Twist", "Plank"],
+            };
+            return exercises[part];
+        }
+
+        function saveWorkout() {
+            const workouts = [];
+
+            // Salvar exercícios de cardio
+            const cardioType = document.getElementById(`cardio-type-1`);
+            const time = parseInt(document.getElementById(`cardio-time-1`).value);
+            const speed = parseFloat(document.getElementById(`cardio-speed-1`).value);
+            if (cardioType.value && time && speed) {
+                const calories = time * 10; // Exemplo de cálculo
+                workouts.push({
+                    type: cardioType.value,
+                    exerciseType: 'Cardio',
+                    calories: calories,
+                    details: `Duração: ${time} min, Velocidade: ${speed} km/h`,
+                });
+            }
+
+            // Salvar exercícios de musculação
+            const selectedPart = document.getElementById('body-part').value;
+            for (let i = 1; i <= 7; i++) {
+                const muscleLoad = parseFloat(document.getElementById(`${selectedPart.toLowerCase()}-load-${i}`).value);
+                const muscleReps = parseInt(document.getElementById(`${selectedPart.toLowerCase()}-reps-${i}`).value);
+                const muscleSets = parseInt(document.getElementById(`${selectedPart.toLowerCase()}-sets-${i}`).value);
+                if (muscleLoad && muscleReps && muscleSets) {
+                    const calories = (muscleLoad * muscleReps * muscleSets) / 20; // Exemplo de cálculo
+                    workouts.push({
+                        type: selectedPart,
+                        exerciseType: 'Musculação',
+                        calories: Math.round(calories),
+                        details: `Carga: ${muscleLoad} kg, Repetições: ${muscleReps}, Séries: ${muscleSets}`,
+                    });
+                }
+            }
+
+            // Salvar os treinos no Firebase
+            workouts.forEach(workout => {
+                database.ref('treinos/' + new Date().toLocaleDateString()).push(workout);
+            });
+
+            alert('Treino salvo com sucesso!');
+            loadSavedWorkouts();
+        }
+
+        function loadSavedWorkouts() {
+            database.ref('treinos/').once('value', (snapshot) => {
+                const data = snapshot.val();
+                const workoutBody = document.getElementById('workout-body');
+                workoutBody.innerHTML = '';
+
+                for (let date in data) {
+                    data[date].forEach(workout => {
+                        workoutBody.innerHTML += `
+                            <tr>
+                                <td>${workout.type}</td>
+                                <td>${workout.exerciseType}</td>
+                                <td>${workout.calories}</td>
+                                <td>${workout.details}</td>
+                            </tr>
+                        `;
+                    });
+                }
+            });
+        }
+
+        // Carregar treinos salvos ao iniciar a página
+        window.onload = loadSavedWorkouts;
+    </script>
+</body>
+</html>
