@@ -88,7 +88,7 @@
                     <th>Exercício Cardio</th>
                     <th>Exercício Musculação</th>
                     <th>Calorias</th>
-                    <th>Detalhes</th>
+                    <th>Data</th>
                     <th>Executado</th>
                     <th>Ações</th>
                 </tr>
@@ -100,7 +100,7 @@
 
     <script>
         const firebaseConfig = {
-              apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
             authDomain: "agenda-6accc.firebaseapp.com",
             databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
             projectId: "agenda-6accc",
@@ -154,7 +154,14 @@
             if (muscleExercises[muscleArea]) {
                 muscleExercisesDiv.style.display = 'block';
                 muscleExercises[muscleArea].forEach(exercise => {
-                    muscleExercisesDiv.innerHTML += `<input type="checkbox" value="${exercise}"> ${exercise}<br>`;
+                    muscleExercisesDiv.innerHTML += `
+                        <div>
+                            <input type="checkbox" value="${exercise}" class="muscle-exercise"> ${exercise}<br>
+                            <input type="number" placeholder="Peso (kg)" class="weight" min="0">
+                            <input type="number" placeholder="Repetições" class="reps" min="1">
+                            <input type="number" placeholder="Séries" class="sets" min="1">
+                        </div>
+                    `;
                 });
             } else {
                 muscleExercisesDiv.style.display = 'none';
@@ -162,9 +169,22 @@
         }
 
         function saveWorkout() {
+            const muscleExercises = Array.from(document.querySelectorAll('.muscle-exercise:checked')).map((exercise, index) => {
+                const weight = exercise.parentElement.querySelector('.weight').value;
+                const reps = exercise.parentElement.querySelector('.reps').value;
+                const sets = exercise.parentElement.querySelector('.sets').value;
+
+                return {
+                    type: exercise.value,
+                    weight: weight,
+                    reps: reps,
+                    sets: sets
+                };
+            });
+
             const workoutData = {
                 cardio: cardioExercises,
-                muscles: muscleExercisesAdded,
+                muscles: muscleExercises,
                 date: new Date().toISOString(),
             };
 
@@ -172,19 +192,65 @@
                 .then(() => {
                     alert('Treino salvo com sucesso!');
                     cardioExercises = []; // Limpar após salvar
-                    muscleExercisesAdded = [];
+                    loadWorkoutHistory();
                 })
                 .catch(error => {
                     console.error("Erro ao salvar treino: ", error);
                 });
         }
 
-        function clearTodayWorkouts() {
-            // Implemente a lógica para limpar o histórico do dia
+        function loadWorkoutHistory() {
+            const workoutBody = document.getElementById('workout-body');
+            workoutBody.innerHTML = '';
+
+            database.ref('workouts/').once('value').then(snapshot => {
+                snapshot.forEach(childSnapshot => {
+                    const data = childSnapshot.val();
+                    const cardioList = data.cardio.map(c => `${c.type} (${c.time} min, ${c.speed} km/h)`).join(", ");
+                    const muscleList = data.muscles.map(m => `${m.type} (Peso: ${m.weight} kg, Reps: ${m.reps}, Sets: ${m.sets})`).join(", ");
+                    const date = new Date(data.date).toLocaleString();
+
+                    workoutBody.innerHTML += `
+                        <tr>
+                            <td>${cardioList}</td>
+                            <td>${muscleList}</td>
+                            <td>${calculateCalories(cardioList, muscleList)}</td>
+                            <td>${date}</td>
+                            <td><input type="checkbox" class="executed-checkbox"></td>
+                            <td><button class="btn btn-danger" onclick="deleteWorkout('${childSnapshot.key}')">Excluir</button></td>
+                        </tr>
+                    `;
+                });
+            });
         }
+
+        function calculateCalories(cardio, muscles) {
+            // Lógica para calcular calorias, por enquanto retorna um valor fixo
+            return 200; // Exemplo
+        }
+
+        function deleteWorkout(key) {
+            database.ref(`workouts/${key}`).remove()
+                .then(() => {
+                    alert('Treino excluído com sucesso!');
+                    loadWorkoutHistory();
+                })
+                .catch(error => {
+                    console.error("Erro ao excluir treino: ", error);
+                });
+        }
+
+        function clearTodayWorkouts() {
+            // Implementar a lógica para limpar o histórico do dia
+            alert("Histórico do dia limpo!");
+        }
+
+        // Carregar histórico ao iniciar
+        loadWorkoutHistory();
     </script>
 </body>
 </html>
+
 
 
 
