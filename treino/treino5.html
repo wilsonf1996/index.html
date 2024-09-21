@@ -174,112 +174,72 @@
         }
 
         function removeMuscleExercise(index) {
-            const group = document.getElementById(`muscle-group-${index}`);
-            group.remove();
+            const exerciseGroup = document.getElementById(`muscle-group-${index}`);
+            if (exerciseGroup) {
+                exerciseGroup.remove();
+            }
         }
 
         function addCardio() {
             const cardioContainer = document.getElementById('cardio-exercises');
-            const currentCount = cardioContainer.getElementsByClassName('form-group').length;
+            const cardioTime = document.getElementById('cardio-time-1').value;
+            const cardioType = document.getElementById('cardio-type-1').value;
+            const cardioSpeed = document.getElementById('cardio-speed-1').value;
 
-            cardioContainer.innerHTML += `
-                <div class="form-group" id="cardio-group-${currentCount}">
-                    <label for="cardio-type-${currentCount}">Exercício Cardio ${currentCount + 1}:</label>
-                    <select class="form-control" id="cardio-type-${currentCount}">
-                        <option value="Corrida">Corrida</option>
-                        <option value="Caminhada">Caminhada</option>
-                        <option value="Bicicleta">Bicicleta</option>
-                        <option value="HIIT">HIIT</option>
-                        <option value="Pular Corda">Pular Corda</option>
-                    </select>
-                    <label for="cardio-time-${currentCount}">Duração (min):</label>
-                    <input type="number" class="form-control" id="cardio-time-${currentCount}" placeholder="Minutos">
-                    <label for="cardio-speed-${currentCount}">Velocidade (km/h):</label>
-                    <input type="number" class="form-control" id="cardio-speed-${currentCount}" placeholder="Velocidade">
-                    <button class="btn btn-danger" onclick="removeCardioExercise(${currentCount})">Remover</button>
-                </div>
-            `;
-        }
-
-        function removeCardioExercise(index) {
-            const group = document.getElementById(`cardio-group-${index}`);
-            group.remove();
-        }
-
-        function saveWorkout() {
-            const workout = [];
-
-            // Coletando exercícios de Cardio
-            const cardioGroups = document.querySelectorAll('#cardio-exercises .form-group');
-            cardioGroups.forEach(group => {
-                const type = group.querySelector('select').value;
-                const time = group.querySelector('input[type="number"]').value;
-                const speed = group.querySelector('input[type="number"]:nth-of-type(2)').value;
-                workout.push({ type: 'Cardio', details: { type, time, speed } });
-            });
-
-            // Coletando exercícios de Musculação
-            const muscleGroups = document.querySelectorAll('#muscle-exercises .form-group');
-            muscleGroups.forEach(group => {
-                const type = group.querySelector('select').value;
-                const load = group.querySelector('input[type="number"]:nth-of-type(1)').value;
-                const reps = group.querySelector('input[type="number"]:nth-of-type(2)').value;
-                const sets = group.querySelector('input[type="number"]:nth-of-type(3)').value;
-                workout.push({ type: 'Musculação', details: { type, load, reps, sets } });
-            });
-
-            // Salvar no Firebase
-            const workoutRef = database.ref('treinos');
-            workoutRef.push(workout, (error) => {
-                if (error) {
-                    alert('Erro ao salvar o treino: ' + error.message);
-                } else {
-                    alert('Treino salvo com sucesso!');
-                    loadSavedWorkouts();
-                }
-            });
-        }
-
-        function loadSavedWorkouts() {
-            const workoutBody = document.getElementById('workout-body');
-            workoutBody.innerHTML = ""; // Limpa a tabela
-
-            const workoutRef = database.ref('treinos');
-            workoutRef.on('value', (snapshot) => {
-                snapshot.forEach((childSnapshot) => {
-                    const workout = childSnapshot.val();
-                    workout.forEach(item => {
-                        const type = item.type === 'Cardio' ? 'Cardio' : 'Musculação';
-                        const calories = calculateCalories(item.details);
-                        workoutBody.innerHTML += `
-                            <tr>
-                                <td>${item.details.type}</td>
-                                <td>${type}</td>
-                                <td>${calories}</td>
-                                <td>${JSON.stringify(item.details)}</td>
-                            </tr>
-                        `;
-                    });
-                });
-            });
-        }
-
-        function calculateCalories(details) {
-            // Calculo simplificado de calorias
-            if (details.type === 'Cardio') {
-                const speed = details.speed ? parseFloat(details.speed) : 0;
-                const time = details.time ? parseInt(details.time) : 0;
-                return (speed * time * 10).toFixed(2); // Aproximado
+            if (cardioTime && cardioSpeed) {
+                const row = `<tr><td>${cardioType}</td><td>Cardio</td><td>${calculateCardioCalories(cardioTime, cardioSpeed)}</td><td>Duração: ${cardioTime} min, Velocidade: ${cardioSpeed} km/h</td></tr>`;
+                document.getElementById('workout-body').innerHTML += row;
+                alert("Exercício Cardio adicionado!");
             } else {
-                const load = details.load ? parseFloat(details.load) : 0;
-                const reps = details.reps ? parseInt(details.reps) : 0;
-                const sets = details.sets ? parseInt(details.sets) : 0;
-                return (load * reps * sets * 0.1).toFixed(2); // Aproximado
+                alert("Por favor, preencha todos os campos!");
             }
         }
 
-        // Carregar treinos salvos ao iniciar
-        loadSavedWorkouts();
+        function calculateCardioCalories(time, speed) {
+            // Cálculo simplificado das calorias gastas
+            return Math.round(time * (speed * 0.2)); // Ajuste conforme necessário
+        }
+
+        function saveWorkout() {
+            const workoutData = [];
+            const cardioRows = document.querySelectorAll('#workout-body tr');
+            cardioRows.forEach(row => {
+                const cells = row.children;
+                workoutData.push({
+                    type: cells[1].innerText,
+                    exercise: cells[0].innerText,
+                    calories: cells[2].innerText,
+                    details: cells[3].innerText
+                });
+            });
+            // Adicionar musculação
+            const muscleExercisesDiv = document.getElementById('muscle-exercises');
+            const muscleGroups = muscleExercisesDiv.getElementsByClassName('form-group');
+            Array.from(muscleGroups).forEach(group => {
+                const type = group.querySelector('select').value;
+                const load = group.querySelector('input[id^="muscle-load"]').value;
+                const reps = group.querySelector('input[id^="muscle-reps"]').value;
+                const sets = group.querySelector('input[id^="muscle-sets"]').value;
+                workoutData.push({
+                    type: "Musculação",
+                    exercise: type,
+                    calories: calculateMuscleCalories(load, reps, sets), // Ajustar conforme necessário
+                    details: `Carga: ${load} kg, Repetições: ${reps}, Séries: ${sets}`
+                });
+            });
+            // Salvar no Firebase
+            const workoutRef = database.ref('workouts');
+            workoutRef.push(workoutData).then(() => {
+                alert("Treino salvo com sucesso!");
+            }).catch(error => {
+                console.error("Erro ao salvar treino:", error);
+            });
+        }
+
+        function calculateMuscleCalories(load, reps, sets) {
+            // Cálculo simplificado das calorias gastas na musculação
+            return Math.round((load * reps * sets) / 30); // Ajuste conforme necessário
+        }
     </script>
 </body>
 </html>
