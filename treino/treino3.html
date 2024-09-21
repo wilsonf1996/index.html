@@ -5,19 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Treino Diário</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.css" />
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             background-color: #f8f9fa;
             font-family: Arial, sans-serif;
-        }
-        #calendar {
-            margin: 20px 0;
         }
         .card {
             margin: 20px 0;
@@ -36,43 +29,58 @@
 </head>
 <body>
     <div class="container">
-        <h1 class="text-center">Treino Diário</h1>
-        <div id="calendar"></div>
+        <h1 class="text-center">Treino do Dia</h1>
 
         <div class="card">
             <div class="card-body">
-                <h5>Escolha a quantidade de exercícios de Cardio:</h5>
-                <select id="cardio-count" class="form-control" onchange="updateCardioExercises()">
-                    <option value="0">0</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                </select>
-                <div id="cardio-exercises"></div>
+                <h5>Escolha seus exercícios de Cardio:</h5>
+                <div id="cardio-exercises">
+                    <div class="form-group">
+                        <label for="cardio-type-1">Exercício Cardio 1:</label>
+                        <select class="form-control" id="cardio-type-1">
+                            <option value="Corrida">Corrida</option>
+                            <option value="Caminhada">Caminhada</option>
+                            <option value="Bicicleta">Bicicleta</option>
+                            <option value="HIIT">HIIT</option>
+                            <option value="Pular Corda">Pular Corda</option>
+                        </select>
+                        <label for="cardio-time-1">Duração (min):</label>
+                        <input type="number" class="form-control" id="cardio-time-1" placeholder="Minutos">
+                        <label for="cardio-speed-1">Velocidade (km/h):</label>
+                        <input type="number" class="form-control" id="cardio-speed-1" placeholder="Velocidade">
+                    </div>
+                    <!-- Adicione mais dois exercícios de cardio aqui -->
+                </div>
 
-                <h5>Escolha a quantidade de exercícios de Musculação:</h5>
-                <select id="muscle-count" class="form-control" onchange="updateMuscleExercises()">
-                    <option value="0">0</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5">5</option>
-                    <option value="6">6</option>
-                    <option value="7">7</option>
-                    <option value="8">8</option>
-                    <option value="9">9</option>
-                    <option value="10">10</option>
-                    <option value="11">11</option>
-                    <option value="12">12</option>
-                </select>
-                <div id="muscle-exercises"></div>
+                <h5>Escolha seus exercícios de Musculação:</h5>
+                <div id="muscle-exercises">
+                    <div class="form-group">
+                        <label for="muscle-type-1">Exercício Musculação 1:</label>
+                        <select class="form-control" id="muscle-type-1">
+                            <option value="Peito">Peito</option>
+                            <option value="Tríceps">Tríceps</option>
+                            <option value="Costas">Costas</option>
+                            <option value="Bíceps">Bíceps</option>
+                            <option value="Ombro">Ombro</option>
+                            <option value="Perna">Perna</option>
+                            <option value="Glúteo">Glúteo</option>
+                            <option value="Abdome">Abdome</option>
+                        </select>
+                        <label for="muscle-load-1">Carga (kg):</label>
+                        <input type="number" class="form-control" id="muscle-load-1" placeholder="Insira a carga">
+                        <label for="muscle-reps-1">Repetições:</label>
+                        <input type="number" class="form-control" id="muscle-reps-1" placeholder="Insira o número de repetições">
+                        <label for="muscle-sets-1">Séries:</label>
+                        <input type="number" class="form-control" id="muscle-sets-1" placeholder="Insira o número de séries">
+                    </div>
+                    <!-- Adicione mais 11 exercícios de musculação aqui -->
+                </div>
 
                 <button class="btn btn-custom" onclick="saveWorkout()">Salvar Treino</button>
             </div>
         </div>
 
-        <h3>Treinos do Dia Selecionado</h3>
+        <h3>Treinos Salvos</h3>
         <table class="table table-striped">
             <thead>
                 <tr>
@@ -84,8 +92,6 @@
             </thead>
             <tbody id="workout-body"></tbody>
         </table>
-
-        <canvas id="calorieChart" width="400" height="200"></canvas>
     </div>
 
     <script>
@@ -103,98 +109,8 @@
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        document.addEventListener('DOMContentLoaded', function() {
-            const calendarEl = document.getElementById('calendar');
-            const calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth',
-                dateClick: function(info) {
-                    loadWorkoutForDay(info.dateStr);
-                }
-            });
-            calendar.render();
-        });
-
-        function updateCardioExercises() {
-            const count = document.getElementById('cardio-count').value;
-            const cardioExercisesDiv = document.getElementById('cardio-exercises');
-            cardioExercisesDiv.innerHTML = ''; // Limpa exercícios anteriores
-
-            for (let i = 1; i <= count; i++) {
-                cardioExercisesDiv.innerHTML += `
-                    <div class="form-group">
-                        <label for="cardio-type-${i}">Exercício Cardio ${i}:</label>
-                        <select class="form-control" id="cardio-type-${i}">
-                            <option value="Corrida">Corrida</option>
-                            <option value="Caminhada">Caminhada</option>
-                            <option value="Bicicleta">Bicicleta</option>
-                            <option value="HIIT">HIIT</option>
-                            <option value="Pular Corda">Pular Corda</option>
-                        </select>
-                        <label for="cardio-time-${i}">Duração (min):</label>
-                        <input type="number" class="form-control" id="cardio-time-${i}" placeholder="Minutos">
-                        <label for="cardio-speed-${i}">Velocidade (km/h):</label>
-                        <input type="number" class="form-control" id="cardio-speed-${i}" placeholder="Velocidade">
-                    </div>
-                `;
-            }
-        }
-
-        function updateMuscleExercises() {
-            const count = document.getElementById('muscle-count').value;
-            const muscleExercisesDiv = document.getElementById('muscle-exercises');
-            muscleExercisesDiv.innerHTML = ''; // Limpa exercícios anteriores
-
-            for (let i = 1; i <= count; i++) {
-                muscleExercisesDiv.innerHTML += `
-                    <div class="form-group">
-                        <label for="muscle-type-${i}">Exercício Musculação ${i}:</label>
-                        <select class="form-control" id="muscle-type-${i}">
-                            <option value="Peito">Peito</option>
-                            <option value="Tríceps">Tríceps</option>
-                            <option value="Costas">Costas</option>
-                            <option value="Bíceps">Bíceps</option>
-                            <option value="Ombro">Ombro</option>
-                            <option value="Perna">Perna</option>
-                            <option value="Glúteo">Glúteo</option>
-                            <option value="Abdome">Abdome</option>
-                        </select>
-                        <label for="muscle-load-${i}">Carga (kg):</label>
-                        <input type="number" class="form-control" id="muscle-load-${i}" placeholder="Insira a carga">
-                        <label for="muscle-reps-${i}">Repetições:</label>
-                        <input type="number" class="form-control" id="muscle-reps-${i}" placeholder="Insira o número de repetições">
-                        <label for="muscle-sets-${i}">Séries:</label>
-                        <input type="number" class="form-control" id="muscle-sets-${i}" placeholder="Insira o número de séries">
-                    </div>
-                `;
-            }
-        }
-
-        function loadWorkoutForDay(date) {
-            const workoutBody = document.getElementById('workout-body');
-            workoutBody.innerHTML = "";
-            const selectedDay = new Date(date).toLocaleDateString(); // Formato: "DD/MM/YYYY"
-            database.ref(`treinos/${selectedDay}`).once('value').then(snapshot => {
-                const workouts = snapshot.val();
-                if (workouts) {
-                    let totalCalories = 0;
-                    for (const workout of Object.values(workouts)) {
-                        const row = workoutBody.insertRow();
-                        row.insertCell(0).textContent = workout.type;
-                        row.insertCell(1).textContent = workout.exerciseType;
-                        row.insertCell(2).textContent = workout.calories;
-                        row.insertCell(3).textContent = workout.details;
-                        totalCalories += workout.calories;
-                    }
-                    updateCalorieChart(totalCalories);
-                } else {
-                    alert("Nenhum treino encontrado para este dia.");
-                }
-            });
-        }
-
         function saveWorkout() {
             const workouts = [];
-            const selectedDay = new Date().toLocaleDateString(); // Formato: "DD/MM/YYYY"
 
             // Salvar exercícios de cardio
             for (let i = 1; i <= 3; i++) {
@@ -235,35 +151,34 @@
 
             // Salvar os treinos no Firebase
             workouts.forEach(workout => {
-                database.ref(`treinos/${selectedDay}`).push(workout);
+                database.ref('treinos/' + new Date().toLocaleDateString()).push(workout);
             });
 
-            alert(`Treinos salvos para o dia ${selectedDay}.`);
+            alert(`Treinos salvos para o dia de hoje.`);
+            loadWorkout(); // Carregar treinos salvos
         }
 
-        function updateCalorieChart(totalCalories) {
-            const ctx = document.getElementById('calorieChart').getContext('2d');
-            const chart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['Calorias Totais'],
-                    datasets: [{
-                        label: 'Calorias',
-                        data: [totalCalories],
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
+        function loadWorkout() {
+            const workoutBody = document.getElementById('workout-body');
+            workoutBody.innerHTML = "";
+            const selectedDay = new Date().toLocaleDateString(); // Formato: "DD/MM/YYYY"
+            database.ref(`treinos/${selectedDay}`).once('value').then(snapshot => {
+                const workouts = snapshot.val();
+                if (workouts) {
+                    for (const workout of Object.values(workouts)) {
+                        const row = workoutBody.insertRow();
+                        row.insertCell(0).textContent = workout.type;
+                        row.insertCell(1).textContent = workout.exerciseType;
+                        row.insertCell(2).textContent = workout.calories;
+                        row.insertCell(3).textContent = workout.details;
                     }
+                } else {
+                    alert("Nenhum treino encontrado para hoje.");
                 }
             });
         }
+
+        document.addEventListener('DOMContentLoaded', loadWorkout);
     </script>
 
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
