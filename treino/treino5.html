@@ -152,7 +152,6 @@
                 alert(`${cardioType} adicionado com sucesso!`);
                 clearCardioInputs();
                 displayWorkout();
-                updateWorkoutInDatabase();
             } else {
                 alert("Por favor, preencha todos os campos.");
             }
@@ -175,121 +174,105 @@
         };
 
         function loadMuscleExercises() {
-            const muscleArea = document.getElementById('muscle-area').value;
-            const muscleExercisesDiv = document.getElementById('muscle-exercises');
-            muscleExercisesDiv.innerHTML = '';
+            const area = document.getElementById('muscle-area').value;
+            const muscleDiv = document.getElementById('muscle-exercises');
+            muscleDiv.innerHTML = '';
 
-            if (muscleArea) {
-                muscleExercisesDiv.style.display = 'block';
-                const exercises = muscleExercises[muscleArea];
-                exercises.forEach((exercise, index) => {
-                    muscleExercisesDiv.innerHTML += `
-                        <div class="form-group">
-                            <label>${exercise}</label>
-                            <button class="btn btn-custom" onclick="addMuscleExercise('${exercise}')">Adicionar</button>
-                        </div>
+            if (muscleExercises[area]) {
+                muscleDiv.style.display = 'block';
+                muscleExercises[area].forEach(exercise => {
+                    const div = document.createElement('div');
+                    div.className = 'form-group';
+                    div.innerHTML = `
+                        <label>${exercise}:</label>
+                        <input type="number" class="form-control" id="${exercise}-weight" placeholder="Carga (kg)" min="0">
+                        <input type="number" class="form-control" id="${exercise}-reps" placeholder="Repetições" min="1">
+                        <input type="number" class="form-control" id="${exercise}-sets" placeholder="Séries" min="1">
+                        <button class="btn btn-custom mt-2" onclick="addMuscleExercise('${exercise}')">Adicionar ${exercise}</button>
                     `;
+                    muscleDiv.appendChild(div);
                 });
             } else {
-                muscleExercisesDiv.style.display = 'none';
+                muscleDiv.style.display = 'none';
             }
         }
 
-        function addMuscleExercise(exercise) {
-            muscleExercisesAdded.push({ type: exercise });
-            alert(`${exercise} adicionado com sucesso!`);
-            displayWorkout();
-            updateWorkoutInDatabase();
+        function addMuscleExercise(exerciseName) {
+            const weight = document.getElementById(`${exerciseName}-weight`).value;
+            const reps = document.getElementById(`${exerciseName}-reps`).value;
+            const sets = document.getElementById(`${exerciseName}-sets`).value;
+
+            if (weight && reps && sets) {
+                muscleExercisesAdded.push({ name: exerciseName, weight, reps, sets });
+                alert(`${exerciseName} adicionado com sucesso!`);
+                clearMuscleInputs(exerciseName);
+                displayWorkout();
+            } else {
+                alert("Por favor, preencha todos os campos.");
+            }
+        }
+
+        function clearMuscleInputs(exerciseName) {
+            document.getElementById(`${exerciseName}-weight`).value = '';
+            document.getElementById(`${exerciseName}-reps`).value = '';
+            document.getElementById(`${exerciseName}-sets`).value = '';
         }
 
         function displayWorkout() {
             const workoutBody = document.getElementById('workout-body');
             workoutBody.innerHTML = '';
 
-            cardioExercises.forEach((exercise, index) => {
-                workoutBody.innerHTML += `
-                    <tr>
-                        <td>${exercise.type} - ${exercise.time} min - ${exercise.speed} km/h</td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td><button class="btn btn-danger" onclick="removeCardioExercise(${index})">Remover</button></td>
-                    </tr>
-                `;
+            cardioExercises.forEach(cardio => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${cardio.type} - ${cardio.time} min, ${cardio.speed} km/h</td>`;
+                workoutBody.appendChild(row);
             });
 
-            muscleExercisesAdded.forEach((exercise, index) => {
-                workoutBody.innerHTML += `
-                    <tr>
-                        <td></td>
-                        <td>${exercise.type}</td>
-                        <td></td>
-                        <td></td>
-                        <td><button class="btn btn-danger" onclick="removeMuscleExercise(${index})">Remover</button></td>
-                    </tr>
-                `;
+            muscleExercisesAdded.forEach(muscle => {
+                const row = document.createElement('tr');
+                row.innerHTML += `<td></td><td>${muscle.name} - ${muscle.weight} kg, ${muscle.reps} reps, ${muscle.sets} sets</td>`;
+                workoutBody.appendChild(row);
             });
-        }
-
-        function removeCardioExercise(index) {
-            cardioExercises.splice(index, 1);
-            updateWorkoutInDatabase();
-            displayWorkout();
-        }
-
-        function removeMuscleExercise(index) {
-            muscleExercisesAdded.splice(index, 1);
-            updateWorkoutInDatabase();
-            displayWorkout();
         }
 
         function saveWorkout() {
-            if (cardioExercises.length === 0 && muscleExercisesAdded.length === 0) {
-                alert("Nenhum exercício adicionado para salvar.");
-            } else {
-                alert("Treino salvo com sucesso!");
-                updateWorkoutInDatabase();
-            }
-        }
-
-        function updateWorkoutInDatabase() {
-            const today = new Date().toISOString().split('T')[0];
             const workoutData = {
                 cardio: cardioExercises,
                 muscle: muscleExercisesAdded,
-                date: today
+                date: new Date().toISOString(),
             };
 
-            database.ref('workouts/' + today).set(workoutData);
+            database.ref('workouts').push(workoutData).then(() => {
+                document.getElementById('success-alert').innerText = "Treino salvo com sucesso!";
+                document.getElementById('success-alert').style.display = "block";
+                setTimeout(() => {
+                    document.getElementById('success-alert').style.display = "none";
+                }, 3000);
+                clearWorkout();
+            }).catch(error => {
+                alert("Erro ao salvar treino: " + error.message);
+            });
         }
 
-        function loadSavedWorkouts() {
-            const today = new Date().toISOString().split('T')[0]; // Obtém a data de hoje
-            database.ref('workouts/' + today).once('value').then((snapshot) => {
-                cardioExercises = [];
-                muscleExercisesAdded = [];
-
-                if (snapshot.exists()) {
-                    const workout = snapshot.val();
-                    cardioExercises = workout.cardio || [];
-                    muscleExercisesAdded = workout.muscle || [];
-                }
-
-                displayWorkout();
-            });
+        function clearWorkout() {
+            cardioExercises = [];
+            muscleExercisesAdded = [];
+            document.getElementById('cardio-type').value = '';
+            clearCardioInputs();
+            document.getElementById('muscle-area').value = '';
+            document.getElementById('muscle-exercises').innerHTML = '';
+            displayWorkout();
         }
 
         function clearTodayWorkouts() {
             cardioExercises = [];
             muscleExercisesAdded = [];
-            updateWorkoutInDatabase(); // Limpa os dados no Firebase
             displayWorkout();
             alert("Histórico do dia limpo com sucesso!");
         }
-
-        window.onload = loadSavedWorkouts;
     </script>
 </body>
 </html>
+
 
 
