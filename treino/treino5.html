@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>App de Treino</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js"></script>
     <style>
         .completed {
             text-decoration: line-through;
@@ -22,10 +25,9 @@
 <body>
     <div class="container">
         <h1 class="text-center mt-4">Seu Treino Diário</h1>
-
         <div class="date-input">
             <label for="date">Selecione a Data:</label>
-            <input type="date" id="date" class="form-control">
+            <input type="date" id="date" class="form-control" onchange="loadWorkout()">
         </div>
 
         <div class="btn-group btn-group-toggle mt-3" data-toggle="buttons">
@@ -38,7 +40,6 @@
         </div>
 
         <div id="tab-content" class="tab-content">
-            <!-- Cardio Section -->
             <div id="cardio" class="tab-pane fade show active">
                 <h3>Exercícios de Cardio</h3>
                 <div class="form-group">
@@ -51,19 +52,19 @@
                         <option>Elíptico</option>
                         <option>Natação</option>
                         <option>Remo</option>
-                        <option>Boxe</option>
-                        <option>Subir Escadas</option>
-                        <option>Dança Aeróbica</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label for="cardio-time">Duração (min):</label>
-                    <input type="number" id="cardio-time" class="form-control">
+                    <input type="number" id="cardio-time" class="form-control" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="cardio-speed">Velocidade (km/h):</label>
+                    <input type="number" id="cardio-speed" class="form-control" min="1" required>
                 </div>
                 <button class="btn btn-success" onclick="addCardioExercise()">Adicionar Cardio</button>
             </div>
 
-            <!-- Musculação Section -->
             <div id="musculacao" class="tab-pane fade">
                 <h3>Exercícios de Musculação</h3>
                 <div class="form-group">
@@ -101,10 +102,19 @@
         <button class="btn btn-warning mt-3" onclick="clearTodayWorkouts()">Limpar Treinos</button>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
     <script>
-        // Configuração do Firebase
+        let workout = [];
+        const muscleExercises = {
+            "Peito": ["Supino Reto", "Supino Inclinado", "Crossover"],
+            "Costas": ["Puxada na Barra", "Remada", "Levantamento Terra"],
+            "Ombro": ["Desenvolvimento", "Elevação Lateral", "Elevação Frontal"],
+            "Bíceps": ["Rosca Direta", "Rosca Alternada", "Rosca Scott"],
+            "Tríceps": ["Tríceps na Polia", "Mergulho", "Extensão de Tríceps"],
+            "Perna": ["Agachamento", "Leg Press", "Cadeira Extensora"],
+            "Glúteo": ["Cadeira Abdutora", "Elevação de Quadril"],
+            "Abdome": ["Abdominal", "Prancha", "Elevação de Pernas"]
+        };
+
         const firebaseConfig = {
             apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
             authDomain: "agenda-6accc.firebaseapp.com",
@@ -116,22 +126,9 @@
             measurementId: "G-CVBQ54PERH"
         };
 
-        // Inicializa o Firebase
-        const app = firebase.initializeApp(firebaseConfig);
+        // Inicialização do Firebase
+        firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
-
-        let workout = [];
-
-        const muscleExercises = {
-            "Peito": ["Supino Reto", "Supino Inclinado", "Crucifixo", "Peck Deck", "Flexões", "Crossover", "Pullover", "Supino Declinado", "Cable Fly", "Bench Press"],
-            "Costas": ["Remada Curvada", "Pull Down", "Puxada Alta", "Levantamento Terra", "Remada Unilateral", "Barra Fixa", "Remada Máquina", "Rack Pull", "Pullover", "Renegade Row"],
-            "Ombro": ["Desenvolvimento", "Elevação Lateral", "Elevação Frontal", "Remada Alta", "Encolhimento de Ombros", "Arnold Press", "Face Pull", "Puxada Vertical", "Elev. Lateral Inclinada", "Elevação de Ombros"],
-            "Bíceps": ["Rosca Direta", "Rosca Martelo", "Rosca Concentrada", "Rosca Inversa", "Rosca Scott", "Rosca 21", "Rosca com Halteres", "Rosca na Barra", "Rosca no Cabo", "Rosca Alternada"],
-            "Tríceps": ["Mergulho", "Tríceps na Polia", "Tríceps Francês", "Extensão de Tríceps", "Kickback", "Supino Fechado", "Tríceps com Halteres", "Mergulho entre Bancos", "Barra Dips", "Tríceps na Máquina"],
-            "Perna": ["Agachamento", "Leg Press", "Cadeira Extensora", "Cadeira Flexora", "Levantamento Terra", "Afundo", "Panturrilha em Pé", "Panturrilha Sentado", "Agachamento Sumô", "Agachamento Frontal"],
-            "Glúteo": ["Agachamento com Peso", "Elevação de Quadril", "Stiff", "Ponte de Glúteo", "Cadeira Abdutora", "Cadeira Adutora", "Abertura de Pernas", "Kickbacks", "Agachamento Búlgaro", "Deadlift"],
-            "Abdome": ["Crunch", "Prancha", "Elevação de Pernas", "Bicicleta", "Abdominal Inverso", "Prancha Lateral", "Elevação de Ombros", "Abdominal com Peso", "V-ups", "Russian Twist"]
-        };
 
         function showTab(tabId) {
             document.querySelectorAll('.tab-pane').forEach(tab => {
@@ -143,16 +140,25 @@
         function addCardioExercise() {
             const exercise = document.getElementById('cardio-exercise').value;
             const time = document.getElementById('cardio-time').value;
-            workout.push({ type: 'cardio', exercise, time });
-            displayWorkout();
+            const speed = document.getElementById('cardio-speed').value;
+            if (time && speed) {
+                workout.push({ type: 'cardio', exercise, time, speed });
+                displayWorkout();
+            } else {
+                alert("Preencha todos os campos de cardio!");
+            }
         }
 
         function addMuscleExercise(exercise) {
             const load = prompt("Digite a carga em kg:");
             const reps = prompt("Digite o número de repetições:");
             const sets = prompt("Digite o número de séries:");
-            workout.push({ type: 'musculacao', exercise, load, reps, sets });
-            displayWorkout();
+            if (load && reps && sets) {
+                workout.push({ type: 'musculacao', exercise, load, reps, sets });
+                displayWorkout();
+            } else {
+                alert("Preencha todos os campos de musculação!");
+            }
         }
 
         function loadMuscleExercises() {
@@ -163,11 +169,11 @@
 
             if (muscleExerciseList) {
                 muscleExerciseList.forEach(exercise => {
-                    const button = document.createElement('button');
-                    button.textContent = exercise;
-                    button.className = 'btn btn-info m-1';
-                    button.onclick = () => addMuscleExercise(exercise);
-                    muscleExercisesDiv.appendChild(button);
+                    const btn = document.createElement('button');
+                    btn.classList.add('btn', 'btn-secondary', 'm-2');
+                    btn.innerText = exercise;
+                    btn.onclick = () => addMuscleExercise(exercise);
+                    muscleExercisesDiv.appendChild(btn);
                 });
                 muscleExercisesDiv.style.display = 'block';
             } else {
@@ -178,107 +184,58 @@
         function displayWorkout() {
             const workoutBody = document.getElementById('workout-body');
             workoutBody.innerHTML = '';
-
             workout.forEach((item, index) => {
                 const row = document.createElement('tr');
-                const exerciseCell = document.createElement('td');
-                const detailsCell = document.createElement('td');
-
-                exerciseCell.textContent = item.exercise;
-                detailsCell.textContent = item.type === 'cardio' ? `Duração: ${item.time} min` : `Cargas: ${item.load} kg, Reps: ${item.reps}, Sets: ${item.sets}`;
-
-                const completedCell = document.createElement('td');
-                const completedCheckbox = document.createElement('input');
-                completedCheckbox.type = 'checkbox';
-                completedCheckbox.onclick = () => {
-                    if (completedCheckbox.checked) {
-                        row.classList.add('completed');
-                    } else {
-                        row.classList.remove('completed');
-                    }
-                };
-                completedCell.appendChild(completedCheckbox);
-
-                const removeCell = document.createElement('td');
-                const removeButton = document.createElement('button');
-                removeButton.textContent = 'Remover';
-                removeButton.className = 'btn btn-danger btn-sm';
-                removeButton.onclick = () => {
-                    workout.splice(index, 1);
-                    displayWorkout();
-                };
-                removeCell.appendChild(removeButton);
-
-                row.appendChild(exerciseCell);
-                row.appendChild(detailsCell);
-                row.appendChild(completedCell);
-                row.appendChild(removeCell);
+                row.innerHTML = `
+                    <td>${item.exercise || item.type}</td>
+                    <td>${item.type === 'musculacao' ? `${item.load} kg, ${item.reps} reps, ${item.sets} sets` : `${item.time} min, ${item.speed} km/h`}</td>
+                    <td><input type="checkbox" onclick="this.parentNode.parentNode.classList.toggle('completed');"></td>
+                    <td><button class="btn btn-danger" onclick="removeExercise(${index})">Remover</button></td>
+                `;
                 workoutBody.appendChild(row);
             });
         }
 
+        function removeExercise(index) {
+            workout.splice(index, 1);
+            displayWorkout();
+        }
+
         function saveWorkout() {
             const date = document.getElementById('date').value;
-            if (!date) {
-                alert("Por favor, selecione uma data.");
-                return;
+            if (date) {
+                const reference = database.ref('workouts/' + date);
+                reference.set(workout);
+                alert('Treino salvo com sucesso!');
+            } else {
+                alert('Selecione uma data para salvar o treino.');
             }
-            const workoutsRef = database.ref('workouts/' + date);
-            workoutsRef.set(workout)
-                .then(() => {
-                    alert("Treino salvo com sucesso!");
-                })
-                .catch(error => {
-                    console.error("Erro ao salvar treino:", error);
+        }
+
+        function loadWorkout() {
+            const date = document.getElementById('date').value;
+            if (date) {
+                const reference = database.ref('workouts/' + date);
+                reference.once('value', (snapshot) => {
+                    workout = snapshot.val() || [];
+                    displayWorkout();
                 });
+            }
         }
 
         function clearTodayWorkouts() {
             const date = document.getElementById('date').value;
-            if (!date) {
-                alert("Por favor, selecione uma data.");
-                return;
+            if (date) {
+                const reference = database.ref('workouts/' + date);
+                reference.remove();
+                workout = [];
+                displayWorkout();
+                alert('Treinos limpos com sucesso!');
+            } else {
+                alert('Selecione uma data para limpar os treinos.');
             }
-            const workoutsRef = database.ref('workouts/' + date);
-            workoutsRef.remove()
-                .then(() => {
-                    alert("Treinos removidos com sucesso!");
-                    workout = [];
-                    displayWorkout();
-                })
-                .catch(error => {
-                    console.error("Erro ao remover treinos:", error);
-                });
-        }
-
-        // Evento para carregar treinos ao selecionar a data
-        document.getElementById('date').addEventListener('change', loadWorkout);
-
-        function loadWorkout() {
-            const date = document.getElementById('date').value;
-            if (!date) {
-                alert("Por favor, selecione uma data.");
-                return;
-            }
-            const workoutsRef = database.ref('workouts/' + date);
-            workoutsRef.once('value')
-                .then(snapshot => {
-                    if (snapshot.exists()) {
-                        workout = snapshot.val();
-                        displayWorkout();
-                    } else {
-                        alert("Nenhum treino encontrado para esta data.");
-                    }
-                })
-                .catch(error => {
-                    console.error("Erro ao carregar treino:", error);
-                });
         }
     </script>
-
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.0.2/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>
 
