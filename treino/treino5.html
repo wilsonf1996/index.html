@@ -169,116 +169,118 @@
                     </div>
                 `;
             } else {
-                alert("Selecione uma parte do corpo antes de adicionar exercícios.");
+                alert("Por favor, selecione uma parte do corpo primeiro!");
             }
         }
 
         function removeMuscleExercise(index) {
-            const muscleGroup = document.getElementById(`muscle-group-${index}`);
-            muscleGroup.parentNode.removeChild(muscleGroup);
+            const group = document.getElementById(`muscle-group-${index}`);
+            group.remove();
         }
 
         function addCardio() {
-            const cardioExercisesDiv = document.getElementById('cardio-exercises');
-            const cardioCount = cardioExercisesDiv.getElementsByClassName('form-group').length;
-            cardioExercisesDiv.innerHTML += `
-                <div class="form-group">
-                    <label for="cardio-type-${cardioCount + 1}">Exercício Cardio ${cardioCount + 1}:</label>
-                    <select class="form-control" id="cardio-type-${cardioCount + 1}">
+            const cardioContainer = document.getElementById('cardio-exercises');
+            const currentCount = cardioContainer.getElementsByClassName('form-group').length;
+
+            cardioContainer.innerHTML += `
+                <div class="form-group" id="cardio-group-${currentCount}">
+                    <label for="cardio-type-${currentCount}">Exercício Cardio ${currentCount + 1}:</label>
+                    <select class="form-control" id="cardio-type-${currentCount}">
                         <option value="Corrida">Corrida</option>
                         <option value="Caminhada">Caminhada</option>
                         <option value="Bicicleta">Bicicleta</option>
                         <option value="HIIT">HIIT</option>
                         <option value="Pular Corda">Pular Corda</option>
                     </select>
-                    <label for="cardio-time-${cardioCount + 1}">Duração (min):</label>
-                    <input type="number" class="form-control" id="cardio-time-${cardioCount + 1}" placeholder="Minutos">
-                    <label for="cardio-speed-${cardioCount + 1}">Velocidade (km/h):</label>
-                    <input type="number" class="form-control" id="cardio-speed-${cardioCount + 1}" placeholder="Velocidade">
+                    <label for="cardio-time-${currentCount}">Duração (min):</label>
+                    <input type="number" class="form-control" id="cardio-time-${currentCount}" placeholder="Minutos">
+                    <label for="cardio-speed-${currentCount}">Velocidade (km/h):</label>
+                    <input type="number" class="form-control" id="cardio-speed-${currentCount}" placeholder="Velocidade">
+                    <button class="btn btn-danger" onclick="removeCardioExercise(${currentCount})">Remover</button>
                 </div>
             `;
         }
 
+        function removeCardioExercise(index) {
+            const group = document.getElementById(`cardio-group-${index}`);
+            group.remove();
+        }
+
         function saveWorkout() {
-            const workouts = [];
+            const workout = [];
 
-            // Salvar exercícios de cardio
+            // Coletando exercícios de Cardio
             const cardioGroups = document.querySelectorAll('#cardio-exercises .form-group');
-            cardioGroups.forEach((group, index) => {
-                const cardioType = document.getElementById(`cardio-type-${index + 1}`);
-                if (cardioType) {
-                    const time = parseInt(document.getElementById(`cardio-time-${index + 1}`).value);
-                    const speed = parseFloat(document.getElementById(`cardio-speed-${index + 1}`).value);
-                    if (cardioType.value && time && speed) {
-                        const calories = time * 10; // Exemplo de cálculo
-                        workouts.push({
-                            type: cardioType.value,
-                            exerciseType: 'Cardio',
-                            calories: calories,
-                            details: `Duração: ${time} min, Velocidade: ${speed} km/h`,
-                        });
-                    }
-                }
+            cardioGroups.forEach(group => {
+                const type = group.querySelector('select').value;
+                const time = group.querySelector('input[type="number"]').value;
+                const speed = group.querySelector('input[type="number"]:nth-of-type(2)').value;
+                workout.push({ type: 'Cardio', details: { type, time, speed } });
             });
 
-            // Salvar exercícios de musculação
+            // Coletando exercícios de Musculação
             const muscleGroups = document.querySelectorAll('#muscle-exercises .form-group');
-            muscleGroups.forEach((group, index) => {
-                const muscleType = document.getElementById(`muscle-type-${index}`);
-                if (muscleType) {
-                    const load = parseFloat(document.getElementById(`muscle-load-${index}`).value);
-                    const reps = parseInt(document.getElementById(`muscle-reps-${index}`).value);
-                    const sets = parseInt(document.getElementById(`muscle-sets-${index}`).value);
-                    if (muscleType.value && load && reps && sets) {
-                        const calories = (load * reps * sets) / 20; // Exemplo de cálculo
-                        workouts.push({
-                            type: muscleType.value,
-                            exerciseType: 'Musculação',
-                            calories: Math.round(calories),
-                            details: `Carga: ${load} kg, Repetições: ${reps}, Séries: ${sets}`,
-                        });
-                    }
+            muscleGroups.forEach(group => {
+                const type = group.querySelector('select').value;
+                const load = group.querySelector('input[type="number"]:nth-of-type(1)').value;
+                const reps = group.querySelector('input[type="number"]:nth-of-type(2)').value;
+                const sets = group.querySelector('input[type="number"]:nth-of-type(3)').value;
+                workout.push({ type: 'Musculação', details: { type, load, reps, sets } });
+            });
+
+            // Salvar no Firebase
+            const workoutRef = database.ref('treinos');
+            workoutRef.push(workout, (error) => {
+                if (error) {
+                    alert('Erro ao salvar o treino: ' + error.message);
+                } else {
+                    alert('Treino salvo com sucesso!');
+                    loadSavedWorkouts();
                 }
             });
-
-            // Salvar os treinos no Firebase
-            const today = new Date().toLocaleDateString();
-            workouts.forEach(workout => {
-                database.ref('treinos/' + today).push(workout);
-            });
-
-            alert("Treinos salvos para o dia de hoje.");
-            loadSavedWorkouts(); // Carregar treinos salvos
         }
 
         function loadSavedWorkouts() {
             const workoutBody = document.getElementById('workout-body');
-            workoutBody.innerHTML = "";
-            const today = new Date().toLocaleDateString(); // Formato: "DD/MM/YYYY"
-            database.ref(`treinos/${today}`).once('value').then(snapshot => {
-                const workouts = snapshot.val();
-                if (workouts) {
-                    for (const workout of Object.values(workouts)) {
+            workoutBody.innerHTML = ""; // Limpa a tabela
+
+            const workoutRef = database.ref('treinos');
+            workoutRef.on('value', (snapshot) => {
+                snapshot.forEach((childSnapshot) => {
+                    const workout = childSnapshot.val();
+                    workout.forEach(item => {
+                        const type = item.type === 'Cardio' ? 'Cardio' : 'Musculação';
+                        const calories = calculateCalories(item.details);
                         workoutBody.innerHTML += `
                             <tr>
-                                <td>${workout.type}</td>
-                                <td>${workout.exerciseType}</td>
-                                <td>${workout.calories}</td>
-                                <td>${workout.details}</td>
+                                <td>${item.details.type}</td>
+                                <td>${type}</td>
+                                <td>${calories}</td>
+                                <td>${JSON.stringify(item.details)}</td>
                             </tr>
                         `;
-                    }
-                } else {
-                    alert("Nenhum treino encontrado para hoje.");
-                }
+                    });
+                });
             });
         }
 
-        document.addEventListener('DOMContentLoaded', loadSavedWorkouts);
-    </script>
+        function calculateCalories(details) {
+            // Calculo simplificado de calorias
+            if (details.type === 'Cardio') {
+                const speed = details.speed ? parseFloat(details.speed) : 0;
+                const time = details.time ? parseInt(details.time) : 0;
+                return (speed * time * 10).toFixed(2); // Aproximado
+            } else {
+                const load = details.load ? parseFloat(details.load) : 0;
+                const reps = details.reps ? parseInt(details.reps) : 0;
+                const sets = details.sets ? parseInt(details.sets) : 0;
+                return (load * reps * sets * 0.1).toFixed(2); // Aproximado
+            }
+        }
 
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+        // Carregar treinos salvos ao iniciar
+        loadSavedWorkouts();
+    </script>
 </body>
 </html>
+
