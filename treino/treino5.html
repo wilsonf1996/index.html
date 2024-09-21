@@ -40,7 +40,7 @@
 
         <div class="card">
             <div class="card-body">
-                <h5>Escolha seus exercícios de Cardio:</h5>
+                <h5>Escolha seu exercício de Cardio:</h5>
                 <div id="cardio-exercises">
                     <div class="form-group">
                         <label for="cardio-type">Exercício Cardio:</label>
@@ -107,14 +107,7 @@
 
     <script>
         const firebaseConfig = {
-            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
-            authDomain: "agenda-6accc.firebaseapp.com",
-            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
-            projectId: "agenda-6accc",
-            storageBucket: "agenda-6accc.appspot.com",
-            messagingSenderId: "794262176773",
-            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
-            measurementId: "G-CVBQ54PERH"
+            // suas configurações do Firebase
         };
 
         const app = firebase.initializeApp(firebaseConfig);
@@ -132,6 +125,7 @@
         };
 
         let cardioExercises = [];
+        let muscleExercisesAdded = [];
 
         function addCardioExercise() {
             const cardioType = document.getElementById('cardio-type').value;
@@ -156,6 +150,7 @@
             const muscleArea = document.getElementById('muscle-area').value;
             const muscleExercisesDiv = document.getElementById('muscle-exercises');
             muscleExercisesDiv.innerHTML = ""; // Limpa os exercícios anteriores
+            muscleExercisesAdded = []; // Limpa os exercícios adicionados
             if (muscleArea) {
                 muscleExercisesDiv.style.display = "block";
                 muscleExercises[muscleArea].forEach((exercise, index) => {
@@ -172,92 +167,37 @@
                             <label for="muscle-sets-${index + 1}">Séries:</label>
                             <input type="number" class="form-control" id="muscle-sets-${index + 1}" placeholder="Séries" min="0">
                             <button class="btn btn-custom mt-2" onclick="addMuscleExercise('${exercise}', ${index + 1})">Adicionar Exercício</button>
-                        </div>
-                    `;
+                        </div>`;
                 });
             } else {
-                muscleExercisesDiv.style.display = "none";
+                muscleExercisesDiv.style.display = "none"; // Oculta se não houver seleção
             }
         }
 
-        function addMuscleExercise(exerciseName, index) {
+        function addMuscleExercise(exercise, index) {
             const load = document.getElementById(`muscle-load-${index}`).value;
             const reps = document.getElementById(`muscle-reps-${index}`).value;
             const sets = document.getElementById(`muscle-sets-${index}`).value;
 
             if (load && reps && sets) {
-                const muscleExercise = {
-                    name: exerciseName,
-                    load: load,
-                    reps: reps,
-                    sets: sets
-                };
-                alert(`${exerciseName} adicionado com sucesso!`);
-                saveToDatabase(cardioExercises, muscleExercise);
+                muscleExercisesAdded.push({ exercise, load, reps, sets });
+                alert(`${exercise} adicionado com sucesso!`);
             } else {
                 alert("Por favor, preencha todos os campos.");
             }
         }
 
-        function saveToDatabase(cardioExercises, muscleExercise) {
-            const workoutRef = database.ref('workouts/' + new Date().toISOString().slice(0, 10));
-            const newWorkout = {
-                cardio: cardioExercises,
-                muscle: muscleExercise
-            };
-            workoutRef.push(newWorkout, function(error) {
-                if (error) {
-                    alert("Erro ao salvar o treino: " + error);
-                } else {
-                    alert("Treino salvo com sucesso!");
-                    loadWorkouts();
-                }
-            });
-        }
-
-        function loadWorkouts() {
-            const workoutBody = document.getElementById('workout-body');
-            workoutBody.innerHTML = ""; // Limpa o histórico atual
-            const workoutRef = database.ref('workouts/' + new Date().toISOString().slice(0, 10));
-            workoutRef.once('value', (snapshot) => {
-                snapshot.forEach(childSnapshot => {
-                    const workout = childSnapshot.val();
-                    const cardioDetails = workout.cardio.map(e => `${e.type} (${e.time} min, ${e.speed} km/h)`).join(', ');
-                    const muscleDetails = `${workout.muscle.name} (Carga: ${workout.muscle.load} kg, Reps: ${workout.muscle.reps}, Sets: ${workout.muscle.sets})`;
-                    workoutBody.innerHTML += `
-                        <tr>
-                            <td>${cardioDetails}</td>
-                            <td>${muscleDetails}</td>
-                            <td>--</td>
-                            <td><button class="btn btn-danger" onclick="deleteWorkout('${childSnapshot.key}')">Excluir</button></td>
-                        </tr>
-                    `;
-                });
-            });
+        function saveWorkout() {
+            // Aqui você pode salvar o treino no Firebase
+            console.log("Salvando treino...");
+            console.log("Cardio:", cardioExercises);
+            console.log("Musculação:", muscleExercisesAdded);
         }
 
         function clearTodayWorkouts() {
-            const workoutRef = database.ref('workouts/' + new Date().toISOString().slice(0, 10));
-            workoutRef.remove().then(() => {
-                alert("Histórico do dia limpo com sucesso!");
-                loadWorkouts();
-            }).catch(error => {
-                alert("Erro ao limpar o histórico: " + error);
-            });
+            // Lógica para limpar o histórico do dia
+            console.log("Limpar histórico do dia...");
         }
-
-        function deleteWorkout(workoutId) {
-            const workoutRef = database.ref('workouts/' + new Date().toISOString().slice(0, 10) + '/' + workoutId);
-            workoutRef.remove().then(() => {
-                alert("Treino excluído com sucesso!");
-                loadWorkouts();
-            }).catch(error => {
-                alert("Erro ao excluir o treino: " + error);
-            });
-        }
-
-        window.onload = loadWorkouts;
     </script>
 </body>
 </html>
-
