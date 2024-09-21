@@ -37,22 +37,7 @@
         <div class="card">
             <div class="card-body">
                 <h5>Escolha seus exercícios de Cardio:</h5>
-                <div id="cardio-exercises">
-                    <div class="form-group">
-                        <label for="cardio-type-1">Exercício Cardio 1:</label>
-                        <select class="form-control" id="cardio-type-1">
-                            <option value="Corrida">Corrida</option>
-                            <option value="Caminhada">Caminhada</option>
-                            <option value="Bicicleta">Bicicleta</option>
-                            <option value="HIIT">HIIT</option>
-                            <option value="Pular Corda">Pular Corda</option>
-                        </select>
-                        <label for="cardio-time-1">Duração (min):</label>
-                        <input type="number" class="form-control" id="cardio-time-1" placeholder="Minutos">
-                        <label for="cardio-speed-1">Velocidade (km/h):</label>
-                        <input type="number" class="form-control" id="cardio-speed-1" placeholder="Velocidade">
-                    </div>
-                </div>
+                <div id="cardio-exercises"></div>
                 <button class="btn btn-primary" onclick="addCardio()">Adicionar Exercício Cardio</button>
 
                 <h5>Escolha a parte do corpo a ser treinada:</h5>
@@ -86,6 +71,7 @@
                     <th>Tipo</th>
                     <th>Calorias</th>
                     <th>Detalhes</th>
+                    <th>Ação</th>
                 </tr>
             </thead>
             <tbody id="workout-body"></tbody>
@@ -169,79 +155,124 @@
                     </div>
                 `;
             } else {
-                alert("Por favor, selecione uma parte do corpo primeiro!");
+                alert("Por favor, selecione uma parte do corpo.");
             }
         }
 
         function removeMuscleExercise(index) {
-            const exerciseGroup = document.getElementById(`muscle-group-${index}`);
-            if (exerciseGroup) {
-                exerciseGroup.remove();
+            const muscleGroup = document.getElementById(`muscle-group-${index}`);
+            if (muscleGroup) {
+                muscleGroup.remove();
             }
         }
 
         function addCardio() {
-            const cardioContainer = document.getElementById('cardio-exercises');
-            const cardioTime = document.getElementById('cardio-time-1').value;
-            const cardioType = document.getElementById('cardio-type-1').value;
-            const cardioSpeed = document.getElementById('cardio-speed-1').value;
-
-            if (cardioTime && cardioSpeed) {
-                const row = `<tr><td>${cardioType}</td><td>Cardio</td><td>${calculateCardioCalories(cardioTime, cardioSpeed)}</td><td>Duração: ${cardioTime} min, Velocidade: ${cardioSpeed} km/h</td></tr>`;
-                document.getElementById('workout-body').innerHTML += row;
-                alert("Exercício Cardio adicionado!");
-            } else {
-                alert("Por favor, preencha todos os campos!");
-            }
-        }
-
-        function calculateCardioCalories(time, speed) {
-            // Cálculo simplificado das calorias gastas
-            return Math.round(time * (speed * 0.2)); // Ajuste conforme necessário
+            const cardioExercisesDiv = document.getElementById('cardio-exercises');
+            cardioExercisesDiv.innerHTML += `
+                <div class="form-group">
+                    <label for="cardio-type">Exercício Cardio:</label>
+                    <input type="text" class="form-control" id="cardio-type" placeholder="Insira o exercício">
+                    <label for="cardio-calories">Calorias:</label>
+                    <input type="number" class="form-control" id="cardio-calories" placeholder="Insira as calorias">
+                </div>
+            `;
         }
 
         function saveWorkout() {
-            const workoutData = [];
-            const cardioRows = document.querySelectorAll('#workout-body tr');
-            cardioRows.forEach(row => {
-                const cells = row.children;
-                workoutData.push({
-                    type: cells[1].innerText,
-                    exercise: cells[0].innerText,
-                    calories: cells[2].innerText,
-                    details: cells[3].innerText
-                });
-            });
-            // Adicionar musculação
+            const cardioExercisesDiv = document.getElementById('cardio-exercises');
+            const workoutBody = document.getElementById('workout-body');
+            workoutBody.innerHTML = ""; // Limpa o histórico antes de salvar
+
+            const cardioExercises = Array.from(cardioExercisesDiv.getElementsByTagName('input')).map((input) => ({
+                type: input.value,
+                calories: input.nextElementSibling.value,
+            }));
+
             const muscleExercisesDiv = document.getElementById('muscle-exercises');
-            const muscleGroups = muscleExercisesDiv.getElementsByClassName('form-group');
-            Array.from(muscleGroups).forEach(group => {
-                const type = group.querySelector('select').value;
-                const load = group.querySelector('input[id^="muscle-load"]').value;
-                const reps = group.querySelector('input[id^="muscle-reps"]').value;
-                const sets = group.querySelector('input[id^="muscle-sets"]').value;
-                workoutData.push({
-                    type: "Musculação",
-                    exercise: type,
-                    calories: calculateMuscleCalories(load, reps, sets), // Ajustar conforme necessário
-                    details: `Carga: ${load} kg, Repetições: ${reps}, Séries: ${sets}`
-                });
+            const muscleExercises = Array.from(muscleExercisesDiv.getElementsByClassName('form-group')).map((group) => ({
+                type: group.querySelector('select').value,
+                load: group.querySelector('input[id^="muscle-load"]').value,
+                reps: group.querySelector('input[id^="muscle-reps"]').value,
+                sets: group.querySelector('input[id^="muscle-sets"]').value,
+            }));
+
+            // Salva no Firebase
+            const newWorkoutRef = database.ref('workouts').push();
+            newWorkoutRef.set({
+                cardio: cardioExercises,
+                musculacao: muscleExercises
             });
-            // Salvar no Firebase
-            const workoutRef = database.ref('workouts');
-            workoutRef.push(workoutData).then(() => {
-                alert("Treino salvo com sucesso!");
-            }).catch(error => {
-                console.error("Erro ao salvar treino:", error);
+
+            // Atualiza a tabela de treinos salvos
+            cardioExercises.forEach((exercise, index) => {
+                workoutBody.innerHTML += `
+                    <tr>
+                        <td>${exercise.type}</td>
+                        <td>Cardio</td>
+                        <td>${exercise.calories}</td>
+                        <td>N/A</td>
+                        <td><button class="btn btn-danger" onclick="deleteWorkout('${newWorkoutRef.key}')">Excluir</button></td>
+                    </tr>
+                `;
+            });
+
+            muscleExercises.forEach((exercise, index) => {
+                workoutBody.innerHTML += `
+                    <tr>
+                        <td>${exercise.type}</td>
+                        <td>Musculação</td>
+                        <td>N/A</td>
+                        <td>Carga: ${exercise.load}, Reps: ${exercise.reps}, Sets: ${exercise.sets}</td>
+                        <td><button class="btn btn-danger" onclick="deleteWorkout('${newWorkoutRef.key}')">Excluir</button></td>
+                    </tr>
+                `;
             });
         }
 
-        function calculateMuscleCalories(load, reps, sets) {
-            // Cálculo simplificado das calorias gastas na musculação
-            return Math.round((load * reps * sets) / 30); // Ajuste conforme necessário
+        function deleteWorkout(workoutId) {
+            database.ref('workouts/' + workoutId).remove();
+            alert("Treino excluído com sucesso!");
+            location.reload(); // Recarrega a página para atualizar a tabela
         }
+
+        // Carregar treinos salvos ao iniciar
+        window.onload = function() {
+            database.ref('workouts').on('value', (snapshot) => {
+                const data = snapshot.val();
+                const workoutBody = document.getElementById('workout-body');
+                workoutBody.innerHTML = ""; // Limpa a tabela antes de preencher
+
+                for (const id in data) {
+                    const workout = data[id];
+                    workout.cardio.forEach((exercise) => {
+                        workoutBody.innerHTML += `
+                            <tr>
+                                <td>${exercise.type}</td>
+                                <td>Cardio</td>
+                                <td>${exercise.calories}</td>
+                                <td>N/A</td>
+                                <td><button class="btn btn-danger" onclick="deleteWorkout('${id}')">Excluir</button></td>
+                            </tr>
+                        `;
+                    });
+
+                    workout.musculacao.forEach((exercise) => {
+                        workoutBody.innerHTML += `
+                            <tr>
+                                <td>${exercise.type}</td>
+                                <td>Musculação</td>
+                                <td>N/A</td>
+                                <td>Carga: ${exercise.load}, Reps: ${exercise.reps}, Sets: ${exercise.sets}</td>
+                                <td><button class="btn btn-danger" onclick="deleteWorkout('${id}')">Excluir</button></td>
+                            </tr>
+                        `;
+                    });
+                }
+            });
+        };
     </script>
 </body>
 </html>
+
 
 
