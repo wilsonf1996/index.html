@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,6 +13,7 @@
             background-color: #f2f2f2;
             font-family: 'Arial', sans-serif;
         }
+
         .container {
             max-width: 800px;
             margin-top: 30px;
@@ -20,45 +22,57 @@
             padding: 20px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
-        h1, h3 {
+
+        h1,
+        h3 {
             color: #343a40;
             text-align: center;
         }
+
         .btn-custom {
             background-color: #007bff;
             color: white;
             border-radius: 5px;
             transition: background-color 0.3s;
         }
+
         .btn-custom:hover {
             background-color: #0056b3;
         }
+
         .btn-danger {
             background-color: #dc3545;
             color: white;
             border-radius: 5px;
             transition: background-color 0.3s;
         }
+
         .btn-danger:hover {
             background-color: #c82333;
         }
+
         .form-group label {
             font-weight: bold;
         }
+
         .table {
             margin-top: 20px;
             background-color: white;
             border-radius: 10px;
             overflow: hidden;
         }
-        th, td {
+
+        th,
+        td {
             vertical-align: middle;
         }
+
         .alert {
             margin-top: 20px;
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>Treino do Dia</h1>
@@ -139,8 +153,13 @@
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        let cardioExercises = [];
-        let muscleExercisesAdded = [];
+        let cardioExercises = JSON.parse(localStorage.getItem('cardioExercises')) || [];
+        let muscleExercisesAdded = JSON.parse(localStorage.getItem('muscleExercisesAdded')) || [];
+
+        function saveToLocalStorage() {
+            localStorage.setItem('cardioExercises', JSON.stringify(cardioExercises));
+            localStorage.setItem('muscleExercisesAdded', JSON.stringify(muscleExercisesAdded));
+        }
 
         function addCardioExercise() {
             const cardioType = document.getElementById('cardio-type').value;
@@ -152,6 +171,7 @@
                 alert(`${cardioType} adicionado com sucesso!`);
                 clearCardioInputs();
                 displayWorkout();
+                saveToLocalStorage(); // Salvar no localStorage
             } else {
                 alert("Por favor, preencha todos os campos.");
             }
@@ -167,138 +187,96 @@
             "Costas": ["Puxada na Barra", "Remada", "Levantamento Terra", "Pull Over", "Puxada Frontal", "Remada Curvada", "Puxada com Halteres"],
             "Ombro": ["Desenvolvimento", "Elevação Lateral", "Elevação Frontal", "Encolhimento de Ombros", "Arnold Press", "Remada Alta", "Elevação de Ombro"],
             "Bíceps": ["Rosca Direta", "Rosca Alternada", "Rosca Martelo", "Rosca Scott", "Rosca Concentrada", "Rosca Inversa", "Rosca com Halteres"],
-            "Tríceps": ["Tríceps na Polia", "Mergulho", "Tríceps Francês", "Tríceps Testa", "Extensão de Tríceps", "Rosca Francesa", "Kickback"],
-            "Perna": ["Agachamento", "Leg Press", "Cadeira Extensora", "Cadeira Flexora", "Panturrilha em Pé", "Stiff", "Agachamento Sumô"],
-            "Glúteo": ["Agachamento com Peso", "Cadeira Abdutora", "Hip Thrust", "Avanço", "Levantamento Pélvico", "Glúteo na Polia", "Glúteo em Pé"],
-            "Abdome": ["Abdominais", "Prancha", "Elevação de Pernas", "Bicicleta", "Prancha Lateral", "Abdominal Inverso", "Crunch"]
+            "Tríceps": ["Tríceps Corda", "Tríceps Francesa", "Tríceps Testa", "Tríceps Barra", "Tríceps Pulley", "Tríceps Banco", "Mergulho"],
+            "Perna": ["Agachamento Livre", "Leg Press", "Cadeira Extensora", "Cadeira Flexora", "Afundo", "Elevação de Panturrilha", "Agachamento Sumô"],
+            "Glúteo": ["Agachamento", "Glúteo 4 Apoios", "Cadeira Abdutora", "Agachamento Sumô", "Elevação de Quadril", "Avanço", "Stiff"],
+            "Abdome": ["Abdominal Remador", "Prancha", "Abdominal Infra", "Abdominal Superior", "Abdominal na Roda", "Abdominal Oblíquo", "Prancha Lateral"]
         };
 
         function loadMuscleExercises() {
-            const area = document.getElementById('muscle-area').value;
-            const exercises = muscleExercises[area];
-            const muscleExerciseDiv = document.getElementById('muscle-exercises');
-            muscleExerciseDiv.innerHTML = '';
+            const muscleArea = document.getElementById('muscle-area').value;
+            const muscleExerciseList = muscleExercises[muscleArea];
+            const muscleExercisesDiv = document.getElementById('muscle-exercises');
+            muscleExercisesDiv.innerHTML = '';
 
-            if (exercises) {
-                muscleExerciseDiv.style.display = 'block';
-                exercises.forEach(exercise => {
-                    muscleExerciseDiv.innerHTML += `
-                        <div class="form-group">
-                            <label>${exercise}:</label>
-                            <input type="number" class="form-control" placeholder="Carga (kg)" id="weight-${exercise.replace(/ /g, "-")}" min="0">
-                            <input type="number" class="form-control" placeholder="Repetições" id="reps-${exercise.replace(/ /g, "-")}" min="0">
-                            <input type="number" class="form-control" placeholder="Séries" id="sets-${exercise.replace(/ /g, "-")}" min="0">
-                            <button class="btn btn-custom" onclick="addMuscleExercise('${exercise}')">Adicionar ${exercise}</button>
-                        </div>
-                    `;
+            if (muscleExerciseList) {
+                muscleExerciseList.forEach(exercise => {
+                    const button = document.createElement('button');
+                    button.textContent = exercise;
+                    button.classList.add('btn', 'btn-primary', 'm-2');
+                    button.onclick = () => addMuscleExercise(exercise);
+                    muscleExercisesDiv.appendChild(button);
                 });
+                muscleExercisesDiv.style.display = 'block';
+            } else {
+                muscleExercisesDiv.style.display = 'none';
             }
         }
 
         function addMuscleExercise(exercise) {
-            const weight = document.getElementById(`weight-${exercise.replace(/ /g, "-")}`).value;
-            const reps = document.getElementById(`reps-${exercise.replace(/ /g, "-")}`).value;
-            const sets = document.getElementById(`sets-${exercise.replace(/ /g, "-")}`).value;
-
-            if (weight && reps && sets) {
-                muscleExercisesAdded.push({ exercise, weight, reps, sets });
-                alert(`${exercise} adicionado com sucesso!`);
-                clearMuscleInputs(exercise);
-                displayWorkout();
-            } else {
-                alert("Por favor, preencha todos os campos.");
-            }
-        }
-
-        function clearMuscleInputs(exercise) {
-            document.getElementById(`weight-${exercise.replace(/ /g, "-")}`).value = '';
-            document.getElementById(`reps-${exercise.replace(/ /g, "-")}`).value = '';
-            document.getElementById(`sets-${exercise.replace(/ /g, "-")}`).value = '';
+            muscleExercisesAdded.push(exercise);
+            alert(`${exercise} adicionado com sucesso!`);
+            saveToLocalStorage(); // Salvar no localStorage
+            displayWorkout();
         }
 
         function displayWorkout() {
             const workoutBody = document.getElementById('workout-body');
             workoutBody.innerHTML = '';
-
-            cardioExercises.forEach((cardio, index) => {
-                workoutBody.innerHTML += `
-                    <tr>
-                        <td>${cardio.type} - ${cardio.time} min, ${cardio.speed} km/h</td>
-                        <td>${muscleExercisesAdded.map(m => `${m.exercise} (${m.weight} kg, ${m.reps} reps, ${m.sets} sets)`).join(", ")}</td>
-                        <td>${calculateCalories(cardio.time, cardio.speed)} cal</td>
-                        <td><button class="btn btn-danger" onclick="removeCardio(${index})">Remover</button></td>
-                        <td><input type="checkbox" onchange="markAsDone(${index}, 'cardio')"></td>
-                    </tr>
+            cardioExercises.forEach((exercise, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${exercise.type}</td>
+                    <td>${muscleExercisesAdded[index] || '-'}</td>
+                    <td>${calculateCalories(exercise.time, exercise.speed)}</td>
+                    <td>Duração: ${exercise.time} min / Velocidade: ${exercise.speed} km/h</td>
+                    <td><input type="checkbox" onclick="markAsDone(this)"></td>
+                    <td><button class="btn btn-danger" onclick="removeExercise(${index})">Remover</button></td>
                 `;
+                workoutBody.appendChild(row);
             });
+        }
 
-            muscleExercisesAdded.forEach((muscle, index) => {
-                workoutBody.innerHTML += `
-                    <tr>
-                        <td>${cardioExercises.map(c => `${c.type} (${c.time} min)`).join(", ")}</td>
-                        <td>${muscle.exercise} - ${muscle.weight} kg, ${muscle.reps} reps, ${muscle.sets} sets</td>
-                        <td>${calculateMuscleCalories(muscle.weight, muscle.reps, muscle.sets)} cal</td>
-                        <td><button class="btn btn-danger" onclick="removeMuscle(${index})">Remover</button></td>
-                        <td><input type="checkbox" onchange="markAsDone(${index}, 'muscle')"></td>
-                    </tr>
-                `;
-            });
+        function markAsDone(checkbox) {
+            checkbox.closest('tr').classList.toggle('completed');
+        }
+
+        function removeExercise(index) {
+            cardioExercises.splice(index, 1);
+            muscleExercisesAdded.splice(index, 1);
+            saveToLocalStorage();
+            displayWorkout();
         }
 
         function calculateCalories(time, speed) {
-            // Exemplo básico de cálculo de calorias
-            return Math.round((time * speed) * 0.17);
-        }
-
-        function calculateMuscleCalories(weight, reps, sets) {
-            // Exemplo básico de cálculo de calorias para musculação
-            return Math.round((weight * reps * sets) * 0.1);
-        }
-
-        function removeCardio(index) {
-            cardioExercises.splice(index, 1);
-            displayWorkout();
-        }
-
-        function removeMuscle(index) {
-            muscleExercisesAdded.splice(index, 1);
-            displayWorkout();
-        }
-
-        function markAsDone(index, type) {
-            alert(`Exercício ${type === 'cardio' ? 'Cardio' : 'Musculação'} ${index + 1} marcado como executado!`);
+            return Math.round(time * speed * 0.05); // Exemplo de cálculo de calorias
         }
 
         function saveWorkout() {
             const workoutData = {
-                cardioExercises: cardioExercises,
-                muscleExercisesAdded: muscleExercisesAdded,
-                timestamp: new Date().toISOString()
+                cardioExercises,
+                muscleExercisesAdded,
+                timestamp: new Date().toLocaleString()
             };
-
-            database.ref('workouts').push(workoutData)
-                .then(() => {
-                    document.getElementById('success-alert').innerHTML = "Treino salvo com sucesso!";
-                    document.getElementById('success-alert').style.display = "block";
-                    setTimeout(() => {
-                        document.getElementById('success-alert').style.display = "none";
-                    }, 3000);
-                    cardioExercises = [];
-                    muscleExercisesAdded = [];
-                    displayWorkout();
-                })
-                .catch((error) => {
-                    alert("Erro ao salvar treino: " + error.message);
-                });
+            database.ref('workouts').push(workoutData, (error) => {
+                if (error) {
+                    alert('Erro ao salvar no Firebase: ' + error.message);
+                } else {
+                    alert('Treino salvo com sucesso!');
+                }
+            });
         }
 
         function clearTodayWorkouts() {
             cardioExercises = [];
             muscleExercisesAdded = [];
+            saveToLocalStorage();
             displayWorkout();
-            alert("Histórico do dia limpo!");
         }
+
+        window.onload = displayWorkout;
     </script>
 </body>
+
 </html>
 
