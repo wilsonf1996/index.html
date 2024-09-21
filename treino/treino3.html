@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Treino Diário</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.css" />
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        #calendar {
+            margin: 20px 0;
+        }
+        .card {
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center">Treino Diário</h1>
+        <div id="calendar"></div>
+
+        <div class="card">
+            <div class="card-body">
+                <h5>Escolha seu treino:</h5>
+                <div class="form-group">
+                    <label for="cardio-exercise">Exercício Cardio:</label>
+                    <select class="form-control" id="cardio-exercise">
+                        <option value="Corrida">Corrida</option>
+                        <option value="Caminhada">Caminhada</option>
+                        <option value="Bicicleta">Bicicleta</option>
+                        <option value="HIIT">HIIT</option>
+                        <option value="Pular Corda">Pular Corda</option>
+                        <option value="Dança">Dança</option>
+                        <option value="Natação">Natação</option>
+                        <option value="Escalada">Escalada</option>
+                        <option value="Remo">Remo</option>
+                        <option value="Boxe">Boxe</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="muscle-exercise">Exercício Musculação:</label>
+                    <select class="form-control" id="muscle-exercise">
+                        <option value="Peito">Peito</option>
+                        <option value="Tríceps">Tríceps</option>
+                        <option value="Costas">Costas</option>
+                        <option value="Bíceps">Bíceps</option>
+                        <option value="Ombro">Ombro</option>
+                        <option value="Perna">Perna</option>
+                        <option value="Glúteo">Glúteo</option>
+                        <option value="Abdome">Abdome</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="load">Carga (kg):</label>
+                    <input type="number" class="form-control" id="load" placeholder="Insira a carga">
+                </div>
+                <div class="form-group">
+                    <label for="reps">Repetições:</label>
+                    <input type="number" class="form-control" id="reps" placeholder="Insira o número de repetições">
+                </div>
+                <div class="form-group">
+                    <label for="duration">Duração (min):</label>
+                    <input type="number" class="form-control" id="duration" placeholder="Insira a duração">
+                </div>
+                <button class="btn btn-primary" onclick="saveWorkout()">Salvar Treino</button>
+            </div>
+        </div>
+
+        <h3>Treinos do Dia Selecionado</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Exercício</th>
+                    <th>Tipo</th>
+                    <th>Calorias</th>
+                    <th>Detalhes</th>
+                </tr>
+            </thead>
+            <tbody id="workout-body"></tbody>
+        </table>
+
+        <canvas id="calorieChart" width="400" height="200"></canvas>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+            measurementId: "G-CVBQ54PERH"
+        };
+
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const calendarEl = document.getElementById('calendar');
+            const calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                dateClick: function(info) {
+                    loadWorkoutForDay(info.dateStr);
+                }
+            });
+            calendar.render();
+        });
+
+        function loadWorkoutForDay(date) {
+            const workoutBody = document.getElementById('workout-body');
+            workoutBody.innerHTML = "";
+            const selectedDay = new Date(date).toLocaleDateString(); // Formato: "DD/MM/YYYY"
+            database.ref(`treinos/${selectedDay}`).once('value').then(snapshot => {
+                const workouts = snapshot.val();
+                if (workouts) {
+                    let totalCalories = 0;
+                    for (const workout of Object.values(workouts)) {
+                        const row = workoutBody.insertRow();
+                        row.insertCell(0).textContent = workout.type;
+                        row.insertCell(1).textContent = workout.exerciseType;
+                        row.insertCell(2).textContent = workout.calories;
+                        row.insertCell(3).textContent = workout.details;
+                        totalCalories += workout.calories;
+                    }
+                    updateCalorieChart(totalCalories);
+                } else {
+                    alert("Nenhum treino encontrado para este dia.");
+                }
+            });
+        }
+
+        function saveWorkout() {
+            const selectedDay = new Date().toLocaleDateString(); // Salva para o dia atual
+            const cardioExercise = document.getElementById('cardio-exercise').value;
+            const muscleExercise = document.getElementById('muscle-exercise').value;
+            const load = parseFloat(document.getElementById('load').value);
+            const reps = parseInt(document.getElementById('reps').value);
+            const duration = parseInt(document.getElementById('duration').value);
+            const calories = calculateCalories(cardioExercise, muscleExercise, load, reps, duration);
+            const details = `Carga: ${load} kg, Repetições: ${reps}, Duração: ${duration} min`;
+
+            const workoutData = {
+                type: cardioExercise || muscleExercise,
+                exerciseType: cardioExercise ? 'Cardio' : 'Musculação',
+                calories: calories,
+                details: details,
+                date: new Date().toLocaleString()
+            };
+
+            database.ref(`treinos/${selectedDay}`).push(workoutData);
+            alert(`Treino salvo para o dia ${selectedDay}.`);
+        }
+
+        function calculateCalories(cardio, muscle, load, reps, duration) {
+            let calories = 0;
+            if (cardio) {
+                calories += duration * 10; // Exemplo de cálculo para cardio
+            }
+            if (muscle) {
+                calories += (load * reps) / 20; // Exemplo para musculação
+            }
+            return Math.round(calories);
+        }
+
+        function updateCalorieChart(totalCalories) {
+            const ctx = document.getElementById('calorieChart').getContext('2d');
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Calorias Totais'],
+                    datasets: [{
+                        label: 'Calorias',
+                        data: [totalCalories],
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
