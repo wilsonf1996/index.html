@@ -107,6 +107,13 @@
     <script>
         const firebaseConfig = {
             // suas configurações do Firebase
+            apiKey: "sua-api-key",
+            authDomain: "seu-auth-domain",
+            databaseURL: "sua-database-url",
+            projectId: "seu-project-id",
+            storageBucket: "seu-storage-bucket",
+            messagingSenderId: "seu-messaging-sender-id",
+            appId: "seu-app-id"
         };
 
         const app = firebase.initializeApp(firebaseConfig);
@@ -167,7 +174,7 @@
                         </div>`;
                 });
             } else {
-                muscleExercisesDiv.style.display = "none"; // Oculta se não houver seleção
+                muscleExercisesDiv.style.display = "none";
             }
         }
 
@@ -225,19 +232,61 @@
         }
 
         function saveWorkout() {
-            // Aqui você pode salvar o treino no Firebase
-            console.log("Salvando treino...");
-            console.log("Cardio:", cardioExercises);
-            console.log("Musculação:", muscleExercisesAdded);
+            const workoutData = {
+                cardio: cardioExercises,
+                muscle: muscleExercisesAdded,
+                timestamp: Date.now()
+            };
+
+            database.ref('workouts').push(workoutData).then(() => {
+                alert("Treino salvo com sucesso!");
+                clearWorkout();
+                displaySavedWorkouts();
+            }).catch(error => {
+                console.error("Erro ao salvar treino:", error);
+            });
         }
 
-        function clearTodayWorkouts() {
+        function clearWorkout() {
             cardioExercises = [];
             muscleExercisesAdded = [];
             displayWorkout();
-            console.log("Histórico do dia limpo.");
         }
+
+        function displaySavedWorkouts() {
+            const workoutBody = document.getElementById('workout-body');
+            workoutBody.innerHTML = "";
+            database.ref('workouts').once('value', snapshot => {
+                snapshot.forEach(childSnapshot => {
+                    const data = childSnapshot.val();
+                    const cardioList = data.cardio.map(c => `${c.type} (${c.time} min, ${c.speed} km/h)`).join(", ");
+                    const muscleList = data.muscle.map(m => `${m.exercise} (Carga: ${m.load} kg, Reps: ${m.reps}, Séries: ${m.sets})`).join(", ");
+                    workoutBody.innerHTML += `
+                        <tr>
+                            <td>${cardioList}</td>
+                            <td>${muscleList}</td>
+                            <td></td>
+                            <td></td>
+                            <td><input type="checkbox"></td>
+                            <td><button class="btn btn-danger" onclick="removeWorkout('${childSnapshot.key}')">Remover</button></td>
+                        </tr>`;
+                });
+            });
+        }
+
+        function clearTodayWorkouts() {
+            database.ref('workouts').remove().then(() => {
+                alert("Histórico do dia limpo.");
+                displaySavedWorkouts();
+            }).catch(error => {
+                console.error("Erro ao limpar histórico:", error);
+            });
+        }
+
+        // Carregar os treinos salvos ao iniciar a página
+        window.onload = displaySavedWorkouts;
     </script>
 </body>
 </html>
+
 
