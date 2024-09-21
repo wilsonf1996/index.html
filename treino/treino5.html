@@ -154,16 +154,12 @@
                         <button class="btn btn-danger" onclick="removeMuscleExercise(${currentCount})">Remover</button>
                     </div>
                 `;
-            } else {
-                alert("Por favor, selecione uma parte do corpo.");
             }
         }
 
         function removeMuscleExercise(index) {
             const muscleGroup = document.getElementById(`muscle-group-${index}`);
-            if (muscleGroup) {
-                muscleGroup.remove();
-            }
+            muscleGroup.remove();
         }
 
         function addCardio() {
@@ -171,105 +167,100 @@
             cardioExercisesDiv.innerHTML += `
                 <div class="form-group">
                     <label for="cardio-type">Exercício Cardio:</label>
-                    <input type="text" class="form-control" id="cardio-type" placeholder="Insira o exercício">
+                    <input type="text" class="form-control" placeholder="Nome do Exercício Cardio">
                     <label for="cardio-calories">Calorias:</label>
-                    <input type="number" class="form-control" id="cardio-calories" placeholder="Insira as calorias">
+                    <input type="number" class="form-control" placeholder="Calorias gastas">
                 </div>
             `;
         }
 
         function saveWorkout() {
-            const cardioExercisesDiv = document.getElementById('cardio-exercises');
-            const workoutBody = document.getElementById('workout-body');
-            workoutBody.innerHTML = ""; // Limpa o histórico antes de salvar
+            const workoutData = [];
+            const cardioExercises = document.getElementById('cardio-exercises').getElementsByTagName('input');
+            const muscleExercises = document.getElementById('muscle-exercises').getElementsByClassName('form-group');
 
-            const cardioExercises = Array.from(cardioExercisesDiv.getElementsByTagName('input')).map((input) => ({
-                type: input.value,
-                calories: input.nextElementSibling.value,
-            }));
+            for (let i = 0; i < cardioExercises.length; i += 2) {
+                const exercise = cardioExercises[i].value;
+                const calories = cardioExercises[i + 1].value;
 
-            const muscleExercisesDiv = document.getElementById('muscle-exercises');
-            const muscleExercises = Array.from(muscleExercisesDiv.getElementsByClassName('form-group')).map((group) => ({
-                type: group.querySelector('select').value,
-                load: group.querySelector('input[id^="muscle-load"]').value,
-                reps: group.querySelector('input[id^="muscle-reps"]').value,
-                sets: group.querySelector('input[id^="muscle-sets"]').value,
-            }));
+                if (exercise && calories) {
+                    workoutData.push({
+                        type: 'Cardio',
+                        exercise: exercise,
+                        calories: parseFloat(calories)
+                    });
+                }
+            }
+
+            for (let i = 0; i < muscleExercises.length; i++) {
+                const exerciseType = muscleExercises[i].querySelector(`select`).value;
+                const load = muscleExercises[i].querySelector(`#muscle-load-${i}`).value;
+                const reps = muscleExercises[i].querySelector(`#muscle-reps-${i}`).value;
+                const sets = muscleExercises[i].querySelector(`#muscle-sets-${i}`).value;
+
+                if (exerciseType && load && reps && sets) {
+                    workoutData.push({
+                        type: 'Musculação',
+                        exercise: exerciseType,
+                        load: parseFloat(load),
+                        reps: parseInt(reps),
+                        sets: parseInt(sets)
+                    });
+                }
+            }
 
             // Salva no Firebase
-            const newWorkoutRef = database.ref('workouts').push();
-            newWorkoutRef.set({
-                cardio: cardioExercises,
-                musculacao: muscleExercises
-            });
+            const userId = 'user_id_example'; // Substitua pelo ID do usuário autenticado
+            const workoutRef = database.ref(`users/${userId}/workouts`).push();
+            workoutRef.set(workoutData)
+                .then(() => {
+                    alert('Treino salvo com sucesso!');
+                    loadWorkouts(); // Atualiza a lista de treinos
+                })
+                .catch((error) => {
+                    console.error('Erro ao salvar treino:', error);
+                });
+        }
 
-            // Atualiza a tabela de treinos salvos
-            cardioExercises.forEach((exercise, index) => {
-                workoutBody.innerHTML += `
-                    <tr>
-                        <td>${exercise.type}</td>
-                        <td>Cardio</td>
-                        <td>${exercise.calories}</td>
-                        <td>N/A</td>
-                        <td><button class="btn btn-danger" onclick="deleteWorkout('${newWorkoutRef.key}')">Excluir</button></td>
-                    </tr>
-                `;
-            });
+        function loadWorkouts() {
+            const userId = 'user_id_example'; // Substitua pelo ID do usuário autenticado
+            const workoutsRef = database.ref(`users/${userId}/workouts`);
+            workoutsRef.on('value', (snapshot) => {
+                const data = snapshot.val();
+                const workoutBody = document.getElementById('workout-body');
+                workoutBody.innerHTML = ""; // Limpa a tabela anterior
 
-            muscleExercises.forEach((exercise, index) => {
-                workoutBody.innerHTML += `
-                    <tr>
-                        <td>${exercise.type}</td>
-                        <td>Musculação</td>
-                        <td>N/A</td>
-                        <td>Carga: ${exercise.load}, Reps: ${exercise.reps}, Sets: ${exercise.sets}</td>
-                        <td><button class="btn btn-danger" onclick="deleteWorkout('${newWorkoutRef.key}')">Excluir</button></td>
-                    </tr>
-                `;
+                for (const key in data) {
+                    data[key].forEach((workout) => {
+                        const row = `
+                            <tr>
+                                <td>${workout.exercise || ''}</td>
+                                <td>${workout.type}</td>
+                                <td>${workout.calories || ''}</td>
+                                <td>${workout.load ? `${workout.load} kg, ${workout.reps} reps, ${workout.sets} sets` : ''}</td>
+                                <td><button class="btn btn-danger" onclick="deleteWorkout('${key}')">Remover</button></td>
+                            </tr>
+                        `;
+                        workoutBody.innerHTML += row;
+                    });
+                }
             });
         }
 
         function deleteWorkout(workoutId) {
-            database.ref('workouts/' + workoutId).remove();
-            alert("Treino excluído com sucesso!");
-            location.reload(); // Recarrega a página para atualizar a tabela
+            const userId = 'user_id_example'; // Substitua pelo ID do usuário autenticado
+            const workoutRef = database.ref(`users/${userId}/workouts/${workoutId}`);
+            workoutRef.remove()
+                .then(() => {
+                    alert('Treino removido com sucesso!');
+                    loadWorkouts(); // Atualiza a lista de treinos
+                })
+                .catch((error) => {
+                    console.error('Erro ao remover treino:', error);
+                });
         }
 
-        // Carregar treinos salvos ao iniciar
-        window.onload = function() {
-            database.ref('workouts').on('value', (snapshot) => {
-                const data = snapshot.val();
-                const workoutBody = document.getElementById('workout-body');
-                workoutBody.innerHTML = ""; // Limpa a tabela antes de preencher
-
-                for (const id in data) {
-                    const workout = data[id];
-                    workout.cardio.forEach((exercise) => {
-                        workoutBody.innerHTML += `
-                            <tr>
-                                <td>${exercise.type}</td>
-                                <td>Cardio</td>
-                                <td>${exercise.calories}</td>
-                                <td>N/A</td>
-                                <td><button class="btn btn-danger" onclick="deleteWorkout('${id}')">Excluir</button></td>
-                            </tr>
-                        `;
-                    });
-
-                    workout.musculacao.forEach((exercise) => {
-                        workoutBody.innerHTML += `
-                            <tr>
-                                <td>${exercise.type}</td>
-                                <td>Musculação</td>
-                                <td>N/A</td>
-                                <td>Carga: ${exercise.load}, Reps: ${exercise.reps}, Sets: ${exercise.sets}</td>
-                                <td><button class="btn btn-danger" onclick="deleteWorkout('${id}')">Excluir</button></td>
-                            </tr>
-                        `;
-                    });
-                }
-            });
-        };
+        window.onload = loadWorkouts;
     </script>
 </body>
 </html>
