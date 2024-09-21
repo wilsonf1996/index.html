@@ -101,7 +101,25 @@
         <button class="btn btn-warning mt-3" onclick="clearTodayWorkouts()">Limpar Treinos</button>
     </div>
 
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
     <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+            measurementId: "G-CVBQ54PERH"
+        };
+
+        // Inicializa o Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
         let workout = [];
 
         const muscleExercises = {
@@ -145,11 +163,11 @@
 
             if (muscleExerciseList) {
                 muscleExerciseList.forEach(exercise => {
-                    const btn = document.createElement('button');
-                    btn.classList.add('btn', 'btn-secondary', 'm-2');
-                    btn.innerText = exercise;
-                    btn.onclick = () => addMuscleExercise(exercise);
-                    muscleExercisesDiv.appendChild(btn);
+                    const button = document.createElement('button');
+                    button.textContent = exercise;
+                    button.className = 'btn btn-info m-1';
+                    button.onclick = () => addMuscleExercise(exercise);
+                    muscleExercisesDiv.appendChild(button);
                 });
                 muscleExercisesDiv.style.display = 'block';
             } else {
@@ -160,47 +178,107 @@
         function displayWorkout() {
             const workoutBody = document.getElementById('workout-body');
             workoutBody.innerHTML = '';
-            workout.forEach((exercise, index) => {
-                const details = exercise.type === 'cardio'
-                    ? `Duração: ${exercise.time} min`
-                    : `Carga: ${exercise.load} kg / Séries: ${exercise.sets} / Repetições: ${exercise.reps}`;
+
+            workout.forEach((item, index) => {
                 const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${exercise.exercise}</td>
-                    <td>${details}</td>
-                    <td><input type="checkbox" onchange="markAsCompleted(this, ${index})"></td>
-                    <td><button class="btn btn-danger" onclick="removeExercise(${index})">Remover</button></td>
-                `;
+                const exerciseCell = document.createElement('td');
+                const detailsCell = document.createElement('td');
+
+                exerciseCell.textContent = item.exercise;
+                detailsCell.textContent = item.type === 'cardio' ? `Duração: ${item.time} min` : `Cargas: ${item.load} kg, Reps: ${item.reps}, Sets: ${item.sets}`;
+
+                const completedCell = document.createElement('td');
+                const completedCheckbox = document.createElement('input');
+                completedCheckbox.type = 'checkbox';
+                completedCheckbox.onclick = () => {
+                    if (completedCheckbox.checked) {
+                        row.classList.add('completed');
+                    } else {
+                        row.classList.remove('completed');
+                    }
+                };
+                completedCell.appendChild(completedCheckbox);
+
+                const removeCell = document.createElement('td');
+                const removeButton = document.createElement('button');
+                removeButton.textContent = 'Remover';
+                removeButton.className = 'btn btn-danger btn-sm';
+                removeButton.onclick = () => {
+                    workout.splice(index, 1);
+                    displayWorkout();
+                };
+                removeCell.appendChild(removeButton);
+
+                row.appendChild(exerciseCell);
+                row.appendChild(detailsCell);
+                row.appendChild(completedCell);
+                row.appendChild(removeCell);
                 workoutBody.appendChild(row);
             });
         }
 
-        function markAsCompleted(checkbox, index) {
-            const exerciseRow = workout[index];
-            if (checkbox.checked) {
-                exerciseRow.completed = true;
-            } else {
-                exerciseRow.completed = false;
-            }
-            displayWorkout();
-        }
-
-        function removeExercise(index) {
-            workout.splice(index, 1);
-            displayWorkout();
-        }
-
         function saveWorkout() {
-            // Função para salvar o treino
-            alert("Treino salvo!");
+            const date = document.getElementById('date').value;
+            if (!date) {
+                alert("Por favor, selecione uma data.");
+                return;
+            }
+            const workoutsRef = database.ref('workouts/' + date);
+            workoutsRef.set(workout)
+                .then(() => {
+                    alert("Treino salvo com sucesso!");
+                })
+                .catch(error => {
+                    console.error("Erro ao salvar treino:", error);
+                });
         }
 
         function clearTodayWorkouts() {
-            workout = [];
-            displayWorkout();
-            alert("Treinos do dia limpos!");
+            const date = document.getElementById('date').value;
+            if (!date) {
+                alert("Por favor, selecione uma data.");
+                return;
+            }
+            const workoutsRef = database.ref('workouts/' + date);
+            workoutsRef.remove()
+                .then(() => {
+                    alert("Treinos removidos com sucesso!");
+                    workout = [];
+                    displayWorkout();
+                })
+                .catch(error => {
+                    console.error("Erro ao remover treinos:", error);
+                });
+        }
+
+        // Evento para carregar treinos ao selecionar a data
+        document.getElementById('date').addEventListener('change', loadWorkout);
+
+        function loadWorkout() {
+            const date = document.getElementById('date').value;
+            if (!date) {
+                alert("Por favor, selecione uma data.");
+                return;
+            }
+            const workoutsRef = database.ref('workouts/' + date);
+            workoutsRef.once('value')
+                .then(snapshot => {
+                    if (snapshot.exists()) {
+                        workout = snapshot.val();
+                        displayWorkout();
+                    } else {
+                        alert("Nenhum treino encontrado para esta data.");
+                    }
+                })
+                .catch(error => {
+                    console.error("Erro ao carregar treino:", error);
+                });
         }
     </script>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.0.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>
 
