@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor de Moedas e Commodities</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+        }
+        #converter, #historico {
+            margin: 20px 0;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        select, input {
+            margin: 5px 0;
+            padding: 10px;
+            width: 100%;
+        }
+        canvas {
+            margin: 20px 0;
+            max-width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Conversor de Moedas e Commodities</h1>
+
+<div id="converter">
+    <h2>Converter Moeda</h2>
+    <input type="number" id="amount" placeholder="Valor" />
+    <select id="fromCurrency"></select>
+    <select id="toCurrency"></select>
+    <button onclick="convertCurrency()">Converter</button>
+    <h3 id="conversionResult"></h3>
+</div>
+
+<div id="historico">
+    <h2>Histórico de Commodities</h2>
+    <select id="commoditySelector">
+        <option value="WIKI/Gold">Ouro</option>
+        <option value="WIKI/OIL">Petróleo</option>
+        <option value="WIKI/Steel">Aço</option>
+    </select>
+    <button onclick="loadHistoricalData()">Carregar Gráfico</button>
+    <canvas id="myChart"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const OPEN_EXCHANGE_RATES_APP_ID = 'fdbf28905e85432291c037cd866d102d'; // Sua App ID da Open Exchange Rates
+    const ALPHA_VANTAGE_API_KEY = '3K0OWSJQSUHIJYSV'; // Sua chave da API Alpha Vantage
+
+    // Carregar opções de moeda
+    async function loadCurrencyOptions() {
+        const response = await fetch(`https://openexchangerates.org/api/currencies.json`);
+        const data = await response.json();
+        const fromCurrency = document.getElementById("fromCurrency");
+        const toCurrency = document.getElementById("toCurrency");
+
+        for (const currency in data) {
+            const option1 = document.createElement("option");
+            option1.value = currency;
+            option1.textContent = `${currency} - ${data[currency]}`;
+            fromCurrency.appendChild(option1);
+
+            const option2 = document.createElement("option");
+            option2.value = currency;
+            option2.textContent = `${currency} - ${data[currency]}`;
+            toCurrency.appendChild(option2);
+        }
+    }
+
+    // Converter Moeda
+    async function convertCurrency() {
+        const amount = document.getElementById("amount").value;
+        const fromCurrency = document.getElementById("fromCurrency").value;
+        const toCurrency = document.getElementById("toCurrency").value;
+
+        const response = await fetch(`https://openexchangerates.org/api/latest.json?app_id=${OPEN_EXCHANGE_RATES_APP_ID}`);
+        const data = await response.json();
+        const rate = data.rates[toCurrency] / data.rates[fromCurrency];
+        const convertedAmount = (amount * rate).toFixed(2);
+
+        document.getElementById("conversionResult").innerText = `${amount} ${fromCurrency} é igual a ${convertedAmount} ${toCurrency}`;
+    }
+
+    // Carregar dados históricos de commodities
+    async function loadHistoricalData() {
+        const commodity = document.getElementById("commoditySelector").value;
+        const response = await fetch(`https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${commodity}&apikey=${ALPHA_VANTAGE_API_KEY}`);
+        const data = await response.json();
+        const historicalData = Object.entries(data['Time Series (Daily)']).slice(0, 100).reverse(); // Últimos 100 dias
+        createChart(historicalData);
+    }
+
+    // Criar gráfico
+    function createChart(data) {
+        const ctx = document.getElementById('myChart').getContext('2d');
+        const labels = data.map(entry => entry[0]); // Data
+        const prices = data.map(entry => entry[1]['4. close']); // Preço de fechamento
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Preço',
+                    data: prices,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1,
+                    fill: false
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: false
+                    }
+                }
+            }
+        });
+    }
+
+    // Carregar opções de moedas ao iniciar
+    loadCurrencyOptions();
+</script>
+
+</body>
+</html>
