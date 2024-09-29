@@ -21,19 +21,11 @@
             margin-bottom: 20px;
         }
 
-        .search-container, .sort-container {
+        .filter-container {
             margin-bottom: 20px;
         }
 
         input[type="text"] {
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #ddd;
-            width: calc(100% - 22px);
-            box-sizing: border-box;
-        }
-
-        select {
             padding: 10px;
             border-radius: 5px;
             border: 1px solid #ddd;
@@ -127,16 +119,10 @@
 <body>
     <h1>Registro de Localização</h1>
 
-    <div class="search-container">
-        <input type="text" id="search" placeholder="Pesquisar registros..." oninput="filterRecords()">
-    </div>
-
-    <div class="sort-container">
-        <select id="sort" onchange="loadRecords()">
-            <option value="name">Ordenar por Nome</option>
-            <option value="date">Ordenar por Data</option>
-            <option value="location">Ordenar por Localização</option>
-        </select>
+    <div class="filter-container">
+        <input type="text" id="filter-name" placeholder="Filtrar por nome..." oninput="filterRecords()">
+        <input type="text" id="filter-date" placeholder="Filtrar por data..." oninput="filterRecords()">
+        <input type="text" id="filter-location" placeholder="Filtrar por localização..." oninput="filterRecords()">
     </div>
 
     <form id="location-form">
@@ -271,16 +257,6 @@
                     records.push({ key, ...data });
                 });
 
-                // Ordena os registros com base na seleção do usuário
-                const sortOption = document.getElementById('sort').value;
-                if (sortOption === 'name') {
-                    records.sort((a, b) => a.note.localeCompare(b.note));
-                } else if (sortOption === 'date') {
-                    records.sort((a, b) => new Date(b.date) - new Date(a.date));
-                } else if (sortOption === 'location') {
-                    records.sort((a, b) => a.location.localeCompare(b.location));
-                }
-
                 records.forEach(({ key, note, date, time, coordinates, files }) => {
                     const listItem = document.createElement('div');
                     listItem.className = 'list-item';
@@ -306,12 +282,22 @@
 
         // Função para filtrar registros
         function filterRecords() {
-            const searchQuery = document.getElementById('search').value.toLowerCase();
+            const nameQuery = document.getElementById('filter-name').value.toLowerCase();
+            const dateQuery = document.getElementById('filter-date').value.toLowerCase();
+            const locationQuery = document.getElementById('filter-location').value.toLowerCase();
+
             const items = locationList.getElementsByClassName('list-item');
 
             for (let item of items) {
-                const note = item.textContent.toLowerCase();
-                item.style.display = note.includes(searchQuery) ? 'block' : 'none';
+                const note = item.querySelector('strong').textContent.toLowerCase();
+                const date = item.innerHTML.includes('Data:') ? item.innerHTML.split('Data:')[1].split('<br>')[0].toLowerCase() : '';
+                const location = item.innerHTML.includes('Localização:') ? item.innerHTML.split('Localização:')[1].split('<br>')[0].toLowerCase() : '';
+
+                const matchesName = note.includes(nameQuery);
+                const matchesDate = date.includes(dateQuery);
+                const matchesLocation = location.includes(locationQuery);
+
+                item.style.display = (matchesName && matchesDate && matchesLocation) ? 'block' : 'none';
             }
         }
 
@@ -331,4 +317,3 @@
     </script>
 </body>
 </html>
-
