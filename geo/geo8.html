@@ -12,51 +12,43 @@
             font-family: 'Roboto', sans-serif;
             margin: 0;
             padding: 20px;
-            background-color: #e9ecef;
-            color: #343a40;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            background-color: #f5f5f5;
+            color: #333;
         }
 
         h1 {
             text-align: center;
             margin-bottom: 20px;
-            color: #007bff;
         }
 
         .filter-container {
             display: flex;
             justify-content: space-between;
             margin-bottom: 20px;
-            width: 100%;
         }
 
         input[type="text"], input[type="file"], textarea {
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #ced4da;
-            width: calc(100% - 24px);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            width: calc(100% - 22px);
             margin: 5px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            font-size: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
 
         button {
-            padding: 12px 20px;
+            padding: 10px 20px;
             border: none;
-            border-radius: 8px;
+            border-radius: 5px;
             background-color: #007bff;
             color: #fff;
-            font-size: 16px;
             cursor: pointer;
             margin: 5px;
-            transition: background-color 0.3s, transform 0.2s;
+            transition: background-color 0.3s;
         }
 
         button:hover {
             background-color: #0056b3;
-            transform: translateY(-1px);
         }
 
         .toggle-list {
@@ -68,28 +60,22 @@
         .list-item {
             display: flex;
             flex-direction: column;
-            padding: 20px;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            margin-bottom: 15px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
             background-color: #fff;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-            transition: box-shadow 0.3s;
-        }
-
-        .list-item:hover {
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
 
         .list-item h3 {
             margin: 0 0 10px;
-            font-size: 22px;
+            font-size: 20px;
             color: #007bff;
         }
 
         .list-item p {
             margin: 5px 0;
-            font-size: 16px;
         }
 
         .file-link {
@@ -104,9 +90,6 @@
         #map {
             height: 400px;
             margin-top: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-            width: 100%;
         }
 
         @media (max-width: 600px) {
@@ -247,55 +230,124 @@
         }
 
         function loadRecords() {
-            database.ref('locations').on('value', (snapshot) => {
+            database.ref('locations').once('value', (snapshot) => {
                 locationList.innerHTML = '';
-                const locations = snapshot.val();
-                for (let id in locations) {
-                    const record = locations[id];
-                    const listItem = document.createElement('div');
-                    listItem.className = 'list-item';
-                    listItem.innerHTML = `
-                        <h3>${record.note}</h3>
-                        <p><strong>Data:</strong> ${record.date}</p>
-                        <p><strong>Hora:</strong> ${record.time}</p>
-                        <p><strong>Localização:</strong> ${record.location}</p>
-                        <p><strong>Coordenadas:</strong> ${record.coordinates}</p>
-                        ${record.files ? record.files.map(file => `<a href="${file.url}" class="file-link" target="_blank">${file.name}</a>`).join('<br>') : ''}
-                    `;
-                    locationList.appendChild(listItem);
-
-                    const marker = L.marker(record.coordinates.split(', ').map(Number)).addTo(map);
-                    marker.bindPopup(record.note);
-                }
+                snapshot.forEach((childSnapshot) => {
+                    const record = childSnapshot.val();
+                    const recordId = childSnapshot.key;
+                    displayRecord(record, recordId);
+                });
             });
+        }
+
+        function displayRecord(record, id) {
+            const recordDiv = document.createElement('div');
+            recordDiv.className = 'list-item';
+            recordDiv.setAttribute('data-id', id);
+
+            const recordTitle = document.createElement('h3');
+            recordTitle.textContent = record.note;
+            recordDiv.appendChild(recordTitle);
+
+            const recordDate = document.createElement('p');
+            recordDate.textContent = `Data: ${record.date} - Hora: ${record.time}`;
+            recordDiv.appendChild(recordDate);
+
+            const recordLocation = document.createElement('p');
+            recordLocation.textContent = `Localização: ${record.location}`;
+            recordDiv.appendChild(recordLocation);
+
+            if (record.files && record.files.length > 0) {
+                const fileList = document.createElement('div');
+                fileList.innerHTML = '<strong>Arquivos:</strong>';
+                record.files.forEach(file => {
+                    const fileLink = document.createElement('a');
+                    fileLink.href = file.url;
+                    fileLink.className = 'file-link';
+                    fileLink.target = '_blank';
+                    fileLink.textContent = file.name;
+
+                    const deleteFileButton = document.createElement('button');
+                    deleteFileButton.textContent = 'Excluir Arquivo';
+                    deleteFileButton.onclick = () => deleteFile(file.name, id);
+
+                    fileList.appendChild(fileLink);
+                    fileList.appendChild(deleteFileButton);
+                    fileList.appendChild(document.createElement('br'));
+                });
+                recordDiv.appendChild(fileList);
+            }
+
+            const editButton = document.createElement('button');
+            editButton.textContent = 'Editar';
+            editButton.onclick = () => editRecord(id, record);
+            recordDiv.appendChild(editButton);
+
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = 'Excluir';
+            deleteButton.onclick = () => deleteRecord(id);
+            recordDiv.appendChild(deleteButton);
+
+            locationList.appendChild(recordDiv);
+
+            // Adiciona marcador no mapa
+            L.marker(record.coordinates.split(',').map(Number)).addTo(map)
+                .bindPopup(`<b>${record.note}</b><br>${record.location}<br>${record.date} ${record.time}`)
+                .openPopup();
+        }
+
+        function editRecord(id, record) {
+            document.getElementById('note').value = record.note;
+            currentEditId = id;
+            // Se necessário, pode-se adicionar lógica para editar arquivos, se desejado
+        }
+
+        async function deleteRecord(id) {
+            if (confirm('Tem certeza que deseja excluir este registro?')) {
+                await database.ref(`locations/${id}`).remove();
+                loadRecords();
+            }
+        }
+
+        async function deleteFile(fileName, recordId) {
+            if (confirm(`Tem certeza que deseja excluir o arquivo ${fileName}?`)) {
+                // Excluir o arquivo do Firebase Storage
+                const fileRef = storage.ref().child(`files/${fileName}`);
+                await fileRef.delete();
+
+                // Carregar os registros novamente após a exclusão
+                loadRecords();
+            }
         }
 
         function filterRecords() {
             const filterName = document.getElementById('filter-name').value.toLowerCase();
             const filterDate = document.getElementById('filter-date').value.toLowerCase();
             const filterLocation = document.getElementById('filter-location').value.toLowerCase();
+            const items = locationList.getElementsByClassName('list-item');
 
-            const records = document.querySelectorAll('.list-item');
-            records.forEach(record => {
-                const noteText = record.querySelector('h3').textContent.toLowerCase();
-                const dateText = record.querySelector('p').textContent.toLowerCase();
-                const locationText = record.querySelector('p').textContent.toLowerCase();
+            for (let item of items) {
+                const noteText = item.querySelector('h3').textContent.toLowerCase();
+                const dateText = item.querySelector('p').textContent.toLowerCase();
+                const locationText = item.querySelector('p:nth-of-type(2)').textContent.toLowerCase();
+
                 if (noteText.includes(filterName) && dateText.includes(filterDate) && locationText.includes(filterLocation)) {
-                    record.style.display = '';
+                    item.style.display = '';
                 } else {
-                    record.style.display = 'none';
+                    item.style.display = 'none';
                 }
-            });
+            }
         }
 
         function toggleList() {
-            const listItems = document.getElementById('location-list');
             listVisible = !listVisible;
-            listItems.style.display = listVisible ? 'block' : 'none';
+            locationList.style.display = listVisible ? 'block' : 'none';
             document.getElementById('toggle-view').textContent = listVisible ? 'Ocultar Lista' : 'Mostrar Lista';
         }
 
         loadRecords();
     </script>
 </body>
+</html>
+
 </html>
