@@ -3,173 +3,282 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <title>Painel de Investimentos</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
             margin: 0;
             padding: 0;
+            background-color: #f5f5f5;
         }
-        
-        .container {
-            width: 80%;
-            margin: 0 auto;
-            padding: 20px;
-            background: #fff;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        
-        h1 {
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
             text-align: center;
         }
-        
-        .form-group {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 20px;
+        main {
+            padding: 20px;
         }
-        
-        select, input {
+        h2 {
+            color: #333;
+        }
+        select, button {
             padding: 10px;
-            width: 200px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            margin-right: 10px;
-        }
-        
-        button {
-            padding: 10px;
-            background-color: #28a745;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        
-        button:hover {
-            background-color: #218838;
-        }
-        
-        #assets-list {
-            margin-top: 20px;
-        }
-        
-        .asset {
-            display: flex;
-            justify-content: space-between;
             margin: 10px 0;
         }
-        
-        canvas {
+        #chartContainer {
+            width: 100%;
+            height: 400px;
             margin-top: 20px;
+        }
+        footer {
+            text-align: center;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            position: fixed;
+            width: 100%;
+            bottom: 0;
         }
     </style>
 </head>
 <body>
-    <div class="container">
+    <header>
         <h1>Painel de Investimentos</h1>
-        <div class="form-group">
-            <select id="investment-type">
-                <option value="stock">Ação</option>
-                <option value="crypto">Criptomoeda</option>
-                <option value="bond">Título (Exemplo Estático)</option>
+    </header>
+    <main>
+        <section>
+            <h2>Selecione um Ativo</h2>
+            <select id="ativoSelect">
+                <!-- Opções de ativos serão preenchidas aqui -->
             </select>
-            <input type="text" id="asset" placeholder="Código do Ativo (ex: AAPL, BTC)" required>
-            <button id="add-button">Adicionar Ativo</button>
-        </div>
-        <div id="assets-list"></div>
-        <canvas id="performanceChart" width="400" height="200"></canvas>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+            <button id="buscarBtn">Buscar Dados</button>
+        </section>
+        <section id="dadosAtivo">
+            <h2>Dados do Ativo</h2>
+            <div id="resultado"></div>
+        </section>
+        <section id="chartContainer">
+            <canvas id="ativoChart"></canvas>
+        </section>
+        <section>
+            <h2>Lista de Ativos</h2>
+            <ul id="listaAtivos"></ul>
+        </section>
+    </main>
+    <footer>
+        <p>&copy; 2024 Painel de Investimentos</p>
+    </footer>
     <script>
-        const API_KEY_STOCKS = 'ZWTCM0FOU2LRLD3U'; // Sua chave de API da Alpha Vantage
-        const assets = [];
+        const ativos = [
+            "AAPL - Apple Inc.",
+            "MSFT - Microsoft Corporation",
+            "GOOGL - Alphabet Inc. (Google)",
+            "AMZN - Amazon.com, Inc.",
+            "TSLA - Tesla, Inc.",
+            "FB - Meta Platforms, Inc. (Facebook)",
+            "NFLX - Netflix, Inc.",
+            "NVDA - NVIDIA Corporation",
+            "BRK.B - Berkshire Hathaway Inc.",
+            "JPM - JPMorgan Chase & Co.",
+            "V - Visa Inc.",
+            "PG - Procter & Gamble Co.",
+            "UNH - UnitedHealth Group Incorporated",
+            "HD - The Home Depot, Inc.",
+            "DIS - The Walt Disney Company",
+            "VZ - Verizon Communications Inc.",
+            "MA - Mastercard Incorporated",
+            "PFE - Pfizer Inc.",
+            "INTU - Intuit Inc.",
+            "CMCSA - Comcast Corporation",
+            "CSCO - Cisco Systems, Inc.",
+            "T - AT&T Inc.",
+            "XOM - Exxon Mobil Corporation",
+            "ABT - Abbott Laboratories",
+            "NKE - NIKE, Inc.",
+            "BTC - Bitcoin",
+            "ETH - Ethereum",
+            "XRP - XRP (Ripple)",
+            "LTC - Litecoin",
+            "BCH - Bitcoin Cash",
+            "DOT - Polkadot",
+            "ADA - Cardano",
+            "LINK - Chainlink",
+            "SOL - Solana",
+            "DOGE - Dogecoin",
+            "MATIC - Polygon",
+            "UNI - Uniswap",
+            "BNB - Binance Coin",
+            "TRX - TRON",
+            "AVAX - Avalanche",
+            "XLM - Stellar",
+            "FIL - Filecoin",
+            "ALGO - Algorand",
+            "VET - VeChain",
+            "SAND - The Sandbox",
+            "AAVE - Aave",
+            "COMP - Compound",
+            "CRO - Crypto.com Coin",
+            "THETA - Theta Network",
+            "HBAR - Hedera Hashgraph",
+            "VNQ - Vanguard Real Estate ETF",
+            "SPY - SPDR S&P 500 ETF Trust",
+            "QQQ - Invesco QQQ Trust",
+            "IWM - iShares Russell 2000 ETF",
+            "VTI - Vanguard Total Stock Market ETF",
+            "XLF - Financial Select Sector SPDR Fund",
+            "XLY - Consumer Discretionary Select Sector SPDR Fund",
+            "XLC - Communication Services Select Sector SPDR Fund",
+            "XLB - Materials Select Sector SPDR Fund",
+            "XLU - Utilities Select Sector SPDR Fund",
+            "XLI - Industrial Select Sector SPDR Fund",
+            "GLD - SPDR Gold Shares",
+            "SLV - iShares Silver Trust",
+            "USO - United States Oil Fund",
+            "DBA - Invesco DB Agriculture Fund",
+            "DBC - Invesco DB Commodity Index Tracking Fund",
+            "GDX - VanEck Vectors Gold Miners ETF",
+            "GDXJ - VanEck Vectors Junior Gold Miners ETF",
+            "UGL - ProShares Ultra Gold",
+            "DUST - Direxion Daily Gold Miners Bear 2X Shares",
+            "HGU - Horizons Gold ETF",
+            "O - Realty Income Corporation",
+            "FRT - Federal Realty Investment Trust",
+            "SPG - Simon Property Group, Inc.",
+            "PLD - Prologis, Inc.",
+            "VTR - Ventas, Inc.",
+            "AMT - American Tower Corporation",
+            "DRE - Duke Realty Corporation",
+            "ESS - Essex Property Trust, Inc.",
+            "HR - Healthcare Realty Trust Incorporated",
+            "NEM - Newmont Corporation",
+            "CLF - Cleveland-Cliffs Inc.",
+            "CVX - Chevron Corporation",
+            "SLB - Schlumberger Limited",
+            "SPCE - Virgin Galactic Holdings, Inc.",
+            "CRM - Salesforce.com, Inc.",
+            "TWTR - Twitter, Inc.",
+            "LYFT - Lyft, Inc.",
+            "ZM - Zoom Video Communications, Inc.",
+            "RBLX - Roblox Corporation",
+            "SBUX - Starbucks Corporation",
+            "LMT - Lockheed Martin Corporation",
+            "NVS - Novartis AG",
+            "SAP - SAP SE",
+            "TGT - Target Corporation",
+            "HDB - HDFC Bank Limited",
+            "NTRS - Northern Trust Corporation",
+            "SCHW - The Charles Schwab Corporation",
+            "MDT - Medtronic plc",
+            "DE - Deere & Company",
+            "ORCL - Oracle Corporation",
+            "BKNG - Booking Holdings Inc.",
+            "SYK - Stryker Corporation",
+            "AMD - Advanced Micro Devices, Inc.",
+            "ISRG - Intuitive Surgical, Inc.",
+            "ATVI - Activision Blizzard, Inc.",
+            "ADI - Analog Devices, Inc.",
+            "DHR - Danaher Corporation",
+            "CARR - Carrier Global Corporation",
+            "PNC - The PNC Financial Services Group, Inc.",
+            "WBA - Walgreens Boots Alliance, Inc.",
+            "FISV - FISV Inc.",
+            "KMB - Kimberly-Clark Corporation",
+            "KHC - The Kraft Heinz Company",
+            "APD - Air Products and Chemicals, Inc.",
+            "PRGO - Perrigo Company plc",
+            "CSX - CSX Corporation",
+            "HIG - The Hartford Financial Services Group, Inc.",
+            "MTB - M&T Bank Corporation",
+            "PRU - Prudential Financial, Inc.",
+            "SLG - SL Green Realty Corp.",
+            "ESS - Essex Property Trust, Inc.",
+            "HRB - H&R Block, Inc.",
+            "COF - Capital One Financial Corporation",
+            "SRE - Sempra Energy",
+            "DOV - Dover Corporation",
+            "LNT - Alliant Energy Corporation"
+        ];
 
-        document.getElementById('add-button').addEventListener('click', () => {
-            const assetCode = document.getElementById('asset').value.toUpperCase();
-            const investmentType = document.getElementById('investment-type').value;
+        const ativoSelect = document.getElementById('ativoSelect');
+        const listaAtivos = document.getElementById('listaAtivos');
+        const buscarBtn = document.getElementById('buscarBtn');
+        const resultado = document.getElementById('resultado');
+        const ativoChart = document.getElementById('ativoChart').getContext('2d');
+        let chart;
 
-            if (assetCode) {
-                assets.push({ code: assetCode, type: investmentType });
-                document.getElementById('asset').value = '';
-                updateAssetsList();
-                fetchAssetData(assetCode, investmentType);
-            }
+        // Preencher o dropdown com ativos
+        ativos.forEach(ativo => {
+            const option = document.createElement('option');
+            option.value = ativo.split(' - ')[0];
+            option.textContent = ativo;
+            ativoSelect.appendChild(option);
         });
 
-        function updateAssetsList() {
-            const assetsList = document.getElementById('assets-list');
-            assetsList.innerHTML = '';
-            assets.forEach(asset => {
-                const assetDiv = document.createElement('div');
-                assetDiv.className = 'asset';
-                assetDiv.innerHTML = `<span>${asset.code} (${asset.type})</span><span id="${asset.code}-price">Carregando...</span>`;
-                assetsList.appendChild(assetDiv);
-            });
-        }
+        // Exibir a lista de ativos
+        ativos.forEach(ativo => {
+            const li = document.createElement('li');
+            li.textContent = ativo;
+            listaAtivos.appendChild(li);
+        });
 
-        async function fetchAssetData(assetCode, investmentType) {
-            if (investmentType === 'stock') {
-                // Fetch data from Alpha Vantage for stocks
-                const stockResponse = await fetch(`https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${assetCode}&apikey=${API_KEY_STOCKS}`);
-                const stockData = await stockResponse.json();
-                const priceElement = document.getElementById(`${assetCode}-price`);
+        // Buscar dados do ativo selecionado
+        buscarBtn.addEventListener('click', () => {
+            const ativo = ativoSelect.value;
+            const apiKey = 'ZWTCM0FOU2LRLD3U'; // Insira sua chave API aqui
+            const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${ativo}&apikey=${apiKey}&outputsize=full`;
 
-                if (stockData['Time Series (Daily)']) {
-                    const latestDate = Object.keys(stockData['Time Series (Daily)'])[0];
-                    const latestPrice = stockData['Time Series (Daily)'][latestDate]['4. close'];
-                    priceElement.innerText = `R$ ${parseFloat(latestPrice).toFixed(2)}`;
-                    updatePerformanceChart(assetCode, stockData);
-                } else {
-                    priceElement.innerText = 'Ativo não encontrado';
-                }
-            } else if (investmentType === 'crypto') {
-                // Fetch data from CoinGecko for cryptocurrencies
-                const cryptoResponse = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${assetCode.toLowerCase()}&vs_currencies=brl`);
-                const cryptoData = await cryptoResponse.json();
-                const priceElement = document.getElementById(`${assetCode}-price`);
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data['Time Series (Daily)']) {
+                        const timeSeries = data['Time Series (Daily)'];
+                        const dates = Object.keys(timeSeries).slice(0, 500); // Últimos 500 dias
+                        const prices = dates.map(date => parseFloat(timeSeries[date]['4. close']));
 
-                if (cryptoData[assetCode.toLowerCase()]) {
-                    const latestPrice = cryptoData[assetCode.toLowerCase()].brl;
-                    priceElement.innerText = `R$ ${parseFloat(latestPrice).toFixed(2)}`;
-                } else {
-                    priceElement.innerText = 'Ativo não encontrado';
-                }
-            } else if (investmentType === 'bond') {
-                // Exemplo estático para títulos
-                const priceElement = document.getElementById(`${assetCode}-price`);
-                priceElement.innerText = 'R$ 1.000,00 (Exemplo Estático)';
-            }
-        }
+                        // Atualizar dados do ativo
+                        resultado.innerHTML = `
+                            <strong>Ativo:</strong> ${ativo}<br>
+                            <strong>Preço Atual:</strong> ${prices[0].toFixed(2)} USD
+                        `;
 
-        async function updatePerformanceChart(assetCode, stockData) {
-            const labels = Object.keys(stockData['Time Series (Daily)']).slice(0, 5).reverse();
-            const prices = labels.map(date => parseFloat(stockData['Time Series (Daily)'][date]['4. close']));
-
-            const ctx = document.getElementById('performanceChart').getContext('2d');
-            const performanceChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: assetCode,
-                        data: prices,
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        fill: false,
-                    }],
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: {
-                            beginAtZero: false,
-                        },
-                    },
-                },
-            });
-        }
+                        // Desenhar gráfico
+                        if (chart) {
+                            chart.destroy();
+                        }
+                        chart = new Chart(ativoChart, {
+                            type: 'line',
+                            data: {
+                                labels: dates.reverse(),
+                                datasets: [{
+                                    label: `${ativo} Preço`,
+                                    data: prices.reverse(),
+                                    borderColor: 'rgba(75, 192, 192, 1)',
+                                    borderWidth: 1,
+                                    fill: false
+                                }]
+                            },
+                            options: {
+                                scales: {
+                                    y: {
+                                        beginAtZero: false
+                                    }
+                                }
+                            }
+                        });
+                    } else {
+                        resultado.innerHTML = '<strong>Erro:</strong> Dados não encontrados.';
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao buscar dados:', error);
+                    resultado.innerHTML = '<strong>Erro:</strong> Não foi possível buscar os dados.';
+                });
+        });
     </script>
 </body>
 </html>
+
