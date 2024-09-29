@@ -151,11 +151,15 @@
         const database = firebase.database();
         const storage = firebase.storage();
 
-        // Inicializa o mapa
-        const map = L.map('map').setView([-15.7801, -47.9292], 5); // Centraliza em uma coordenada padrão
+        // Referência ao formulário, à lista de localizações e ao mapa
+        const form = document.getElementById('location-form');
+        const locationList = document.getElementById('location-list');
+        const map = L.map('map').setView([-23.5505, -46.6333], 13); // Centro de São Paulo
+
+        // Configura a camada do mapa
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
-            attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+            attribution: '© OpenStreetMap'
         }).addTo(map);
 
         // Adiciona um novo registro ao Firebase
@@ -238,6 +242,12 @@
         function loadRecords() {
             database.ref('locations').on('value', (snapshot) => {
                 locationList.innerHTML = '';
+                map.eachLayer((layer) => {
+                    if (layer instanceof L.Marker) {
+                        map.removeLayer(layer);
+                    }
+                });
+
                 snapshot.forEach((childSnapshot) => {
                     const data = childSnapshot.val();
                     const key = childSnapshot.key;
@@ -248,34 +258,50 @@
                             <strong>Nota:</strong> ${data.note}<br>
                             <strong>Data:</strong> ${data.date}<br>
                             <strong>Hora:</strong> ${data.time}<br>
-                            <strong>Temp:</strong> ${data.temperature}<br>
+                            <strong>Temperatura:</strong> ${data.temperature}<br>
                             <strong>Clima:</strong> ${data.weather}<br>
-                            <strong>Local:</strong> ${data.location}<br>
-                            <strong>Coordenadas:</strong> ${data.coordinates}
+                            <strong>Localização:</strong> ${data.location}<br>
+                            <strong>Coordenadas:</strong> ${data.coordinates}<br>
                         </div>
-                        <div>
-                            ${data.files.map(file => `<a class="file-link" href="${file.url}" target="_blank">${file.name}</a>`).join('')}
-                        </div>
-                        <button onclick="deleteRecord('${key}')">Excluir Registro</button>
                     `;
+
+                    // Adiciona links para os arquivos
+                    if (data.files && data.files.length > 0) {
+                        const fileList = document.createElement('div');
+                        data.files.forEach((file) => {
+                            const link = document.createElement('a');
+                            link.href = file.url;
+                            link.textContent = file.name;
+                            link.className = 'file-link';
+                            link.target = '_blank';
+                            fileList.appendChild(link);
+                        });
+                        listItem.appendChild(fileList);
+                    }
+
+                    // Adiciona o botão de remover
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Remover Registro';
+                    deleteButton.onclick = () => deleteRecord(key);
+                    listItem.appendChild(deleteButton);
+
                     locationList.appendChild(listItem);
 
-                    // Adiciona um marcador ao mapa
-                    const coords = data.coordinates.split(', ').map(Number);
-                    const marker = L.marker(coords).addTo(map);
-                    marker.bindPopup(`<b>${data.note}</b><br>${data.location}<br>${data.temperature}<br>${data.weather}`);
+                    // Adiciona um marcador no mapa
+                    const coordinates = data.coordinates.split(', ').map(Number);
+                    const marker = L.marker(coordinates).addTo(map).bindPopup(data.note);
+                    map.setView(coordinates, 13); // Centraliza o mapa no novo marcador
                 });
             });
         }
 
-        // Exclui um registro do Firebase
+        // Remove um registro do Firebase
         function deleteRecord(key) {
             database.ref('locations/' + key).remove();
-            loadRecords();
         }
 
-        // Inicializa os registros ao carregar a página
-        window.onload = loadRecords;
+        // Inicializa o carregamento dos registros
+        loadRecords();
     </script>
 </body>
 </html>
