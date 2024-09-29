@@ -21,11 +21,19 @@
             margin-bottom: 20px;
         }
 
-        .search-container {
+        .search-container, .sort-container {
             margin-bottom: 20px;
         }
 
         input[type="text"] {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            width: calc(100% - 22px);
+            box-sizing: border-box;
+        }
+
+        select {
             padding: 10px;
             border-radius: 5px;
             border: 1px solid #ddd;
@@ -121,6 +129,14 @@
 
     <div class="search-container">
         <input type="text" id="search" placeholder="Pesquisar registros..." oninput="filterRecords()">
+    </div>
+
+    <div class="sort-container">
+        <select id="sort" onchange="loadRecords()">
+            <option value="name">Ordenar por Nome</option>
+            <option value="date">Ordenar por Data</option>
+            <option value="location">Ordenar por Localização</option>
+        </select>
     </div>
 
     <form id="location-form">
@@ -240,7 +256,7 @@
 
         // Carrega e exibe os registros da Firebase
         function loadRecords() {
-            database.ref('locations').on('value', (snapshot) => {
+            database.ref('locations').once('value', (snapshot) => {
                 locationList.innerHTML = '';
                 map.eachLayer((layer) => {
                     if (layer instanceof L.Marker) {
@@ -248,27 +264,42 @@
                     }
                 });
 
-                snapshot.forEach((childSnapshot) => {
+                const records = [];
+                snapshot.forEach(childSnapshot => {
                     const data = childSnapshot.val();
                     const key = childSnapshot.key;
+                    records.push({ key, ...data });
+                });
+
+                // Ordena os registros com base na seleção do usuário
+                const sortOption = document.getElementById('sort').value;
+                if (sortOption === 'name') {
+                    records.sort((a, b) => a.note.localeCompare(b.note));
+                } else if (sortOption === 'date') {
+                    records.sort((a, b) => new Date(b.date) - new Date(a.date));
+                } else if (sortOption === 'location') {
+                    records.sort((a, b) => a.location.localeCompare(b.location));
+                }
+
+                records.forEach(({ key, note, date, time, coordinates, files }) => {
                     const listItem = document.createElement('div');
                     listItem.className = 'list-item';
-                    listItem.innerHTML = 
-                        `<div>
-                            <strong>Nota:</strong> ${data.note}<br>
-                            <strong>Data:</strong> ${data.date}<br>
-                            <strong>Hora:</strong> ${data.time}<br>
-                            <strong>Localização:</strong> ${data.location}<br>
-                            <a class="file-link" href="${data.files.map(file => file.url).join(', ')}" target="_blank">Ver Arquivos</a>
+                    listItem.innerHTML = `
+                        <strong>${note}</strong>
+                        <div>
+                            <strong>Data:</strong> ${date}<br>
+                            <strong>Hora:</strong> ${time}<br>
+                            <strong>Localização:</strong> ${coordinates}<br>
+                            <a class="file-link" href="${files.map(file => file.url).join(', ')}" target="_blank">Ver Arquivos</a>
                         </div>
                         <button onclick="deleteRecord('${key}')">Excluir</button>`;
                     
                     locationList.appendChild(listItem);
 
                     // Adiciona o marcador ao mapa
-                    const [lat, lon] = data.coordinates.split(', ').map(Number);
+                    const [lat, lon] = coordinates.split(', ').map(Number);
                     const marker = L.marker([lat, lon]).addTo(map);
-                    marker.bindPopup(`<strong>${data.note}</strong><br><strong>Data:</strong> ${data.date}<br><strong>Hora:</strong> ${data.time}`);
+                    marker.bindPopup(`<strong>${note}</strong><br><strong>Data:</strong> ${date}<br><strong>Hora:</strong> ${time}`);
                 });
             });
         }
