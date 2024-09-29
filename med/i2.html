@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Investimentos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        
+        .form-group {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        
+        select, input {
+            padding: 10px;
+            width: 200px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        
+        button {
+            padding: 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background-color: #218838;
+        }
+        
+        #assets-list {
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        
+        .asset {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 5px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        
+        .asset span {
+            flex: 1;
+            text-align: left;
+        }
+        
+        canvas {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Painel de Investimentos</h1>
+        <div class="form-group">
+            <select id="investment-type">
+                <option value="stock">Ação</option>
+                <option value="crypto">Criptomoeda</option>
+                <option value="bond">Título (Exemplo Estático)</option>
+            </select>
+            <input type="text" id="asset" placeholder="Código do Ativo (ex: AAPL, BTC)" required>
+            <select id="period">
+                <option value="1d">Último Dia</option>
+                <option value="1w">Última Semana</option>
+                <option value="1m">Último Mês</option>
+                <option value="6m">Últimos 6 Meses</option>
+                <option value="1y">Último Ano</option>
+            </select>
+            <button id="add-button">Adicionar Ativo</button>
+        </div>
+        <div id="assets-list"></div>
+        <canvas id="performanceChart" width="400" height="200"></canvas>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const API_KEY_STOCKS = 'ZWTCM0FOU2LRLD3U'; // Sua chave de API da Alpha Vantage
+        const assets = [];
+
+        document.getElementById('add-button').addEventListener('click', () => {
+            const assetCode = document.getElementById('asset').value.toUpperCase();
+            const investmentType = document.getElementById('investment-type').value;
+            const period = document.getElementById('period').value;
+
+            if (assetCode) {
+                assets.push({ code: assetCode, type: investmentType, period });
+                document.getElementById('asset').value = '';
+                updateAssetsList();
+                fetchAssetData(assetCode, investmentType, period);
+            }
+        });
+
+        function updateAssetsList() {
+            const assetsList = document.getElementById('assets-list');
+            assetsList.innerHTML = '';
+            assets.forEach(asset => {
+                const assetDiv = document.createElement('div');
+                assetDiv.className = 'asset';
+                assetDiv.innerHTML = `<span>${asset.code} (${asset.type})</span><span id="${asset.code}-price">Carregando...</span>`;
+                assetsList.appendChild(assetDiv);
+            });
+        }
+
+        async function fetchAssetData(assetCode, investmentType, period) {
+            if (investmentType === 'stock') {
+                // Fetch data from Alpha Vantage for stocks
+                const stockResponse = await fetch(`https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${assetCode}&apikey=${API_KEY_STOCKS}`);
+                const stockData = await stockResponse.json();
+                const priceElement = document.getElementById(`${assetCode}-price`);
+
+                if (stockData['Time Series (Daily)']) {
+                    const latestDate = Object.keys(stockData['Time Series (Daily)'])[0];
+                    const latestPrice = stockData['Time Series (Daily)'][latestDate]['4. close'];
+                    priceElement.innerText = `R$ ${parseFloat(latestPrice).toFixed(2)}`;
+                    updatePerformanceChart(assetCode, stockData, period);
+                } else {
+                    priceElement.innerText = 'Ativo não encontrado';
+                }
+            } else if (investmentType === 'crypto') {
+                // Fetch data from CoinGecko for cryptocurrencies
+                const cryptoResponse = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${assetCode.toLowerCase()}&vs_currencies=brl`);
+                const cryptoData = await cryptoResponse.json();
+                const priceElement = document.getElementById(`${assetCode}-price`);
+
+                if (cryptoData[assetCode.toLowerCase()]) {
+                    const latestPrice = cryptoData[assetCode.toLowerCase()].brl;
+                    priceElement.innerText = `R$ ${parseFloat(latestPrice).toFixed(2)}`;
+                } else {
+                    priceElement.innerText = 'Ativo não encontrado';
+                }
+            } else if (investmentType === 'bond') {
+                // Exemplo estático para títulos
+                const priceElement = document.getElementById(`${assetCode}-price`);
+                priceElement.innerText = 'R$ 1.000,00 (Exemplo Estático)';
+            }
+        }
+
+        async function updatePerformanceChart(assetCode, stockData, period) {
+            const dataLength = getDataLength(period);
+            const labels = Object.keys(stockData['Time Series (Daily)']).slice(0, dataLength).reverse();
+            const prices = labels.map(date => parseFloat(stockData['Time Series (Daily)'][date]['4. close']));
+
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            const performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: assetCode,
+                        data: prices,
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        fill: false,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                        },
+                    },
+                },
+            });
+        }
+
+        function getDataLength(period) {
+            switch (period) {
+                case '1d': return 1; // Último dia
+                case '1w': return 7; // Última semana
+                case '1m': return 30; // Último mês
+                case '6m': return 180; // Últimos 6 meses
+                case '1y': return 365; // Último ano
+                default: return 5; // Padrão
+            }
+        }
+    </script>
+</body>
+</html>
