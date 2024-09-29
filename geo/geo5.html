@@ -1,135 +1,282 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Geo App</title>
-  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
-  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY"></script>
-  <style>
-    #map {
-      height: 400px;
-      width: 100%;
-    }
-    #list-container {
-      margin-top: 20px;
-    }
-    .list-item {
-      padding: 10px;
-      border: 1px solid #ccc;
-      margin-bottom: 10px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Localização</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        form {
+            margin-bottom: 20px;
+        }
+
+        input, textarea {
+            padding: 10px;
+            margin: 5px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            width: calc(100% - 22px);
+            box-sizing: border-box;
+        }
+
+        textarea {
+            resize: vertical;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: #fff;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .list-item {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            background-color: #fff;
+            text-align: left;
+        }
+
+        .list-item button {
+            background-color: #dc3545;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .list-item button:hover {
+            background-color: #c82333;
+        }
+
+        .file-link {
+            display: block;
+            margin-top: 5px;
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .file-link:hover {
+            text-decoration: underline;
+        }
+
+        .download-all {
+            display: block;
+            margin-top: 10px;
+            background-color: #28a745;
+        }
+
+        .download-all:hover {
+            background-color: #218838;
+        }
+
+        #map {
+            height: 400px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 600px) {
+            input, textarea {
+                width: calc(100% - 12px);
+            }
+
+            button {
+                width: 100%;
+                margin: 5px 0;
+            }
+        }
+    </style>
 </head>
 <body>
-  <h1>Geo App</h1>
-  <div id="map"></div>
-  <div id="list-container"></div>
+    <h1>Registro de Localização</h1>
 
-  <script>
-    // Configuração do Firebase
-    const firebaseConfig = {
-      apiKey: "YOUR_FIREBASE_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
+    <form id="location-form">
+        <textarea id="note" placeholder="Digite uma nota" rows="4" required></textarea>
+        <input type="file" id="file-upload" multiple />
+        <button type="button" onclick="addLocation()">Adicionar Registro</button>
+    </form>
 
-    // Inicializando o Firebase
-    firebase.initializeApp(firebaseConfig);
-    const dbRef = firebase.database().ref('registros');
+    <div id="location-list"></div>
+    <div id="map"></div>
 
-    let map;
-    let markers = [];
-    let locationList = [];
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-    // Inicializa o mapa
-    function initMap() {
-      map = new google.maps.Map(document.getElementById('map'), {
-        center: { lat: -23.5505, lng: -46.6333 }, // Ponto central (São Paulo, por exemplo)
-        zoom: 8
-      });
-    }
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+            measurementId: "G-CVBQ54PERH"
+        };
 
-    // Limpa os marcadores do mapa
-    function clearMapMarkers() {
-      for (let i = 0; i < markers.length; i++) {
-        markers[i].setMap(null);
-      }
-      markers = [];
-    }
+        // Inicializa o Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const storage = firebase.storage();
 
-    // Atualiza os pontos no mapa
-    function updateMapMarkers(locations) {
-      clearMapMarkers();
+        // Inicializa o mapa
+        const map = L.map('map').setView([-15.7801, -47.9292], 5); // Centraliza em uma coordenada padrão
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
 
-      locations.forEach(location => {
-        const marker = new google.maps.Marker({
-          position: location,
-          map: map,
-          title: 'Registro'
-        });
-        markers.push(marker);
-      });
-    }
+        // Adiciona um novo registro ao Firebase
+        async function addLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(async (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    const currentDate = new Date().toISOString().slice(0, 10); // Data no formato YYYY-MM-DD
 
-    // Exclui um registro do Firebase
-    function deleteRecord(key) {
-      firebase.database().ref('registros/' + key).remove()
-        .then(() => {
-          alert('Registro excluído com sucesso!');
-        })
-        .catch((error) => {
-          alert('Erro ao excluir registro: ' + error.message);
-        });
-    }
+                    // Ajusta a hora local
+                    const localDate = new Date();
+                    const options = {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        timeZoneName: 'short',
+                    };
+                    const currentTime = localDate.toLocaleString('pt-BR', options); // Hora local
 
-    // Função para carregar registros e exibi-los
-    function loadRecords() {
-      dbRef.on('value', (snapshot) => {
-        locationList = []; // Limpa a lista de locais
-        const data = snapshot.val();
-        const listContainer = document.getElementById('list-container');
-        listContainer.innerHTML = ''; // Limpa a exibição da lista
+                    const note = document.getElementById('note').value;
 
-        if (data) {
-          Object.keys(data).forEach((key) => {
-            const registro = data[key];
-            const latitude = registro.latitude;
-            const longitude = registro.longitude;
+                    try {
+                        const weatherData = await getWeather(lat, lon);
+                        const temperature = weatherData.main.temp;
+                        const weatherDescription = weatherData.weather[0].description;
+                        const locationName = weatherData.name;
 
-            // Adiciona o registro à lista de localizações para o mapa
-            locationList.push({ lat: latitude, lng: longitude });
+                        const files = document.getElementById('file-upload').files;
+                        const fileUrls = [];
 
-            // Cria o item da lista de exibição
-            const listItem = document.createElement('div');
-            listItem.classList.add('list-item');
-            listItem.innerHTML = `
-              <p>Nota: ${registro.nota}</p>
-              <p>Temperatura: ${registro.temperatura}</p>
-              <p>Clima: ${registro.clima}</p>
-              <p>Coordenadas: (${latitude}, ${longitude})</p>
-              <button onclick="deleteRecord('${key}')">Excluir</button>
-            `;
-            listContainer.appendChild(listItem);
-          });
+                        // Faz o upload de arquivos
+                        for (let file of files) {
+                            const storageRef = storage.ref().child(`files/${file.name}`);
+                            await storageRef.put(file);
+                            const fileUrl = await storageRef.getDownloadURL();
+                            fileUrls.push({ name: file.name, url: fileUrl });
+                        }
 
-          // Atualiza os marcadores no mapa
-          updateMapMarkers(locationList);
+                        const newRecord = {
+                            note,
+                            date: currentDate,
+                            time: currentTime,
+                            temperature: `${temperature}°C`,
+                            weather: weatherDescription,
+                            location: locationName,
+                            coordinates: `${lat}, ${lon}`,
+                            files: fileUrls
+                        };
+
+                        const newRecordRef = database.ref('locations').push();
+                        await newRecordRef.set(newRecord);
+
+                        form.reset();
+                        loadRecords();
+                    } catch (error) {
+                        console.error('Erro ao obter dados do clima:', error);
+                    }
+                }, (error) => {
+                    alert('Não foi possível obter a localização. Verifique suas permissões de localização.');
+                });
+            } else {
+                alert('Geolocalização não é suportada por este navegador.');
+            }
         }
-      });
-    }
 
-    // Inicializa o mapa e carrega os registros
-    window.onload = function() {
-      initMap();
-      loadRecords();
-    };
-  </script>
+        // Função para obter dados do clima usando a API do OpenWeatherMap
+        async function getWeather(lat, lon) {
+            const apiKey = 'e18e61a7e515eb3b92b588155acd3bc1';
+            const apiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`;
+
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                throw new Error('Erro na resposta da API do OpenWeatherMap');
+            }
+            return await response.json();
+        }
+
+        // Carrega e exibe os registros da Firebase
+        function loadRecords() {
+            database.ref('locations').on('value', (snapshot) => {
+                locationList.innerHTML = '';
+                snapshot.forEach((childSnapshot) => {
+                    const data = childSnapshot.val();
+                    const key = childSnapshot.key;
+                    const listItem = document.createElement('div');
+                    listItem.className = 'list-item';
+                    listItem.innerHTML = `
+                        <div>
+                            <strong>Nota:</strong> ${data.note}<br>
+                            <strong>Data:</strong> ${data.date}<br>
+                            <strong>Hora:</strong> ${data.time}<br>
+                            <strong>Temp:</strong> ${data.temperature}<br>
+                            <strong>Clima:</strong> ${data.weather}<br>
+                            <strong>Local:</strong> ${data.location}<br>
+                            <strong>Coordenadas:</strong> ${data.coordinates}
+                        </div>
+                        <div>
+                            ${data.files.map(file => `<a class="file-link" href="${file.url}" target="_blank">${file.name}</a>`).join('')}
+                        </div>
+                        <button onclick="deleteRecord('${key}')">Excluir Registro</button>
+                    `;
+                    locationList.appendChild(listItem);
+
+                    // Adiciona um marcador ao mapa
+                    const coords = data.coordinates.split(', ').map(Number);
+                    const marker = L.marker(coords).addTo(map);
+                    marker.bindPopup(`<b>${data.note}</b><br>${data.location}<br>${data.temperature}<br>${data.weather}`);
+                });
+            });
+        }
+
+        // Exclui um registro do Firebase
+        function deleteRecord(key) {
+            database.ref('locations/' + key).remove();
+            loadRecords();
+        }
+
+        // Inicializa os registros ao carregar a página
+        window.onload = loadRecords;
+    </script>
 </body>
 </html>
 
