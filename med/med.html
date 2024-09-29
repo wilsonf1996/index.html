@@ -3,211 +3,154 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Conversor de Unidades de Engenharia</title>
+    <title>Conversor de Unidades</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
-            margin: 0;
             padding: 20px;
-            color: #333;
-            transition: background-color 0.5s, color 0.5s;
         }
-        h1 {
-            text-align: center;
-        }
-        .container {
-            max-width: 800px;
-            margin: auto;
-            padding: 20px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        label {
-            display: block;
-            margin: 10px 0 5px;
-        }
-        select, input {
+        select, input, button {
+            margin: 10px 0;
+            padding: 10px;
             width: 100%;
-            padding: 10px;
-            margin: 5px 0 20px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            transition: border 0.3s;
-        }
-        select:focus, input:focus {
-            border: 1px solid #007bff;
-            outline: none;
-        }
-        button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            background-color: #0056b3;
+            max-width: 300px;
         }
         .result {
-            font-size: 1.2em;
-            margin-top: 10px;
-            color: #007bff;
+            margin-top: 20px;
+            font-weight: bold;
         }
         .error {
             color: red;
         }
-        .history {
-            margin-top: 20px;
-            border-top: 1px solid #ccc;
-            padding-top: 10px;
-        }
-        .history-item {
-            margin: 5px 0;
-            padding: 10px;
-            background: #f9f9f9;
-            border-left: 5px solid #007bff;
-            transition: background 0.3s;
-        }
-        .history-item:hover {
-            background: #e9e9e9;
-        }
-        #themeToggle {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            padding: 5px 10px;
-            cursor: pointer;
+        h1 {
+            text-align: center;
         }
     </style>
 </head>
 <body>
-    <button id="themeToggle">Alternar Tema</button>
-    <div class="container">
-        <h1>Conversor de Unidades de Engenharia</h1>
-        <label for="measureType">Tipo de Medida:</label>
-        <select id="measureType" onchange="updateConversions()"></select>
+    <h1>Conversor de Unidades</h1>
+    <label for="measureType">Selecione o tipo de medida:</label>
+    <select id="measureType" onchange="updateConversions()"></select>
 
-        <label for="fromUnit">De:</label>
-        <select id="fromUnit"></select>
+    <label for="fromUnit">De:</label>
+    <select id="fromUnit"></select>
 
-        <label for="value">Valor:</label>
-        <input type="number" id="value" placeholder="Insira o valor" min="0">
+    <label for="toUnit">Para:</label>
+    <select id="toUnit"></select>
 
-        <label for="toUnit">Para:</label>
-        <select id="toUnit"></select>
+    <label for="value">Valor:</label>
+    <input type="number" id="value" placeholder="Insira o valor" />
 
-        <button onclick="convert()">Converter</button>
-        <div id="result" class="result"></div>
-        <div id="error" class="error"></div>
+    <button onclick="convert()">Converter</button>
 
-        <div class="history" id="history">
-            <h3>Histórico de Conversões</h3>
-            <button onclick="clearHistory()">Limpar Histórico</button>
-        </div>
-    </div>
+    <div id="result" class="result"></div>
+    <div id="error" class="error"></div>
 
     <script>
         const conversions = {
-            length: {
-                units: ["m", "km", "cm", "mm", "mi", "yd", "ft", "in"],
-                factors: { "m": 1, "km": 1000, "cm": 0.01, "mm": 0.001, "mi": 1609.34, "yd": 0.9144, "ft": 0.3048, "in": 0.0254 },
+            comprimento: {
+                units: ["m", "cm", "mm", "km", "in", "ft", "yd", "mi", "µm", "nm"],
                 convert(value, fromUnit, toUnit) {
-                    const baseValue = value / this.factors[fromUnit];
-                    return baseValue * this.factors[toUnit];
+                    const factors = { m: 1, cm: 0.01, mm: 0.001, km: 1000, in: 0.0254, ft: 0.3048, yd: 0.9144, mi: 1609.34, µm: 1e-6, nm: 1e-9 };
+                    const baseValue = value / factors[fromUnit];
+                    return baseValue * factors[toUnit];
                 }
             },
             area: {
-                units: ["m2", "ha", "ac", "ft2", "km2", "mi2"],
-                factors: { "m2": 1, "ha": 10000, "ac": 4046.86, "ft2": 0.092903, "km2": 1000000, "mi2": 2589988.11 },
+                units: ["m²", "cm²", "mm²", "ha", "ac", "ft²", "yd²", "km²", "in²", "mi²"],
                 convert(value, fromUnit, toUnit) {
-                    const baseValue = value / this.factors[fromUnit];
-                    return baseValue * this.factors[toUnit];
+                    const factors = { "m²": 1, "cm²": 0.0001, "mm²": 1e-6, "ha": 10000, "ac": 4046.86, "ft²": 0.092903, "yd²": 0.836127, "km²": 1e6, "in²": 0.00064516, "mi²": 2589988.11 };
+                    const baseValue = value / factors[fromUnit];
+                    return baseValue * factors[toUnit];
                 }
             },
             volume: {
-                units: ["m3", "l", "ml", "ft3", "in3", "gal"],
-                factors: { "m3": 1, "l": 0.001, "ml": 0.000001, "ft3": 0.0283168, "in3": 0.0000163871, "gal": 0.00378541 },
+                units: ["m³", "cm³", "mL", "L", "ft³", "yd³", "km³", "in³", "gal", "pt"],
                 convert(value, fromUnit, toUnit) {
-                    const baseValue = value / this.factors[fromUnit];
-                    return baseValue * this.factors[toUnit];
+                    const factors = { "m³": 1, "cm³": 1e-6, "mL": 1e-6, "L": 0.001, "ft³": 0.0283168, "yd³": 0.764555, "km³": 1e9, "in³": 0.0000163871, "gal": 0.00378541, "pt": 0.000473176 };
+                    const baseValue = value / factors[fromUnit];
+                    return baseValue * factors[toUnit];
                 }
             },
-            mass: {
-                units: ["kg", "g", "mg", "lb", "oz", "t"],
-                factors: { "kg": 1, "g": 0.001, "mg": 0.000001, "lb": 0.453592, "oz": 0.0283495, "t": 1000 },
+            massa: {
+                units: ["kg", "g", "mg", "t", "lb", "oz", "qt", "ton", "gr"],
                 convert(value, fromUnit, toUnit) {
-                    const baseValue = value / this.factors[fromUnit];
-                    return baseValue * this.factors[toUnit];
+                    const factors = { kg: 1, g: 0.001, mg: 1e-6, t: 1000, lb: 0.453592, oz: 0.0283495, qt: 1.13652, ton: 907.185, gr: 0.0647989 };
+                    const baseValue = value / factors[fromUnit];
+                    return baseValue * factors[toUnit];
                 }
             },
-            temperature: {
-                units: ["C", "F", "K"],
+            temperatura: {
+                units: ["°C", "°F", "K", "°R"],
                 convert(value, fromUnit, toUnit) {
-                    if (fromUnit === "C") {
-                        return toUnit === "F" ? (value * 9/5) + 32 : value + 273.15;
-                    } else if (fromUnit === "F") {
-                        return toUnit === "C" ? (value - 32) * 5/9 : ((value - 32) * 5/9) + 273.15;
-                    } else {
-                        return toUnit === "C" ? value - 273.15 : (value - 273.15) * 9/5 + 32;
+                    if (fromUnit === "°C") {
+                        if (toUnit === "°F") return (value * 9/5) + 32;
+                        if (toUnit === "K") return value + 273.15;
+                        if (toUnit === "°R") return (value + 273.15) * 9/5;
                     }
+                    if (fromUnit === "°F") {
+                        if (toUnit === "°C") return (value - 32) * 5/9;
+                        if (toUnit === "K") return ((value - 32) * 5/9) + 273.15;
+                        if (toUnit === "°R") return value + 459.67;
+                    }
+                    if (fromUnit === "K") {
+                        if (toUnit === "°C") return value - 273.15;
+                        if (toUnit === "°F") return ((value - 273.15) * 9/5) + 32;
+                        if (toUnit === "°R") return value * 9/5;
+                    }
+                    if (fromUnit === "°R") {
+                        if (toUnit === "°C") return (value - 491.67) * 5/9;
+                        if (toUnit === "°F") return value - 459.67;
+                        if (toUnit === "K") return value * 5/9;
+                    }
+                    return value; // Se for a mesma unidade
                 }
             },
-            pressure: {
-                units: ["Pa", "kPa", "MPa", "bar", "psi", "atm"],
-                factors: { "Pa": 1, "kPa": 1000, "MPa": 1000000, "bar": 100000, "psi": 6894.76, "atm": 101325 },
+            tempo: {
+                units: ["s", "min", "h", "d", "wk", "mo", "yr"],
                 convert(value, fromUnit, toUnit) {
-                    const baseValue = value / this.factors[fromUnit];
-                    return baseValue * this.factors[toUnit];
+                    const factors = { s: 1, min: 60, h: 3600, d: 86400, wk: 604800, mo: 2629800, yr: 31557600 };
+                    const baseValue = value / factors[fromUnit];
+                    return baseValue * factors[toUnit];
                 }
             },
-            force: {
-                units: ["N", "kN", "lb_f", "oz_f"],
-                factors: { "N": 1, "kN": 1000, "lb_f": 4.44822, "oz_f": 0.278013 },
+            pressao: {
+                units: ["Pa", "kPa", "MPa", "bar", "atm", "mmHg", "inHg", "psi"],
                 convert(value, fromUnit, toUnit) {
-                    const baseValue = value / this.factors[fromUnit];
-                    return baseValue * this.factors[toUnit];
+                    const factors = { Pa: 1, kPa: 1000, MPa: 1e6, bar: 100000, atm: 101325, mmHg: 133.322, inHg: 3386.39, psi: 6894.76 };
+                    const baseValue = value / factors[fromUnit];
+                    return baseValue * factors[toUnit];
                 }
             },
-            energy: {
-                units: ["J", "kJ", "cal", "kcal", "Wh", "kWh"],
-                factors: { "J": 1, "kJ": 1000, "cal": 4.184, "kcal": 4184, "Wh": 3600, "kWh": 3600000 },
+            energia: {
+                units: ["J", "kJ", "cal", "kcal", "Wh", "kWh", "BTU"],
                 convert(value, fromUnit, toUnit) {
-                    const baseValue = value / this.factors[fromUnit];
-                    return baseValue * this.factors[toUnit];
+                    const factors = { J: 1, kJ: 1000, cal: 4.184, kcal: 4184, Wh: 3600, kWh: 3.6e6, BTU: 1055.06 };
+                    const baseValue = value / factors[fromUnit];
+                    return baseValue * factors[toUnit];
                 }
             },
-            power: {
-                units: ["W", "kW", "hp", "BTU/h"],
-                factors: { "W": 1, "kW": 1000, "hp": 745.7, "BTU/h": 0.293071 },
+            potencia: {
+                units: ["W", "kW", "hp", "J/s", "BTU/h"],
                 convert(value, fromUnit, toUnit) {
-                    const baseValue = value / this.factors[fromUnit];
-                    return baseValue * this.factors[toUnit];
+                    const factors = { W: 1, kW: 1000, hp: 745.7, "J/s": 1, "BTU/h": 0.293071 };
+                    const baseValue = value / factors[fromUnit];
+                    return baseValue * factors[toUnit];
                 }
             },
-            speed: {
-                units: ["m/s", "km/h", "mph", "ft/s"],
-                factors: { "m/s": 1, "km/h": 0.277778, "mph": 0.44704, "ft/s": 0.3048 },
+            frequencia: {
+                units: ["Hz", "kHz", "MHz", "GHz"],
                 convert(value, fromUnit, toUnit) {
-                    const baseValue = value / this.factors[fromUnit];
-                    return baseValue * this.factors[toUnit];
+                    const factors = { Hz: 1, kHz: 1000, MHz: 1e6, GHz: 1e9 };
+                    const baseValue = value / factors[fromUnit];
+                    return baseValue * factors[toUnit];
                 }
             },
-            length: {
-                units: ["m", "km", "cm", "mm", "mi", "yd", "ft", "in"],
-                factors: { "m": 1, "km": 1000, "cm": 0.01, "mm": 0.001, "mi": 1609.34, "yd": 0.9144, "ft": 0.3048, "in": 0.0254 },
-                convert(value, fromUnit, toUnit) {
-                    const baseValue = value / this.factors[fromUnit];
-                    return baseValue * this.factors[toUnit];
-                }
-            }
-            // Adicione outras categorias conforme necessário
+            // Adicione mais categorias conforme necessário...
         };
 
-        function initialize() {
+        function populateMeasureTypes() {
             const measureTypeSelect = document.getElementById("measureType");
             Object.keys(conversions).forEach(type => {
                 const option = document.createElement("option");
@@ -222,16 +165,13 @@
             const measureType = document.getElementById("measureType").value;
             const fromUnitSelect = document.getElementById("fromUnit");
             const toUnitSelect = document.getElementById("toUnit");
-
             fromUnitSelect.innerHTML = "";
             toUnitSelect.innerHTML = "";
-
             conversions[measureType].units.forEach(unit => {
                 const fromOption = document.createElement("option");
                 fromOption.value = unit;
                 fromOption.textContent = unit;
                 fromUnitSelect.appendChild(fromOption);
-
                 const toOption = document.createElement("option");
                 toOption.value = unit;
                 toOption.textContent = unit;
@@ -244,48 +184,22 @@
             const fromUnit = document.getElementById("fromUnit").value;
             const toUnit = document.getElementById("toUnit").value;
             const value = parseFloat(document.getElementById("value").value);
-            const resultElement = document.getElementById("result");
-            const errorElement = document.getElementById("error");
+            const resultDiv = document.getElementById("result");
+            const errorDiv = document.getElementById("error");
+            errorDiv.innerHTML = "";
 
-            errorElement.textContent = "";
-            resultElement.textContent = "";
-
-            if (isNaN(value) || value < 0) {
-                errorElement.textContent = "Por favor, insira um valor válido.";
+            if (isNaN(value)) {
+                errorDiv.innerHTML = "Por favor, insira um valor válido.";
                 return;
             }
 
-            let result;
-            if (measureType === "temperature") {
-                result = conversions[measureType].convert(value, fromUnit, toUnit);
-            } else {
-                result = conversions[measureType].convert(value, fromUnit, toUnit);
-            }
-
-            resultElement.textContent = `Resultado: ${result.toFixed(2)} ${toUnit}`;
-            addToHistory(value, fromUnit, result, toUnit);
+            const result = conversions[measureType].convert(value, fromUnit, toUnit);
+            resultDiv.innerHTML = `${value} ${fromUnit} é igual a ${result.toFixed(4)} ${toUnit}`;
         }
 
-        function addToHistory(value, fromUnit, result, toUnit) {
-            const historyElement = document.getElementById("history");
-            const historyItem = document.createElement("div");
-            historyItem.className = "history-item";
-            historyItem.textContent = `${value} ${fromUnit} = ${result.toFixed(2)} ${toUnit}`;
-            historyElement.appendChild(historyItem);
-        }
-
-        function clearHistory() {
-            document.getElementById("history").innerHTML = '<h3>Histórico de Conversões</h3><button onclick="clearHistory()">Limpar Histórico</button>';
-        }
-
-        document.getElementById("themeToggle").onclick = function() {
-            const body = document.body;
-            body.style.backgroundColor = body.style.backgroundColor === 'black' ? '#f4f4f4' : 'black';
-            body.style.color = body.style.color === 'white' ? '#333' : 'white';
-        }
-
-        initialize();
+        window.onload = populateMeasureTypes;
     </script>
 </body>
 </html>
+
 
