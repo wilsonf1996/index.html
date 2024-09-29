@@ -155,6 +155,7 @@
         const locationList = document.getElementById('location-list');
         const map = L.map('map').setView([-23.5505, -46.6333], 13);
         let listVisible = true;
+        let currentEditId = null;
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
@@ -178,18 +179,9 @@
                     const note = document.getElementById('note').value;
 
                     try {
-                        const weatherData = await getWeather(lat, lon);
-                        const locationName = weatherData.name;
-
+                        const locationName = await getPreciseLocation(lat, lon);
                         const files = document.getElementById('file-upload').files;
-                        const fileUrls = [];
-
-                        for (let file of files) {
-                            const storageRef = storage.ref().child(`files/${file.name}`);
-                            await storageRef.put(file);
-                            const fileUrl = await storageRef.getDownloadURL();
-                            fileUrls.push({ name: file.name, url: fileUrl });
-                        }
+                        const fileUrls = await uploadFiles(files);
 
                         const newRecord = {
                             note,
@@ -216,14 +208,25 @@
             }
         }
 
-        async function getWeather(lat, lon) {
-            const apiKey = 'e18e61a7e515eb3b92b588155acd3bc1';
-            const apiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`;
+        async function getPreciseLocation(lat, lon) {
+            const apiUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1&accept-language=pt-BR`;
             const response = await fetch(apiUrl);
             if (!response.ok) {
-                throw new Error('Erro na resposta da API do OpenWeatherMap');
+                throw new Error('Erro ao obter nome da localização');
             }
-            return await response.json();
+            const data = await response.json();
+            return data.display_name || 'Localização Desconhecida';
+        }
+
+        async function uploadFiles(files) {
+            const fileUrls = [];
+            for (let file of files) {
+                const storageRef = storage.ref().child(`files/${file.name}`);
+                await storageRef.put(file);
+                const fileUrl = await storageRef.getDownloadURL();
+                fileUrls.push({ name: file.name, url: fileUrl });
+            }
+            return fileUrls;
         }
 
         function loadRecords() {
@@ -231,7 +234,8 @@
                 locationList.innerHTML = '';
                 snapshot.forEach((childSnapshot) => {
                     const record = childSnapshot.val();
-                    displayRecord(record, childSnapshot.key);
+                    const recordId = childSnapshot.key;
+                    displayRecord(record, recordId);
                 });
             });
         }
@@ -239,6 +243,7 @@
         function displayRecord(record, id) {
             const recordDiv = document.createElement('div');
             recordDiv.className = 'list-item';
+            recordDiv.setAttribute('data-id', id);
 
             const recordTitle = document.createElement('h3');
             recordTitle.textContent = record.note;
@@ -249,7 +254,7 @@
             recordDiv.appendChild(recordDate);
 
             const recordLocation = document.createElement('p');
-            recordLocation.textContent = `Localização: ${record.location} (${record.coordinates})`;
+            recordLocation.textContent = `Localização: ${record.location}`;
             recordDiv.appendChild(recordLocation);
 
             if (record.files && record.files.length > 0) {
@@ -261,11 +266,27 @@
                     fileLink.className = 'file-link';
                     fileLink.target = '_blank';
                     fileLink.textContent = file.name;
+
+                    const deleteFileButton = document.createElement('button');
+                    deleteFileButton.textContent = 'Excluir Arquivo';
+                    deleteFileButton.onclick = () => deleteFile(file.name, id);
+
                     fileList.appendChild(fileLink);
+                    fileList.appendChild(deleteFileButton);
                     fileList.appendChild(document.createElement('br'));
                 });
                 recordDiv.appendChild(fileList);
             }
+
+            const editButton = document.createElement('button');
+            editButton.textContent = 'Editar';
+            editButton.onclick = () => editRecord(id, record);
+            recordDiv.appendChild(editButton);
+
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = 'Excluir';
+            deleteButton.onclick = () => deleteRecord(id);
+            recordDiv.appendChild(deleteButton);
 
             locationList.appendChild(recordDiv);
 
@@ -273,6 +294,30 @@
             L.marker(record.coordinates.split(',').map(Number)).addTo(map)
                 .bindPopup(`<b>${record.note}</b><br>${record.location}<br>${record.date} ${record.time}`)
                 .openPopup();
+        }
+
+        function editRecord(id, record) {
+            document.getElementById('note').value = record.note;
+            currentEditId = id;
+            // Se necessário, pode-se adicionar lógica para editar arquivos, se desejado
+        }
+
+        async function deleteRecord(id) {
+            if (confirm('Tem certeza que deseja excluir este registro?')) {
+                await database.ref(`locations/${id}`).remove();
+                loadRecords();
+            }
+        }
+
+        async function deleteFile(fileName, recordId) {
+            if (confirm(`Tem certeza que deseja excluir o arquivo ${fileName}?`)) {
+                // Excluir o arquivo do Firebase Storage
+                const fileRef = storage.ref().child(`files/${fileName}`);
+                await fileRef.delete();
+
+                // Carregar os registros novamente após a exclusão
+                loadRecords();
+            }
         }
 
         function filterRecords() {
