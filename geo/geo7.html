@@ -10,18 +10,20 @@
     <style>
         body {
             font-family: 'Roboto', sans-serif;
-            text-align: center;
             margin: 0;
             padding: 20px;
             background-color: #f5f5f5;
+            color: #333;
         }
 
         h1 {
-            color: #333;
+            text-align: center;
             margin-bottom: 20px;
         }
 
         .filter-container {
+            display: flex;
+            justify-content: space-between;
             margin-bottom: 20px;
         }
 
@@ -30,8 +32,8 @@
             border-radius: 5px;
             border: 1px solid #ddd;
             width: calc(100% - 22px);
-            box-sizing: border-box;
-            margin: 5px 0;
+            margin: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
 
         button {
@@ -42,46 +44,41 @@
             color: #fff;
             cursor: pointer;
             margin: 5px;
+            transition: background-color 0.3s;
         }
 
         button:hover {
             background-color: #0056b3;
         }
 
+        .toggle-list {
+            display: flex;
+            justify-content: center;
+            margin: 15px 0;
+        }
+
         .list-item {
             display: flex;
             flex-direction: column;
-            align-items: flex-start;
             padding: 15px;
             border: 1px solid #ddd;
             border-radius: 5px;
             margin-bottom: 10px;
             background-color: #fff;
-            text-align: left;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
 
         .list-item h3 {
             margin: 0 0 10px;
-            font-size: 18px;
+            font-size: 20px;
             color: #007bff;
         }
 
-        .list-item button {
-            background-color: #dc3545;
-            border: none;
-            color: #fff;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-
-        .list-item button:hover {
-            background-color: #c82333;
+        .list-item p {
+            margin: 5px 0;
         }
 
         .file-link {
-            display: block;
-            margin-top: 5px;
             color: #007bff;
             text-decoration: none;
         }
@@ -96,13 +93,17 @@
         }
 
         @media (max-width: 600px) {
+            .filter-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
             input[type="text"], input[type="file"], textarea {
-                width: calc(100% - 12px);
+                width: 100%;
             }
 
             button {
                 width: 100%;
-                margin: 5px 0;
             }
         }
     </style>
@@ -122,6 +123,10 @@
         <button type="button" onclick="addLocation()">Adicionar Registro</button>
     </form>
 
+    <div class="toggle-list">
+        <button id="toggle-view" onclick="toggleList()">Ocultar Lista</button>
+    </div>
+
     <div id="location-list"></div>
     <div id="map"></div>
 
@@ -131,7 +136,6 @@
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
     <script>
-        // Configuração do Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
             authDomain: "agenda-6accc.firebaseapp.com",
@@ -143,30 +147,26 @@
             measurementId: "G-CVBQ54PERH"
         };
 
-        // Inicializa o Firebase
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
         const storage = firebase.storage();
 
-        // Referência ao formulário, à lista de localizações e ao mapa
         const form = document.getElementById('location-form');
         const locationList = document.getElementById('location-list');
-        const map = L.map('map').setView([-23.5505, -46.6333], 13); // Centro de São Paulo
+        const map = L.map('map').setView([-23.5505, -46.6333], 13);
+        let listVisible = true;
 
-        // Configura a camada do mapa
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // Adiciona um novo registro ao Firebase
         async function addLocation() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(async (position) => {
                     const lat = position.coords.latitude;
                     const lon = position.coords.longitude;
-                    const currentDate = new Date().toISOString().slice(0, 10); // Data no formato YYYY-MM-DD
-
+                    const currentDate = new Date().toISOString().slice(0, 10);
                     const localDate = new Date();
                     const options = {
                         hour: '2-digit',
@@ -174,18 +174,16 @@
                         second: '2-digit',
                         timeZoneName: 'short',
                     };
-                    const currentTime = localDate.toLocaleString('pt-BR', options); // Hora local
-
+                    const currentTime = localDate.toLocaleString('pt-BR', options);
                     const note = document.getElementById('note').value;
 
                     try {
                         const weatherData = await getWeather(lat, lon);
-                        const locationName = weatherData.name; // Nome da localização
+                        const locationName = weatherData.name;
 
                         const files = document.getElementById('file-upload').files;
                         const fileUrls = [];
 
-                        // Faz o upload de arquivos
                         for (let file of files) {
                             const storageRef = storage.ref().child(`files/${file.name}`);
                             await storageRef.put(file);
@@ -218,11 +216,9 @@
             }
         }
 
-        // Função para obter dados do clima usando a API do OpenWeatherMap
         async function getWeather(lat, lon) {
             const apiKey = 'e18e61a7e515eb3b92b588155acd3bc1';
             const apiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`;
-
             const response = await fetch(apiUrl);
             if (!response.ok) {
                 throw new Error('Erro na resposta da API do OpenWeatherMap');
@@ -230,18 +226,16 @@
             return await response.json();
         }
 
-        // Carrega e exibe os registros da Firebase
         function loadRecords() {
             database.ref('locations').once('value', (snapshot) => {
-                locationList.innerHTML = ''; // Limpa a lista existente
+                locationList.innerHTML = '';
                 snapshot.forEach((childSnapshot) => {
                     const record = childSnapshot.val();
-                    displayRecord(record, childSnapshot.key); // Exibe o registro
+                    displayRecord(record, childSnapshot.key);
                 });
             });
         }
 
-        // Exibe um registro na lista
         function displayRecord(record, id) {
             const recordDiv = document.createElement('div');
             recordDiv.className = 'list-item';
@@ -259,61 +253,55 @@
             recordDiv.appendChild(recordLocation);
 
             if (record.files && record.files.length > 0) {
-                const filesDiv = document.createElement('div');
-                filesDiv.innerHTML = '<strong>Arquivos:</strong>';
+                const fileList = document.createElement('div');
+                fileList.innerHTML = '<strong>Arquivos:</strong>';
                 record.files.forEach(file => {
                     const fileLink = document.createElement('a');
                     fileLink.href = file.url;
-                    fileLink.textContent = file.name;
-                    fileLink.target = '_blank';
                     fileLink.className = 'file-link';
-                    filesDiv.appendChild(fileLink);
+                    fileLink.target = '_blank';
+                    fileLink.textContent = file.name;
+                    fileList.appendChild(fileLink);
+                    fileList.appendChild(document.createElement('br'));
                 });
-                recordDiv.appendChild(filesDiv);
+                recordDiv.appendChild(fileList);
             }
-
-            const deleteButton = document.createElement('button');
-            deleteButton.textContent = 'Excluir Registro';
-            deleteButton.onclick = () => deleteRecord(id);
-            recordDiv.appendChild(deleteButton);
 
             locationList.appendChild(recordDiv);
 
             // Adiciona marcador no mapa
-            const coords = record.coordinates.split(', ');
-            const marker = L.marker([parseFloat(coords[0]), parseFloat(coords[1])]).addTo(map);
-            marker.bindPopup(record.note).openPopup();
+            L.marker(record.coordinates.split(',').map(Number)).addTo(map)
+                .bindPopup(`<b>${record.note}</b><br>${record.location}<br>${record.date} ${record.time}`)
+                .openPopup();
         }
 
-        // Função para excluir um registro
-        function deleteRecord(id) {
-            database.ref(`locations/${id}`).remove().then(() => {
-                loadRecords();
-            });
-        }
-
-        // Função para filtrar registros
         function filterRecords() {
-            const nameFilter = document.getElementById('filter-name').value.toLowerCase();
-            const dateFilter = document.getElementById('filter-date').value.toLowerCase();
-            const locationFilter = document.getElementById('filter-location').value.toLowerCase();
+            const filterName = document.getElementById('filter-name').value.toLowerCase();
+            const filterDate = document.getElementById('filter-date').value.toLowerCase();
+            const filterLocation = document.getElementById('filter-location').value.toLowerCase();
+            const items = locationList.getElementsByClassName('list-item');
 
-            const records = Array.from(locationList.children);
-            records.forEach(record => {
-                const title = record.querySelector('h3').textContent.toLowerCase();
-                const date = record.querySelector('p:nth-of-type(1)').textContent.toLowerCase();
-                const location = record.querySelector('p:nth-of-type(2)').textContent.toLowerCase();
+            for (let item of items) {
+                const noteText = item.querySelector('h3').textContent.toLowerCase();
+                const dateText = item.querySelector('p').textContent.toLowerCase();
+                const locationText = item.querySelector('p:nth-of-type(2)').textContent.toLowerCase();
 
-                const matchesName = title.includes(nameFilter);
-                const matchesDate = date.includes(dateFilter);
-                const matchesLocation = location.includes(locationFilter);
-
-                record.style.display = (matchesName && matchesDate && matchesLocation) ? 'block' : 'none';
-            });
+                if (noteText.includes(filterName) && dateText.includes(filterDate) && locationText.includes(filterLocation)) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            }
         }
 
-        // Carrega os registros ao inicializar a página
+        function toggleList() {
+            listVisible = !listVisible;
+            locationList.style.display = listVisible ? 'block' : 'none';
+            document.getElementById('toggle-view').textContent = listVisible ? 'Ocultar Lista' : 'Mostrar Lista';
+        }
+
         loadRecords();
     </script>
 </body>
 </html>
+
