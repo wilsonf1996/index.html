@@ -147,19 +147,112 @@
                     return baseValue * factors[toUnit];
                 }
             },
-            // Adicione mais categorias conforme necessário...
+            densidade: {
+                units: ["kg/m³", "g/cm³"],
+                convert(value, fromUnit, toUnit) {
+                    const factors = { "kg/m³": 1, "g/cm³": 1000 };
+                    const baseValue = value / factors[fromUnit];
+                    return baseValue * factors[toUnit];
+                }
+            },
+            viscosidade: {
+                units: ["Pa.s", "mPa.s"],
+                convert(value, fromUnit, toUnit) {
+                    const factors = { "Pa.s": 1, "mPa.s": 0.001 };
+                    const baseValue = value / factors[fromUnit];
+                    return baseValue * factors[toUnit];
+                }
+            },
+            condutividade: {
+                units: ["S/m", "mS/m"],
+                convert(value, fromUnit, toUnit) {
+                    const factors = { "S/m": 1, "mS/m": 0.001 };
+                    const baseValue = value / factors[fromUnit];
+                    return baseValue * factors[toUnit];
+                }
+            },
+            emissividade: {
+                units: ["", ""],
+                convert(value, fromUnit, toUnit) {
+                    // Emissividade é adimensional
+                    return value;
+                }
+            },
+            indiceDeRefracao: {
+                units: ["", ""],
+                convert(value, fromUnit, toUnit) {
+                    // Índice de refração é adimensional
+                    return value;
+                }
+            },
+            resistividade: {
+                units: ["Ω.m", "mΩ.m"],
+                convert(value, fromUnit, toUnit) {
+                    const factors = { "Ω.m": 1, "mΩ.m": 0.001 };
+                    const baseValue = value / factors[fromUnit];
+                    return baseValue * factors[toUnit];
+                }
+            },
+            capacitancia: {
+                units: ["F", "mF", "μF", "nF"],
+                convert(value, fromUnit, toUnit) {
+                    const factors = { F: 1, mF: 1e-3, μF: 1e-6, nF: 1e-9 };
+                    const baseValue = value / factors[fromUnit];
+                    return baseValue * factors[toUnit];
+                }
+            },
+            indutancia: {
+                units: ["H", "mH", "μH"],
+                convert(value, fromUnit, toUnit) {
+                    const factors = { H: 1, mH: 1e-3, μH: 1e-6 };
+                    const baseValue = value / factors[fromUnit];
+                    return baseValue * factors[toUnit];
+                }
+            },
+            cargaEletrica: {
+                units: ["C", "mC", "μC", "nC"],
+                convert(value, fromUnit, toUnit) {
+                    const factors = { C: 1, mC: 1e-3, μC: 1e-6, nC: 1e-9 };
+                    const baseValue = value / factors[fromUnit];
+                    return baseValue * factors[toUnit];
+                }
+            },
+            campoEletrico: {
+                units: ["V/m", "kV/m"],
+                convert(value, fromUnit, toUnit) {
+                    const factors = { "V/m": 1, "kV/m": 1000 };
+                    const baseValue = value / factors[fromUnit];
+                    return baseValue * factors[toUnit];
+                }
+            },
+            tensão: {
+                units: ["V", "mV", "kV"],
+                convert(value, fromUnit, toUnit) {
+                    const factors = { V: 1, mV: 0.001, kV: 1000 };
+                    const baseValue = value / factors[fromUnit];
+                    return baseValue * factors[toUnit];
+                }
+            },
+            intensidadeDeCorrente: {
+                units: ["A", "mA", "µA"],
+                convert(value, fromUnit, toUnit) {
+                    const factors = { A: 1, mA: 0.001, µA: 1e-6 };
+                    const baseValue = value / factors[fromUnit];
+                    return baseValue * factors[toUnit];
+                }
+            },
+            temperaturaTermodinâmica: {
+                units: ["K", "°C"],
+                convert(value, fromUnit, toUnit) {
+                    if (fromUnit === "K") {
+                        return value - 273.15;
+                    } else if (fromUnit === "°C") {
+                        return value + 273.15;
+                    }
+                    return value; // Se for a mesma unidade
+                }
+            }
         };
-
-        function populateMeasureTypes() {
-            const measureTypeSelect = document.getElementById("measureType");
-            Object.keys(conversions).forEach(type => {
-                const option = document.createElement("option");
-                option.value = type;
-                option.textContent = type.charAt(0).toUpperCase() + type.slice(1);
-                measureTypeSelect.appendChild(option);
-            });
-            updateConversions();
-        }
 
         function updateConversions() {
             const measureType = document.getElementById("measureType").value;
@@ -167,15 +260,17 @@
             const toUnitSelect = document.getElementById("toUnit");
             fromUnitSelect.innerHTML = "";
             toUnitSelect.innerHTML = "";
+
             conversions[measureType].units.forEach(unit => {
-                const fromOption = document.createElement("option");
-                fromOption.value = unit;
-                fromOption.textContent = unit;
-                fromUnitSelect.appendChild(fromOption);
-                const toOption = document.createElement("option");
-                toOption.value = unit;
-                toOption.textContent = unit;
-                toUnitSelect.appendChild(toOption);
+                const optionFrom = document.createElement("option");
+                optionFrom.value = unit;
+                optionFrom.textContent = unit;
+                fromUnitSelect.appendChild(optionFrom);
+
+                const optionTo = document.createElement("option");
+                optionTo.value = unit;
+                optionTo.textContent = unit;
+                toUnitSelect.appendChild(optionTo);
             });
         }
 
@@ -186,18 +281,29 @@
             const value = parseFloat(document.getElementById("value").value);
             const resultDiv = document.getElementById("result");
             const errorDiv = document.getElementById("error");
-            errorDiv.innerHTML = "";
 
             if (isNaN(value)) {
-                errorDiv.innerHTML = "Por favor, insira um valor válido.";
+                errorDiv.textContent = "Por favor, insira um valor válido.";
+                resultDiv.textContent = "";
                 return;
             }
 
-            const result = conversions[measureType].convert(value, fromUnit, toUnit);
-            resultDiv.innerHTML = `${value} ${fromUnit} é igual a ${result.toFixed(4)} ${toUnit}`;
+            const convertedValue = conversions[measureType].convert(value, fromUnit, toUnit);
+            errorDiv.textContent = "";
+            resultDiv.textContent = `Resultado: ${convertedValue.toFixed(6)} ${toUnit}`;
         }
 
-        window.onload = populateMeasureTypes;
+        // Preenchendo o tipo de medida no início
+        window.onload = () => {
+            const measureTypeSelect = document.getElementById("measureType");
+            Object.keys(conversions).forEach(key => {
+                const option = document.createElement("option");
+                option.value = key;
+                option.textContent = key.charAt(0).toUpperCase() + key.slice(1);
+                measureTypeSelect.appendChild(option);
+            });
+            updateConversions();
+        };
     </script>
 </body>
 </html>
