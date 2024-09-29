@@ -12,8 +12,8 @@
             font-family: 'Roboto', sans-serif;
             margin: 0;
             padding: 20px;
-            background-color: #ffffff; /* Cor de fundo limpa */
-            color: #333;
+            background-color: #e9ecef;
+            color: #343a40;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -22,45 +22,41 @@
         h1 {
             text-align: center;
             margin-bottom: 20px;
-            color: #0078d4; /* Azul padrão Microsoft */
+            color: #007bff;
         }
 
         .filter-container {
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
             margin-bottom: 20px;
-            flex-wrap: wrap;
+            width: 100%;
         }
 
         input[type="text"], input[type="file"], textarea {
             padding: 12px;
             border-radius: 8px;
-            border: 1px solid #ccc;
-            width: 300px; /* Largura fixa para melhor aparência */
+            border: 1px solid #ced4da;
+            width: calc(100% - 24px);
             margin: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            transition: border-color 0.3s;
-        }
-
-        input[type="text"]:focus, textarea:focus {
-            border-color: #0078d4; /* Destaque ao focar */
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            font-size: 16px;
         }
 
         button {
-            padding: 12px 25px;
+            padding: 12px 20px;
             border: none;
             border-radius: 8px;
-            background-color: #0078d4; /* Azul padrão Microsoft */
+            background-color: #007bff;
             color: #fff;
+            font-size: 16px;
             cursor: pointer;
             margin: 5px;
             transition: background-color 0.3s, transform 0.2s;
-            font-weight: bold;
         }
 
         button:hover {
             background-color: #0056b3;
-            transform: translateY(-1px); /* Sutil efeito de elevação */
+            transform: translateY(-1px);
         }
 
         .toggle-list {
@@ -73,29 +69,31 @@
             display: flex;
             flex-direction: column;
             padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
             margin-bottom: 15px;
-            background-color: #f9f9f9; /* Fundo claro para listas */
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            width: 100%; /* Largura total para dispositivos móveis */
-            max-width: 600px; /* Largura máxima */
+            background-color: #fff;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            transition: box-shadow 0.3s;
+        }
+
+        .list-item:hover {
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
 
         .list-item h3 {
             margin: 0 0 10px;
-            font-size: 24px;
-            color: #0078d4;
+            font-size: 22px;
+            color: #007bff;
         }
 
         .list-item p {
             margin: 5px 0;
-            font-size: 14px;
-            color: #555;
+            font-size: 16px;
         }
 
         .file-link {
-            color: #0078d4;
+            color: #007bff;
             text-decoration: none;
         }
 
@@ -106,10 +104,9 @@
         #map {
             height: 400px;
             margin-top: 20px;
-            width: 100%; /* Largura total */
-            max-width: 600px; /* Largura máxima */
-            border-radius: 10px; /* Bordas arredondadas */
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            width: 100%;
         }
 
         @media (max-width: 600px) {
@@ -229,84 +226,76 @@
         }
 
         async function getPreciseLocation(lat, lon) {
-            const apiKey = 'sua_api_key_aqui'; // Substitua pela sua chave de API
-            const response = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lon}&key=${apiKey}`);
+            const apiUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1&accept-language=pt-BR`;
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                throw new Error('Erro ao obter nome da localização');
+            }
             const data = await response.json();
-            return data.results[0].formatted_address;
+            return data.display_name || 'Localização Desconhecida';
         }
 
         async function uploadFiles(files) {
             const fileUrls = [];
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                const storageRef = storage.ref(`files/${file.name}`);
+            for (let file of files) {
+                const storageRef = storage.ref().child(`files/${file.name}`);
                 await storageRef.put(file);
                 const fileUrl = await storageRef.getDownloadURL();
-                fileUrls.push(fileUrl);
+                fileUrls.push({ name: file.name, url: fileUrl });
             }
             return fileUrls;
         }
 
-        async function loadRecords() {
-            locationList.innerHTML = '';
-            const recordsRef = database.ref('locations');
-            recordsRef.on('value', (snapshot) => {
-                const records = snapshot.val();
-                for (let id in records) {
-                    const record = records[id];
+        function loadRecords() {
+            database.ref('locations').on('value', (snapshot) => {
+                locationList.innerHTML = '';
+                const locations = snapshot.val();
+                for (let id in locations) {
+                    const record = locations[id];
                     const listItem = document.createElement('div');
-                    listItem.classList.add('list-item');
+                    listItem.className = 'list-item';
                     listItem.innerHTML = `
                         <h3>${record.note}</h3>
-                        <p>Data: ${record.date}</p>
-                        <p>Hora: ${record.time}</p>
-                        <p>Localização: ${record.location}</p>
-                        <p>Coordenadas: ${record.coordinates}</p>
-                        ${record.files.map(url => `<a class="file-link" href="${url}" target="_blank">Ver arquivo</a>`).join('')}
+                        <p><strong>Data:</strong> ${record.date}</p>
+                        <p><strong>Hora:</strong> ${record.time}</p>
+                        <p><strong>Localização:</strong> ${record.location}</p>
+                        <p><strong>Coordenadas:</strong> ${record.coordinates}</p>
+                        ${record.files ? record.files.map(file => `<a href="${file.url}" class="file-link" target="_blank">${file.name}</a>`).join('<br>') : ''}
                     `;
                     locationList.appendChild(listItem);
 
-                    if (listVisible) {
-                        const [lat, lon] = record.coordinates.split(', ');
-                        L.marker([lat, lon]).addTo(map).bindPopup(record.note);
-                    }
+                    const marker = L.marker(record.coordinates.split(', ').map(Number)).addTo(map);
+                    marker.bindPopup(record.note);
+                }
+            });
+        }
+
+        function filterRecords() {
+            const filterName = document.getElementById('filter-name').value.toLowerCase();
+            const filterDate = document.getElementById('filter-date').value.toLowerCase();
+            const filterLocation = document.getElementById('filter-location').value.toLowerCase();
+
+            const records = document.querySelectorAll('.list-item');
+            records.forEach(record => {
+                const noteText = record.querySelector('h3').textContent.toLowerCase();
+                const dateText = record.querySelector('p').textContent.toLowerCase();
+                const locationText = record.querySelector('p').textContent.toLowerCase();
+                if (noteText.includes(filterName) && dateText.includes(filterDate) && locationText.includes(filterLocation)) {
+                    record.style.display = '';
+                } else {
+                    record.style.display = 'none';
                 }
             });
         }
 
         function toggleList() {
+            const listItems = document.getElementById('location-list');
             listVisible = !listVisible;
-            const button = document.getElementById('toggle-view');
-            if (listVisible) {
-                locationList.style.display = 'block';
-                button.textContent = 'Ocultar Lista';
-            } else {
-                locationList.style.display = 'none';
-                button.textContent = 'Mostrar Lista';
-            }
-        }
-
-        function filterRecords() {
-            const nameFilter = document.getElementById('filter-name').value.toLowerCase();
-            const dateFilter = document.getElementById('filter-date').value.toLowerCase();
-            const locationFilter = document.getElementById('filter-location').value.toLowerCase();
-            const listItems = locationList.getElementsByClassName('list-item');
-
-            Array.from(listItems).forEach(item => {
-                const noteText = item.querySelector('h3').textContent.toLowerCase();
-                const dateText = item.querySelector('p:nth-of-type(1)').textContent.toLowerCase();
-                const locationText = item.querySelector('p:nth-of-type(4)').textContent.toLowerCase();
-                
-                item.style.display = 
-                    (noteText.includes(nameFilter) && 
-                    dateText.includes(dateFilter) && 
-                    locationText.includes(locationFilter)) ? 
-                    'block' : 'none';
-            });
+            listItems.style.display = listVisible ? 'block' : 'none';
+            document.getElementById('toggle-view').textContent = listVisible ? 'Ocultar Lista' : 'Mostrar Lista';
         }
 
         loadRecords();
     </script>
 </body>
 </html>
-
