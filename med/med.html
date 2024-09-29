@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor de Unidades</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #e9ecef;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #343a40;
+        }
+        .converter {
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+        }
+        select, input, button {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        h2 {
+            color: #495057;
+        }
+        #result {
+            font-weight: bold;
+            font-size: 18px;
+            margin-top: 10px;
+        }
+        .unit-label {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Conversor de Unidades</h1>
+<div class="converter">
+    <label for="measureType">Selecione o tipo de medida:</label>
+    <select id="measureType" onchange="updateConversions()"></select>
+
+    <label for="fromUnit" class="unit-label">Converter de:</label>
+    <select id="fromUnit"></select>
+
+    <label for="toUnit" class="unit-label">Converter para:</label>
+    <select id="toUnit"></select>
+
+    <label for="value">Valor:</label>
+    <input type="number" id="value" placeholder="Insira o valor a converter" step="any">
+
+    <button onclick="convert()">Converter</button>
+
+    <h2>Resultado:</h2>
+    <div id="result"></div>
+</div>
+
+<script>
+    const conversions = {
+        length: {
+            units: ["m", "cm", "mm", "km", "in", "ft", "yd", "mi", "nm", "pm", "lightyear"],
+            factors: {
+                "m": 1,
+                "cm": 100,
+                "mm": 1000,
+                "km": 0.001,
+                "in": 39.3701,
+                "ft": 3.28084,
+                "yd": 1.09361,
+                "mi": 0.000621371,
+                "nm": 1e9,
+                "pm": 1e12,
+                "lightyear": 1.057e-9
+            }
+        },
+        area: {
+            units: ["m²", "cm²", "km²", "ha", "ac", "ft²", "yd²", "mi²", "a", "b", "r"],
+            factors: {
+                "m²": 1,
+                "cm²": 10000,
+                "km²": 0.000001,
+                "ha": 0.0001,
+                "ac": 0.000247105,
+                "ft²": 10.7639,
+                "yd²": 1.19599,
+                "mi²": 3.861e-7,
+                "a": 0.01,
+                "b": 0.0001,
+                "r": 0.404686
+            }
+        },
+        volume: {
+            units: ["m³", "L", "mL", "ft³", "in³", "gal", "qt", "pt", "cc", "bbl", "cup"],
+            factors: {
+                "m³": 1,
+                "L": 1000,
+                "mL": 1000000,
+                "ft³": 35.3147,
+                "in³": 61023.7,
+                "gal": 264.172,
+                "qt": 105.668,
+                "pt": 211.339,
+                "cc": 1000000,
+                "bbl": 6.28981,
+                "cup": 4226.75
+            }
+        },
+        weight: {
+            units: ["kg", "g", "mg", "lb", "oz", "ton", "t", "st", "sl", "dwt", "grain"],
+            factors: {
+                "kg": 1,
+                "g": 1000,
+                "mg": 1000000,
+                "lb": 2.20462,
+                "oz": 35.274,
+                "ton": 0.001,
+                "t": 0.001,
+                "st": 0.157473,
+                "sl": 0.0685218,
+                "dwt": 564.383,
+                "grain": 15432.4
+            }
+        },
+        pressure: {
+            units: ["Pa", "kPa", "bar", "atm", "mmHg", "psi", "Torr", "kgf/m²", "pascals", "inHg", "N/m²"],
+            factors: {
+                "Pa": 1,
+                "kPa": 0.001,
+                "bar": 0.00001,
+                "atm": 0.00000986923,
+                "mmHg": 0.00750062,
+                "psi": 0.000145038,
+                "Torr": 0.00750062,
+                "kgf/m²": 0.000101971,
+                "pascals": 1,
+                "inHg": 0.00393663,
+                "N/m²": 1
+            }
+        },
+        temperature: {
+            units: ["C", "F", "K", "R"],
+            convert: (value, fromUnit, toUnit) => {
+                if (fromUnit === "C") {
+                    if (toUnit === "F") return (value * 9 / 5) + 32;
+                    if (toUnit === "K") return value + 273.15;
+                    if (toUnit === "R") return (value + 273.15) * 9 / 5;
+                } else if (fromUnit === "F") {
+                    if (toUnit === "C") return (value - 32) * 5 / 9;
+                    if (toUnit === "K") return (value - 32) * 5 / 9 + 273.15;
+                    if (toUnit === "R") return value + 459.67;
+                } else if (fromUnit === "K") {
+                    if (toUnit === "C") return value - 273.15;
+                    if (toUnit === "F") return (value - 273.15) * 9 / 5 + 32;
+                    if (toUnit === "R") return value * 9 / 5;
+                } else if (fromUnit === "R") {
+                    if (toUnit === "C") return (value - 491.67) * 5 / 9;
+                    if (toUnit === "F") return value - 459.67;
+                    if (toUnit === "K") return value * 5 / 9;
+                }
+            }
+        },
+        force: {
+            units: ["N", "kgf", "lbf", "dyn", "poundal", "gf"],
+            factors: {
+                "N": 1,
+                "kgf": 0.101971,
+                "lbf": 0.224809,
+                "dyn": 100000,
+                "poundal": 0.0310809,
+                "gf": 101.971
+            }
+        },
+        energy: {
+            units: ["J", "kJ", "cal", "kcal", "Wh", "kWh", "BTU", "eV", "ft-lbf", "N·m", "erg"],
+            factors: {
+                "J": 1,
+                "kJ": 0.001,
+                "cal": 0.239006,
+                "kcal": 0.000239006,
+                "Wh": 0.277778,
+                "kWh": 0.000277778,
+                "BTU": 0.000947817,
+                "eV": 6.242e+18,
+                "ft-lbf": 0.737562,
+                "N·m": 1,
+                "erg": 1e+7
+            }
+        },
+        power: {
+            units: ["W", "kW", "CV", "hp", "Btu/h", "ft-lb/s", "Nm/s", "J/s", "kJ/s"],
+            factors: {
+                "W": 1,
+                "kW": 0.001,
+                "CV": 0.00135962,
+                "hp": 0.00134102,
+                "Btu/h": 3.41214,
+                "ft-lb/s": 0.737562,
+                "Nm/s": 1,
+                "J/s": 1,
+                "kJ/s": 0.001
+            }
+        },
+        time: {
+            units: ["s", "min", "h", "d", "wk", "mo", "yr", "ms", "us"],
+            factors: {
+                "s": 1,
+                "min": 0.0166667,
+                "h": 0.000277778,
+                "d": 1.15741e-5,
+                "wk": 1.65344e-6,
+                "mo": 3.8027e-7,
+                "yr": 3.17098e-8,
+                "ms": 1000,
+                "us": 1000000
+            }
+        },
+        density: {
+            units: ["kg/m³", "g/cm³", "lb/m³", "ton/m³", "sl/ft³", "g/L", "g/mL", "kg/L"],
+            factors: {
+                "kg/m³": 1,
+                "g/cm³": 1000,
+                "lb/m³": 0.062428,
+                "ton/m³": 0.001,
+                "sl/ft³": 0.0207327,
+                "g/L": 1000,
+                "g/mL": 1000,
+                "kg/L": 1
+            }
+        },
+        speed: {
+            units: ["m/s", "km/h", "mph", "ft/s", "kn", "mach"],
+            factors: {
+                "m/s": 1,
+                "km/h": 3.6,
+                "mph": 2.23694,
+                "ft/s": 3.28084,
+                "kn": 1.94384,
+                "mach": 0.00293888
+            }
+        },
+        angle: {
+            units: ["rad", "deg", "grad", "arcmin", "arcsec"],
+            factors: {
+                "rad": 1,
+                "deg": 57.2958,
+                "grad": 63.662,
+                "arcmin": 3437.75,
+                "arcsec": 206265
+            }
+        },
+        frequency: {
+            units: ["Hz", "kHz", "MHz", "GHz", "rpm"],
+            factors: {
+                "Hz": 1,
+                "kHz": 0.001,
+                "MHz": 1e-6,
+                "GHz": 1e-9,
+                "rpm": 60
+            }
+        },
+        concentration: {
+            units: ["mol/L", "mmol/L", "μmol/L", "mg/L", "g/L", "ppm"],
+            factors: {
+                "mol/L": 1,
+                "mmol/L": 1000,
+                "μmol/L": 1000000,
+                "mg/L": 1000,
+                "g/L": 1,
+                "ppm": 1000
+            }
+        },
+        powerDensity: {
+            units: ["W/m²", "kW/m²", "W/cm²", "W/L", "W/ft²"],
+            factors: {
+                "W/m²": 1,
+                "kW/m²": 0.001,
+                "W/cm²": 10000,
+                "W/L": 0.001,
+                "W/ft²": 0.092903
+            }
+        },
+        capacitance: {
+            units: ["F", "mF", "µF", "nF", "pF"],
+            factors: {
+                "F": 1,
+                "mF": 1000,
+                "µF": 1e6,
+                "nF": 1e9,
+                "pF": 1e12
+            }
+        },
+        inductance: {
+            units: ["H", "mH", "µH", "nH"],
+            factors: {
+                "H": 1,
+                "mH": 1000,
+                "µH": 1e6,
+                "nH": 1e9
+            }
+        },
+        temperatureDifference: {
+            units: ["K", "°C"],
+            convert: (value, fromUnit, toUnit) => value; // K e °C são equivalentes em diferença
+        },
+        magneticFlux: {
+            units: ["Wb", "mWb", "µWb", "nWb"],
+            factors: {
+                "Wb": 1,
+                "mWb": 1000,
+                "µWb": 1e6,
+                "nWb": 1e9
+            }
+        }
+    };
+
+    function updateConversions() {
+        const measureType = document.getElementById("measureType").value;
+        const fromUnitSelect = document.getElementById("fromUnit");
+        const toUnitSelect = document.getElementById("toUnit");
+        
+        // Clear previous options
+        fromUnitSelect.innerHTML = "";
+        toUnitSelect.innerHTML = "";
+        
+        // Populate units
+        conversions[measureType].units.forEach(unit => {
+            const option = document.createElement("option");
+            option.value = unit;
+            option.textContent = unit;
+            fromUnitSelect.appendChild(option);
+            toUnitSelect.appendChild(option.cloneNode(true));
+        });
+    }
+
+    function convert() {
+        const measureType = document.getElementById("measureType").value;
+        const fromUnit = document.getElementById("fromUnit").value;
+        const toUnit = document.getElementById("toUnit").value;
+        const value = parseFloat(document.getElementById("value").value);
+        const result = document.getElementById("result");
+
+        if (isNaN(value)) {
+            result.textContent = "Por favor, insira um valor válido.";
+            return;
+        }
+
+        let convertedValue;
+
+        if (measureType === "temperature") {
+            convertedValue = conversions[measureType].convert(value, fromUnit, toUnit);
+        } else if (measureType === "temperatureDifference") {
+            convertedValue = conversions[measureType].convert(value, fromUnit, toUnit);
+        } else {
+            const factorFrom = conversions[measureType].factors[fromUnit];
+            const factorTo = conversions[measureType].factors[toUnit];
+            convertedValue = (value * factorFrom) / factorTo;
+        }
+
+        result.textContent = `Resultado: ${convertedValue.toFixed(4)} ${toUnit}`;
+    }
+
+    // Initialize the converter with the first set of units
+    const measureTypeSelect = document.getElementById("measureType");
+    const measureTypes = Object.keys(conversions);
+    
+    measureTypes.forEach(type => {
+        const option = document.createElement("option");
+        option.value = type;
+        option.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+        measureTypeSelect.appendChild(option);
+    });
+
+    updateConversions();
+</script>
+
+</body>
+</html>
