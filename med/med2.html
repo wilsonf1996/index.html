@@ -29,6 +29,12 @@
         h3 {
             margin-top: 20px;
         }
+        #loading {
+            display: none;
+            text-align: center;
+            font-style: italic;
+            color: #555;
+        }
     </style>
 </head>
 <body>
@@ -49,19 +55,20 @@
 <div id="commodities">
     <h2>Preço de Commodities</h2>
     <select id="commoditySelector">
-        <option value="GOLD">Ouro</option>
-        <option value="OIL">Petróleo</option>
-        <option value="STEEL">Aço</option>
-        <option value="SILVER">Prata</option>
-        <option value="COPPER">Cobre</option>
-        <option value="COTTON">Algodão</option>
-        <option value="WHEAT">Trigo</option>
-        <option value="CORN">Milho</option>
-        <option value="ALUMINUM">Alumínio</option>
-        <option value="SOYBEANS">Soja</option>
+        <option value="GOLD">Ouro (GOLD)</option>
+        <option value="OIL">Petróleo (OIL)</option>
+        <option value="STEEL">Aço (STEEL)</option>
+        <option value="SILVER">Prata (SILVER)</option>
+        <option value="COPPER">Cobre (COPPER)</option>
+        <option value="COTTON">Algodão (COTTON)</option>
+        <option value="WHEAT">Trigo (WHEAT)</option>
+        <option value="CORN">Milho (CORN)</option>
+        <option value="ALUMINUM">Alumínio (ALUMINUM)</option>
+        <option value="SOYBEANS">Soja (SOYBEANS)</option>
     </select>
     <select id="commodityCurrencySelector"></select>
     <button onclick="getCommodityValue()">Ver Preço</button>
+    <p id="loading">Carregando...</p>
     <h3 id="commodityPriceResult"></h3>
 </div>
 
@@ -110,19 +117,32 @@
         });
     }
 
+    // Exibir/ocultar indicador de carregamento
+    function toggleLoading(show) {
+        const loading = document.getElementById('loading');
+        loading.style.display = show ? 'block' : 'none';
+    }
+
     // Converter Moeda
     async function convertCurrency() {
         const amount = document.getElementById("amount").value;
         const fromCurrency = document.getElementById("fromCurrency").value;
         const toCurrency = document.getElementById("toCurrency").value;
 
-        // Obter a taxa de câmbio
-        const response = await fetch(`https://openexchangerates.org/api/latest.json?app_id=${OPEN_EXCHANGE_RATES_APP_ID}`);
-        const data = await response.json();
-        const rate = data.rates[toCurrency] / data.rates[fromCurrency];
-        const convertedAmount = (amount * rate).toFixed(2);
+        try {
+            toggleLoading(true);
+            const response = await fetch(`https://openexchangerates.org/api/latest.json?app_id=${OPEN_EXCHANGE_RATES_APP_ID}`);
+            const data = await response.json();
+            const rate = data.rates[toCurrency] / data.rates[fromCurrency];
+            const convertedAmount = (amount * rate).toFixed(2);
 
-        document.getElementById("conversionResult").innerText = `${amount} ${fromCurrency} é igual a ${convertedAmount} ${toCurrency}`;
+            document.getElementById("conversionResult").innerText = `${amount} ${fromCurrency} é igual a ${convertedAmount} ${toCurrency}`;
+        } catch (error) {
+            document.getElementById("conversionResult").innerText = 'Erro ao converter moeda.';
+            console.error(error);
+        } finally {
+            toggleLoading(false);
+        }
     }
 
     // Obter preço atual da commodity
@@ -130,31 +150,23 @@
         const commodity = document.getElementById("commoditySelector").value;
         const currency = document.getElementById("commodityCurrencySelector").value;
 
-        // Obter o preço atual da commodity
-        const response = await fetch(`https://eodhistoricaldata.com/api/real-time/${commodity}?api_token=${EOD_API_KEY}&fmt=json`);
-        
-        if (!response.ok) {
-            console.error('Erro na requisição: ', response.statusText);
-            alert('Erro ao acessar a API da commodity.');
-            return;
-        }
+        try {
+            toggleLoading(true);
+            const response = await fetch(`https://eodhistoricaldata.com/api/real-time/${commodity}?api_token=${EOD_API_KEY}&fmt=json`);
+            const data = await response.json();
 
-        const data = await response.json();
+            if (!data || !data.close) {
+                throw new Error('Dados da commodity não encontrados.');
+            }
 
-        if (!data || !data.close) {
-            console.error('Dados da commodity não encontrados: ', data);
-            alert('Não foi possível carregar os dados da commodity.');
-            return;
-        }
-
-        const priceInUSD = data.close; // Preço em USD
-        const convertedPrice = await convertCommodityPriceToCurrency(priceInUSD, currency);
-        
-        // Verifica se o preço convertido é um número
-        if (isNaN(convertedPrice)) {
-            document.getElementById("commodityPriceResult").innerText = 'Erro ao converter o preço da commodity.';
-        } else {
+            const priceInUSD = data.close; // Preço em USD
+            const convertedPrice = await convertCommodityPriceToCurrency(priceInUSD, currency);
             document.getElementById("commodityPriceResult").innerText = `Preço atual de ${commodity} em ${currency}: ${convertedPrice.toFixed(2)} ${currency}`;
+        } catch (error) {
+            document.getElementById("commodityPriceResult").innerText = 'Erro ao obter o preço da commodity.';
+            console.error(error);
+        } finally {
+            toggleLoading(false);
         }
     }
 
@@ -164,26 +176,17 @@
             return price; // Se já estiver em USD
         }
 
-        // Obter a taxa de câmbio
         const response = await fetch(`https://openexchangerates.org/api/latest.json?app_id=${OPEN_EXCHANGE_RATES_APP_ID}`);
         const data = await response.json();
-        
-        // Verifica se a taxa está disponível
-        if (!data.rates[currency]) {
-            console.error(`Taxa de câmbio não encontrada para ${currency}`);
-            return NaN; // Retorna NaN se a moeda não estiver disponível
-        }
-
         const rate = data.rates[currency];
-        return price * rate; // Converter para a moeda selecionada
+        return price * rate;
     }
 
-    // Inicializar opções de moeda ao carregar a página
+    // Inicializar opções ao carregar a página
     window.onload = loadCurrencyOptions;
-
 </script>
+
 </body>
 </html>
-
 
 
