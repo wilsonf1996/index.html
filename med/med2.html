@@ -14,7 +14,7 @@
         h1 {
             text-align: center;
         }
-        #converter, #historico {
+        #converter, #commodities {
             margin: 20px 0;
             padding: 20px;
             background: #fff;
@@ -26,9 +26,8 @@
             padding: 10px;
             width: 100%;
         }
-        canvas {
-            margin: 20px 0;
-            max-width: 100%;
+        h3 {
+            margin-top: 20px;
         }
     </style>
 </head>
@@ -46,9 +45,9 @@
     <h3 id="conversionResult"></h3>
 </div>
 
-<!-- Seção de Histórico de Commodities -->
-<div id="historico">
-    <h2>Histórico de Commodities</h2>
+<!-- Seção de Commodities -->
+<div id="commodities">
+    <h2>Preço de Commodities</h2>
     <select id="commoditySelector">
         <option value="WIKI/Gold">Ouro</option>
         <option value="WIKI/OIL">Petróleo</option>
@@ -61,12 +60,11 @@
         <option value="WIKI/Aluminum">Alumínio</option>
         <option value="WIKI/Soybeans">Soja</option>
     </select>
-    <button onclick="loadHistoricalData()">Carregar Gráfico</button>
-    <canvas id="myChart"></canvas>
-    <h3 id="commodityConversionResult"></h3>
+    <select id="commodityCurrencySelector"></select>
+    <button onclick="getCommodityValue()">Ver Preço</button>
+    <h3 id="commodityPriceResult"></h3>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     const OPEN_EXCHANGE_RATES_APP_ID = 'fdbf28905e85432291c037cd866d102d'; // Sua App ID da Open Exchange Rates
     const ALPHA_VANTAGE_API_KEY = '3K0OWSJQSUHIJYSV'; // Sua chave da API Alpha Vantage
@@ -90,6 +88,7 @@
     function loadCurrencyOptions() {
         const fromCurrency = document.getElementById("fromCurrency");
         const toCurrency = document.getElementById("toCurrency");
+        const commodityCurrencySelector = document.getElementById("commodityCurrencySelector");
 
         // Adicionando opções de moeda
         mainCurrencies.forEach(currency => {
@@ -102,6 +101,12 @@
             option2.value = currency.code;
             option2.textContent = `${currency.code} - ${currency.name}`;
             toCurrency.appendChild(option2);
+
+            // Adicionando opções para commodities
+            const option3 = document.createElement("option");
+            option3.value = currency.code;
+            option3.textContent = `${currency.code} - ${currency.name}`;
+            commodityCurrencySelector.appendChild(option3);
         });
     }
 
@@ -120,97 +125,39 @@
         document.getElementById("conversionResult").innerText = `${amount} ${fromCurrency} é igual a ${convertedAmount} ${toCurrency}`;
     }
 
-    // Carregar dados históricos de commodities
-    async function loadHistoricalData() {
+    // Obter preço atual da commodity
+    async function getCommodityValue() {
         const commodity = document.getElementById("commoditySelector").value;
-        const response = await fetch(`https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${commodity}&apikey=${ALPHA_VANTAGE_API_KEY}`);
-        const data = await response.json();
+        const currency = document.getElementById("commodityCurrencySelector").value;
 
-        if (!data['Time Series (Daily)']) {
-            console.error('Erro ao carregar dados: ', data);
-            alert('Não foi possível carregar os dados históricos da commodity.');
-            return;
-        }
-
-        const historicalData = Object.entries(data['Time Series (Daily)']).slice(0, 100).reverse(); // Últimos 100 dias
-        createChart(historicalData);
-        const conversionResult = await getCommodityValueInBRL(commodity);
-        document.getElementById("commodityConversionResult").innerText = `Valor atual da commodity em BRL: ${conversionResult} BRL`;
-    }
-
-    // Criar gráfico
-    function createChart(data) {
-        const ctx = document.getElementById('myChart').getContext('2d');
-        const labels = data.map(entry => entry[0]); // Data
-        const prices = data.map(entry => entry[1]['4. close']); // Preço de fechamento
-
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Preço',
-                    data: prices,
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 2,
-                    fill: false
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: false
-                    }
-                }
-            }
-        });
-    }
-
-    // Obter valor da commodity em BRL
-    async function getCommodityValueInBRL(commodity) {
+        // Obter o preço atual da commodity
         const response = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${commodity}&apikey=${ALPHA_VANTAGE_API_KEY}`);
         const data = await response.json();
 
         if (!data['Global Quote']) {
             console.error('Erro ao carregar dados da commodity: ', data);
-            return 'N/A';
+            alert('Não foi possível carregar os dados da commodity.');
+            return;
         }
 
-        const price = parseFloat(data['Global Quote']['05. price']);
-        const brlExchangeRate = await getBRLToCommodityExchangeRate(commodity); // Obter a taxa de câmbio do BRL
-
-        return (price * brlExchangeRate).toFixed(2);
+        const priceInUSD = parseFloat(data['Global Quote']['05. price']);
+        const convertedPrice = await convertCommodityPriceToCurrency(priceInUSD, currency);
+        
+        document.getElementById("commodityPriceResult").innerText = `Preço atual de ${commodity} em ${currency}: ${convertedPrice.toFixed(2)} ${currency}`;
     }
 
-    // Obter a taxa de câmbio do BRL em relação à commodity
-    async function getBRLToCommodityExchangeRate(commodity) {
-        const response = await fetch(`https://openexchangerates.org/api/latest.json?app_id=${OPEN_EXCHANGE_RATES_APP_ID}`);
-        const data = await response.json();
-
-        if (commodity === 'WIKI/Gold') {
-            return data.rates['USD']; // Preço do ouro em USD
-        } else if (commodity === 'WIKI/OIL') {
-            return data.rates['USD']; // Preço do petróleo em USD
-        } else if (commodity === 'WIKI/Steel') {
-            return data.rates['USD']; // Preço do aço em USD
-        } else if (commodity === 'WIKI/Silver') {
-            return data.rates['USD']; // Preço da prata em USD
-        } else if (commodity === 'WIKI/Copper') {
-            return data.rates['USD']; // Preço do cobre em USD
-        } else if (commodity === 'WIKI/Cotton') {
-            return data.rates['USD']; // Preço do algodão em USD
-        } else if (commodity === 'WIKI/Wheat') {
-            return data.rates['USD']; // Preço do trigo em USD
-        } else if (commodity === 'WIKI/Corn') {
-            return data.rates['USD']; // Preço do milho em USD
-        } else if (commodity === 'WIKI/Aluminum') {
-            return data.rates['USD']; // Preço do alumínio em USD
-        } else if (commodity === 'WIKI/Soybeans') {
-            return data.rates['USD']; // Preço da soja em USD
+    // Converter preço da commodity para a moeda selecionada
+    async function convertCommodityPriceToCurrency(price, currency) {
+        if (currency === 'USD') {
+            return price; // Se já estiver em USD
         }
 
-        return 1; // Retornar 1 se a taxa não for encontrada
+        // Obter a taxa de câmbio
+        const response = await fetch(`https://openexchangerates.org/api/latest.json?app_id=${OPEN_EXCHANGE_RATES_APP_ID}`);
+        const data = await response.json();
+        const rate = data.rates[currency];
+
+        return price * rate; // Converter para a moeda selecionada
     }
 
     // Inicializar opções de moeda ao carregar a página
