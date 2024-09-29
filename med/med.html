@@ -1,166 +1,174 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Conversão em Engenharia Civil</title>
+    <title>Unit Converter</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
             margin: 0;
-            padding: 0;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 50px auto;
             padding: 20px;
-            background: white;
-            border-radius: 5px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-
         h1 {
             text-align: center;
-            color: #333;
         }
-
-        form {
-            display: flex;
-            flex-direction: column;
+        .input-group {
+            margin: 15px 0;
         }
-
-        label {
-            margin-top: 10px;
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
         }
-
-        input, select {
+        .input-group input, .input-group select {
+            width: 100%;
             padding: 10px;
-            margin-top: 5px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
         }
-
         button {
-            margin-top: 20px;
+            width: 100%;
             padding: 10px;
-            background-color: #007BFF;
-            color: white;
+            background-color: #28a745;
             border: none;
-            border-radius: 5px;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 16px;
             cursor: pointer;
         }
-
         button:hover {
-            background-color: #0056b3;
+            background-color: #218838;
         }
-
         .result {
+            text-align: center;
             margin-top: 20px;
-            padding: 10px;
-            background-color: #e9ecef;
-            border: 1px solid #ccc;
-            border-radius: 5px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Calculadora de Conversão em Engenharia Civil</h1>
-        
-        <form id="conversion-form">
-            <label for="category">Escolha a Categoria de Conversão:</label>
-            <select id="category" required>
-                <option value="">Selecione uma Categoria</option>
-                <option value="comprimento">Comprimento</option>
-                <option value="massa">Massa</option>
-                <option value="temperatura">Temperatura</option>
+        <h1>Unit Converter</h1>
+        <div class="input-group">
+            <label for="category">Category</label>
+            <select id="category" onchange="populateUnits()">
+                <option value="length">Length</option>
+                <option value="mass">Mass</option>
+                <option value="volume">Volume</option>
+                <option value="temperature">Temperature</option>
+                <option value="speed">Speed</option>
+                <option value="time">Time</option>
+                <option value="energy">Energy</option>
+                <option value="area">Area</option>
             </select>
+        </div>
 
-            <label for="value">Valor a Converter:</label>
-            <input type="number" id="value" step="any" required>
+        <div class="input-group">
+            <label for="fromUnit">From Unit</label>
+            <select id="fromUnit"></select>
+        </div>
 
-            <label for="from-unit">Unidade de Origem:</label>
-            <select id="from-unit" required></select>
+        <div class="input-group">
+            <label for="toUnit">To Unit</label>
+            <select id="toUnit"></select>
+        </div>
 
-            <label for="to-unit">Unidade de Destino:</label>
-            <select id="to-unit" required></select>
+        <div class="input-group">
+            <label for="inputValue">Value</label>
+            <input type="number" id="inputValue" placeholder="Enter value to convert">
+        </div>
 
-            <button type="submit">Converter</button>
-        </form>
+        <button onclick="convert()">Convert</button>
 
-        <div id="result" class="result"></div>
+        <div class="result">
+            <h2 id="resultText">Result: --</h2>
+        </div>
     </div>
 
     <script>
-        const unitOptions = {
-            comprimento: ['metros', 'quilômetros', 'milhas', 'polegadas'],
-            massa: ['quilogramas', 'gramas', 'libras', 'onças'],
-            temperatura: ['celsius', 'fahrenheit', 'kelvin']
+        const units = {
+            length: { meters: 1, kilometers: 0.001, miles: 0.000621371, feet: 3.28084, inches: 39.3701 },
+            mass: { grams: 1, kilograms: 0.001, pounds: 0.00220462, tons: 0.000001, ounces: 0.035274 },
+            volume: { liters: 1, milliliters: 1000, gallons: 0.264172, barrels: 0.00838641, cups: 4.22675 },
+            temperature: { celsius: 1, fahrenheit: (v) => (v * 9/5) + 32, kelvin: (v) => v + 273.15 },
+            speed: { 'm/s': 1, 'km/h': 3.6, 'mph': 2.23694, knots: 1.94384, 'ft/s': 3.28084 },
+            time: { seconds: 1, minutes: 0.0166667, hours: 0.000277778, days: 0.0000115741, weeks: 0.0000016534 },
+            energy: { joules: 1, calories: 0.239006, kilojoules: 0.001, 'kWh': 2.77778e-7, BTU: 0.000947817 },
+            area: { 'm²': 1, hectares: 0.0001, acres: 0.000247105, 'ft²': 10.7639, 'mi²': 3.861e-7 }
         };
 
-        document.getElementById('category').addEventListener('change', function() {
-            const category = this.value;
-            const fromUnitSelect = document.getElementById('from-unit');
-            const toUnitSelect = document.getElementById('to-unit');
-
-            // Limpa as opções atuais
-            fromUnitSelect.innerHTML = '';
-            toUnitSelect.innerHTML = '';
-
-            if (unitOptions[category]) {
-                // Popula as opções de unidades
-                unitOptions[category].forEach(unit => {
-                    const optionFrom = document.createElement('option');
-                    const optionTo = document.createElement('option');
-                    optionFrom.value = unit;
-                    optionFrom.textContent = unit;
-                    optionTo.value = unit;
-                    optionTo.textContent = unit;
-                    fromUnitSelect.appendChild(optionFrom);
-                    toUnitSelect.appendChild(optionTo);
-                });
-            }
-        });
-
-        document.getElementById('conversion-form').addEventListener('submit', function(event) {
-            event.preventDefault();
-            
+        function populateUnits() {
             const category = document.getElementById('category').value;
-            const value = parseFloat(document.getElementById('value').value);
-            const fromUnit = document.getElementById('from-unit').value;
-            const toUnit = document.getElementById('to-unit').value;
+            const fromUnit = document.getElementById('fromUnit');
+            const toUnit = document.getElementById('toUnit');
+            fromUnit.innerHTML = '';
+            toUnit.innerHTML = '';
 
-            let apiUrl = '';
+            for (const unit in units[category]) {
+                const option1 = document.createElement('option');
+                option1.value = unit;
+                option1.text = unit;
+                fromUnit.add(option1);
 
-            // Configuração da URL da API de conversão baseada na categoria
-            switch (category) {
-                case 'comprimento':
-                    apiUrl = `https://api.exemplo.com/convert/length?value=${value}&from=${fromUnit}&to=${toUnit}`;
-                    break;
-                case 'massa':
-                    apiUrl = `https://api.exemplo.com/convert/mass?value=${value}&from=${fromUnit}&to=${toUnit}`;
-                    break;
-                case 'temperatura':
-                    apiUrl = `https://api.exemplo.com/convert/temperature?value=${value}&from=${fromUnit}&to=${toUnit}`;
-                    break;
-                default:
-                    break;
+                const option2 = document.createElement('option');
+                option2.value = unit;
+                option2.text = unit;
+                toUnit.add(option2);
+            }
+        }
+
+        function convert() {
+            const category = document.getElementById('category').value;
+            const fromUnit = document.getElementById('fromUnit').value;
+            const toUnit = document.getElementById('toUnit').value;
+            const inputValue = parseFloat(document.getElementById('inputValue').value);
+
+            if (isNaN(inputValue)) {
+                alert('Please enter a valid number');
+                return;
             }
 
-            fetch(apiUrl)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Erro na conversão.');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    document.getElementById('result').innerText = `Resultado: ${data.result} ${toUnit}`;
-                })
-                .catch(error => {
-                    document.getElementById('result').innerText = `Erro: ${error.message}`;
-                });
-        });
+            let result;
+
+            if (category === 'temperature') {
+                result = convertTemperature(inputValue, fromUnit, toUnit);
+            } else {
+                const fromFactor = units[category][fromUnit];
+                const toFactor = units[category][toUnit];
+                result = (inputValue * fromFactor) / toFactor;
+            }
+
+            document.getElementById('resultText').innerText = `Result: ${result.toFixed(4)} ${toUnit}`;
+        }
+
+        function convertTemperature(value, from, to) {
+            if (from === 'celsius' && to === 'fahrenheit') {
+                return (value * 9/5) + 32;
+            } else if (from === 'fahrenheit' && to === 'celsius') {
+                return (value - 32) * 5/9;
+            } else if (from === 'celsius' && to === 'kelvin') {
+                return value + 273.15;
+            } else if (from === 'kelvin' && to === 'celsius') {
+                return value - 273.15;
+            } else if (from === 'fahrenheit' && to === 'kelvin') {
+                return (value - 32) * 5/9 + 273.15;
+            } else if (from === 'kelvin' && to === 'fahrenheit') {
+                return (value - 273.15) * 9/5 + 32;
+            } else {
+                return value;
+            }
+        }
+
+        // Populate units on page load
+        window.onload = populateUnits;
     </script>
 </body>
 </html>
