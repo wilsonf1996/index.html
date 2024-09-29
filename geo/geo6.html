@@ -25,29 +25,13 @@
             margin-bottom: 20px;
         }
 
-        input[type="text"] {
+        input[type="text"], input[type="file"], textarea {
             padding: 10px;
             border-radius: 5px;
             border: 1px solid #ddd;
             width: calc(100% - 22px);
             box-sizing: border-box;
-        }
-
-        form {
-            margin-bottom: 20px;
-        }
-
-        input, textarea {
-            padding: 10px;
-            margin: 5px;
-            border-radius: 5px;
-            border: 1px solid #ddd;
-            width: calc(100% - 22px);
-            box-sizing: border-box;
-        }
-
-        textarea {
-            resize: vertical;
+            margin: 5px 0;
         }
 
         button {
@@ -105,7 +89,7 @@
         }
 
         @media (max-width: 600px) {
-            input, textarea {
+            input[type="text"], input[type="file"], textarea {
                 width: calc(100% - 12px);
             }
 
@@ -176,7 +160,6 @@
                     const lon = position.coords.longitude;
                     const currentDate = new Date().toISOString().slice(0, 10); // Data no formato YYYY-MM-DD
 
-                    // Ajusta a hora local
                     const localDate = new Date();
                     const options = {
                         hour: '2-digit',
@@ -243,77 +226,83 @@
         // Carrega e exibe os registros da Firebase
         function loadRecords() {
             database.ref('locations').once('value', (snapshot) => {
-                locationList.innerHTML = '';
-                map.eachLayer((layer) => {
-                    if (layer instanceof L.Marker) {
-                        map.removeLayer(layer);
-                    }
-                });
-
-                const records = [];
-                snapshot.forEach(childSnapshot => {
-                    const data = childSnapshot.val();
-                    const key = childSnapshot.key;
-                    records.push({ key, ...data });
-                });
-
-                records.forEach(({ key, note, date, time, coordinates, files }) => {
-                    const listItem = document.createElement('div');
-                    listItem.className = 'list-item';
-                    listItem.innerHTML = `
-                        <strong>${note}</strong>
-                        <div>
-                            <strong>Data:</strong> ${date}<br>
-                            <strong>Hora:</strong> ${time}<br>
-                            <strong>Localização:</strong> ${coordinates}<br>
-                            <a class="file-link" href="${files.map(file => file.url).join(', ')}" target="_blank">Ver Arquivos</a>
-                        </div>
-                        <button onclick="deleteRecord('${key}')">Excluir</button>`;
-                    
-                    locationList.appendChild(listItem);
-
-                    // Adiciona o marcador ao mapa
-                    const [lat, lon] = coordinates.split(', ').map(Number);
-                    const marker = L.marker([lat, lon]).addTo(map);
-                    marker.bindPopup(`<strong>${note}</strong><br><strong>Data:</strong> ${date}<br><strong>Hora:</strong> ${time}`);
+                locationList.innerHTML = ''; // Limpa a lista existente
+                snapshot.forEach((childSnapshot) => {
+                    const record = childSnapshot.val();
+                    displayRecord(record);
+                    const { coordinates } = record;
+                    const [lat, lon] = coordinates.split(',').map(Number);
+                    L.marker([lat, lon]).addTo(map).bindPopup(record.note); // Adiciona marcador ao mapa
                 });
             });
         }
 
-        // Função para filtrar registros
-        function filterRecords() {
-            const nameQuery = document.getElementById('filter-name').value.toLowerCase();
-            const dateQuery = document.getElementById('filter-date').value.toLowerCase();
-            const locationQuery = document.getElementById('filter-location').value.toLowerCase();
+        // Exibe um registro na lista
+        function displayRecord(record) {
+            const recordDiv = document.createElement('div');
+            recordDiv.className = 'list-item';
+            recordDiv.innerHTML = `
+                <strong>Nota:</strong> ${record.note}<br>
+                <strong>Data:</strong> ${record.date}<br>
+                <strong>Hora:</strong> ${record.time}<br>
+                <strong>Localização:</strong> ${record.location}<br>
+                <strong>Coordenadas:</strong> ${record.coordinates}<br>
+            `;
 
-            const items = locationList.getElementsByClassName('list-item');
-
-            for (let item of items) {
-                const note = item.querySelector('strong').textContent.toLowerCase();
-                const date = item.innerHTML.includes('Data:') ? item.innerHTML.split('Data:')[1].split('<br>')[0].toLowerCase() : '';
-                const location = item.innerHTML.includes('Localização:') ? item.innerHTML.split('Localização:')[1].split('<br>')[0].toLowerCase() : '';
-
-                const matchesName = note.includes(nameQuery);
-                const matchesDate = date.includes(dateQuery);
-                const matchesLocation = location.includes(locationQuery);
-
-                item.style.display = (matchesName && matchesDate && matchesLocation) ? 'block' : 'none';
-            }
-        }
-
-        // Exclui um registro da Firebase
-        function deleteRecord(key) {
-            database.ref('locations/' + key).remove()
-                .then(() => {
-                    loadRecords();
-                })
-                .catch((error) => {
-                    console.error('Erro ao excluir o registro:', error);
+            // Adiciona links para arquivos se existirem
+            if (record.files && record.files.length > 0) {
+                record.files.forEach(file => {
+                    const link = document.createElement('a');
+                    link.href = file.url;
+                    link.target = '_blank';
+                    link.className = 'file-link';
+                    link.innerText = `Abrir arquivo: ${file.name}`;
+                    recordDiv.appendChild(link);
                 });
+            }
+
+            // Adiciona botão para excluir registro
+            const deleteButton = document.createElement('button');
+            deleteButton.innerText = 'Excluir Registro';
+            deleteButton.onclick = () => deleteRecord(childSnapshot.key);
+            recordDiv.appendChild(deleteButton);
+
+            locationList.appendChild(recordDiv);
         }
 
-        // Carrega registros ao iniciar
-        loadRecords();
+        // Exclui um registro do Firebase
+        async function deleteRecord(recordId) {
+            await database.ref(`locations/${recordId}`).remove();
+            loadRecords(); // Atualiza a lista após exclusão
+        }
+
+        // Filtra os registros com base nas entradas do filtro
+        function filterRecords() {
+            const nameFilter = document.getElementById('filter-name').value.toLowerCase();
+            const dateFilter = document.getElementById('filter-date').value.toLowerCase();
+            const locationFilter = document.getElementById('filter-location').value.toLowerCase();
+
+            const records = document.querySelectorAll('.list-item');
+            records.forEach(record => {
+                const nameText = record.innerText.toLowerCase();
+                const dateText = record.innerText.toLowerCase();
+                const locationText = record.innerText.toLowerCase();
+
+                const matchesName = nameText.includes(nameFilter);
+                const matchesDate = dateText.includes(dateFilter);
+                const matchesLocation = locationText.includes(locationFilter);
+
+                if (matchesName && matchesDate && matchesLocation) {
+                    record.style.display = '';
+                } else {
+                    record.style.display = 'none';
+                }
+            });
+        }
+
+        // Carrega os registros ao iniciar
+        window.onload = loadRecords;
     </script>
 </body>
 </html>
+
