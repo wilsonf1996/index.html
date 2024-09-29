@@ -157,7 +157,7 @@
     </style>
 </head>
 <body>
-  <header>
+    <header>
         <h1>Registro de Localização</h1>
     </header>
 
@@ -190,7 +190,6 @@
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
     <script>
-        // Configuração do Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
             authDomain: "agenda-6accc.firebaseapp.com",
@@ -206,207 +205,101 @@
         const database = firebase.database();
         const storage = firebase.storage();
 
-        // Função toggleFullscreen
-        function toggleFullscreen() {
-            const mapContainer = document.getElementById('map-container');
-            if (!document.fullscreenElement) {
-                mapContainer.requestFullscreen().catch(err => {
-                    console.error(`Erro ao tentar colocar em tela cheia: ${err.message} (${err.name})`);
-                });
-            } else {
-                document.exitFullscreen();
-            }
-        }
-        const app = firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-        const storage = firebase.storage();
-
         const form = document.getElementById('location-form');
         const locationList = document.getElementById('location-list');
         const map = L.map('map').setView([-23.5505, -46.6333], 13);
         let listVisible = true;
-        let currentEditId = null;
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        async function addLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(async (position) => {
-                    const lat = position.coords.latitude;
-                    const lon = position.coords.longitude;
-                    const currentDate = new Date().toISOString().slice(0, 10);
-                    const localDate = new Date();
-                    const options = {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit',
-                        timeZoneName: 'short',
-                    };
-                    const currentTime = localDate.toLocaleString('pt-BR', options);
-                    const note = document.getElementById('note').value;
+        const markers = [];
 
-                    try {
-                        const locationName = await getPreciseLocation(lat, lon);
-                        const files = document.getElementById('file-upload').files;
-                        const fileUrls = await uploadFiles(files);
+        function addLocation() {
+            const note = document.getElementById('note').value;
+            const fileInput = document.getElementById('file-upload');
+            const files = fileInput.files;
 
-                        const newRecord = {
-                            note,
-                            date: currentDate,
-                            time: currentTime,
-                            location: locationName,
-                            coordinates: `${lat}, ${lon}`,
-                            files: fileUrls
-                        };
-
-                        const newRecordRef = database.ref('locations').push();
-                        await newRecordRef.set(newRecord);
-
-                        form.reset();
-                        loadRecords();
-                    } catch (error) {
-                        console.error('Erro ao obter dados do clima:', error);
-                    }
-                }, (error) => {
-                    alert('Não foi possível obter a localização. Verifique suas permissões de localização.');
-                });
-            } else {
-                alert('Geolocalização não é suportada por este navegador.');
+            if (!note || files.length === 0) {
+                alert('Por favor, preencha a nota e selecione um arquivo.');
+                return;
             }
-        }
 
-        async function getPreciseLocation(lat, lon) {
-            const apiUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1&accept-language=pt-BR`;
-            const response = await fetch(apiUrl);
-            if (!response.ok) {
-                throw new Error('Erro ao obter nome da localização');
-            }
-            const data = await response.json();
-            return data.display_name || 'Localização Desconhecida';
-        }
-
-        async function uploadFiles(files) {
+            const locationRef = database.ref('locations').push();
             const fileUrls = [];
-            for (let file of files) {
-                const storageRef = storage.ref().child(`files/${file.name}`);
-                await storageRef.put(file);
-                const fileUrl = await storageRef.getDownloadURL();
-                fileUrls.push({ name: file.name, url: fileUrl });
-            }
-            return fileUrls;
-        }
 
-        function loadRecords() {
-            database.ref('locations').once('value', (snapshot) => {
-                locationList.innerHTML = '';
-                snapshot.forEach((childSnapshot) => {
-                    const record = childSnapshot.val();
-                    const recordId = childSnapshot.key;
-                    displayRecord(record, recordId);
+            const uploadPromises = [];
+
+            for (const file of files) {
+                const fileRef = storage.ref(`uploads/${file.name}`);
+                const uploadTask = fileRef.put(file);
+
+                uploadPromises.push(uploadTask.then(() => fileRef.getDownloadURL()));
+            }
+
+            Promise.all(uploadPromises).then(urls => {
+                fileUrls.push(...urls);
+                const newLocation = {
+                    note: note,
+                    date: new Date().toISOString(),
+                    location: map.getCenter().toJSON(),
+                    files: fileUrls
+                };
+
+                locationRef.set(newLocation).then(() => {
+                    displayRecord(newLocation, locationRef.key);
+                    document.getElementById('note').value = '';
+                    fileInput.value = '';
                 });
             });
         }
 
-        function displayRecord(record, id) {
-            const recordDiv = document.createElement('div');
-            recordDiv.className = 'list-item';
-            recordDiv.setAttribute('data-id', id);
+        function displayRecord(location, key) {
+            const locationItem = document.createElement('div');
+            locationItem.classList.add('list-item');
+            locationItem.innerHTML = `
+                <h3>${location.note}</h3>
+                <p><strong>Data:</strong> ${new Date(location.date).toLocaleString()}</p>
+                <p><strong>Localização:</strong> ${location.location.lat.toFixed(4)}, ${location.location.lng.toFixed(4)}</p>
+                <p><strong>Arquivos:</strong></p>
+            `;
 
-            const recordTitle = document.createElement('h3');
-            recordTitle.textContent = record.note;
-            recordDiv.appendChild(recordTitle);
+            const fileList = document.createElement('div');
+            location.files.forEach(fileUrl => {
+                const fileLink = document.createElement('a');
+                fileLink.href = fileUrl;
+                fileLink.textContent = fileUrl.split('/').pop();
+                fileLink.classList.add('file-link');
+                fileLink.target = '_blank'; // Para abrir o link em nova aba
+                fileList.appendChild(fileLink);
+            });
 
-            const recordDate = document.createElement('p');
-            recordDate.textContent = `Data: ${record.date} - Hora: ${record.time}`;
-            recordDiv.appendChild(recordDate);
+            locationItem.appendChild(fileList);
+            locationList.appendChild(locationItem);
 
-            const recordLocation = document.createElement('p');
-            recordLocation.textContent = `Localização: ${record.location}`;
-            recordDiv.appendChild(recordLocation);
-
-            if (record.files && record.files.length > 0) {
-                const fileList = document.createElement('div');
-                fileList.innerHTML = '<strong>Arquivos:</strong>';
-                record.files.forEach(file => {
-                    const fileLink = document.createElement('a');
-                    fileLink.href = file.url;
-                    fileLink.className = 'file-link';
-                    fileLink.target = '_blank';
-                    fileLink.textContent = file.name;
-
-                    const deleteFileButton = document.createElement('button');
-                    deleteFileButton.textContent = 'Excluir Arquivo';
-                    deleteFileButton.onclick = () => deleteFile(file.name, id);
-
-                    fileList.appendChild(fileLink);
-                    fileList.appendChild(deleteFileButton);
-                    fileList.appendChild(document.createElement('br'));
-                });
-                recordDiv.appendChild(fileList);
-            }
-
-            const editButton = document.createElement('button');
-            editButton.textContent = 'Editar';
-            editButton.onclick = () => editRecord(id, record);
-            recordDiv.appendChild(editButton);
-
-            const deleteButton = document.createElement('button');
-            deleteButton.textContent = 'Excluir';
-            deleteButton.onclick = () => deleteRecord(id);
-            recordDiv.appendChild(deleteButton);
-
-            locationList.appendChild(recordDiv);
-
-            // Adiciona marcador no mapa
-            L.marker(record.coordinates.split(',').map(Number)).addTo(map)
-                .bindPopup(`<b>${record.note}</b><br>${record.location}<br>${record.date} ${record.time}`)
-                .openPopup();
-        }
-
-        function editRecord(id, record) {
-            document.getElementById('note').value = record.note;
-            currentEditId = id;
-            // Se necessário, pode-se adicionar lógica para editar arquivos, se desejado
-        }
-
-        async function deleteRecord(id) {
-            if (confirm('Tem certeza que deseja excluir este registro?')) {
-                await database.ref(`locations/${id}`).remove();
-                loadRecords();
-            }
-        }
-
-        async function deleteFile(fileName, recordId) {
-            if (confirm(`Tem certeza que deseja excluir o arquivo ${fileName}?`)) {
-                // Excluir o arquivo do Firebase Storage
-                const fileRef = storage.ref().child(`files/${fileName}`);
-                await fileRef.delete();
-
-                // Carregar os registros novamente após a exclusão
-                loadRecords();
-            }
+            const marker = L.marker([location.location.lat, location.location.lng]).addTo(map);
+            markers.push(marker);
         }
 
         function filterRecords() {
-            const filterName = document.getElementById('filter-name').value.toLowerCase();
-            const filterDate = document.getElementById('filter-date').value.toLowerCase();
-            const filterLocation = document.getElementById('filter-location').value.toLowerCase();
-            const items = locationList.getElementsByClassName('list-item');
-
-            for (let item of items) {
-                const noteText = item.querySelector('h3').textContent.toLowerCase();
-                const dateText = item.querySelector('p').textContent.toLowerCase();
-                const locationText = item.querySelector('p:nth-of-type(2)').textContent.toLowerCase();
-
-                if (noteText.includes(filterName) && dateText.includes(filterDate) && locationText.includes(filterLocation)) {
-                    item.style.display = '';
-                } else {
-                    item.style.display = 'none';
-                }
-            }
+            const nameFilter = document.getElementById('filter-name').value.toLowerCase();
+            const dateFilter = document.getElementById('filter-date').value.toLowerCase();
+            const locationFilter = document.getElementById('filter-location').value.toLowerCase();
+            
+            const items = document.querySelectorAll('.list-item');
+            items.forEach(item => {
+                const note = item.querySelector('h3').textContent.toLowerCase();
+                const date = item.querySelector('p strong').nextSibling.textContent.toLowerCase();
+                const location = item.querySelector('p strong').nextSibling.nextSibling.textContent.toLowerCase();
+                
+                const matchesName = note.includes(nameFilter);
+                const matchesDate = date.includes(dateFilter);
+                const matchesLocation = location.includes(locationFilter);
+                
+                item.style.display = (matchesName && matchesDate && matchesLocation) ? '' : 'none';
+            });
         }
 
         function toggleList() {
@@ -415,9 +308,16 @@
             document.getElementById('toggle-view').textContent = listVisible ? 'Ocultar Lista' : 'Mostrar Lista';
         }
 
-        loadRecords();
+        function toggleFullscreen() {
+            const mapContainer = document.getElementById('map-container');
+            if (!document.fullscreenElement) {
+                mapContainer.requestFullscreen().catch(err => {
+                    alert(`Erro ao tentar entrar em modo de tela cheia: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
     </script>
 </body>
-</html>
-
 </html>
