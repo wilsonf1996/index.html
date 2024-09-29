@@ -21,6 +21,18 @@
             margin-bottom: 20px;
         }
 
+        .search-container {
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            width: calc(100% - 22px);
+            box-sizing: border-box;
+        }
+
         form {
             margin-bottom: 20px;
         }
@@ -87,16 +99,6 @@
             text-decoration: underline;
         }
 
-        .download-all {
-            display: block;
-            margin-top: 10px;
-            background-color: #28a745;
-        }
-
-        .download-all:hover {
-            background-color: #218838;
-        }
-
         #map {
             height: 400px;
             margin-top: 20px;
@@ -117,6 +119,10 @@
 <body>
     <h1>Registro de Localização</h1>
 
+    <div class="search-container">
+        <input type="text" id="search" placeholder="Pesquisar registros..." oninput="filterRecords()">
+    </div>
+
     <form id="location-form">
         <textarea id="note" placeholder="Digite uma nota" rows="4" required></textarea>
         <input type="file" id="file-upload" multiple />
@@ -129,8 +135,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
     <script>
@@ -184,9 +188,7 @@
 
                     try {
                         const weatherData = await getWeather(lat, lon);
-                        const temperature = weatherData.main.temp;
-                        const weatherDescription = weatherData.weather[0].description;
-                        const locationName = weatherData.name;
+                        const locationName = weatherData.name; // Nome da localização
 
                         const files = document.getElementById('file-upload').files;
                         const fileUrls = [];
@@ -203,8 +205,6 @@
                             note,
                             date: currentDate,
                             time: currentTime,
-                            temperature: `${temperature}°C`,
-                            weather: weatherDescription,
                             location: locationName,
                             coordinates: `${lat}, ${lon}`,
                             files: fileUrls
@@ -253,60 +253,35 @@
                     const key = childSnapshot.key;
                     const listItem = document.createElement('div');
                     listItem.className = 'list-item';
-                    listItem.innerHTML = `
-                        <div>
+                    listItem.innerHTML = 
+                        `<div>
                             <strong>Nota:</strong> ${data.note}<br>
                             <strong>Data:</strong> ${data.date}<br>
                             <strong>Hora:</strong> ${data.time}<br>
-                            <strong>Temperatura:</strong> ${data.temperature}<br>
-                            <strong>Clima:</strong> ${data.weather}<br>
                             <strong>Localização:</strong> ${data.location}<br>
-                            <strong>Coordenadas:</strong> ${data.coordinates}<br>
-                        </div>
-                        ${data.files.map(file => `<a class="file-link" href="${file.url}" target="_blank">${file.name}</a>`).join('')}
-                        <button onclick="deleteRecord('${key}')">Excluir</button>
-                    `;
+                        </div>`;
 
+                    const [lat, lon] = data.coordinates.split(', ').map(Number);
+                    const marker = L.marker([lat, lon]).addTo(map);
+                    marker.bindPopup(`<strong>${data.note}</strong><br><strong>Data:</strong> ${data.date}<br><strong>Hora:</strong> ${data.time}`);
+                    
                     locationList.appendChild(listItem);
-
-                    // Adiciona marcador no mapa
-                    const coordinates = data.coordinates.split(',').map(Number);
-                    const marker = L.marker(coordinates).addTo(map).bindPopup(listItem.innerHTML);
                 });
-
-                const downloadAllButton = document.createElement('a');
-                downloadAllButton.className = 'download-all';
-                downloadAllButton.href = '#';
-                downloadAllButton.innerText = 'Baixar Todos os Arquivos';
-                downloadAllButton.onclick = downloadAllFiles;
-                locationList.appendChild(downloadAllButton);
             });
         }
 
-        // Função para excluir um registro
-        function deleteRecord(key) {
-            database.ref('locations/' + key).remove();
-            loadRecords();
+        // Função para filtrar registros
+        function filterRecords() {
+            const searchQuery = document.getElementById('search').value.toLowerCase();
+            const items = locationList.getElementsByClassName('list-item');
+
+            for (let item of items) {
+                const note = item.textContent.toLowerCase();
+                item.style.display = note.includes(searchQuery) ? 'block' : 'none';
+            }
         }
 
-        // Função para baixar todos os arquivos
-        function downloadAllFiles() {
-            database.ref('locations').once('value', async (snapshot) => {
-                const zip = new JSZip();
-
-                snapshot.forEach((childSnapshot) => {
-                    const data = childSnapshot.val();
-                    data.files.forEach((file) => {
-                        zip.file(file.name, file.url, { binary: true });
-                    });
-                });
-
-                const content = await zip.generateAsync({ type: 'blob' });
-                saveAs(content, 'arquivos.zip');
-            });
-        }
-
-        // Carrega os registros no início
+        // Carrega registros ao iniciar
         loadRecords();
     </script>
 </body>
