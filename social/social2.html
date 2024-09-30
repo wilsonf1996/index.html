@@ -1,79 +1,156 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TheFacebook 2004 Clone</title>
+    <title>TheFacebook - 2004</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Verdana:300,400,500,700&display=swap">
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
+            font-family: 'Verdana', sans-serif;
+            background-color: #e9ebee;
             color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
-
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
+        header {
+            background-color: #3b5998;
+            color: white;
+            padding: 10px 0;
+            width: 100%;
+            text-align: center;
+            position: fixed;
+            top: 0;
+            z-index: 1000;
+        }
+        #content {
+            margin-top: 60px;
+            width: 100%;
+            max-width: 500px;
+            background-color: #fff;
             padding: 20px;
-            background: white;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
-
-        #auth-section {
-            margin-bottom: 20px;
-        }
-
         input[type="text"], textarea {
             width: 100%;
+            padding: 10px;
             margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
         }
-
         button {
             padding: 10px;
-            background-color: #007bff;
+            background-color: #3b5998;
             color: white;
             border: none;
+            border-radius: 4px;
             cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
         }
-
         button:hover {
-            background-color: #0056b3;
+            background-color: #2d4373;
         }
-
         .post {
-            border: 1px solid #ccc;
-            margin-bottom: 10px;
             padding: 10px;
+            border-bottom: 1px solid #ccc;
+            margin-bottom: 10px;
         }
-
-        .post img {
+        .post:last-child {
+            border-bottom: none;
+        }
+        .post-header {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .media {
             max-width: 100%;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .edit-button, .delete-button {
+            background-color: #ff5722;
+            border: none;
+            padding: 8px;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .edit-button:hover {
+            background-color: #e64a19;
+        }
+        .delete-button:hover {
+            background-color: #d32f2f;
+        }
+        .friend-list, .messages, .events, .groups {
+            margin-top: 20px;
         }
     </style>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>TheFacebook 2004</h1>
-        
-        <div id="auth-section">
-            <h2 id="auth-title">Registro</h2>
-            <input type="text" id="username" placeholder="Nome de usuário" required>
-            <button id="auth-button" onclick="registerUser()">Registrar</button>
+
+    <header>
+        <h1>TheFacebook</h1>
+    </header>
+
+    <div id="content">
+        <div id="login-section">
+            <input type="text" id="username" placeholder="Digite seu nome de usuário">
+            <button onclick="login()">Entrar</button>
         </div>
-        
-        <div id="new-post" style="display: none;">
-            <textarea id="post-text" placeholder="O que você está pensando?"></textarea>
-            <input type="file" id="media" accept="image/*">
-            <button onclick="submitPost()">Postar</button>
+
+        <div id="post-section" style="display: none;">
+            <h2>Criar uma Postagem</h2>
+            <textarea id="post-text" placeholder="O que você está pensando?" rows="3"></textarea>
+            <input type="file" id="media" accept="image/*,video/*,audio/*" multiple>
+            <button onclick="createPost()">Postar</button>
+            <button onclick="logout()">Sair</button>
         </div>
-        
-        <div id="posts"></div>
+
+        <div id="timeline" style="display: none;">
+            <h2>Timeline</h2>
+            <div id="posts"></div>
+        </div>
+
+        <div class="friend-list" style="display: none;">
+            <h2>Amigos</h2>
+            <div id="friends"></div>
+            <input type="text" id="friend-username" placeholder="Adicionar amigo">
+            <button onclick="addFriend()">Adicionar Amigo</button>
+        </div>
+
+        <div class="messages" style="display: none;">
+            <h2>Mensagens</h2>
+            <div id="message-list"></div>
+            <input type="text" id="message-text" placeholder="Digite sua mensagem">
+            <button onclick="sendMessage()">Enviar</button>
+        </div>
+
+        <div class="events" style="display: none;">
+            <h2>Eventos</h2>
+            <input type="text" id="event-name" placeholder="Nome do evento">
+            <button onclick="createEvent()">Criar Evento</button>
+            <div id="event-list"></div>
+        </div>
+
+        <div class="groups" style="display: none;">
+            <h2>Grupos</h2>
+            <input type="text" id="group-name" placeholder="Nome do grupo">
+            <button onclick="createGroup()">Criar Grupo</button>
+            <div id="group-list"></div>
+        </div>
     </div>
-    
-    <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-database.js"></script>
+
     <script>
-        // Configuração do Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
             authDomain: "agenda-6accc.firebaseapp.com",
@@ -84,80 +161,282 @@
             appId: "1:205960633520:web:c9b1b9e166a8e3daed1dc6"
         };
 
-        // Inicializa o Firebase
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
+        const storage = firebase.storage();
 
         let currentUser = null;
+        let friends = [];
 
-        // Função de registro
-        function registerUser() {
+        function login() {
             const username = document.getElementById('username').value;
-            if (username) {
+            if (username !== "") {
                 currentUser = username;
-                document.getElementById('auth-section').style.display = 'none';
-                document.getElementById('new-post').style.display = 'block';
+                document.getElementById('login-section').style.display = 'none';
+                document.getElementById('post-section').style.display = 'block';
+                document.getElementById('timeline').style.display = 'block';
+                document.querySelector('.friend-list').style.display = 'block';
+                document.querySelector('.messages').style.display = 'block';
+                document.querySelector('.events').style.display = 'block';
+                document.querySelector('.groups').style.display = 'block';
                 loadPosts();
+                loadFriends();
             } else {
                 alert('Por favor, insira um nome de usuário.');
             }
         }
 
-        // Função para submeter uma postagem
-        function submitPost() {
+        function logout() {
+            currentUser = null;
+            document.getElementById('login-section').style.display = 'block';
+            document.getElementById('post-section').style.display = 'none';
+            document.getElementById('timeline').style.display = 'none';
+            document.querySelector('.friend-list').style.display = 'none';
+            document.querySelector('.messages').style.display = 'none';
+            document.querySelector('.events').style.display = 'none';
+            document.querySelector('.groups').style.display = 'none';
+            document.getElementById('posts').innerHTML = '';
+            document.getElementById('friends').innerHTML = '';
+            document.getElementById('message-list').innerHTML = '';
+            document.getElementById('event-list').innerHTML = '';
+            document.getElementById('group-list').innerHTML = '';
+        }
+
+        function createPost() {
             const postText = document.getElementById('post-text').value;
-            const mediaInput = document.getElementById('media');
-            
-            if (postText) {
+            const mediaFiles = document.getElementById('media').files;
+
+            if ((postText !== "" || mediaFiles.length > 0) && currentUser) {
                 const postId = database.ref('posts').push().key;
                 const postData = {
-                    username: currentUser,
                     text: postText,
-                    timestamp: Date.now(),
-                    mediaURL: mediaInput.files.length > 0 ? URL.createObjectURL(mediaInput.files[0]) : null
+                    author: currentUser,
+                    timestamp: Date.now()
                 };
-                
-                database.ref('posts/' + postId).set(postData).then(() => {
-                    loadPosts();
-                });
 
-                document.getElementById('post-text').value = '';
-                mediaInput.value = '';
+                database.ref('posts/' + postId).set(postData).then(() => {
+                    // Handle media upload if there are files
+                    if (mediaFiles.length > 0) {
+                        uploadMedia(postId, mediaFiles);
+                    } else {
+                        document.getElementById('post-text').value = '';
+                        loadPosts();
+                    }
+                });
             } else {
-                alert('Por favor, insira algum texto.');
+                alert('Por favor, insira um texto ou selecione um arquivo.');
             }
         }
 
-        // Função para carregar postagens
+        function uploadMedia(postId, mediaFiles) {
+            const mediaPromises = [];
+            for (let i = 0; i < mediaFiles.length; i++) {
+                const mediaFile = mediaFiles[i];
+                const storageRef = storage.ref('media/' + postId + '/' + mediaFile.name);
+                const uploadTask = storageRef.put(mediaFile);
+
+                mediaPromises.push(uploadTask.then(() => {
+                    return storageRef.getDownloadURL().then((url) => {
+                        return database.ref('posts/' + postId + '/media').push().set(url);
+                    });
+                }));
+            }
+
+            Promise.all(mediaPromises).then(() => {
+                document.getElementById('post-text').value = '';
+                loadPosts();
+            });
+        }
+
         function loadPosts() {
-            database.ref('posts').once('value').then((snapshot) => {
-                const postsDiv = document.getElementById('posts');
-                postsDiv.innerHTML = '';
+            const postsRef = database.ref('posts');
+            postsRef.orderByChild('timestamp').once('value', (snapshot) => {
+                const postsContainer = document.getElementById('posts');
+                postsContainer.innerHTML = '';
                 snapshot.forEach((childSnapshot) => {
+                    const postId = childSnapshot.key;
                     const post = childSnapshot.val();
-                    const postElement = document.createElement('div');
-                    postElement.classList.add('post');
+                    const postDiv = document.createElement('div');
+                    postDiv.classList.add('post');
+                    postDiv.innerHTML = `<div class="post-header">${post.author}</div><div>${post.text}</div>`;
+                    
+                    // Load media if exists
+                    const mediaRef = database.ref('posts/' + postId + '/media');
+                    mediaRef.once('value', (mediaSnapshot) => {
+                        mediaSnapshot.forEach((mediaChild) => {
+                            const mediaUrl = mediaChild.val();
+                            const mediaElement = document.createElement(mediaUrl.endsWith('.mp4') ? 'video' : 'img');
+                            mediaElement.src = mediaUrl;
+                            mediaElement.classList.add('media');
+                            if (mediaUrl.endsWith('.mp4')) {
+                                mediaElement.controls = true;
+                            }
+                            postDiv.appendChild(mediaElement);
+                        });
+                    });
 
-                    const postUser = document.createElement('h3');
-                    postUser.textContent = post.username;
-                    postElement.appendChild(postUser);
+                    const editButton = document.createElement('button');
+                    editButton.innerText = 'Editar';
+                    editButton.classList.add('edit-button');
+                    editButton.onclick = function() { editPost(postId); };
 
-                    const postText = document.createElement('p');
-                    postText.textContent = post.text;
-                    postElement.appendChild(postText);
+                    const deleteButton = document.createElement('button');
+                    deleteButton.innerText = 'Excluir';
+                    deleteButton.classList.add('delete-button');
+                    deleteButton.onclick = function() { deletePost(postId); };
 
-                    if (post.mediaURL) {
-                        const mediaElement = document.createElement('img');
-                        mediaElement.src = post.mediaURL;
-                        postElement.appendChild(mediaElement);
-                    }
-
-                    postsDiv.appendChild(postElement);
+                    postDiv.appendChild(editButton);
+                    postDiv.appendChild(deleteButton);
+                    postsContainer.appendChild(postDiv);
                 });
             });
         }
+
+        function editPost(postId) {
+            const postRef = database.ref('posts/' + postId);
+            postRef.once('value', (snapshot) => {
+                const post = snapshot.val();
+                if (post) {
+                    document.getElementById('post-text').value = post.text;
+                }
+                deletePost(postId); // Remover a postagem original
+            });
+        }
+
+        function deletePost(postId) {
+            const postRef = database.ref('posts/' + postId);
+            postRef.remove().then(() => {
+                loadPosts();
+            });
+        }
+
+        // Funções de amigos
+        function loadFriends() {
+            const friendsRef = database.ref('friends');
+            friendsRef.once('value', (snapshot) => {
+                const friendsContainer = document.getElementById('friends');
+                friendsContainer.innerHTML = '';
+                snapshot.forEach((childSnapshot) => {
+                    const friend = childSnapshot.val();
+                    const friendDiv = document.createElement('div');
+                    friendDiv.innerText = friend;
+                    friendsContainer.appendChild(friendDiv);
+                });
+            });
+        }
+
+        function addFriend() {
+            const friendUsername = document.getElementById('friend-username').value;
+            if (friendUsername !== "") {
+                database.ref('friends/' + friendUsername).set(friendUsername).then(() => {
+                    loadFriends();
+                    document.getElementById('friend-username').value = '';
+                });
+            }
+        }
+
+        // Funções de mensagens
+        function sendMessage() {
+            const messageText = document.getElementById('message-text').value;
+            if (messageText !== "") {
+                const messageId = database.ref('messages').push().key;
+                const messageData = {
+                    text: messageText,
+                    sender: currentUser,
+                    timestamp: Date.now()
+                };
+                database.ref('messages/' + messageId).set(messageData).then(() => {
+                    loadMessages();
+                    document.getElementById('message-text').value = '';
+                });
+            }
+        }
+
+        function loadMessages() {
+            const messagesRef = database.ref('messages');
+            messagesRef.orderByChild('timestamp').once('value', (snapshot) => {
+                const messageList = document.getElementById('message-list');
+                messageList.innerHTML = '';
+                snapshot.forEach((childSnapshot) => {
+                    const message = childSnapshot.val();
+                    const messageDiv = document.createElement('div');
+                    messageDiv.innerText = `${message.sender}: ${message.text}`;
+                    messageList.appendChild(messageDiv);
+                });
+            });
+        }
+
+        // Funções de eventos
+        function createEvent() {
+            const eventName = document.getElementById('event-name').value;
+            if (eventName !== "") {
+                const eventId = database.ref('events').push().key;
+                const eventData = {
+                    name: eventName,
+                    creator: currentUser,
+                    timestamp: Date.now()
+                };
+                database.ref('events/' + eventId).set(eventData).then(() => {
+                    loadEvents();
+                    document.getElementById('event-name').value = '';
+                });
+            }
+        }
+
+        function loadEvents() {
+            const eventsRef = database.ref('events');
+            eventsRef.once('value', (snapshot) => {
+                const eventList = document.getElementById('event-list');
+                eventList.innerHTML = '';
+                snapshot.forEach((childSnapshot) => {
+                    const event = childSnapshot.val();
+                    const eventDiv = document.createElement('div');
+                    eventDiv.innerText = `${event.name} - Criado por: ${event.creator}`;
+                    eventList.appendChild(eventDiv);
+                });
+            });
+        }
+
+        // Funções de grupos
+        function createGroup() {
+            const groupName = document.getElementById('group-name').value;
+            if (groupName !== "") {
+                const groupId = database.ref('groups').push().key;
+                const groupData = {
+                    name: groupName,
+                    creator: currentUser,
+                    timestamp: Date.now()
+                };
+                database.ref('groups/' + groupId).set(groupData).then(() => {
+                    loadGroups();
+                    document.getElementById('group-name').value = '';
+                });
+            }
+        }
+
+        function loadGroups() {
+            const groupsRef = database.ref('groups');
+            groupsRef.once('value', (snapshot) => {
+                const groupList = document.getElementById('group-list');
+                groupList.innerHTML = '';
+                snapshot.forEach((childSnapshot) => {
+                    const group = childSnapshot.val();
+                    const groupDiv = document.createElement('div');
+                    groupDiv.innerText = `${group.name} - Criado por: ${group.creator}`;
+                    groupList.appendChild(groupDiv);
+                });
+            });
+        }
+
+        // Carregar todas as funcionalidades ao iniciar
+        window.onload = function() {
+            loadMessages();
+            loadEvents();
+            loadGroups();
+        };
     </script>
 </body>
 </html>
+
 
 
