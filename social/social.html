@@ -87,7 +87,7 @@
     <!-- Login Section -->
     <div id="login-section">
         <input type="text" id="username" placeholder="Digite seu nome de usuário">
-        <button onclick="login()">Entrar</button>
+        <button onclick="checkUsername()">Entrar</button>
     </div>
 
     <!-- Profile Section -->
@@ -128,25 +128,41 @@
 
         let currentUser = null;
 
-        // Função de Login Simples
-        function login() {
+        // Função para verificar se o nome de usuário é único
+        function checkUsername() {
             const username = document.getElementById('username').value;
 
             if (username !== "") {
-                auth.signInAnonymously().then(() => {
-                    currentUser = username;
-                    document.getElementById('current-user-name').textContent = currentUser;
-                    document.getElementById('login-section').style.display = 'none';
-                    document.getElementById('profile-section').style.display = 'block';
-                    document.getElementById('post-section').style.display = 'block';
-                    document.getElementById('timeline').style.display = 'block';
-                    loadPosts();
-                }).catch((error) => {
-                    alert('Erro ao fazer login: ' + error.message);
+                const usersRef = database.ref('users');
+                usersRef.orderByChild('username').equalTo(username).once('value', snapshot => {
+                    if (snapshot.exists()) {
+                        alert('Nome de usuário já existe. Escolha outro.');
+                    } else {
+                        login(username);  // Se não existir, logar
+                    }
                 });
             } else {
                 alert('Por favor, insira um nome de usuário.');
             }
+        }
+
+        // Função de Login Simples
+        function login(username) {
+            auth.signInAnonymously().then(() => {
+                currentUser = username;
+                // Salvar o nome de usuário no banco de dados
+                database.ref('users/' + auth.currentUser.uid).set({
+                    username: currentUser
+                });
+                document.getElementById('current-user-name').textContent = currentUser;
+                document.getElementById('login-section').style.display = 'none';
+                document.getElementById('profile-section').style.display = 'block';
+                document.getElementById('post-section').style.display = 'block';
+                document.getElementById('timeline').style.display = 'block';
+                loadPosts();
+            }).catch((error) => {
+                alert('Erro ao fazer login: ' + error.message);
+            });
         }
 
         // Função de Logout
@@ -211,21 +227,24 @@
 
         // Função para curtir um post
         function likePost(postId, currentLikes) {
-            database.ref('posts/' + postId).update({ likes: currentLikes + 1 });
+            const postRef = database.ref('posts/' + postId);
+            postRef.update({ likes: currentLikes + 1 });
         }
 
         // Função para comentar em um post
         function commentOnPost(postId) {
             const commentText = prompt('Digite seu comentário:');
-            if (commentText !== null && commentText.trim() !== "") {
-                const newComment = {
+
+            if (commentText && currentUser) {
+                const postRef = database.ref('posts/' + postId);
+                postRef.child('comments').push({
                     text: commentText,
                     userName: currentUser
-                };
-                database.ref('posts/' + postId + '/comments').push(newComment);
-                loadPosts();
+                });
             }
         }
     </script>
+
 </body>
 </html>
+
