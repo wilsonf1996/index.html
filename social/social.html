@@ -5,25 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>App de Rede Social</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         body {
             font-family: 'Roboto', sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #121212; /* Cor de fundo escura */
-            color: white;
+            background-color: #fafafa; /* Fundo mais claro */
+            color: #333; /* Texto mais escuro para contraste */
             display: flex;
             flex-direction: column;
             align-items: center;
             height: 100vh;
+            overflow-y: scroll; /* Adiciona scroll se necessário */
         }
         header {
-            background-color: #1f1f1f; /* Cabeçalho escuro */
-            color: white;
+            background-color: #ffffff; /* Cabeçalho branco */
+            color: #333;
             padding: 10px 20px;
             text-align: center;
             width: 100%;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
             position: fixed;
             top: 0;
             z-index: 1000;
@@ -37,10 +39,10 @@
         #post-section, #timeline {
             width: 100%;
             max-width: 600px;
-            background-color: #1e1e1e; /* Fundo dos posts */
+            background-color: #ffffff; /* Fundo branco para as seções */
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             margin: 20px 0;
             display: flex;
             flex-direction: column;
@@ -49,33 +51,37 @@
             width: 100%;
             padding: 10px;
             margin-bottom: 10px;
-            border: 1px solid #444;
+            border: 1px solid #ddd;
             border-radius: 4px;
             font-size: 16px;
-            background-color: #222; /* Fundo dos inputs */
-            color: white;
+            background-color: #f9f9f9; /* Fundo dos inputs mais claro */
+            color: #333;
         }
         button {
             padding: 10px 20px;
-            background-color: #0095f6;
+            background-color: #0095f6; /* Azul Instagram */
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
             transition: background-color 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         button:hover {
-            background-color: #007bbd;
+            background-color: #007bbd; /* Azul escuro ao passar o mouse */
         }
         .post {
             padding: 10px;
-            border-bottom: 1px solid #444;
+            border-bottom: 1px solid #ddd;
             position: relative;
             margin-bottom: 10px;
+            transition: transform 0.2s; /* Animação suave */
         }
-        .post:last-child {
-            border-bottom: none;
+        .post:hover {
+            transform: scale(1.01); /* Efeito de aumento ao passar o mouse */
         }
         .post-header {
             display: flex;
@@ -112,6 +118,21 @@
         }
         .logout-button:hover {
             background-color: #d32f2f; /* Cor mais escura para logout */
+        }
+        .icon-button {
+            border: none;
+            background: none;
+            cursor: pointer;
+            color: #0095f6;
+            font-size: 20px;
+        }
+        .icon-button:hover {
+            color: #007bbd;
+        }
+        @media (max-width: 768px) {
+            #post-section, #timeline {
+                max-width: 90%;
+            }
         }
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
@@ -191,53 +212,45 @@
                     text: postText,
                     userName: currentUser,
                     timestamp: Date.now(),
-                    mediaURLs: [] // Alterado para array de URLs
+                    mediaURLs: []
                 };
 
                 if (mediaFiles.length > 0) {
-                    let uploadPromises = [];
-
+                    const promises = [];
                     for (let i = 0; i < mediaFiles.length; i++) {
                         const mediaFile = mediaFiles[i];
                         const storageRef = storage.ref('posts/' + postId + '/' + mediaFile.name);
-                        uploadPromises.push(
-                            storageRef.put(mediaFile).then(() => {
-                                return storageRef.getDownloadURL();
-                            }).then((downloadURL) => {
-                                postData.mediaURLs.push(downloadURL);
-                            })
-                        );
+                        promises.push(storageRef.put(mediaFile).then(snapshot => {
+                            return snapshot.ref.getDownloadURL();
+                        }));
                     }
-
-                    Promise.all(uploadPromises).then(() => {
-                        database.ref('posts/' + postId).set(postData);
-                        clearPostForm();
-                        loadPosts();
+                    Promise.all(promises).then(urls => {
+                        postData.mediaURLs = urls;
+                        savePost(postId, postData);
                     });
                 } else {
-                    database.ref('posts/' + postId).set(postData);
-                    clearPostForm();
-                    loadPosts();
+                    savePost(postId, postData);
                 }
+                document.getElementById('post-text').value = '';
+                document.getElementById('media').value = '';
             } else {
-                alert('Post vazio ou usuário não logado!');
+                alert('Por favor, insira algum texto ou selecione uma mídia.');
             }
         }
 
-        function clearPostForm() {
-            document.getElementById('post-text').value = '';
-            document.getElementById('media').value = '';
+        function savePost(postId, postData) {
+            database.ref('posts/' + postId).set(postData).then(() => {
+                loadPosts();
+            });
         }
 
         function loadPosts() {
-            const postsRef = database.ref('posts');
-            postsRef.on('value', (snapshot) => {
+            database.ref('posts').once('value', snapshot => {
                 const postsContainer = document.getElementById('posts');
-                postsContainer.innerHTML = '';
-
-                snapshot.forEach((childSnapshot) => {
+                postsContainer.innerHTML = ''; // Limpar posts existentes
+                snapshot.forEach(childSnapshot => {
+                    const postId = childSnapshot.key;
                     const post = childSnapshot.val();
-                    const postId = childSnapshot.key; // Obtendo o ID da postagem
                     const postDiv = document.createElement('div');
                     postDiv.classList.add('post');
 
@@ -251,7 +264,7 @@
                     postDiv.appendChild(postText);
 
                     if (post.mediaURLs) {
-                        post.mediaURLs.forEach((mediaURL) => {
+                        post.mediaURLs.forEach(mediaURL => {
                             const mediaElement = document.createElement(mediaURL.endsWith('.mp4') ? 'video' : 'img');
                             mediaElement.src = mediaURL;
                             mediaElement.classList.add('media');
@@ -264,13 +277,13 @@
 
                     const editButton = document.createElement('button');
                     editButton.classList.add('edit-button');
-                    editButton.innerText = 'Editar';
+                    editButton.innerHTML = '<i class="fas fa-edit"></i> Editar';
                     editButton.onclick = () => editPost(postId, post);
                     postDiv.appendChild(editButton);
 
                     const deleteButton = document.createElement('button');
                     deleteButton.classList.add('delete-button');
-                    deleteButton.innerText = 'Excluir';
+                    deleteButton.innerHTML = '<i class="fas fa-trash"></i> Excluir';
                     deleteButton.onclick = () => deletePost(postId);
                     postDiv.appendChild(deleteButton);
 
