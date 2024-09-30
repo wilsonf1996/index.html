@@ -3,25 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App de Rede Social</title>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+    <title>Rede Social - Estilo Facebook 2004</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Verdana:300,400,500,700&display=swap">
     <style>
         body {
-            font-family: 'Roboto', sans-serif;
+            font-family: 'Verdana', sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #121212; /* Cor de fundo escura */
-            color: white;
+            background-color: #f0f2f5; /* Fundo claro */
+            color: #333;
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-height: 100vh; /* Altura mínima para ocupar toda a tela */
-            overflow-x: hidden; /* Evitar rolagem horizontal */
+            min-height: 100vh;
         }
         header {
-            background-color: #1f1f1f; /* Cabeçalho escuro */
+            background-color: #3b5998; /* Azul do Facebook */
             color: white;
-            padding: 15px 20px; /* Mais espaçamento */
+            padding: 15px;
             text-align: center;
             width: 100%;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
@@ -34,70 +33,54 @@
             width: 100%;
             max-width: 400px;
             text-align: center;
-            padding: 20px; /* Mais espaçamento interno */
-            background-color: #1e1e1e; /* Fundo do login */
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
         #post-section, #timeline {
             width: 100%;
             max-width: 600px;
-            background-color: #1e1e1e; /* Fundo dos posts */
+            background-color: #fff; /* Fundo branco para os posts */
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
             margin: 20px 0;
             display: flex;
             flex-direction: column;
-            transition: max-height 0.5s ease, opacity 0.5s ease; /* Transições suaves */
         }
         input[type="text"], textarea {
             width: 100%;
-            padding: 12px; /* Aumentar o padding para melhor usabilidade */
+            padding: 10px;
             margin-bottom: 10px;
-            border: 1px solid #444;
+            border: 1px solid #ccc;
             border-radius: 4px;
-            font-size: 16px;
-            background-color: #222; /* Fundo dos inputs */
-            color: white;
+            font-size: 14px;
         }
         button {
-            padding: 12px 20px; /* Aumentar o tamanho do botão */
-            background-color: #0095f6;
+            padding: 10px;
+            background-color: #3b5998; /* Azul do Facebook */
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 14px;
             transition: background-color 0.3s ease;
-            margin-top: 10px; /* Espaçamento entre os botões */
         }
         button:hover {
-            background-color: #007bbd;
+            background-color: #2d4373; /* Azul mais escuro ao passar o mouse */
         }
         .post {
             padding: 10px;
-            border-bottom: 1px solid #444;
-            position: relative;
+            border-bottom: 1px solid #ccc;
             margin-bottom: 10px;
-            transition: background-color 0.3s; /* Efeito ao passar o mouse */
-        }
-        .post:hover {
-            background-color: #2c2c2c; /* Efeito de destaque ao passar o mouse */
         }
         .post:last-child {
             border-bottom: none;
         }
         .post-header {
-            display: flex;
-            align-items: center;
+            font-weight: bold;
             margin-bottom: 5px;
-            font-size: 14px; /* Tamanho menor para cabeçalho */
-            color: #cccccc; /* Cor mais clara para o cabeçalho */
         }
         .media {
             max-width: 100%;
-            border-radius: 8px;
+            border-radius: 4px;
             margin-top: 10px;
         }
         .edit-button, .delete-button {
@@ -220,81 +203,97 @@
                     }
 
                     Promise.all(uploadPromises).then(() => {
-                        database.ref('posts/' + postId).set(postData).then(() => {
-                            loadPosts(); // Atualiza a timeline após a postagem
-                        });
-                    }).catch((error) => {
-                        console.error('Erro ao carregar arquivos:', error);
+                        database.ref('posts/' + postId).set(postData);
+                        clearPostForm();
+                        loadPosts();
                     });
                 } else {
-                    database.ref('posts/' + postId).set(postData).then(() => {
-                        loadPosts(); // Atualiza a timeline após a postagem
-                    });
+                    database.ref('posts/' + postId).set(postData);
+                    clearPostForm();
+                    loadPosts();
                 }
-
-                document.getElementById('post-text').value = '';
-                document.getElementById('media').value = ''; // Limpar o input de arquivo
             } else {
-                alert('Por favor, insira um texto ou selecione uma mídia.');
+                alert('Post vazio ou usuário não logado!');
             }
         }
 
+        function clearPostForm() {
+            document.getElementById('post-text').value = '';
+            document.getElementById('media').value = '';
+        }
+
         function loadPosts() {
-            database.ref('posts').once('value').then((snapshot) => {
-                const postsDiv = document.getElementById('posts');
-                postsDiv.innerHTML = ''; // Limpa os posts existentes
+            const postsRef = database.ref('posts');
+            postsRef.on('value', (snapshot) => {
+                const postsContainer = document.getElementById('posts');
+                postsContainer.innerHTML = '';
+
                 snapshot.forEach((childSnapshot) => {
                     const post = childSnapshot.val();
-                    const postElement = document.createElement('div');
-                    postElement.classList.add('post');
+                    const postId = childSnapshot.key; // Obtendo o ID da postagem
+                    const postDiv = document.createElement('div');
+                    postDiv.classList.add('post');
 
                     const postHeader = document.createElement('div');
                     postHeader.classList.add('post-header');
-                    postHeader.textContent = `${post.userName} - ${new Date(post.timestamp).toLocaleString()}`;
-                    postElement.appendChild(postHeader);
+                    postHeader.innerHTML = `<strong>${post.userName}</strong> - ${new Date(post.timestamp).toLocaleString()}`;
 
-                    const postText = document.createElement('p');
-                    postText.textContent = post.text;
-                    postElement.appendChild(postText);
+                    const postContent = document.createElement('div');
+                    postContent.innerText = post.text;
+
+                    postDiv.appendChild(postHeader);
+                    postDiv.appendChild(postContent);
 
                     if (post.mediaURLs.length > 0) {
-                        post.mediaURLs.forEach((url) => {
-                            const mediaElement = document.createElement('img');
+                        post.mediaURLs.forEach(url => {
+                            const mediaElement = document.createElement(url.includes('video') ? 'video' : 'img');
                             mediaElement.src = url;
                             mediaElement.classList.add('media');
-                            postElement.appendChild(mediaElement);
+                            if (url.includes('video')) {
+                                mediaElement.controls = true;
+                            }
+                            postDiv.appendChild(mediaElement);
                         });
                     }
 
                     const editButton = document.createElement('button');
+                    editButton.innerText = 'Editar';
                     editButton.classList.add('edit-button');
-                    editButton.textContent = 'Editar';
-                    editButton.onclick = () => editPost(childSnapshot.key);
-                    postElement.appendChild(editButton);
+                    editButton.onclick = function() { editPost(postId); }; // Ligação ao método de edição
 
                     const deleteButton = document.createElement('button');
+                    deleteButton.innerText = 'Excluir';
                     deleteButton.classList.add('delete-button');
-                    deleteButton.textContent = 'Excluir';
-                    deleteButton.onclick = () => deletePost(childSnapshot.key);
-                    postElement.appendChild(deleteButton);
+                    deleteButton.onclick = function() { deletePost(postId); }; // Ligação ao método de exclusão
 
-                    postsDiv.appendChild(postElement);
+                    postDiv.appendChild(editButton);
+                    postDiv.appendChild(deleteButton);
+                    postsContainer.appendChild(postDiv);
                 });
             });
         }
 
-        function deletePost(postId) {
-            database.ref('posts/' + postId).remove().then(() => {
-                loadPosts(); // Atualiza a timeline após a exclusão
+        function editPost(postId) {
+            const postRef = database.ref('posts/' + postId);
+            postRef.once('value', (snapshot) => {
+                const post = snapshot.val();
+                if (post) {
+                    document.getElementById('post-text').value = post.text;
+                    // Para o caso de haver arquivos de mídia, você pode adicionar lógica aqui para mostrar os arquivos
+                }
+                deletePost(postId); // Remover a postagem original
             });
         }
 
-        function editPost(postId) {
-            // Aqui você pode implementar a lógica para editar um post.
-            alert('Função de edição não implementada ainda!');
+        function deletePost(postId) {
+            const postRef = database.ref('posts/' + postId);
+            postRef.remove().then(() => {
+                loadPosts();
+            });
         }
     </script>
 </body>
 </html>
+
 
 
