@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rede Social com Firebase</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f4f4; }
+        h1 { text-align: center; }
+        #postForm { margin-bottom: 20px; }
+        #posts { background: white; padding: 15px; border-radius: 5px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); }
+        .post { border-bottom: 1px solid #eaeaea; padding: 10px 0; }
+        .post:last-child { border-bottom: none; }
+        .comment-section { margin-top: 10px; padding-left: 20px; }
+        .hidden { display: none; }
+        #authContainer { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <h1>Rede Social com Firebase</h1>
+
+    <!-- Autenticação -->
+    <div id="authContainer">
+        <input type="email" id="email" placeholder="Email" required>
+        <input type="password" id="password" placeholder="Senha" required>
+        <button onclick="register()">Registrar</button>
+        <button onclick="login()">Login</button>
+        <button onclick="logout()">Logout</button>
+        <div id="userStatus"></div>
+    </div>
+
+    <!-- Formulário de Postagem -->
+    <div id="postForm" class="hidden">
+        <input type="text" id="postInput" placeholder="Escreva sua postagem..." required>
+        <button onclick="addPost()">Publicar</button>
+    </div>
+
+    <!-- Posts -->
+    <div id="posts"></div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js"></script>
+
+    <script>
+        // Configurações do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+            measurementId: "G-CVBQ54PERH"
+        };
+
+        // Inicializa o Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+
+        // Verifica o estado do usuário
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                document.getElementById('userStatus').innerText = `Logado como: ${user.email}`;
+                document.getElementById('postForm').classList.remove('hidden');
+                loadPosts(); // Carrega as postagens ao logar
+            } else {
+                document.getElementById('userStatus').innerText = 'Não logado';
+                document.getElementById('postForm').classList.add('hidden');
+                document.getElementById('posts').innerHTML = ''; // Limpa os posts ao deslogar
+            }
+        });
+
+        // Registro de usuário
+        function register() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            auth.createUserWithEmailAndPassword(email, password)
+                .then(userCredential => {
+                    alert('Usuário registrado!');
+                })
+                .catch(error => alert(error.message));
+        }
+
+        // Login de usuário
+        function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            auth.signInWithEmailAndPassword(email, password)
+                .catch(error => alert(error.message));
+        }
+
+        // Logout de usuário
+        function logout() {
+            auth.signOut();
+        }
+
+        // Adicionar nova postagem
+        function addPost() {
+            const postText = document.getElementById('postInput').value;
+            const user = auth.currentUser;
+            if (postText && user) {
+                const postId = database.ref('posts').push().key;
+                database.ref('posts/' + postId).set({
+                    username: user.email,
+                    text: postText,
+                    likes: 0,
+                    comments: []
+                });
+                document.getElementById('postInput').value = '';
+            } else {
+                alert('Preencha a postagem.');
+            }
+        }
+
+        // Carregar postagens
+        function loadPosts() {
+            database.ref('posts').on('value', snapshot => {
+                const postsDiv = document.getElementById('posts');
+                postsDiv.innerHTML = '';
+                const posts = snapshot.val();
+                for (let id in posts) {
+                    const post = posts[id];
+                    postsDiv.innerHTML += `
+                        <div class="post">
+                            <strong>${post.username}</strong>
+                            <div>${post.text}</div>
+                            <div>Likes: <span id="likeCount-${id}">${post.likes}</span></div>
+                            <button onclick="likePost('${id}')">👍 Curtir</button>
+                            <div class="comment-section">
+                                <input type="text" id="commentInput-${id}" placeholder="Adicionar comentário...">
+                                <button onclick="addComment('${id}')">Comentar</button>
+                                <div id="comments-${id}"></div>
+                            </div>
+                        </div>`;
+                    updateComments(id, post.comments);
+                }
+            });
+        }
+
+        // Curtir postagem
+        function likePost(postId) {
+            const postRef = database.ref('posts/' + postId);
+            postRef.child('likes').transaction(likes => likes + 1);
+        }
+
+        // Adicionar comentário
+        function addComment(postId) {
+            const commentInput = document.getElementById(`commentInput-${postId}`).value;
+            if (commentInput) {
+                const commentRef = database.ref(`posts/${postId}/comments`);
+                commentRef.push(commentInput);
+                document.getElementById(`commentInput-${postId}`).value = '';
+            } else {
+                alert('Escreva um comentário.');
+            }
+        }
+
+        // Atualizar comentários
+        function updateComments(postId, comments) {
+            const commentsDiv = document.getElementById(`comments-${postId}`);
+            commentsDiv.innerHTML = '';
+            if (comments) {
+                for (let id in comments) {
+                    const comment = comments[id];
+                    commentsDiv.innerHTML += `<div>${comment}</div>`;
+                }
+            }
+        }
+    </script>
+
+</body>
+</html>
