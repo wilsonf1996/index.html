@@ -24,7 +24,7 @@
             width: 100%;
             margin-bottom: 20px;
         }
-        #post-section, #timeline, #profile-section {
+        #post-section, #timeline {
             width: 100%;
             max-width: 600px;
             background-color: white;
@@ -60,23 +60,19 @@
         .post:last-child {
             border-bottom: none;
         }
-        .actions {
+        .post-header {
             display: flex;
             justify-content: space-between;
-            margin-top: 10px;
+            align-items: center;
         }
-        .comments {
-            margin-top: 10px;
-        }
-        .comment {
-            margin-left: 20px;
-            font-size: 14px;
+        .timestamp {
+            font-size: 12px;
+            color: gray;
         }
     </style>
     <!-- Firebase JS SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
 </head>
 <body>
 
@@ -87,13 +83,7 @@
     <!-- Login Section -->
     <div id="login-section">
         <input type="text" id="username" placeholder="Digite seu nome de usuário">
-        <button onclick="checkUsername()">Entrar</button>
-    </div>
-
-    <!-- Profile Section -->
-    <div id="profile-section" style="display: none;">
-        <h2>Perfil de <span id="current-user-name"></span></h2>
-        <button onclick="logout()">Sair</button>
+        <button onclick="login()">Entrar</button>
     </div>
 
     <!-- Post Section -->
@@ -124,56 +114,22 @@
         // Inicializar Firebase
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
-        const auth = firebase.auth();
 
         let currentUser = null;
 
-        // Função para verificar se o nome de usuário é único
-        function checkUsername() {
+        // Função de Login Simples
+        function login() {
             const username = document.getElementById('username').value;
 
             if (username !== "") {
-                const usersRef = database.ref('users');
-                usersRef.orderByChild('username').equalTo(username).once('value', snapshot => {
-                    if (snapshot.exists()) {
-                        alert('Nome de usuário já existe. Escolha outro.');
-                    } else {
-                        login(username);  // Se não existir, logar
-                    }
-                });
-            } else {
-                alert('Por favor, insira um nome de usuário.');
-            }
-        }
-
-        // Função de Login Simples
-        function login(username) {
-            auth.signInAnonymously().then(() => {
                 currentUser = username;
-                // Salvar o nome de usuário no banco de dados
-                database.ref('users/' + auth.currentUser.uid).set({
-                    username: currentUser
-                });
-                document.getElementById('current-user-name').textContent = currentUser;
                 document.getElementById('login-section').style.display = 'none';
-                document.getElementById('profile-section').style.display = 'block';
                 document.getElementById('post-section').style.display = 'block';
                 document.getElementById('timeline').style.display = 'block';
                 loadPosts();
-            }).catch((error) => {
-                alert('Erro ao fazer login: ' + error.message);
-            });
-        }
-
-        // Função de Logout
-        function logout() {
-            auth.signOut().then(() => {
-                currentUser = null;
-                document.getElementById('login-section').style.display = 'block';
-                document.getElementById('profile-section').style.display = 'none';
-                document.getElementById('post-section').style.display = 'none';
-                document.getElementById('timeline').style.display = 'none';
-            });
+            } else {
+                alert('Por favor, insira um nome de usuário.');
+            }
         }
 
         // Função para criar um post
@@ -185,9 +141,7 @@
                 const postData = {
                     text: postText,
                     userName: currentUser,
-                    timestamp: Date.now(),
-                    likes: 0,
-                    comments: []
+                    timestamp: Date.now()
                 };
 
                 database.ref('posts/' + postId).set(postData);
@@ -209,42 +163,18 @@
                     const post = childSnapshot.val();
                     const postDiv = document.createElement('div');
                     postDiv.classList.add('post');
+                    const postTime = new Date(post.timestamp).toLocaleString();
                     postDiv.innerHTML = `
-                        <strong>${post.userName}</strong>
-                        <p>${post.text}</p>
-                        <div class="actions">
-                            <button onclick="likePost('${childSnapshot.key}', ${post.likes})">Curtir (${post.likes})</button>
-                            <button onclick="commentOnPost('${childSnapshot.key}')">Comentar</button>
+                        <div class="post-header">
+                            <strong>${post.userName}</strong>
+                            <span class="timestamp">${postTime}</span>
                         </div>
-                        <div class="comments">
-                            ${post.comments.map(comment => `<div class="comment"><strong>${comment.userName}:</strong> ${comment.text}</div>`).join('')}
-                        </div>
-                    `;
+                        <p>${post.text}</p>`;
                     postsContainer.appendChild(postDiv);
                 });
             });
         }
-
-        // Função para curtir um post
-        function likePost(postId, currentLikes) {
-            const postRef = database.ref('posts/' + postId);
-            postRef.update({ likes: currentLikes + 1 });
-        }
-
-        // Função para comentar em um post
-        function commentOnPost(postId) {
-            const commentText = prompt('Digite seu comentário:');
-
-            if (commentText && currentUser) {
-                const postRef = database.ref('posts/' + postId);
-                postRef.child('comments').push({
-                    text: commentText,
-                    userName: currentUser
-                });
-            }
-        }
     </script>
-
 </body>
 </html>
 
