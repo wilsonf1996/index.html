@@ -15,14 +15,24 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            height: 100vh;
         }
         header {
             background-color: #1f1f1f; /* Cabeçalho escuro */
             color: white;
-            padding: 10px 0;
+            padding: 10px 20px;
             text-align: center;
             width: 100%;
-            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            position: fixed;
+            top: 0;
+            z-index: 1000;
+        }
+        #login-section {
+            margin-top: 80px; /* Margem para evitar sobreposição do cabeçalho */
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
         }
         #post-section, #timeline {
             width: 100%;
@@ -31,7 +41,9 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            margin-bottom: 20px;
+            margin: 20px 0;
+            display: flex;
+            flex-direction: column;
         }
         input[type="text"], textarea {
             width: 100%;
@@ -45,36 +57,54 @@
         }
         button {
             padding: 10px 20px;
-            background-color: #6200ea;
+            background-color: #0095f6;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
+            transition: background-color 0.3s ease;
         }
         button:hover {
-            background-color: #3700b3;
+            background-color: #007bbd;
         }
         .post {
             padding: 10px;
             border-bottom: 1px solid #444;
             position: relative;
+            margin-bottom: 10px;
         }
         .post:last-child {
             border-bottom: none;
         }
+        .post-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .post-header strong {
+            margin-right: 10px;
+        }
         .media {
             max-width: 100%;
-            height: auto;
             border-radius: 8px;
             margin-top: 10px;
         }
         .edit-button, .delete-button {
             margin-top: 10px;
             background-color: #ff5722; /* Cor para o botão de excluir */
+            border: none;
+            padding: 8px;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
         }
         .edit-button:hover {
             background-color: #e64a19; /* Cor mais escura para editar */
+        }
+        .delete-button:hover {
+            background-color: #d32f2f; /* Cor mais escura para excluir */
         }
         .logout-button {
             margin-top: 20px;
@@ -101,8 +131,8 @@
 
     <div id="post-section" style="display: none;">
         <h2>Criar uma Postagem</h2>
-        <textarea id="post-text" placeholder="O que você está pensando?"></textarea>
-        <input type="file" id="media" accept="image/*,video/*">
+        <textarea id="post-text" placeholder="O que você está pensando?" rows="3"></textarea>
+        <input type="file" id="media" accept="image/*,video/*,audio/*" multiple>
         <button onclick="createPost()">Postar</button>
         <button class="logout-button" onclick="logout()">Sair</button>
     </div>
@@ -153,26 +183,36 @@
 
         function createPost() {
             const postText = document.getElementById('post-text').value;
-            const mediaFile = document.getElementById('media').files[0];
+            const mediaFiles = document.getElementById('media').files;
 
-            if ((postText !== "" || mediaFile) && currentUser) {
+            if ((postText !== "" || mediaFiles.length > 0) && currentUser) {
                 const postId = database.ref('posts').push().key;
                 const postData = {
                     text: postText,
                     userName: currentUser,
                     timestamp: Date.now(),
-                    mediaURL: null
+                    mediaURLs: [] // Alterado para array de URLs
                 };
 
-                if (mediaFile) {
-                    const storageRef = storage.ref('posts/' + postId + '/' + mediaFile.name);
-                    storageRef.put(mediaFile).then(() => {
-                        storageRef.getDownloadURL().then((downloadURL) => {
-                            postData.mediaURL = downloadURL;
-                            database.ref('posts/' + postId).set(postData);
-                            clearPostForm();
-                            loadPosts();
-                        });
+                if (mediaFiles.length > 0) {
+                    let uploadPromises = [];
+
+                    for (let i = 0; i < mediaFiles.length; i++) {
+                        const mediaFile = mediaFiles[i];
+                        const storageRef = storage.ref('posts/' + postId + '/' + mediaFile.name);
+                        uploadPromises.push(
+                            storageRef.put(mediaFile).then(() => {
+                                return storageRef.getDownloadURL();
+                            }).then((downloadURL) => {
+                                postData.mediaURLs.push(downloadURL);
+                            })
+                        );
+                    }
+
+                    Promise.all(uploadPromises).then(() => {
+                        database.ref('posts/' + postId).set(postData);
+                        clearPostForm();
+                        loadPosts();
                     });
                 } else {
                     database.ref('posts/' + postId).set(postData);
@@ -200,20 +240,28 @@
                     const postId = childSnapshot.key; // Obtendo o ID da postagem
                     const postDiv = document.createElement('div');
                     postDiv.classList.add('post');
-                    postDiv.innerHTML = `
-                        <strong>${post.userName}</strong>
-                        <p>${post.text}</p>
-                    `;
 
-                    if (post.mediaURL) {
-                        if (post.mediaURL.endsWith('.mp4')) {
-                            postDiv.innerHTML += `<video class="media" controls src="${post.mediaURL}"></video>`;
-                        } else {
-                            postDiv.innerHTML += `<img class="media" src="${post.mediaURL}" alt="Post media">`;
-                        }
+                    const postHeader = document.createElement('div');
+                    postHeader.classList.add('post-header');
+                    postHeader.innerHTML = `<strong>${post.userName}</strong> - ${new Date(post.timestamp).toLocaleString()}`;
+                    postDiv.appendChild(postHeader);
+
+                    const postText = document.createElement('p');
+                    postText.innerText = post.text;
+                    postDiv.appendChild(postText);
+
+                    if (post.mediaURLs) {
+                        post.mediaURLs.forEach((mediaURL) => {
+                            const mediaElement = document.createElement(mediaURL.endsWith('.mp4') ? 'video' : 'img');
+                            mediaElement.src = mediaURL;
+                            mediaElement.classList.add('media');
+                            if (mediaURL.endsWith('.mp4')) {
+                                mediaElement.controls = true; // Adiciona controles ao vídeo
+                            }
+                            postDiv.appendChild(mediaElement);
+                        });
                     }
 
-                    // Botões de Editar e Excluir
                     const editButton = document.createElement('button');
                     editButton.classList.add('edit-button');
                     editButton.innerText = 'Editar';
@@ -232,10 +280,10 @@
         }
 
         function editPost(postId, post) {
-            document.getElementById('post-text').value = post.text;
-            document.getElementById('media').value = ''; // Para o caso de mudar a mídia
-            const postSection = document.getElementById('post-section');
-            postSection.dataset.postId = postId; // Armazenar o ID do post que será editado
+            const postText = document.getElementById('post-text');
+            postText.value = post.text;
+            document.getElementById('media').value = '';
+            currentEditingPostId = postId; // Identifica o post que está sendo editado
         }
 
         function deletePost(postId) {
