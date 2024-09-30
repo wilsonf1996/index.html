@@ -24,7 +24,7 @@
             width: 100%;
             margin-bottom: 20px;
         }
-        #post-section, #timeline {
+        #post-section, #timeline, #profile-section {
             width: 100%;
             max-width: 600px;
             background-color: white;
@@ -60,10 +60,23 @@
         .post:last-child {
             border-bottom: none;
         }
+        .actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        .comments {
+            margin-top: 10px;
+        }
+        .comment {
+            margin-left: 20px;
+            font-size: 14px;
+        }
     </style>
     <!-- Firebase JS SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
 </head>
 <body>
 
@@ -75,6 +88,12 @@
     <div id="login-section">
         <input type="text" id="username" placeholder="Digite seu nome de usuário">
         <button onclick="login()">Entrar</button>
+    </div>
+
+    <!-- Profile Section -->
+    <div id="profile-section" style="display: none;">
+        <h2>Perfil de <span id="current-user-name"></span></h2>
+        <button onclick="logout()">Sair</button>
     </div>
 
     <!-- Post Section -->
@@ -105,6 +124,7 @@
         // Inicializar Firebase
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
+        const auth = firebase.auth();
 
         let currentUser = null;
 
@@ -113,14 +133,31 @@
             const username = document.getElementById('username').value;
 
             if (username !== "") {
-                currentUser = username;
-                document.getElementById('login-section').style.display = 'none';
-                document.getElementById('post-section').style.display = 'block';
-                document.getElementById('timeline').style.display = 'block';
-                loadPosts();
+                auth.signInAnonymously().then(() => {
+                    currentUser = username;
+                    document.getElementById('current-user-name').textContent = currentUser;
+                    document.getElementById('login-section').style.display = 'none';
+                    document.getElementById('profile-section').style.display = 'block';
+                    document.getElementById('post-section').style.display = 'block';
+                    document.getElementById('timeline').style.display = 'block';
+                    loadPosts();
+                }).catch((error) => {
+                    alert('Erro ao fazer login: ' + error.message);
+                });
             } else {
                 alert('Por favor, insira um nome de usuário.');
             }
+        }
+
+        // Função de Logout
+        function logout() {
+            auth.signOut().then(() => {
+                currentUser = null;
+                document.getElementById('login-section').style.display = 'block';
+                document.getElementById('profile-section').style.display = 'none';
+                document.getElementById('post-section').style.display = 'none';
+                document.getElementById('timeline').style.display = 'none';
+            });
         }
 
         // Função para criar um post
@@ -132,7 +169,9 @@
                 const postData = {
                     text: postText,
                     userName: currentUser,
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
+                    likes: 0,
+                    comments: []
                 };
 
                 database.ref('posts/' + postId).set(postData);
@@ -154,10 +193,38 @@
                     const post = childSnapshot.val();
                     const postDiv = document.createElement('div');
                     postDiv.classList.add('post');
-                    postDiv.innerHTML = `<strong>${post.userName}</strong><p>${post.text}</p>`;
+                    postDiv.innerHTML = `
+                        <strong>${post.userName}</strong>
+                        <p>${post.text}</p>
+                        <div class="actions">
+                            <button onclick="likePost('${childSnapshot.key}', ${post.likes})">Curtir (${post.likes})</button>
+                            <button onclick="commentOnPost('${childSnapshot.key}')">Comentar</button>
+                        </div>
+                        <div class="comments">
+                            ${post.comments.map(comment => `<div class="comment"><strong>${comment.userName}:</strong> ${comment.text}</div>`).join('')}
+                        </div>
+                    `;
                     postsContainer.appendChild(postDiv);
                 });
             });
+        }
+
+        // Função para curtir um post
+        function likePost(postId, currentLikes) {
+            database.ref('posts/' + postId).update({ likes: currentLikes + 1 });
+        }
+
+        // Função para comentar em um post
+        function commentOnPost(postId) {
+            const commentText = prompt('Digite seu comentário:');
+            if (commentText !== null && commentText.trim() !== "") {
+                const newComment = {
+                    text: commentText,
+                    userName: currentUser
+                };
+                database.ref('posts/' + postId + '/comments').push(newComment);
+                loadPosts();
+            }
         }
     </script>
 </body>
