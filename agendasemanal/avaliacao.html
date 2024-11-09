@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plano de Treino Semanal</title>
+    <title>Avaliação Física Pessoal</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
   <style>
     body { 
@@ -21,7 +21,7 @@
         font-size: 2em;
     }
 
-    input[type="text"], input[type="password"], input[type="date"] {
+    input[type="text"], input[type="password"], input[type="date"], input[type="number"] {
         width: 100%; 
         padding: 12px; 
         margin: 12px 0; 
@@ -99,7 +99,7 @@
             font-size: 1.5em;
         }
 
-        input[type="text"], input[type="password"], input[type="date"], button {
+        input[type="text"], input[type="password"], input[type="date"], input[type="number"], button {
             font-size: 14px;
         }
 
@@ -114,7 +114,7 @@
             font-size: 1.2em;
         }
 
-        input[type="text"], input[type="password"], input[type="date"], button {
+        input[type="text"], input[type="password"], input[type="date"], input[type="number"], button {
             font-size: 12px;
         }
 
@@ -159,27 +159,46 @@
         <button onclick="rejectTerms()">Recusar</button>
     </div>
 
-    <!-- Plano de Treino Semanal -->
+    <!-- Avaliação Física Pessoal -->
     <div id="agenda-container">
-        <h1>Bem-vindo ao seu Plano de Treino Semanal</h1>
-        <label>Data de início da semana:</label>
+        <h1>Bem-vindo à sua Avaliação Física Pessoal</h1>
+        <label>Data de início da avaliação:</label>
         <input type="date" id="start-date" onchange="loadAgenda()">
         <button onclick="logout()">Sair</button>
 
         <table id="agenda-table">
             <thead>
                 <tr>
-                    <th>Número de Série</th>
-                    <th>Segunda</th>
-                    <th>Terça</th>
-                    <th>Quarta</th>
-                    <th>Quinta</th>
-                    <th>Sexta</th>
-                    <th>Sábado</th>
-                    <th>Domingo</th>
+                    <th>Campo</th>
+                    <th>Valor</th>
                 </tr>
             </thead>
-            <tbody id="agenda-body"></tbody>
+            <tbody id="agenda-body">
+                <tr>
+                    <td>Peso (kg)</td>
+                    <td><input type="number" id="peso" onchange="saveData('peso', this.value)"></td>
+                </tr>
+                <tr>
+                    <td>Altura (cm)</td>
+                    <td><input type="number" id="altura" onchange="saveData('altura', this.value)"></td>
+                </tr>
+                <tr>
+                    <td>Hora</td>
+                    <td><input type="time" id="hora" onchange="saveData('hora', this.value)"></td>
+                </tr>
+                <tr>
+                    <td>Ritmo Cardíaco</td>
+                    <td><input type="number" id="ritmo-cardiaco" onchange="saveData('ritmo-cardiaco', this.value)"></td>
+                </tr>
+                <tr>
+                    <td>Condição Física</td>
+                    <td><input type="text" id="condicao-fisica" onchange="saveData('condicao-fisica', this.value)"></td>
+                </tr>
+                <tr>
+                    <td>Largura de Cintura (cm)</td>
+                    <td><input type="number" id="largura-cintura" onchange="saveData('largura-cintura', this.value)"></td>
+                </tr>
+            </tbody>
         </table>
     </div>
 
@@ -222,94 +241,85 @@
             document.getElementById('terms-container').style.display = 'none';
         }
 
-        function showAgenda() {
+        function showRegister() {
             document.getElementById('login-container').style.display = 'none';
-            document.getElementById('register-container').style.display = 'none';
-            document.getElementById('agenda-container').style.display = 'block';
-            loadAgenda();
+            document.getElementById('register-container').style.display = 'block';
         }
 
         function register() {
             const username = document.getElementById('register-username').value;
             const password = document.getElementById('register-password').value;
 
-            if (!username || !/^[a-zA-Z0-9]+$/.test(username)) {
-                alert('Nome de usuário inválido.');
-                return;
+            if (password.length === 4) {
+                localStorage.setItem('username', username);
+                localStorage.setItem('password', password);
+                currentUserId = username;
+                showTerms();
+            } else {
+                alert("A senha deve ter exatamente 4 números.");
             }
+        }
 
-            if (!password || password.length !== 4 || isNaN(password)) {
-                alert('A senha deve conter exatamente 4 números.');
-                return;
-            }
+        function showTerms() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('register-container').style.display = 'none';
+            document.getElementById('terms-container').style.display = 'block';
+        }
 
-            localStorage.setItem('username', username);
-            currentUserId = username;
+        function acceptTerms() {
+            document.getElementById('terms-container').style.display = 'none';
             showAgenda();
         }
 
-        function login() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-
-            if (localStorage.getItem('username') === username && password === '1234') {
-                currentUserId = username;
-                showAgenda();
-            } else {
-                alert('Nome de usuário ou senha inválidos.');
-            }
+        function rejectTerms() {
+            alert('Você precisa aceitar os termos de uso para continuar.');
         }
 
-        function loadAgenda() {
-            if (!currentUserId) {
-                return;
-            }
-
-            const agendaRef = database.ref('users/' + currentUserId + '/agenda');
-            agendaRef.once('value', (snapshot) => {
-                const agenda = snapshot.val() || {};
-                const startDate = new Date(document.getElementById('start-date').value);
-                const daysOfWeek = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
-                let tableContent = '';
-
-                daysOfWeek.forEach((day, index) => {
-                    tableContent += `<tr><td>${index + 1}</td>`;
-                    for (let i = 0; i < 7; i++) {
-                        tableContent += `<td><span class="editable" onclick="editAgenda('${day}', ${index})">${agenda[day] || 'Nenhum exercício'}</span></td>`;
-                    }
-                });
-
-                document.getElementById('agenda-body').innerHTML = tableContent;
-            });
-        }
-
-        function editAgenda(day, index) {
-            const newExercise = prompt(`Insira o treino para ${day}:`);
-            if (newExercise !== null) {
-                const agendaRef = database.ref('users/' + currentUserId + '/agenda/' + day);
-                agendaRef.set(newExercise);
-                loadAgenda();
-            }
+        function showAgenda() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('register-container').style.display = 'none';
+            document.getElementById('terms-container').style.display = 'none';
+            document.getElementById('agenda-container').style.display = 'block';
+            loadAgenda();
         }
 
         function logout() {
             localStorage.removeItem('username');
+            localStorage.removeItem('password');
+            currentUserId = null;
             showLogin();
         }
 
-        function showRegister() {
-            document.getElementById('login-container').style.display = 'none';
-            document.getElementById('register-container').style.display = 'block';
+        function saveData(field, value) {
+            if (currentUserId) {
+                const userRef = database.ref('usuarios/' + currentUserId);
+                userRef.update({
+                    [field]: value
+                });
+            }
         }
 
-        function acceptTerms() {
-            showRegister();
+        function loadAgenda() {
+            if (currentUserId) {
+                const userRef = database.ref('usuarios/' + currentUserId);
+                userRef.once('value').then(snapshot => {
+                    const data = snapshot.val();
+                    if (data) {
+                        for (const key in data) {
+                            if (document.getElementById(key)) {
+                                document.getElementById(key).value = data[key];
+                            }
+                        }
+                    }
+                });
+            }
         }
-
-        function rejectTerms() {
-            alert('Você deve aceitar os termos para continuar.');
-        }
-
     </script>
+
+    <footer>
+        <p>© 2024 Avaliação Física Pessoal. Todos os direitos reservados.</p>
+    </footer>
+
 </body>
 </html>
+
