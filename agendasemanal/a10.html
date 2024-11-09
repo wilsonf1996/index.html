@@ -6,117 +6,57 @@
     <title>Agenda Semanal com Autenticação</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
     <style>
-        :root {
-            --primary-color: #1976d2;
-            --secondary-color: #ffab40;
-            --main-bg-color: #f5f5f5;
-            --main-text-color: #333;
-            --secondary-bg-color: #ffffff;
-            --hover-bg-color: #e0e0e0;
-            --table-border-color: #ddd;
-        }
-
+        /* Estilos CSS */
         body {
             font-family: 'Roboto', sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            background-color: var(--main-bg-color);
-            color: var(--main-text-color);
-        }
-
-        h1 {
-            color: var(--primary-color);
-            margin-top: 20px;
-        }
-
-        #login-container, #register-container, #agenda-container {
-            max-width: 1000px;
-            width: 100%;
             padding: 20px;
-            background-color: var(--secondary-bg-color);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            border-radius: 10px;
         }
-
+        h1 {
+            text-align: center;
+        }
         input[type="text"], input[type="password"], input[type="date"] {
             width: 100%;
-            padding: 12px;
+            padding: 10px;
             margin: 10px 0;
-            border: 1px solid var(--table-border-color);
-            border-radius: 8px;
-            font-size: 16px;
-            background-color: var(--secondary-bg-color);
+            border: 1px solid #ccc;
+            border-radius: 5px;
         }
-
         button {
-            padding: 12px 24px;
-            background-color: var(--primary-color);
+            background-color: #007bff;
             color: white;
+            padding: 10px;
             border: none;
-            cursor: pointer;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: background-color 0.3s ease;
-        }
-
-        button:hover {
-            background-color: #1565c0;
-        }
-
-        table {
+            border-radius: 5px;
             width: 100%;
-            margin: 20px auto;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #agenda-table {
+            width: 100%;
+            margin-top: 20px;
             border-collapse: collapse;
-            background-color: var(--secondary-bg-color);
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
-
-        th, td {
-            border: 1px solid var(--table-border-color);
-            padding: 12px;
+        #agenda-table th, #agenda-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
             text-align: center;
-            white-space: nowrap;
         }
-
-        th {
-            background-color: var(--primary-color);
-            color: #fff;
-        }
-
         .editable {
             cursor: pointer;
-            background-color: var(--hover-bg-color);
-            padding: 10px;
-            border-radius: 8px;
-            transition: background-color 0.3s ease;
         }
-
-        .editable:hover {
-            background-color: #e0f7fa;
+        #login-container, #register-container, #agenda-container {
+            display: none;
         }
-
-        @media only screen and (max-width: 600px) {
-            table {
-                font-size: 12px;
-            }
-
-            button {
-                padding: 8px 16px;
-            }
+        #agenda-container {
+            display: block;
         }
     </style>
 </head>
 <body>
 
-  <!-- Tela de Login -->
+    <!-- Tela de Login -->
     <div id="login-container">
         <h1>Login</h1>
         <input type="text" id="username" placeholder="Nome de usuário" autocomplete="username">
@@ -145,13 +85,13 @@
             <thead>
                 <tr>
                     <th>Hora</th>
-                    <th>Seg</th>
-                    <th>Ter</th>
-                    <th>Qua</th>
-                    <th>Qui</th>
-                    <th>Sex</th>
-                    <th>Sáb</th>
-                    <th>Dom</th>
+                    <th>Segunda</th>
+                    <th>Terça</th>
+                    <th>Quarta</th>
+                    <th>Quinta</th>
+                    <th>Sexta</th>
+                    <th>Sábado</th>
+                    <th>Domingo</th>
                 </tr>
             </thead>
             <tbody id="agenda-body"></tbody>
@@ -244,52 +184,63 @@
             if (!startDateInput) return;
 
             const startDate = new Date(startDateInput);
-            const weekStartDate = formatDateToISO(startDate); // Função que formata a data para ISO
-            const agendaRef = database.ref('agendas/' + currentUserId + '/week_' + weekStartDate);
-            
+            const startOfWeek = getStartOfWeek(startDate);  // Ajusta para a segunda-feira dessa semana
+            const formattedDate = formatDateToISO(startOfWeek);
+
+            // Define as datas para segunda a domingo
+            const weekDates = getWeekDates(startOfWeek);
+
+            // Atualiza os cabeçalhos da agenda com as datas corretas
+            updateTableHeaders(weekDates);
+
+            const agendaRef = database.ref('agendas/' + currentUserId + '/week_' + formattedDate);
             agendaRef.once('value', snapshot => {
                 const agendaData = snapshot.val() || {};
-                renderAgendaTable(agendaData);
+                renderAgendaTable(agendaData, weekDates);
             });
         }
 
-        function renderAgendaTable(agendaData) {
+        function updateTableHeaders(weekDates) {
+            const thElements = document.querySelectorAll('#agenda-table thead th');
+            for (let i = 1; i <= 7; i++) {
+                thElements[i].textContent = `${weekDates[i-1].toLocaleDateString('pt-BR', { weekday: 'short' })} (${weekDates[i-1].toLocaleDateString('pt-BR')})`;
+            }
+        }
+
+        function renderAgendaTable(agendaData, weekDates) {
             const tbody = document.getElementById('agenda-body');
             tbody.innerHTML = '';
 
             const hours = [];
-            for (let h = 0; h < 24; h++) {
-                hours.push(`${String(h).padStart(2, '0')}:00`);
-                hours.push(`${String(h).padStart(2, '0')}:30`);
-            }
+            for (let i = 0; i < 24; i++) hours.push(`${i}:00`);
 
-            for (const hour of hours) {
-                const row = document.createElement('tr');
-                const hourCell = document.createElement('td');
-                hourCell.textContent = hour;
-                row.appendChild(hourCell);
+            hours.forEach(hour => {
+                const tr = document.createElement('tr');
+                const tdHour = document.createElement('td');
+                tdHour.textContent = hour;
+                tr.appendChild(tdHour);
 
-                for (let i = 1; i <= 7; i++) {
-                    const cell = document.createElement('td');
-                    cell.className = 'editable';
-                    cell.textContent = agendaData[hour] && agendaData[hour][i] ? agendaData[hour][i] : '';
-                    cell.onclick = () => enterEditMode(cell, hour, i);
-                    row.appendChild(cell);
-                }
-                tbody.appendChild(row);
-            }
+                weekDates.forEach((date, index) => {
+                    const td = document.createElement('td');
+                    const dateStr = formatDateToISO(date);
+                    td.textContent = agendaData[dateStr]?.[hour] || '';
+
+                    td.classList.add('editable');
+                    td.onclick = () => editCell(td, hour, index, dateStr);
+
+                    tr.appendChild(td);
+                });
+
+                tbody.appendChild(tr);
+            });
         }
 
-        function formatDateToISO(date) {
-            return date.toISOString().split('T')[0]; // Retorna a data no formato YYYY-MM-DD
-        }
-
-        function enterEditMode(cell, hour, day) {
+        function editCell(cell, hour, day, dateStr) {
             const currentText = cell.textContent;
             const input = document.createElement('input');
             input.type = 'text';
             input.value = currentText;
-            input.onblur = () => updateCellData(cell, hour, day, input.value);
+            input.onblur = () => updateCellData(cell, hour, day, dateStr, input.value);
             input.onkeydown = (e) => {
                 if (e.key === 'Enter') input.blur();
             };
@@ -299,17 +250,41 @@
             input.focus();
         }
 
-        function updateCellData(cell, hour, day, newValue) {
+        function updateCellData(cell, hour, day, dateStr, newValue) {
             if (!currentUserId) return;
 
-            const startDateInput = document.getElementById('start-date').value;
-            const weekStartDate = formatDateToISO(new Date(startDateInput));
-            const cellRef = database.ref(`agendas/${currentUserId}/week_${weekStartDate}/${hour}/${day}`);
+            const weekDate = document.getElementById('start-date').value;
+            const weekKey = formatDateToISO(getStartOfWeek(new Date(weekDate)));
+            const cellRef = database.ref(`agendas/${currentUserId}/week_${weekKey}/${hour}/${day}`);
             cellRef.set(newValue);
             cell.textContent = newValue;
+        }
+
+        function getStartOfWeek(date) {
+            const day = date.getDay();
+            const diff = (day === 0 ? -6 : 1) - day;
+            const startOfWeek = new Date(date);
+            startOfWeek.setDate(date.getDate() + diff);
+            startOfWeek.setHours(0, 0, 0, 0);
+            return startOfWeek;
+        }
+
+        function getWeekDates(startDate) {
+            const dates = [];
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
+                dates.push(date);
+            }
+            return dates;
+        }
+
+        function formatDateToISO(date) {
+            return date.toISOString().split('T')[0];  // Retorna a data no formato "yyyy-mm-dd"
         }
 
         window.onload = showLogin;
     </script>
 </body>
 </html>
+
