@@ -168,18 +168,21 @@
 
         let currentUserId = null;
 
+        // Exibir tela de login
         function showLogin() {
             document.getElementById('login-container').style.display = 'block';
             document.getElementById('register-container').style.display = 'none';
             document.getElementById('agenda-container').style.display = 'none';
         }
 
+        // Exibir tela de registro
         function showRegister() {
             document.getElementById('login-container').style.display = 'none';
             document.getElementById('register-container').style.display = 'block';
             document.getElementById('agenda-container').style.display = 'none';
         }
 
+        // Exibir agenda
         function showAgenda() {
             document.getElementById('login-container').style.display = 'none';
             document.getElementById('register-container').style.display = 'none';
@@ -188,11 +191,11 @@
             loadAgenda(1); // Carrega a primeira semana por padrão
         }
 
+        // Função para registrar um novo usuário
         function register() {
             const username = document.getElementById('register-username').value;
             const password = document.getElementById('register-password').value;
 
-            // Validação para o nome de usuário ser uma palavra única e a senha ser numérica e até 4 dígitos
             if (!username || !/^[a-zA-Z0-9]+$/.test(username)) {
                 alert('Nome de usuário inválido. Deve ser uma palavra sem espaços.');
                 return;
@@ -203,7 +206,6 @@
                 return;
             }
 
-            // Salvar usuário e senha no Realtime Database
             const userRef = database.ref('users/' + username);
             userRef.set({
                 password: password
@@ -217,6 +219,7 @@
             });
         }
 
+        // Função para realizar login
         function login() {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
@@ -233,70 +236,61 @@
             });
         }
 
+        // Função para fazer logout
         function logout() {
             currentUserId = null;
             showLogin();
         }
 
+        // Preencher o seletor de semanas
         function populateWeeks() {
-            const firstDayOfYear = new Date();
-            firstDayOfYear.setMonth(0); // Janeiro
-            firstDayOfYear.setDate(1); // 1º dia do ano
-
             const weekSelector = document.getElementById('week-selector');
             weekSelector.innerHTML = '';
             for (let i = 1; i <= 52; i++) {
                 const option = document.createElement('option');
                 option.value = i;
-                option.textContent = `Semana ${i}`;
+                option.textContent = 'Semana ' + i;
                 weekSelector.appendChild(option);
             }
         }
 
-        function loadAgenda(week) {
-            const agendaBody = document.getElementById('agenda-body');
-            agendaBody.innerHTML = ''; // Limpa a tabela antes de carregar
+        // Carregar a agenda de uma semana
+        function loadAgenda(weekNumber) {
+            const agendaRef = database.ref('agendas/' + currentUserId + '/' + weekNumber);
+            agendaRef.once('value', snapshot => {
+                const agendaData = snapshot.val();
+                const agendaBody = document.getElementById('agenda-body');
+                agendaBody.innerHTML = '';
 
-            const weekRef = database.ref('agenda/' + currentUserId + '/week_' + week);
-            weekRef.once('value', snapshot => {
-                const agendaData = snapshot.val() || {};
-                const daysOfWeek = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
-                for (let hour = 8; hour <= 18; hour++) {
+                for (let i = 0; i < 24; i++) {
                     const row = document.createElement('tr');
                     const hourCell = document.createElement('td');
-                    hourCell.textContent = `${hour}:00`;
+                    hourCell.textContent = `${i + 1}:00`;
                     row.appendChild(hourCell);
 
-                    daysOfWeek.forEach((day, index) => {
+                    for (let j = 0; j < 7; j++) {
                         const cell = document.createElement('td');
-                        const dayData = agendaData[day] && agendaData[day][hour];
-                        if (dayData) {
-                            const editableCell = document.createElement('div');
-                            editableCell.classList.add('editable');
-                            const input = document.createElement('input');
-                            input.value = dayData;
-                            input.addEventListener('blur', () => {
-                                updateAgenda(day, hour, input.value);
-                            });
-                            editableCell.appendChild(input);
-                            cell.appendChild(editableCell);
-                        }
+                        const cellData = agendaData ? agendaData[i] && agendaData[i][j] : null;
+                        const cellContent = document.createElement('div');
+                        cellContent.className = 'editable';
+                        cellContent.textContent = cellData || '';
+                        cellContent.onclick = function() {
+                            const newText = prompt('Digite o compromisso:', cellData || '');
+                            if (newText !== null) {
+                                agendaData[i] = agendaData[i] || [];
+                                agendaData[i][j] = newText;
+                                agendaRef.set(agendaData);
+                            }
+                        };
+                        cell.appendChild(cellContent);
                         row.appendChild(cell);
-                    });
+                    }
 
                     agendaBody.appendChild(row);
                 }
             });
         }
-
-        function updateAgenda(day, hour, value) {
-            const agendaRef = database.ref('agenda/' + currentUserId + '/week_' + document.getElementById('week-selector').value + '/' + day + '/' + hour);
-            agendaRef.set(value);
-        }
-
-        // Inicializando a tela de login ao carregar a página
-        showLogin();
     </script>
+
 </body>
 </html>
-
