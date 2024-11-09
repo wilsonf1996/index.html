@@ -213,7 +213,7 @@
     startDate.setDate(startDate.getDate() - startDate.getDay() + 1);
 
     const weekDates = getWeekDates(startDate);
-    updateTableHeaders(weekDates);
+    
 
     const agendaRef = database.ref('agendas/' + currentUserId);
     agendaRef.once('value', snapshot => {
@@ -223,43 +223,47 @@
 }
 
         function updateTableHeaders(weekDates) {
-            const thElements = document.querySelectorAll('#agenda-table thead th');
-            for (let i = 1; i <= 7; i++) {
-                thElements[i].textContent = `${new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(weekDates[i - 1])} (${formatDateToISO(weekDates[i - 1])})`;
-            }
+    const thElements = document.querySelectorAll('#agenda-table thead th');
+    for (let i = 1; i <= 7; i++) {
+        thElements[i].textContent = `${new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(weekDates[i - 1])} (${formatDateToISO(weekDates[i - 1])})`;
+    }
+}
+
+       function renderAgendaTable(agendaData, weekDates) {
+    const tbody = document.getElementById('agenda-body');
+    tbody.innerHTML = '';
+    const hours = [];
+    for (let hour = 0; hour < 24; hour++) {
+        const hourStr = hour < 10 ? `0${hour}:00` : `${hour}:00`;
+        const halfHourStr = hour < 10 ? `0${hour}:30` : `${hour}:30`;
+        hours.push(hourStr);
+        hours.push(halfHourStr);
+    }
+
+    hours.forEach(hour => {
+        const row = document.createElement('tr');
+        const hourCell = document.createElement('td');
+        hourCell.textContent = hour;
+        row.appendChild(hourCell);
+
+        for (let i = 0; i < 7; i++) {
+            const day = formatDateToISO(weekDates[i]);
+            const cell = document.createElement('td');
+            cell.classList.add('editable');
+            cell.dataset.date = day;
+            cell.dataset.hour = hour;
+            cell.textContent = agendaData[day]?.[hour] || '';
+            cell.contentEditable = true;
+            cell.addEventListener('blur', () => saveAgenda(day, hour, cell.textContent));
+            row.appendChild(cell);
         }
-
-        function renderAgendaTable(agendaData, weekDates) {
-            const tbody = document.getElementById('agenda-body');
-            tbody.innerHTML = '';
-            const hours = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
-
-            hours.forEach(hour => {
-                const row = document.createElement('tr');
-                const hourCell = document.createElement('td');
-                hourCell.textContent = hour;
-                row.appendChild(hourCell);
-
-                for (let i = 0; i < 7; i++) {
-                    const day = formatDateToISO(weekDates[i]);
-                    const cell = document.createElement('td');
-                    cell.classList.add('editable');
-                    cell.dataset.date = day;
-                    cell.dataset.hour = hour;
-                    cell.textContent = agendaData[day]?.[hour] || '';
-                    cell.contentEditable = true;
-                    cell.addEventListener('blur', () => saveAgenda(day, hour, cell.textContent));
-                    row.appendChild(cell);
-                }
-                tbody.appendChild(row);
-            });
-        }
-
-        function saveAgenda(day, hour, content) {
-            const agendaRef = database.ref('agendas/' + currentUserId + '/' + day + '/' + hour);
-            agendaRef.set(content);
-        }
-
+        tbody.appendChild(row);
+    });
+}
+       function saveAgenda(day, hour, content) {
+    const agendaRef = database.ref('agendas/' + currentUserId + '/' + day + '/' + hour);
+    agendaRef.set(content);
+}
         function getWeekDates(startDate) {
             return Array.from({ length: 7 }, (_, i) => new Date(startDate.getTime() + i * 86400000));
         }
