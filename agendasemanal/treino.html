@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agenda Semanal com Autenticação</title>
+    <title>Agenda de Exercícios</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
     <style>
         body { 
@@ -21,7 +21,7 @@
             font-size: 2em;
         }
 
-        input[type="text"], input[type="password"], input[type="date"] {
+        input[type="text"], input[type="number"] {
             width: 100%; 
             padding: 12px; 
             margin: 12px 0; 
@@ -47,43 +47,21 @@
             background-color: #0056b3; 
         }
 
-        #agenda-table { 
-            width: 100%; 
-            margin-top: 20px; 
-            border-collapse: separate; 
-            border-spacing: 0 10px;
-        }
-
-        #agenda-table th, #agenda-table td { 
-            border: 1px solid #ddd; 
-            padding: 12px; 
-            text-align: center; 
-            background-color: #fff; 
-            border-radius: 8px; 
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
-
-        #agenda-table th { 
-            position: sticky; 
-            top: 0; 
-            background-color: #007bff; 
-            color: white; 
-            z-index: 1; 
-        }
-
-        .editable { 
-            cursor: pointer; 
-            color: #007bff; 
-        }
-
-        #login-container, #register-container, #agenda-container, #terms-container { 
-            display: none; 
-        }
-
-        .terms-text { 
-            font-size: 14px; 
-            color: #555; 
+        .exercise-list {
             margin-top: 20px;
+        }
+
+        .exercise-item {
+            margin-bottom: 10px;
+        }
+
+        .exercise-item input, .exercise-item select {
+            width: 80%;
+            margin-right: 10px;
+        }
+
+        #login-container, #register-container, #agenda-container { 
+            display: none; 
         }
 
         footer { 
@@ -94,18 +72,6 @@
             padding: 20px 0; 
             background-color: #f8f9fa; 
             border-top: 1px solid #ddd;
-        }
-
-        @media (max-width: 768px) {
-            body { padding: 10px; }
-            h1 { font-size: 1.5em; }
-            input[type="text"], input[type="password"], input[type="date"], button { font-size: 14px; }
-        }
-
-        @media (max-width: 480px) {
-            h1 { font-size: 1.2em; }
-            input[type="text"], input[type="password"], input[type="date"], button { font-size: 12px; }
-            footer { font-size: 10px; padding: 10px 0; }
         }
     </style>
 </head>
@@ -129,28 +95,16 @@
         <p>Já tem uma conta? <a href="#" onclick="showLogin()">Faça Login</a></p>
     </div>
 
-    <!-- Agenda -->
+    <!-- Agenda de Exercícios -->
     <div id="agenda-container">
-        <h1>Bem-vindo à sua Agenda</h1>
-        <label>Data de início da semana:</label>
-        <input type="date" id="start-date" onchange="loadAgenda()">
+        <h1>Agenda de Exercícios</h1>
         <button onclick="logout()">Sair</button>
 
-        <table id="agenda-table">
-            <thead>
-                <tr>
-                    <th>Hora</th>
-                    <th>Segunda</th>
-                    <th>Terça</th>
-                    <th>Quarta</th>
-                    <th>Quinta</th>
-                    <th>Sexta</th>
-                    <th>Sábado</th>
-                    <th>Domingo</th>
-                </tr>
-            </thead>
-            <tbody id="agenda-body"></tbody>
-        </table>
+        <div class="exercise-list" id="exercise-list">
+            <h3>Adicionar Exercícios</h3>
+            <button onclick="addExerciseInput()">Adicionar Exercício</button>
+        </div>
+        <button onclick="saveAgenda()">Salvar Agenda</button>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
@@ -171,7 +125,6 @@
         let currentUserId = null;
 
         window.onload = function() {
-            document.getElementById('start-date').valueAsDate = new Date();
             checkUserLoggedIn();
         }
 
@@ -201,7 +154,6 @@
             document.getElementById('login-container').style.display = 'none';
             document.getElementById('register-container').style.display = 'none';
             document.getElementById('agenda-container').style.display = 'block';
-            loadAgenda();
         }
 
         function register() {
@@ -259,45 +211,61 @@
             showLogin();
         }
 
-        function loadAgenda() {
-            const startDate = document.getElementById('start-date').value;
-            const agendaRef = database.ref('agenda/' + currentUserId + '/' + startDate);
+        function addExerciseInput() {
+            const exerciseList = document.getElementById('exercise-list');
 
-            agendaRef.once('value', snapshot => {
-                const agendaData = snapshot.val();
-                const agendaBody = document.getElementById('agenda-body');
-                agendaBody.innerHTML = '';
+            if (exerciseList.childElementCount >= 20) {
+                alert('Você pode adicionar no máximo 20 exercícios por dia.');
+                return;
+            }
 
-                if (agendaData) {
-                    for (let time in agendaData) {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${time}</td>
-                            <td class="editable" onclick="editAgenda('${startDate}', '${time}', 'segunda')">${agendaData[time].segunda || ''}</td>
-                            <td class="editable" onclick="editAgenda('${startDate}', '${time}', 'terca')">${agendaData[time].terca || ''}</td>
-                            <td class="editable" onclick="editAgenda('${startDate}', '${time}', 'quarta')">${agendaData[time].quarta || ''}</td>
-                            <td class="editable" onclick="editAgenda('${startDate}', '${time}', 'quinta')">${agendaData[time].quinta || ''}</td>
-                            <td class="editable" onclick="editAgenda('${startDate}', '${time}', 'sexta')">${agendaData[time].sexta || ''}</td>
-                            <td class="editable" onclick="editAgenda('${startDate}', '${time}', 'sabado')">${agendaData[time].sabado || ''}</td>
-                            <td class="editable" onclick="editAgenda('${startDate}', '${time}', 'domingo')">${agendaData[time].domingo || ''}</td>
-                        `;
-                        agendaBody.appendChild(row);
-                    }
-                }
-            });
+            const exerciseItem = document.createElement('div');
+            exerciseItem.classList.add('exercise-item');
+
+            exerciseItem.innerHTML = `
+                <input type="text" placeholder="Nome do exercício">
+                <input type="number" placeholder="Repetições" min="1">
+                <select>
+                    <option value="1">1 vez por semana</option>
+                    <option value="2">2 vezes por semana</option>
+                    <option value="3">3 vezes por semana</option>
+                    <option value="4">4 vezes por semana</option>
+                    <option value="5">5 vezes por semana</option>
+                    <option value="6">6 vezes por semana</option>
+                    <option value="7">7 vezes por semana</option>
+                </select>
+            `;
+            exerciseList.appendChild(exerciseItem);
         }
 
-        function editAgenda(date, time, day) {
-            const activity = prompt(`O que você deseja fazer na ${day.charAt(0).toUpperCase() + day.slice(1)}?`);
-            if (activity !== null) {
-                const agendaRef = database.ref('agenda/' + currentUserId + '/' + date + '/' + time);
-                agendaRef.update({ [day]: activity }).then(() => {
-                    loadAgenda();
+        function saveAgenda() {
+            const exerciseList = document.getElementById('exercise-list');
+            const exercises = [];
+
+            const exerciseItems = exerciseList.querySelectorAll('.exercise-item');
+            exerciseItems.forEach(item => {
+                const name = item.querySelector('input[type="text"]').value;
+                const repetitions = item.querySelector('input[type="number"]').value;
+                const frequency = item.querySelector('select').value;
+
+                if (name && repetitions && frequency) {
+                    exercises.push({ name, repetitions, frequency });
+                }
+            });
+
+            if (exercises.length > 0) {
+                const agendaRef = database.ref('agenda/' + currentUserId + '/' + new Date().toLocaleDateString());
+                agendaRef.set(exercises).then(() => {
+                    alert('Agenda salva com sucesso!');
+                }).catch(error => {
+                    alert('Erro ao salvar a agenda: ' + error.message);
                 });
+            } else {
+                alert('Você precisa adicionar ao menos um exercício.');
             }
         }
     </script>
-
 </body>
 </html>
+
 
