@@ -199,69 +199,73 @@
             showLogin();
         }
 
-        function loadAgenda() {
-            if (!currentUserId) return;
+          function loadAgenda() {
+    const startDateInput = document.getElementById('start-date').value;
+    if (!startDateInput) return;
 
-            const startDate = new Date(document.getElementById('start-date').value);
-            const weekDates = getWeekDates(startDate);
+    const startDate = new Date(startDateInput);
+    
+    // Definir a hora para 00:00 para evitar problemas de fuso horário
+    startDate.setHours(0, 0, 0, 0);
+    
+    // Ajustar a data para a segunda-feira da semana
+    startDate.setDate(startDate.getDate() - startDate.getDay() + 1);
 
-            const agendaRef = database.ref('agendas/' + currentUserId);
-            agendaRef.once('value', snapshot => {
-                const agendaData = snapshot.val() || {};
-                renderAgendaTable(agendaData, weekDates);
-            });
+    const weekDates = getWeekDates(startDate);
+    updateTableHeaders(weekDates);
+
+    const agendaRef = database.ref('agendas/' + currentUserId);
+    agendaRef.once('value', snapshot => {
+        const agendaData = snapshot.val() || {};
+        renderAgendaTable(agendaData, weekDates);
+    });
+}
+
+        function updateTableHeaders(weekDates) {
+            const thElements = document.querySelectorAll('#agenda-table thead th');
+            for (let i = 1; i <= 7; i++) {
+                thElements[i].textContent = `${new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(weekDates[i - 1])} (${formatDateToISO(weekDates[i - 1])})`;
+            }
         }
 
         function renderAgendaTable(agendaData, weekDates) {
             const tbody = document.getElementById('agenda-body');
             tbody.innerHTML = '';
+            const hours = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
 
-            for (let hour = 7; hour <= 22; hour++) {
+            hours.forEach(hour => {
                 const row = document.createElement('tr');
                 const hourCell = document.createElement('td');
-                hourCell.textContent = `${hour}:00`;
+                hourCell.textContent = hour;
                 row.appendChild(hourCell);
 
                 for (let i = 0; i < 7; i++) {
-                    const dateKey = formatDate(weekDates[i]);
+                    const day = formatDateToISO(weekDates[i]);
                     const cell = document.createElement('td');
-                    const agendaItem = agendaData[dateKey] && agendaData[dateKey][hour];
-                    const content = agendaItem ? agendaItem : 'Livre';
-
-                    cell.textContent = content;
                     cell.classList.add('editable');
-                    cell.onclick = () => editAgendaItem(dateKey, hour);
+                    cell.dataset.date = day;
+                    cell.dataset.hour = hour;
+                    cell.textContent = agendaData[day]?.[hour] || '';
+                    cell.contentEditable = true;
+                    cell.addEventListener('blur', () => saveAgenda(day, hour, cell.textContent));
                     row.appendChild(cell);
                 }
-
                 tbody.appendChild(row);
-            }
+            });
         }
 
-        function editAgendaItem(dateKey, hour) {
-            const newActivity = prompt('Digite o novo compromisso:');
-            if (newActivity) {
-                const agendaRef = database.ref('agendas/' + currentUserId + '/' + dateKey);
-                agendaRef.child(hour).set(newActivity)
-                .then(() => loadAgenda())
-                .catch(error => alert('Erro ao editar: ' + error.message));
-            }
+        function saveAgenda(day, hour, content) {
+            const agendaRef = database.ref('agendas/' + currentUserId + '/' + day + '/' + hour);
+            agendaRef.set(content);
         }
 
         function getWeekDates(startDate) {
-            const dates = [];
-            for (let i = 0; i < 7; i++) {
-                const date = new Date(startDate);
-                date.setDate(startDate.getDate() + i);
-                dates.push(date);
-            }
-            return dates;
+            return Array.from({ length: 7 }, (_, i) => new Date(startDate.getTime() + i * 86400000));
         }
 
-        function formatDate(date) {
+        function formatDateToISO(date) {
             return date.toISOString().split('T')[0];
         }
-
         function acceptTerms() {
             document.getElementById('terms-container').style.display = 'none';
             showRegister();
