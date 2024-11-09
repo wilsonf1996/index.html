@@ -67,8 +67,8 @@
     <!-- Tela de Login -->
     <div id="login-container">
         <h1>Login</h1>
-        <input type="text" id="email" placeholder="Email">
-        <input type="password" id="password" placeholder="Senha (máximo 4 dígitos)">
+        <input type="text" id="username" placeholder="Nome de usuário" autocomplete="username">
+        <input type="password" id="password" placeholder="Senha" autocomplete="current-password">
         <button onclick="login()">Login</button>
         <p>Não tem uma conta? <a href="#" onclick="showRegister()">Registre-se</a></p>
     </div>
@@ -76,8 +76,8 @@
     <!-- Tela de Registro -->
     <div id="register-container" style="display: none;">
         <h1>Registro</h1>
-        <input type="text" id="register-name" placeholder="Nome de usuário (somente uma palavra)">
-        <input type="password" id="register-password" placeholder="Senha (máximo 4 dígitos)">
+        <input type="text" id="register-username" placeholder="Nome de usuário" autocomplete="username">
+        <input type="password" id="register-password" placeholder="Senha (até 4 números)" autocomplete="new-password">
         <button onclick="register()">Registrar</button>
         <p>Já tem uma conta? <a href="#" onclick="showLogin()">Faça Login</a></p>
     </div>
@@ -85,8 +85,8 @@
     <!-- Agenda -->
     <div id="agenda-container" style="display: none;">
         <h1>Bem-vindo à sua Agenda</h1>
-        <select id="week-selector" aria-label="Selecionar semana" onchange="loadAgenda(this.value)">
-            <!-- Opções da caixa de seleção serão preenchidas dinamicamente -->
+        <select id="week-selector" onchange="loadAgenda(this.value)">
+            <!-- Opções de semanas serão preenchidas aqui -->
         </select>
         <button onclick="logout()">Sair</button>
 
@@ -107,7 +107,6 @@
         </table>
     </div>
 
-    <!-- Scripts Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
@@ -149,113 +148,108 @@
         }
 
         function register() {
-            const name = document.getElementById('register-name').value;
+            const username = document.getElementById('register-username').value;
             const password = document.getElementById('register-password').value;
 
-            // Verificação do nome de usuário
-            const nameRegex = /^[a-zA-Z0-9]+$/; // Aceita letras e números, sem espaços
-            if (!name || !nameRegex.test(name)) {
+            // Validação para o nome de usuário ser uma palavra única e a senha ser numérica e até 4 dígitos
+            if (!username || !/^[a-zA-Z0-9]+$/.test(username)) {
                 alert('Nome de usuário inválido. Deve ser uma palavra sem espaços.');
                 return;
             }
 
-            // Verificação da senha
-            const passwordRegex = /^\d{1,4}$/; // Aceita apenas números e no máximo 4 dígitos
-            if (!password || !passwordRegex.test(password)) {
+            if (!password || !/^\d{1,4}$/.test(password)) {
                 alert('Senha inválida. Deve ser um número de até 4 dígitos.');
                 return;
             }
 
-            // Criando o usuário com Firebase Authentication
-            auth.createUserWithEmailAndPassword(name + "@example.com", password)
-                .then(userCredential => {
-                    currentUserId = userCredential.user.uid;
-                    showAgenda();
-                })
-                .catch(error => {
-                    alert('Erro no registro: ' + error.message);
-                });
+            // Salvar usuário e senha no Realtime Database
+            const userRef = database.ref('users/' + username);
+            userRef.set({
+                password: password
+            })
+            .then(() => {
+                alert('Usuário registrado com sucesso!');
+                showLogin();
+            })
+            .catch(error => {
+                alert('Erro no registro: ' + error.message);
+            });
         }
 
         function login() {
-            const email = document.getElementById('email').value;
+            const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
 
-            auth.signInWithEmailAndPassword(email, password)
-                .then(userCredential => {
-                    currentUserId = userCredential.user.uid;
+            const userRef = database.ref('users/' + username);
+            userRef.once('value', snapshot => {
+                const userData = snapshot.val();
+                if (userData && userData.password === password) {
+                    currentUserId = username;
                     showAgenda();
-                })
-                .catch(error => {
-                    alert('Erro no login: ' + error.message);
-                });
+                } else {
+                    alert('Usuário ou senha incorretos.');
+                }
+            })
+            .catch(error => {
+                alert('Erro no login: ' + error.message);
+            });
         }
 
         function logout() {
-            auth.signOut().then(() => {
-                showLogin();
-            });
+            currentUserId = null;
+            showLogin();
         }
 
         function populateWeeks() {
             const weekSelector = document.getElementById('week-selector');
             weekSelector.innerHTML = '';
-
             const firstDayOfYear = new Date(2024, 0, 1);
             const lastDayOfYear = new Date(2026, 11, 31);
 
             while (firstDayOfYear <= lastDayOfYear) {
                 const weekStart = new Date(firstDayOfYear);
-                const weekEnd = new Date(firstDayOfYear);
-                weekEnd.setDate(weekEnd.getDate() + 6);
-
-                const option = document.createElement('option');
-                option.value = weekStart.toISOString().slice(0, 10);
-                option.textContent = `${weekStart.toLocaleDateString()} - ${weekEnd.toLocaleDateString()}`;
-                weekSelector.appendChild(option);
-
+                weekStart.setDate(firstDayOfYear.getDate() + (7 - firstDayOfYear.getDay()) % 7);
+                const weekOption = document.createElement('option');
+                weekOption.value = weekStart.toISOString().split('T')[0];
+                weekOption.textContent = `Semana de ${weekStart.toLocaleDateString()}`;
+                weekSelector.appendChild(weekOption);
                 firstDayOfYear.setDate(firstDayOfYear.getDate() + 7);
             }
         }
 
         function loadAgenda(week) {
             const agendaRef = database.ref(`users/${currentUserId}/agenda/${week}`);
-            agendaRef.on('value', snapshot => {
-                const agendaData = snapshot.val() || {};
-                renderAgendaTable(agendaData);
+            agendaRef.once('value', snapshot => {
+                const agendaData = snapshot.val();
+                const agendaBody = document.getElementById('agenda-body');
+                agendaBody.innerHTML = '';
+                for (let hour = 8; hour <= 20; hour++) {
+                    const row = document.createElement('tr');
+                    const timeCell = document.createElement('td');
+                    timeCell.textContent = `${hour}:00`;
+                    row.appendChild(timeCell);
+                    for (const day of ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom']) {
+                        const cell = document.createElement('td');
+                        const dayData = agendaData ? agendaData[day] && agendaData[day][hour] : '';
+                        cell.textContent = dayData || '';
+                        cell.classList.add('editable');
+                        cell.onclick = () => editCell(cell, day, hour, week);
+                        row.appendChild(cell);
+                    }
+                    agendaBody.appendChild(row);
+                }
             });
         }
 
-        function renderAgendaTable(agendaData) {
-            const agendaBody = document.getElementById('agenda-body');
-            agendaBody.innerHTML = '';
-
-            for (let hour = 7; hour <= 22; hour++) {
-                const row = document.createElement('tr');
-                const timeCell = document.createElement('td');
-                timeCell.textContent = `${hour}:00`;
-                row.appendChild(timeCell);
-
-                for (let day of ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom']) {
-                    const cell = document.createElement('td');
-                    const dayData = agendaData[day] ? agendaData[day][hour] : '';
-                    cell.textContent = dayData;
-                    cell.classList.add('editable');
-                    cell.onclick = () => editCell(cell, day, hour);
-                    row.appendChild(cell);
-                }
-                agendaBody.appendChild(row);
-            }
-        }
-
-        function editCell(cell, day, hour) {
+        function editCell(cell, day, hour, week) {
             const newActivity = prompt('Digite a atividade:');
             if (newActivity !== null) {
-                const agendaRef = database.ref(`users/${currentUserId}/agenda/${weekSelector.value}/${day}/${hour}`);
+                const agendaRef = database.ref(`users/${currentUserId}/agenda/${week}/${day}/${hour}`);
                 agendaRef.set(newActivity);
             }
         }
     </script>
 </body>
 </html>
+
 
