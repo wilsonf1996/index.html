@@ -19,6 +19,7 @@
         #login-container, #register-container, #agenda-container, #terms-container { display: none; }
         .terms-text { font-size: 14px; color: #555; margin-top: 20px; }
         .terms-text a { color: #007bff; text-decoration: none; }
+        .privacy-policy { font-size: 14px; color: #555; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -47,6 +48,21 @@
         <p class="terms-text">
             Ao usar este aplicativo, você concorda com os <a href="#" onclick="showTermsDetails()">Termos de Uso</a> e a nossa <a href="#" onclick="showPrivacyPolicy()">Política de Privacidade</a>.
         </p>
+
+        <!-- Texto dos Termos de Uso -->
+        <p class="terms-text" id="terms-details" style="display:none;">
+            Estes são os termos e condições para o uso deste aplicativo. Ao aceitar, você concorda em cumprir as normas e políticas definidas.
+            <br>1. Uso de dados - Este aplicativo pode coletar dados para melhorar a experiência do usuário.
+            <br>2. Responsabilidade - O usuário é responsável por todas as informações fornecidas.
+        </p>
+
+        <!-- Texto da Política de Privacidade -->
+        <p class="privacy-policy" id="privacy-policy" style="display:none;">
+            Nossa política de privacidade explica como coletamos, usamos e protegemos suas informações pessoais.
+            <br>1. Coleta de dados - Coletamos dados como nome e senha para autenticação.
+            <br>2. Uso de dados - Seus dados não serão compartilhados com terceiros sem seu consentimento.
+        </p>
+
         <button onclick="acceptTerms()">Aceitar</button>
         <button onclick="rejectTerms()">Recusar</button>
     </div>
@@ -118,7 +134,7 @@
             document.getElementById('login-container').style.display = 'none';
             document.getElementById('register-container').style.display = 'block';
             document.getElementById('agenda-container').style.display = 'none';
-            document.getElementById('terms-container').style.display = 'none';
+            document.getElementById('terms-container').style.display = 'block';
         }
 
         function showAgenda() {
@@ -172,40 +188,28 @@
                     localStorage.setItem('username', username);
                     showAgenda();
                 } else {
-                    alert('Credenciais inválidas!');
+                    alert('Nome de usuário ou senha inválidos.');
                 }
             });
         }
 
         function logout() {
-            currentUserId = null;
             localStorage.removeItem('username');
+            currentUserId = null;
             showLogin();
         }
 
         function loadAgenda() {
-            const startDateInput = document.getElementById('start-date').value;
-            if (!startDateInput) return;
+            if (!currentUserId) return;
 
-            const startDate = new Date(startDateInput);
-            startDate.setHours(0, 0, 0, 0);
-            startDate.setDate(startDate.getDate() - startDate.getDay() + 1);
-
+            const startDate = new Date(document.getElementById('start-date').value);
             const weekDates = getWeekDates(startDate);
-            updateTableHeaders(weekDates);
 
             const agendaRef = database.ref('agendas/' + currentUserId);
             agendaRef.once('value', snapshot => {
                 const agendaData = snapshot.val() || {};
                 renderAgendaTable(agendaData, weekDates);
             });
-        }
-
-        function updateTableHeaders(weekDates) {
-            const thElements = document.querySelectorAll('#agenda-table thead th');
-            for (let i = 1; i <= 7; i++) {
-                thElements[i].textContent = `${new Intl.DateTimeFormat('pt-BR', { weekday: 'short' }).format(weekDates[i - 1])} - ${weekDates[i - 1].toLocaleDateString('pt-BR')}`;
-            }
         }
 
         function renderAgendaTable(agendaData, weekDates) {
@@ -269,14 +273,13 @@
         }
 
         function showTermsDetails() {
-            alert('Exibindo detalhes dos Termos de Uso...');
+            document.getElementById('terms-details').style.display = 'block';
         }
 
         function showPrivacyPolicy() {
-            alert('Exibindo Política de Privacidade...');
+            document.getElementById('privacy-policy').style.display = 'block';
         }
     </script>
 
 </body>
 </html>
-
