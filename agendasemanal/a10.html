@@ -116,7 +116,7 @@
 </head>
 <body>
 
-    <!-- Tela de Login -->
+  <!-- Tela de Login -->
     <div id="login-container">
         <h1>Login</h1>
         <input type="text" id="username" placeholder="Nome de usuário" autocomplete="username">
@@ -240,13 +240,13 @@
         }
 
         function loadAgenda() {
-            if (!currentUserId) return;
-
             const startDateInput = document.getElementById('start-date').value;
             if (!startDateInput) return;
 
             const startDate = new Date(startDateInput);
-            const agendaRef = database.ref('agendas/' + currentUserId + '/week_' + startDateInput);
+            const weekStartDate = formatDateToISO(startDate); // Função que formata a data para ISO
+            const agendaRef = database.ref('agendas/' + currentUserId + '/week_' + weekStartDate);
+            
             agendaRef.once('value', snapshot => {
                 const agendaData = snapshot.val() || {};
                 renderAgendaTable(agendaData);
@@ -280,6 +280,10 @@
             }
         }
 
+        function formatDateToISO(date) {
+            return date.toISOString().split('T')[0]; // Retorna a data no formato YYYY-MM-DD
+        }
+
         function enterEditMode(cell, hour, day) {
             const currentText = cell.textContent;
             const input = document.createElement('input');
@@ -298,8 +302,9 @@
         function updateCellData(cell, hour, day, newValue) {
             if (!currentUserId) return;
 
-            const startDate = document.getElementById('start-date').value;
-            const cellRef = database.ref(`agendas/${currentUserId}/week_${startDate}/${hour}/${day}`);
+            const startDateInput = document.getElementById('start-date').value;
+            const weekStartDate = formatDateToISO(new Date(startDateInput));
+            const cellRef = database.ref(`agendas/${currentUserId}/week_${weekStartDate}/${hour}/${day}`);
             cellRef.set(newValue);
             cell.textContent = newValue;
         }
@@ -308,4 +313,3 @@
     </script>
 </body>
 </html>
-
