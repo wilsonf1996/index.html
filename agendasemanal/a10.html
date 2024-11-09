@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda Semanal com Autenticação e Pesquisa</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+    <style>
+        /* Estilos básicos */
+        * { box-sizing: border-box; }
+        body { font-family: 'Roboto', sans-serif; background-color: #f1f3f4; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        #login-container, #register-container, #agenda-container { max-width: 600px; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); text-align: center; }
+        h1 { color: #1a73e8; font-weight: 500; }
+        input[type="text"], input[type="password"], select, button, textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
+        button { background-color: #1a73e8; color: #fff; font-weight: 500; cursor: pointer; border: none; }
+        button:hover { background-color: #155bb5; }
+        #agenda-container { display: flex; flex-direction: column; }
+        #agenda-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        #agenda-table thead th { padding: 10px; background-color: #4285f4; color: #fff; }
+        #agenda-table tbody td { padding: 10px; border: 1px solid #ddd; vertical-align: top; position: relative; }
+        #event-form { display: none; margin-bottom: 20px; }
+        /* Responsividade */
+        @media (max-width: 768px) {
+            #agenda-table { font-size: 12px; }
+            #agenda-table thead, #agenda-table tbody { display: block; }
+            #agenda-table tbody tr { display: flex; flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Tela de Login -->
+<div id="login-container">
+    <h1>Login</h1>
+    <input type="text" id="username" placeholder="Nome de usuário" autocomplete="username">
+    <input type="password" id="password" placeholder="Senha" autocomplete="current-password">
+    <button onclick="login()">Login</button>
+    <p>Não tem uma conta? <a href="#" onclick="showRegister()">Registre-se</a></p>
+</div>
+
+<!-- Tela de Registro -->
+<div id="register-container" style="display: none;">
+    <h1>Registro</h1>
+    <input type="text" id="register-username" placeholder="Nome de usuário" autocomplete="username">
+    <input type="password" id="register-password" placeholder="Senha (até 4 números)" autocomplete="new-password">
+    <button onclick="register()">Registrar</button>
+    <p>Já tem uma conta? <a href="#" onclick="showLogin()">Faça Login</a></p>
+</div>
+
+<!-- Agenda e Formulário de Evento -->
+<div id="agenda-container" style="display: none;">
+    <h1>Bem-vindo à sua Agenda</h1>
+    <div>
+        <select id="week-selector" onchange="loadAgenda(this.value)"></select>
+        <input type="search" id="search-event" placeholder="Buscar eventos..." oninput="searchEvent()">
+        <button onclick="logout()">Sair</button>
+    </div>
+
+    <!-- Formulário de Criação de Evento -->
+    <div id="event-form">
+        <h2>Criar Novo Evento</h2>
+        <textarea id="event-description" placeholder="Descrição do evento"></textarea>
+        <select id="event-date"></select>
+        <select id="event-time">
+            <option value="07:00">07:00</option>
+            <option value="07:30">07:30</option>
+            <!-- Adicione outros horários aqui a cada meia hora até 21:00 -->
+        </select>
+        <button onclick="createEvent()">Adicionar Evento</button>
+    </div>
+
+    <button onclick="toggleEventForm()">+ Novo Evento</button>
+
+    <!-- Agenda -->
+    <table id="agenda-table">
+        <thead>
+            <tr>
+                <th>Hora</th>
+                <th>Seg</th>
+                <th>Ter</th>
+                <th>Qua</th>
+                <th>Qui</th>
+                <th>Sex</th>
+                <th>Sáb</th>
+                <th>Dom</th>
+            </tr>
+        </thead>
+        <tbody id="agenda-body"></tbody>
+    </table>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+        authDomain: "agenda-6accc.firebaseapp.com",
+        databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+        projectId: "agenda-6accc",
+        storageBucket: "agenda-6accc.appspot.com",
+        messagingSenderId: "205960633520",
+        appId: "1:205960633520:web:c9b1b9e166a8e3daed1dc6"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const database = firebase.database();
+    let currentUserId = null;
+
+    function showLogin() {
+        document.getElementById('login-container').style.display = 'block';
+        document.getElementById('register-container').style.display = 'none';
+        document.getElementById('agenda-container').style.display = 'none';
+    }
+
+    function showRegister() {
+        document.getElementById('login-container').style.display = 'none';
+        document.getElementById('register-container').style.display = 'block';
+        document.getElementById('agenda-container').style.display = 'none';
+    }
+
+    function showAgenda() {
+        document.getElementById('login-container').style.display = 'none';
+        document.getElementById('register-container').style.display = 'none';
+        document.getElementById('agenda-container').style.display = 'block';
+        populateWeeks();
+        loadAgenda(1);
+    }
+
+    function populateWeeks() {
+        const firstDayOfYear = new Date();
+        firstDayOfYear.setMonth(0, 1);
+        const options = [];
+        for (let week = 1; week <= 52; week++) {
+            const startDate = new Date(firstDayOfYear);
+            startDate.setDate(firstDayOfYear.getDate() + (week - 1) * 7);
+            const endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + 6);
+            options.push(`<option value="${week}">Semana ${week}: ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}</option>`);
+        }
+        document.getElementById('week-selector').innerHTML = options.join('');
+    }
+
+    function toggleEventForm() {
+        const form = document.getElementById('event-form');
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function createEvent() {
+        const description = document.getElementById('event-description').value;
+        const date = document.getElementById('event-date').value;
+        const time = document.getElementById('event-time').value;
+        const [day, week] = date.split('-');
+
+        const agendaRef = database.ref(`agenda/${currentUserId}/semana${week}/${day}/${time}`);
+        agendaRef.set(description).then(() => {
+            alert("Evento adicionado!");
+            loadAgenda(week);
+            toggleEventForm();
+        }).catch(error => alert("Erro ao adicionar evento: " + error.message));
+    }
+
+    function loadAgenda(week) {
+        if (!currentUserId) return;
+        const agendaRef = database.ref(`agenda/${currentUserId}/semana${week}`);
+        agendaRef.once('value', snapshot => {
+            const agendaData = snapshot.val();
+            const agendaBody = document.getElementById('agenda-body');
+            agendaBody.innerHTML = '';
+            for (let hour = 7; hour <= 21; hour++) {
+                const row = document.createElement('tr');
+                const hourCell = document.createElement('td');
+                hourCell.textContent = `${hour}:00`;
+                row.appendChild(hourCell);
+                for (let day = 1; day <= 7; day++) {
+                    const cell = document.createElement('td');
+                    const event = agendaData && agendaData[day] && agendaData[day][`${hour}:00`] ? agendaData[day][`${hour}:00`] : '';
+                    cell.textContent = event;
+                    row.appendChild(cell);
+                }
+                agendaBody.appendChild(row);
+            }
+        });
+    }
+
+    function searchEvent() {
+        const query = document.getElementById('search-event').value.toLowerCase();
+        const rows = document.querySelectorAll('#agenda-body tr');
+        rows.forEach(row => {
+            const containsQuery = Array.from(row.cells).some(cell => cell.textContent.toLowerCase().includes(query));
+            row.style.display = containsQuery ? '' : 'none';
+        });
+    }
+    
+    function login() {
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        auth.signInWithEmailAndPassword(username, password).then(user => {
+            currentUserId = user.uid;
+            showAgenda();
+        }).catch(error => alert("Erro no login: " + error.message));
+    }
+
+    function register() {
+        const username = document.getElementById('register-username').value;
+        const password = document.getElementById('register-password').value;
+        auth.createUserWithEmailAndPassword(username, password).then(() => alert("Usuário registrado com sucesso!")).catch(error => alert("Erro no registro: " + error.message));
+    }
+
+    function logout() {
+        auth.signOut().then(() => showLogin()).catch(error => alert("Erro ao sair: " + error.message));
+    }
+
+</script>
+</body>
+</html>
