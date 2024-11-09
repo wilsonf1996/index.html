@@ -6,68 +6,75 @@
     <title>Agenda Semanal com Autenticação</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
     <style>
-        /* Variáveis e estilos gerais */
-        :root {
-            --primary-color: #1976d2;
-            --secondary-color: #ffab40;
-            --main-bg-color: #f5f5f5;
-            --main-text-color: #333;
-            --secondary-bg-color: #ffffff;
-            --hover-bg-color: #e0e0e0;
-            --table-border-color: #ddd;
-        }
-
         body {
             font-family: 'Roboto', sans-serif;
-            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
             margin: 0;
-            background-color: var(--main-bg-color);
-            color: var(--main-text-color);
+            background-color: #f3f4f6;
         }
-
-        .login-container, .agenda-container {
-            max-width: 500px;
-            margin: 0 auto;
+        #login-container, #register-container, #agenda-container {
+            max-width: 400px;
+            width: 100%;
             padding: 20px;
-            background-color: var(--secondary-bg-color);
+            background-color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
             border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
-
-        .hidden { display: none; }
-
-        /* Botão de login */
-        button {
-            padding: 12px 24px;
-            font-size: 16px;
-            border: none;
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
             border-radius: 5px;
-            background-color: var(--primary-color);
-            color: #fff;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
         }
-
-        button:hover { background-color: #1565c0; }
+        button {
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
     </style>
 </head>
 <body>
-    <h1>Agenda Semanal com Autenticação</h1>
 
-    <!-- Formulário de Login -->
-    <div class="login-container" id="login-container">
-        <h2>Login</h2>
-        <input type="text" id="username" placeholder="Nome de Usuário" required>
-        <input type="password" id="password" placeholder="Senha de 4 dígitos" required maxlength="4">
-        <button onclick="login()">Entrar</button>
-        <p id="login-error" style="color: red;"></p>
+    <!-- Tela de Login -->
+    <div id="login-container">
+        <h1>Login</h1>
+        <input type="text" id="email" placeholder="Email">
+        <input type="password" id="password" placeholder="Senha (mínimo 6 dígitos)">
+        <button onclick="login()">Login</button>
+        <p>Não tem uma conta? <a href="#" onclick="showRegister()">Registre-se</a></p>
     </div>
 
-    <!-- Agenda após Login -->
-    <div class="agenda-container hidden" id="agenda-container">
-        <select id="week-selector" onchange="loadAgenda(this.value)">
-            <!-- Opções dinâmicas para seleção de semana -->
+    <!-- Tela de Registro -->
+    <div id="register-container" style="display: none;">
+        <h1>Registro</h1>
+        <input type="text" id="register-email" placeholder="Email">
+        <input type="password" id="register-password" placeholder="Senha (mínimo 6 dígitos)">
+        <button onclick="register()">Registrar</button>
+        <p>Já tem uma conta? <a href="#" onclick="showLogin()">Faça Login</a></p>
+    </div>
+
+    <!-- Agenda -->
+    <div id="agenda-container" style="display: none;">
+        <h1>Bem-vindo à sua Agenda</h1>
+        <select id="week-selector" aria-label="Selecionar semana" onchange="loadAgenda(this.value)">
+            <!-- Opções da caixa de seleção serão preenchidas dinamicamente -->
         </select>
+        <button onclick="logout()">Sair</button>
+
         <table id="agenda-table">
             <thead>
                 <tr>
@@ -85,62 +92,114 @@
         </table>
     </div>
 
+    <!-- Scripts Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
     <script>
-        // Configuração do Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
             authDomain: "agenda-6accc.firebaseapp.com",
             databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
             projectId: "agenda-6accc",
             storageBucket: "agenda-6accc.appspot.com",
-            messagingSenderId: "794262176773",
-            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
-            measurementId: "G-CVBQ54PERH"
+            messagingSenderId: "205960633520",
+            appId: "1:205960633520:web:c9b1b9e166a8e3daed1dc6"
         };
+
         firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
         const database = firebase.database();
 
-        let currentUser = null;
+        let currentUserId = null;
 
-        // Função de Login
+        function showLogin() {
+            document.getElementById('login-container').style.display = 'block';
+            document.getElementById('register-container').style.display = 'none';
+            document.getElementById('agenda-container').style.display = 'none';
+        }
+
+        function showRegister() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('register-container').style.display = 'block';
+            document.getElementById('agenda-container').style.display = 'none';
+        }
+
+        function showAgenda() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('register-container').style.display = 'none';
+            document.getElementById('agenda-container').style.display = 'block';
+            populateWeeks();
+            loadAgenda(1); // Carrega a primeira semana por padrão
+        }
+
+        function register() {
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+
+            auth.createUserWithEmailAndPassword(email, password)
+                .then(userCredential => {
+                    currentUserId = userCredential.user.uid;
+                    showAgenda();
+                })
+                .catch(error => {
+                    alert('Erro no registro: ' + error.message);
+                });
+        }
+
         function login() {
-            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            if (password.length !== 4) {
-                document.getElementById('login-error').textContent = "A senha deve ter 4 dígitos!";
-                return;
-            }
 
-            // Verifica as credenciais no Firebase
-            const userRef = database.ref(`users/${username}`);
-            userRef.once('value', (snapshot) => {
-                const userData = snapshot.val();
-                if (userData && userData.password === password) {
-                    currentUser = username;
-                    document.getElementById('login-container').classList.add('hidden');
-                    document.getElementById('agenda-container').classList.remove('hidden');
-                    loadAgenda(1); // Carrega a agenda do usuário
-                } else {
-                    document.getElementById('login-error').textContent = "Nome de usuário ou senha incorretos!";
-                }
+            auth.signInWithEmailAndPassword(email, password)
+                .then(userCredential => {
+                    currentUserId = userCredential.user.uid;
+                    showAgenda();
+                })
+                .catch(error => {
+                    alert('Erro no login: ' + error.message);
+                });
+        }
+
+        function logout() {
+            auth.signOut().then(() => {
+                showLogin();
             });
         }
 
-        // Função para carregar a agenda de uma semana
+        function populateWeeks() {
+            const weekSelector = document.getElementById('week-selector');
+            weekSelector.innerHTML = ''; // Limpa o seletor de semanas
+
+            const firstDayOfYear = new Date(2024, 0, 1);
+            const lastDayOfYear = new Date(2026, 11, 31);
+
+            while (firstDayOfYear <= lastDayOfYear) {
+                const weekStart = new Date(firstDayOfYear);
+                const weekEnd = new Date(firstDayOfYear);
+                weekEnd.setDate(weekEnd.getDate() + 6);
+
+                const option = document.createElement('option');
+                option.value = weekStart.toISOString().slice(0, 10);
+                option.textContent = `${weekStart.toLocaleDateString()} - ${weekEnd.toLocaleDateString()}`;
+                weekSelector.appendChild(option);
+
+                firstDayOfYear.setDate(firstDayOfYear.getDate() + 7);
+            }
+        }
+
         function loadAgenda(week) {
-            const agendaRef = database.ref(`agenda/${currentUser}/${week}`);
-            agendaRef.on('value', (snapshot) => {
+            const agendaRef = database.ref(`users/${currentUserId}/agenda/${week}`);
+            agendaRef.on('value', snapshot => {
                 const agendaData = snapshot.val() || {};
                 renderAgendaTable(agendaData);
             });
         }
 
-        // Função para renderizar a tabela da agenda
         function renderAgendaTable(agendaData) {
             const agendaBody = document.getElementById('agenda-body');
             agendaBody.innerHTML = "";
+
             for (let hour = 0; hour < 24; hour++) {
                 const row = agendaBody.insertRow();
                 const cellHour = row.insertCell(0);
@@ -149,21 +208,35 @@
                 for (let day = 1; day <= 7; day++) {
                     const cell = row.insertCell(day);
                     const cellKey = `${hour}-${day}`;
-                    cell.textContent = agendaData[cellKey] || "";
-                    cell.onclick = () => editCell(cellKey);
+                    const cellData = agendaData[cellKey] || "";
+                    cell.className = "editable";
+                    cell.innerHTML = `<div onclick="enterEditMode(this, '${cellKey}')">${cellData}</div>`;
                 }
             }
         }
 
-        // Função para editar uma célula da agenda
-        function editCell(cellKey) {
-            const value = prompt("Digite o conteúdo:");
+        function enterEditMode(cell, cellKey) {
+            const value = prompt('Digite o conteúdo:', cell.textContent);
             if (value !== null) {
-                const agendaRef = database.ref(`agenda/${currentUser}/1/${cellKey}`);
-                agendaRef.set(value);
-                loadAgenda(1);
+                updateCellData(cellKey, value);
             }
         }
+
+        function updateCellData(cellKey, value) {
+            const selectedWeek = document.getElementById('week-selector').value;
+            const agendaRef = database.ref(`users/${currentUserId}/agenda/${selectedWeek}`);
+            agendaRef.update({ [cellKey]: value });
+        }
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                currentUserId = user.uid;
+                showAgenda();
+            } else {
+                showLogin();
+            }
+        });
     </script>
 </body>
 </html>
+
