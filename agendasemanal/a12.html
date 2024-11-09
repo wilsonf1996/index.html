@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda Semanal com Autenticação</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        input[type="text"], input[type="password"], input[type="date"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            width: 100%;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #agenda-table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+        #agenda-table th, #agenda-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        .editable {
+            cursor: pointer;
+        }
+        #login-container, #register-container, #agenda-container {
+            display: none;
+        }
+        #agenda-container {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Tela de Login -->
+    <div id="login-container">
+        <h1>Login</h1>
+        <input type="text" id="username" placeholder="Nome de usuário" autocomplete="username">
+        <input type="password" id="password" placeholder="Senha" autocomplete="current-password">
+        <button onclick="login()">Login</button>
+        <p>Não tem uma conta? <a href="#" onclick="showRegister()">Registre-se</a></p>
+    </div>
+
+    <!-- Tela de Registro -->
+    <div id="register-container" style="display: none;">
+        <h1>Registro</h1>
+        <input type="text" id="register-username" placeholder="Nome de usuário" autocomplete="username">
+        <input type="password" id="register-password" placeholder="Senha (até 4 números)" autocomplete="new-password">
+        <button onclick="register()">Registrar</button>
+        <p>Já tem uma conta? <a href="#" onclick="showLogin()">Faça Login</a></p>
+    </div>
+
+    <!-- Agenda -->
+    <div id="agenda-container" style="display: none;">
+        <h1>Bem-vindo à sua Agenda</h1>
+        <label>Data de início da semana:</label>
+        <input type="date" id="start-date" onchange="loadAgenda()">
+        <button onclick="logout()">Sair</button>
+
+        <table id="agenda-table">
+            <thead>
+                <tr>
+                    <th>Hora</th>
+                    <th>Segunda</th>
+                    <th>Terça</th>
+                    <th>Quarta</th>
+                    <th>Quinta</th>
+                    <th>Sexta</th>
+                    <th>Sábado</th>
+                    <th>Domingo</th>
+                </tr>
+            </thead>
+            <tbody id="agenda-body"></tbody>
+        </table>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "205960633520",
+            appId: "1:205960633520:web:c9b1b9e166a8e3daed1dc6"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        let currentUserId = null;
+
+        function showLogin() {
+            document.getElementById('login-container').style.display = 'block';
+            document.getElementById('register-container').style.display = 'none';
+            document.getElementById('agenda-container').style.display = 'none';
+        }
+
+        function showRegister() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('register-container').style.display = 'block';
+            document.getElementById('agenda-container').style.display = 'none';
+        }
+
+        function showAgenda() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('register-container').style.display = 'none';
+            document.getElementById('agenda-container').style.display = 'block';
+        }
+
+        function register() {
+            const username = document.getElementById('register-username').value;
+            const password = document.getElementById('register-password').value;
+
+            if (!username || !/^[a-zA-Z0-9]+$/.test(username)) {
+                alert('Nome de usuário inválido. Deve ser uma palavra sem espaços.');
+                return;
+            }
+
+            if (!password || !/^\d{1,4}$/.test(password)) {
+                alert('Senha inválida. Deve ser um número de até 4 dígitos.');
+                return;
+            }
+
+            const userRef = database.ref('users/' + username);
+            userRef.set({ password: password })
+            .then(() => {
+                alert('Usuário registrado com sucesso!');
+                showLogin();
+            })
+            .catch(error => {
+                alert('Erro no registro: ' + error.message);
+            });
+        }
+
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            const userRef = database.ref('users/' + username);
+            userRef.once('value', snapshot => {
+                const userData = snapshot.val();
+                if (userData && userData.password === password) {
+                    currentUserId = username;
+                    showAgenda();
+                } else {
+                    alert('Credenciais inválidas!');
+                }
+            });
+        }
+
+        function logout() {
+            currentUserId = null;
+            showLogin();
+        }
+
+        function loadAgenda() {
+            const startDateInput = document.getElementById('start-date').value;
+            if (!startDateInput) return;
+
+            const startDate = new Date(startDateInput);
+
+            // Obtém as 7 datas da semana ao redor da data selecionada
+            const weekDates = getWeekDates(startDate);
+
+            // Atualiza os cabeçalhos da agenda com as datas corretas
+            updateTableHeaders(weekDates);
+
+            const formattedStartDate = formatDateToISO(weekDates[0]); // A primeira data (como a segunda-feira)
+
+            const agendaRef = database.ref('agendas/' + currentUserId + '/semana/' + formattedStartDate);
+            agendaRef.once('value', snapshot => {
+                const agendaData = snapshot.val() || {};
+                renderAgendaTable(agendaData, weekDates);
+            });
+        }
+
+        function updateTableHeaders(weekDates) {
+            const thElements = document.querySelectorAll('#agenda-table thead th');
+            for (let i = 1; i <= 7; i++) {
+                thElements[i].textContent = `${weekDates[i-1].toLocaleDateString('pt-BR', { weekday: 'short' })} (${weekDates[i-1].toLocaleDateString('pt-BR')})`;
+            }
+        }
+
+        function renderAgendaTable(agendaData, weekDates) {
+            const tbody = document.getElementById('agenda-body');
+            tbody.innerHTML = '';
+            
+            let hours = [];
+            for (let i = 0; i < 24; i++) hours.push(`${i}:00`);
+
+            hours.forEach(hour => {
+                const tr = document.createElement('tr');
+                const tdHour = document.createElement('td');
+                tdHour.textContent = hour;
+                tr.appendChild(tdHour);
+
+                weekDates.forEach((date, index) => {
+                    const td = document.createElement('td');
+                    const dateStr = formatDateToISO(date);
+                    td.textContent = agendaData[dateStr]?.[hour] || '';
+
+                    td.classList.add('editable');
+                    td.onclick = () => editCell(td, hour, index, dateStr);
+
+                    tr.appendChild(td);
+                });
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function editCell(cell, hour, day, dateStr) {
+            const currentText = cell.textContent;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentText;
+            input.onblur = () => updateCellData(cell, hour, day, dateStr, input.value);
+            input.onkeydown = (e) => {
+                if (e.key === 'Enter') input.blur();
+            };
+
+            cell.textContent = '';
+            cell.appendChild(input);
+            input.focus();
+        }
+
+        function updateCellData(cell, hour, day, dateStr, newValue) {
+            if (!currentUserId) return;
+
+            const weekDate = document.getElementById('start-date').value;
+            const weekKey = formatDateToISO(new Date(weekDate));
+            const cellRef = database.ref(`agendas/${currentUserId}/semana/${weekKey}/${dateStr}/${hour}`);
+            cellRef.set(newValue);
+            cell.textContent = newValue;
+        }
+
+        function getWeekDates(startDate) {
+            const dates = [];
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
+                dates.push(date);
+            }
+            return dates;
+        }
+
+        function formatDateToISO(date) {
+            return date.toISOString().split('T')[0];  // Retorna a data no formato "yyyy-mm-dd"
+        }
+
+        window.onload = showLogin;
+    </script>
+</body>
+</html>
