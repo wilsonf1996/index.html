@@ -48,9 +48,6 @@
         #login-container, #register-container, #agenda-container {
             display: none;
         }
-        #agenda-container {
-            display: block;
-        }
     </style>
 </head>
 <body>
@@ -65,7 +62,7 @@
     </div>
 
     <!-- Tela de Registro -->
-    <div id="register-container" style="display: none;">
+    <div id="register-container">
         <h1>Registro</h1>
         <input type="text" id="register-username" placeholder="Nome de usuário" autocomplete="username">
         <input type="password" id="register-password" placeholder="Senha (até 4 números)" autocomplete="new-password">
@@ -74,7 +71,7 @@
     </div>
 
     <!-- Agenda -->
-    <div id="agenda-container" style="display: none;">
+    <div id="agenda-container">
         <h1>Bem-vindo à sua Agenda</h1>
         <label>Data de início da semana:</label>
         <input type="date" id="start-date" onchange="loadAgenda()">
@@ -114,7 +111,6 @@
         const database = firebase.database();
         let currentUserId = null;
 
-        // Verifica se o usuário está logado
         function checkUserLoggedIn() {
             const storedUser = localStorage.getItem('username');
             if (storedUser) {
@@ -141,6 +137,7 @@
             document.getElementById('login-container').style.display = 'none';
             document.getElementById('register-container').style.display = 'none';
             document.getElementById('agenda-container').style.display = 'block';
+            loadAgenda();
         }
 
         function register() {
@@ -184,7 +181,7 @@
                 const userData = snapshot.val();
                 if (userData && userData.password === password) {
                     currentUserId = username;
-                    localStorage.setItem('username', username); // Armazena no localStorage
+                    localStorage.setItem('username', username);
                     showAgenda();
                 } else {
                     alert('Credenciais inválidas!');
@@ -194,7 +191,7 @@
 
         function logout() {
             currentUserId = null;
-            localStorage.removeItem('username'); // Remove do localStorage
+            localStorage.removeItem('username');
             showLogin();
         }
 
@@ -210,7 +207,7 @@
             const formattedStartDate = formatDateToISO(weekDates[0]);
 
             const agendaRef = database.ref('agendas/' + currentUserId + '/' + formattedStartDate);
-            agendaRef.once('value', snapshot => {
+            agendaRef.on('value', snapshot => {
                 const agendaData = snapshot.val() || {};
                 renderAgendaTable(agendaData, weekDates);
             });
@@ -235,66 +232,37 @@
                 row.appendChild(hourCell);
 
                 weekDates.forEach(date => {
-                    const dateStr = formatDateToISO(date);
-                    const data = agendaData[dateStr] ? agendaData[dateStr][hour] : '';
+                    const dateKey = formatDateToISO(date);
                     const cell = document.createElement('td');
-                    cell.classList.add('editable');
-                    cell.textContent = data || '';
-                    cell.onclick = () => editCellData(cell, hour, dateStr);
+                    cell.className = 'editable';
+                    cell.contentEditable = true;
+                    cell.textContent = agendaData[dateKey] && agendaData[dateKey][hour] ? agendaData[dateKey][hour] : '';
+                    cell.addEventListener('blur', () => {
+                        const updatedValue = cell.textContent;
+                        const agendaDayRef = database.ref(`agendas/${currentUserId}/${formatDateToISO(weekDates[0])}/${dateKey}`);
+                        agendaDayRef.update({ [hour]: updatedValue });
+                    });
                     row.appendChild(cell);
                 });
-
                 tbody.appendChild(row);
             });
         }
 
-        function editCellData(cell, hour, dateStr) {
-            const oldValue = cell.textContent;
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.value = oldValue;
-            input.onblur = () => updateCellData(cell, hour, dateStr, input.value);
-            input.onkeydown = (e) => {
-                if (e.key === 'Enter') {
-                    updateCellData(cell, hour, dateStr, input.value);
-                }
-            };
-            cell.innerHTML = '';
-            cell.appendChild(input);
-            input.focus();
-        }
-
-        function updateCellData(cell, hour, dateStr, newValue) {
-            if (!currentUserId) return;
-
-            const agendaRef = database.ref('agendas/' + currentUserId + '/' + dateStr);
-            agendaRef.child(hour).set(newValue)
-                .then(() => {
-                    cell.textContent = newValue;
-                })
-                .catch(error => {
-                    alert('Erro ao salvar: ' + error.message);
-                });
-        }
-
         function getWeekDates(startDate) {
-            let dates = [];
-            let currentDate = new Date(startDate);
-            currentDate.setDate(currentDate.getDate() - currentDate.getDay() + 1); // Ajuste para começar na segunda-feira
+            const dates = [];
             for (let i = 0; i < 7; i++) {
-                dates.push(new Date(currentDate));
-                currentDate.setDate(currentDate.getDate() + 1);
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
+                dates.push(date);
             }
             return dates;
         }
 
         function formatDateToISO(date) {
-            return date.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+            return date.toISOString().split('T')[0];
         }
 
-        // Verifica se o usuário já está logado ao carregar a página
         checkUserLoggedIn();
     </script>
 </body>
 </html>
-
