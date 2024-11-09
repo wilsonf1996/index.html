@@ -6,38 +6,65 @@
     <title>Agenda Semanal com Autenticação</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
     <style>
+        /* Variáveis CSS */
+        :root {
+            --primary-color: #1976d2;
+            --secondary-color: #ffab40;
+            --main-bg-color: #f5f5f5;
+            --main-text-color: #333;
+            --secondary-bg-color: #ffffff;
+            --hover-bg-color: #e0e0e0;
+            --table-border-color: #ddd;
+            --btn-bg-color: #4CAF50;
+            --btn-hover-bg-color: #45a049;
+        }
+
         body {
             font-family: 'Roboto', sans-serif;
+            text-align: center;
+            margin: 0;
+            background-color: var(--main-bg-color);
+            color: var(--main-text-color);
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            margin: 0;
-            background-color: #f5f7fa;
         }
+
+        h1 {
+            color: var(--primary-color);
+            margin-top: 20px;
+        }
+
+        /* Container do Login, Registro e Agenda */
         #login-container, #register-container, #agenda-container {
-            max-width: 1000px;
+            max-width: 800px;
             width: 100%;
             padding: 20px;
-            background-color: white;
+            background-color: var(--secondary-bg-color);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             text-align: center;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 20px;
             border-radius: 10px;
+            transition: all 0.3s ease-in-out;
         }
-        input[type="text"], input[type="password"] {
+
+        /* Inputs */
+        input[type="text"], input[type="password"], select {
             width: 100%;
             padding: 12px;
             margin: 10px 0;
-            border: 1px solid #ddd;
+            border: 1px solid var(--table-border-color);
             border-radius: 8px;
             font-size: 16px;
         }
+
+        /* Botão */
         button {
             padding: 12px;
-            background-color: #4CAF50;
+            background-color: var(--btn-bg-color);
             color: white;
             border: none;
             cursor: pointer;
@@ -45,34 +72,42 @@
             transition: background-color 0.3s ease;
             font-size: 16px;
         }
+        
         button:hover {
-            background-color: #45a049;
+            background-color: var(--btn-hover-bg-color);
         }
+
+        /* Tabela de Agenda */
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
         }
+
         th, td {
             padding: 20px;
-            border: 1px solid #ddd;
+            border: 1px solid var(--table-border-color);
             text-align: center;
             min-width: 120px;
             height: 100px;
         }
+
         th {
-            background-color: #f4f4f4;
+            background-color: var(--hover-bg-color);
             font-size: 18px;
         }
+
         td {
-            background-color: #fff;
+            background-color: var(--secondary-bg-color);
             vertical-align: top;
             font-size: 16px;
-            color: #333;
+            color: var(--main-text-color);
         }
+
         td:hover {
             background-color: #f0f8ff;
         }
+
         .editable {
             background-color: #f9f9f9;
             cursor: pointer;
@@ -84,9 +119,11 @@
             align-items: center;
             height: 100%;
         }
+
         .editable:hover {
             background-color: #e0f7fa;
         }
+
         .editable input {
             width: 100%;
             text-align: center;
@@ -94,12 +131,23 @@
             background-color: transparent;
             font-size: 16px;
         }
-        select {
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            background-color: #fff;
-            font-size: 16px;
+
+        /* Menu de navegação */
+        .nav-links {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--primary-color);
+            margin: 0 10px;
+            font-size: 18px;
+        }
+
+        .nav-links a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -192,7 +240,6 @@
             const username = document.getElementById('register-username').value;
             const password = document.getElementById('register-password').value;
 
-            // Validação para o nome de usuário ser uma palavra única e a senha ser numérica e até 4 dígitos
             if (!username || !/^[a-zA-Z0-9]+$/.test(username)) {
                 alert('Nome de usuário inválido. Deve ser uma palavra sem espaços.');
                 return;
@@ -203,20 +250,13 @@
                 return;
             }
 
-            // Firebase Authentication para registrar o usuário
-            auth.createUserWithEmailAndPassword(username + "@gmail.com", password)
-                .then((userCredential) => {
-                    const user = userCredential.user;
-                    // Salvar usuário no Realtime Database
-                    const userRef = database.ref('users/' + user.uid);
-                    userRef.set({
-                        username: username,
-                        email: user.email
-                    });
+            const userRef = database.ref('users/' + username);
+            userRef.set({ password: password })
+                .then(() => {
                     alert('Usuário registrado com sucesso!');
                     showLogin();
                 })
-                .catch((error) => {
+                .catch(error => {
                     alert('Erro no registro: ' + error.message);
                 });
         }
@@ -225,84 +265,71 @@
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
 
-            // Firebase Authentication para login
-            auth.signInWithEmailAndPassword(username + "@gmail.com", password)
-                .then((userCredential) => {
-                    currentUserId = userCredential.user.uid;
+            const userRef = database.ref('users/' + username);
+            userRef.once('value', snapshot => {
+                const user = snapshot.val();
+                if (user && user.password === password) {
+                    currentUserId = username;
+                    alert('Login bem-sucedido!');
                     showAgenda();
-                })
-                .catch((error) => {
-                    alert('Erro no login: ' + error.message);
-                });
-        }
-
-        function logout() {
-            auth.signOut().then(() => {
-                currentUserId = null;
-                showLogin();
-            });
-        }
-
-        function populateWeeks() {
-            const weekSelector = document.getElementById('week-selector');
-            weekSelector.innerHTML = '';
-            for (let i = 1; i <= 52; i++) {
-                const option = document.createElement('option');
-                option.value = i;
-                option.textContent = `Semana ${i}`;
-                weekSelector.appendChild(option);
-            }
-        }
-
-        function loadAgenda(weekNumber) {
-            const agendaBody = document.getElementById('agenda-body');
-            agendaBody.innerHTML = '';
-
-            // Exemplo de agenda. Aqui você poderia recuperar dados do Firebase Realtime Database.
-            const agendaData = [
-                ['08:00', '', '', '', '', '', '', ''],
-                ['09:00', '', '', '', '', '', '', ''],
-                ['10:00', '', '', '', '', '', '', ''],
-                ['11:00', '', '', '', '', '', '', ''],
-                ['12:00', '', '', '', '', '', '', ''],
-                ['13:00', '', '', '', '', '', '', ''],
-                ['14:00', '', '', '', '', '', '', ''],
-                ['15:00', '', '', '', '', '', '', ''],
-                ['16:00', '', '', '', '', '', '', ''],
-                ['17:00', '', '', '', '', '', '', '']
-            ];
-
-            agendaData.forEach(row => {
-                const tr = document.createElement('tr');
-                row.forEach((cell, index) => {
-                    const td = document.createElement('td');
-                    td.textContent = cell;
-                    if (index > 0) {
-                        td.classList.add('editable');
-                        td.addEventListener('click', () => editAgendaCell(td, row[0]));
-                    }
-                    tr.appendChild(td);
-                });
-                agendaBody.appendChild(tr);
-            });
-        }
-
-        function editAgendaCell(td, time) {
-            const input = document.createElement('input');
-            input.value = td.textContent;
-            td.innerHTML = '';
-            td.appendChild(input);
-            input.focus();
-
-            input.addEventListener('blur', () => {
-                td.textContent = input.value;
-                // Salvar no Firebase
-                if (currentUserId) {
-                    const userRef = database.ref('users/' + currentUserId + '/agenda');
-                    userRef.child(time).set(td.textContent);
+                } else {
+                    alert('Nome de usuário ou senha inválidos.');
                 }
             });
         }
+
+        function logout() {
+            currentUserId = null;
+            alert('Você saiu da sua conta!');
+            showLogin();
+        }
+
+        function populateWeeks() {
+            const select = document.getElementById('week-selector');
+            select.innerHTML = '';
+            for (let i = 1; i <= 4; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `Semana ${i}`;
+                select.appendChild(option);
+            }
+        }
+
+        function loadAgenda(week) {
+            if (!currentUserId) return;
+
+            const agendaRef = database.ref('agenda/' + currentUserId + '/week_' + week);
+            agendaRef.once('value', snapshot => {
+                const agenda = snapshot.val() || {};
+                const tableBody = document.getElementById('agenda-body');
+                tableBody.innerHTML = '';
+
+                for (let hour = 8; hour <= 22; hour++) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${hour}:00</td>
+                        ${['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map(day => {
+                            const cellContent = agenda[`${day}_${hour}`] || '';
+                            return `<td class="editable" onclick="editAgenda('${day}_${hour}')"><input type="text" value="${cellContent}" /></td>`;
+                        }).join('')}
+                    `;
+                    tableBody.appendChild(row);
+                }
+            });
+        }
+
+        function editAgenda(cellId) {
+            const input = document.querySelector(`#${cellId} input`);
+            input.focus();
+            input.addEventListener('blur', () => {
+                const value = input.value;
+                const [day, hour] = cellId.split('_');
+                const agendaRef = database.ref('agenda/' + currentUserId + `/week_1/${cellId}`);
+                agendaRef.set(value);
+            });
+        }
+
+        showLogin();
     </script>
 
 </body>
