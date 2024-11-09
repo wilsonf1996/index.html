@@ -80,28 +80,10 @@
         const database = firebase.database();
         let currentUserId = null;
 
+        // Carrega a agenda automaticamente na data atual ao abrir
         window.onload = function() {
-            initializeStartDate();
+            document.getElementById('start-date').valueAsDate = new Date();
             checkUserLoggedIn();
-        }
-
-        // Função para ajustar a data de início para o próximo sábado ou para 9/11/2024, se hoje for sábado.
-        function initializeStartDate() {
-            const today = new Date();
-            const todayDay = today.getDay();
-            const targetSaturday = new Date('2024-11-09'); // 9 de novembro de 2024
-
-            let startDate;
-            if (todayDay === 6) {  // Se for sábado, ajusta a data para 9/11/2024
-                startDate = targetSaturday;
-            } else {
-                // Se não for sábado, a data será o próximo sábado
-                const daysUntilSaturday = (6 - todayDay + 7) % 7;
-                startDate = new Date(today);
-                startDate.setDate(today.getDate() + daysUntilSaturday);
-            }
-
-            document.getElementById('start-date').valueAsDate = startDate;
         }
 
         function checkUserLoggedIn() {
@@ -193,6 +175,8 @@
             if (!startDateInput) return;
 
             const startDate = new Date(startDateInput);
+            startDate.setDate(startDate.getDate() - startDate.getDay() + 1);
+
             const weekDates = getWeekDates(startDate);
             updateTableHeaders(weekDates);
 
@@ -203,47 +187,51 @@
             });
         }
 
-        function getWeekDates(startDate) {
-            const dayOfWeek = startDate.getDay();
-            const weekDates = [];
-            for (let i = 0; i < 7; i++) {
-                const date = new Date(startDate);
-                date.setDate(startDate.getDate() + (i - dayOfWeek));
-                weekDates.push(date.toISOString().split('T')[0]);
-            }
-            return weekDates;
-        }
-
         function updateTableHeaders(weekDates) {
-            const headers = document.querySelectorAll('#agenda-table th');
+            const thElements = document.querySelectorAll('#agenda-table thead th');
             for (let i = 1; i <= 7; i++) {
-                headers[i].innerText = new Date(weekDates[i - 1]).toLocaleDateString('pt-BR', { weekday: 'short' });
+                thElements[i].textContent = `${new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(weekDates[i - 1])} (${formatDateToISO(weekDates[i - 1])})`;
             }
         }
 
         function renderAgendaTable(agendaData, weekDates) {
-            const tableBody = document.getElementById('agenda-body');
-            tableBody.innerHTML = '';
+            const tbody = document.getElementById('agenda-body');
+            tbody.innerHTML = '';
+            const hours = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
 
-            const times = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'];
-            times.forEach(time => {
+            hours.forEach(hour => {
                 const row = document.createElement('tr');
-                const timeCell = document.createElement('td');
-                timeCell.textContent = time;
-                row.appendChild(timeCell);
+                const hourCell = document.createElement('td');
+                hourCell.textContent = hour;
+                row.appendChild(hourCell);
 
-                weekDates.forEach(date => {
+                for (let i = 0; i < 7; i++) {
+                    const day = formatDateToISO(weekDates[i]);
                     const cell = document.createElement('td');
-                    const agendaItem = agendaData[date] && agendaData[date][time];
-                    cell.textContent = agendaItem || '';
+                    cell.classList.add('editable');
+                    cell.dataset.date = day;
+                    cell.dataset.hour = hour;
+                    cell.textContent = agendaData[day]?.[hour] || '';
+                    cell.contentEditable = true;
+                    cell.addEventListener('blur', () => saveAgenda(day, hour, cell.textContent));
                     row.appendChild(cell);
-                });
-
-                tableBody.appendChild(row);
+                }
+                tbody.appendChild(row);
             });
+        }
+
+        function saveAgenda(day, hour, content) {
+            const agendaRef = database.ref('agendas/' + currentUserId + '/' + day + '/' + hour);
+            agendaRef.set(content);
+        }
+
+        function getWeekDates(startDate) {
+            return Array.from({ length: 7 }, (_, i) => new Date(startDate.getTime() + i * 86400000));
+        }
+
+        function formatDateToISO(date) {
+            return date.toISOString().split('T')[0];
         }
     </script>
 </body>
 </html>
-
-
