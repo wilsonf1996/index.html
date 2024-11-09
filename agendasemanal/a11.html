@@ -65,60 +65,26 @@
             border: 1px solid var(--table-border-color);
             margin-bottom: 10px;
         }
-
-        /* Tabela de agenda */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        th, td {
-            padding: 10px;
-            border: 1px solid var(--table-border-color);
-        }
-
-        th {
-            background-color: var(--primary-color);
-            color: white;
-        }
-
-        .editable {
-            background-color: var(--secondary-bg-color);
-            cursor: pointer;
-            text-align: center;
-        }
-
-        .editable:hover {
-            background-color: var(--hover-bg-color);
-        }
     </style>
 </head>
 <body>
     <h1>Agenda Semanal</h1>
 
-    <!-- Container de Autenticação -->
     <div id="auth-container" class="auth-container">
-        <input id="username" type="text" placeholder="Nome de Usuário" required aria-label="Nome de usuário" />
-        <input id="password" type="password" placeholder="Senha (4 dígitos)" required aria-label="Senha" />
+        <!-- Formulário de Login -->
+        <input id="username" type="text" placeholder="Nome de Usuário" />
+        <input id="password" type="password" placeholder="Senha (mínimo 4 caracteres)" />
         <button onclick="login()">Entrar</button>
         <button onclick="showRegisterForm()">Registrar</button>
     </div>
 
-    <!-- Container da Agenda -->
     <div id="agenda-container" style="display: none;">
-        <select id="week-selector" aria-label="Selecionar semana" onchange="loadAgenda(this.value)">
-            <option value="1">Semana 1</option>
-            <option value="2">Semana 2</option>
-            <option value="3">Semana 3</option>
-            <!-- Adicione mais semanas conforme necessário -->
-        </select>
+        <select id="week-selector" aria-label="Selecionar semana" onchange="loadAgenda(this.value)"></select>
 
         <ul id="calendar" role="list"></ul>
 
         <button onclick="logout()">Sair</button>
 
-        <!-- Tabela de Agenda -->
         <table id="agenda-table" role="table">
             <thead>
                 <tr>
@@ -136,7 +102,6 @@
         </table>
     </div>
 
-    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
@@ -165,19 +130,14 @@
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
 
-            // Validação para garantir que o nome de usuário seja uma palavra
-            const usernameRegex = /^[a-zA-Z0-9]+$/;
-            if (!username.match(usernameRegex)) {
-                alert("O nome de usuário deve ser uma única palavra, sem espaços.");
+            if (password.length < 4) {
+                alert("A senha deve ter no mínimo 4 caracteres.");
                 return;
             }
 
-            if (password.length !== 4 || isNaN(password)) {
-                alert("A senha deve ter 4 dígitos.");
-                return;
-            }
+            const email = username + "@domain.com";  // Criação do email no formato correto
 
-            auth.signInWithEmailAndPassword(username + "@domain.com", password)
+            auth.signInWithEmailAndPassword(email, password)
                 .then((userCredential) => {
                     currentUser = userCredential.user;
                     document.getElementById('auth-container').style.display = 'none';
@@ -190,35 +150,35 @@
         }
 
         // Função para registrar um novo usuário
-      function showRegisterForm() {
-    const username = prompt("Escolha um nome de usuário (uma palavra):");
+        function showRegisterForm() {
+            const username = prompt("Escolha um nome de usuário (uma palavra):");
 
-    // Validação para garantir que o nome de usuário seja uma palavra
-    const usernameRegex = /^[a-zA-Z0-9]+$/;
-    if (!username.match(usernameRegex)) {
-        alert("O nome de usuário deve ser uma única palavra, sem espaços.");
-        return;
-    }
+            // Validação para garantir que o nome de usuário seja uma palavra
+            const usernameRegex = /^[a-zA-Z0-9]+$/;
+            if (!username.match(usernameRegex)) {
+                alert("O nome de usuário deve ser uma única palavra, sem espaços.");
+                return;
+            }
 
-    const password = prompt("Escolha uma senha (mínimo 6 caracteres):");
+            const password = prompt("Escolha uma senha (mínimo 4 caracteres):");
 
-    if (password.length < 6) {
-        alert("A senha deve ter no mínimo 6 caracteres.");
-        return;
-    }
+            if (password.length < 4) {
+                alert("A senha deve ter no mínimo 4 caracteres.");
+                return;
+            }
 
-    const email = username + "@domain.com";  // Criação do email no formato correto
+            const email = username + "@domain.com";  // Criação do email no formato correto
 
-    auth.createUserWithEmailAndPassword(email, password)
-        .then((userCredential) => {
-            alert("Usuário registrado com sucesso!");
-        })
-        .catch((error) => {
-            const errorCode = error.code;
-            const errorMessage = error.message;
-            alert(`Erro ao registrar: ${errorCode} - ${errorMessage}`);
-        });
-}
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    alert("Usuário registrado com sucesso!");
+                })
+                .catch((error) => {
+                    const errorCode = error.code;
+                    const errorMessage = error.message;
+                    alert(`Erro ao registrar: ${errorCode} - ${errorMessage}`);
+                });
+        }
 
         // Função para carregar a agenda de um usuário
         function loadAgenda(week) {
@@ -231,7 +191,6 @@
             });
         }
 
-        // Função para renderizar a tabela de agenda
         function renderAgendaTable() {
             const agendaBody = document.getElementById('agenda-body');
             agendaBody.innerHTML = "";
@@ -250,26 +209,28 @@
             }
         }
 
-        // Função para editar uma célula da agenda
         function enterEditMode(cell, cellKey) {
-            const currentValue = cell.textContent;
-            const value = prompt("Editando", currentValue);
+            const value = prompt('Digite o conteúdo:', cell.textContent);
             if (value !== null) {
-                const userAgendaRef = database.ref('agenda/' + currentUser.uid + '/' + selectedWeek + '/' + cellKey);
-                userAgendaRef.set(value);
-                cell.textContent = value;
+                updateCellData(cellKey, value);
             }
         }
 
-        // Função para logout
+        function updateCellData(cellKey, value) {
+            agendaData[cellKey] = value;
+            database.ref('agenda/' + currentUser.uid).set(agendaData);
+            renderAgendaTable();
+        }
+
         function logout() {
             auth.signOut().then(() => {
+                alert("Você saiu.");
                 document.getElementById('auth-container').style.display = 'block';
                 document.getElementById('agenda-container').style.display = 'none';
-                currentUser = null;
             });
         }
     </script>
 </body>
 </html>
+
 
