@@ -114,6 +114,17 @@
         const database = firebase.database();
         let currentUserId = null;
 
+        // Verifica se o usuário está logado
+        function checkUserLoggedIn() {
+            const storedUser = localStorage.getItem('username');
+            if (storedUser) {
+                currentUserId = storedUser;
+                showAgenda();
+            } else {
+                showLogin();
+            }
+        }
+
         function showLogin() {
             document.getElementById('login-container').style.display = 'block';
             document.getElementById('register-container').style.display = 'none';
@@ -166,6 +177,7 @@
                 const userData = snapshot.val();
                 if (userData && userData.password === password) {
                     currentUserId = username;
+                    localStorage.setItem('username', username); // Armazena no localStorage
                     showAgenda();
                 } else {
                     alert('Credenciais inválidas!');
@@ -175,6 +187,7 @@
 
         function logout() {
             currentUserId = null;
+            localStorage.removeItem('username'); // Remove do localStorage
             showLogin();
         }
 
@@ -187,7 +200,7 @@
 
             updateTableHeaders(weekDates);
 
-            const formattedStartDate = formatDateToISO(weekDates[0]); 
+            const formattedStartDate = formatDateToISO(weekDates[0]);
 
             const agendaRef = database.ref('agendas/' + currentUserId + '/' + formattedStartDate);
             agendaRef.once('value', snapshot => {
@@ -199,15 +212,14 @@
         function updateTableHeaders(weekDates) {
             const thElements = document.querySelectorAll('#agenda-table thead th');
             for (let i = 1; i <= 7; i++) {
-                thElements[i].textContent = `${weekDates[i-1].toLocaleDateString('pt-BR', { weekday: 'short' })} (${weekDates[i-1].toLocaleDateString('pt-BR')})`;
+                thElements[i].textContent = `${weekDates[i-1].toLocaleDateString('pt-BR', { weekday: 'long' })} (${formatDateToISO(weekDates[i-1])})`;
             }
         }
 
         function renderAgendaTable(agendaData, weekDates) {
             const tbody = document.getElementById('agenda-body');
             tbody.innerHTML = '';
-            
-            let hours = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
+            const hours = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
 
             hours.forEach(hour => {
                 let row = document.createElement('tr');
@@ -215,7 +227,7 @@
                 hourCell.textContent = hour;
                 row.appendChild(hourCell);
 
-                weekDates.forEach((date, index) => {
+                weekDates.forEach(date => {
                     const dateStr = formatDateToISO(date);
                     const data = agendaData[dateStr] ? agendaData[dateStr][hour] : '';
                     const cell = document.createElement('td');
@@ -273,8 +285,8 @@
             return date.toISOString().split('T')[0]; // Formato YYYY-MM-DD
         }
 
-        // Inicializa a tela de login ao carregar a página
-        showLogin();
+        // Verifica se o usuário já está logado ao carregar a página
+        checkUserLoggedIn();
     </script>
 </body>
 </html>
