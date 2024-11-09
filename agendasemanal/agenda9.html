@@ -3,104 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agenda Semanal com Autenticação</title>
+    <title>Agenda Semanal</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
     <style>
-        /* Estilos básicos e responsivos */
+        /* Estilos de layout */
         body {
             font-family: 'Roboto', sans-serif;
             display: flex;
             justify-content: center;
-            align-items: center;
             min-height: 100vh;
             margin: 0;
-            background-color: #f5f7fa;
+            background-color: #f0f2f5;
             flex-direction: column;
+            color: #333;
         }
-        #login-container, #register-container, #agenda-container {
-            max-width: 600px;
+        #app-container {
+            max-width: 1000px;
             width: 100%;
-            padding: 20px;
+            margin: 20px;
             background-color: white;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            border-radius: 10px;
-            margin: 10px;
-        }
-        input[type="text"], input[type="password"] {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            border: 1px solid #ddd;
             border-radius: 8px;
-            font-size: 16px;
+            overflow: hidden;
         }
-        button {
-            padding: 12px;
-            background-color: #4CAF50;
+        #header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background-color: #0078d4;
+            color: white;
+        }
+        #header h1 {
+            font-size: 1.5rem;
+            margin: 0;
+        }
+        #header button {
+            padding: 10px 20px;
+            background-color: #e81123;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        #form-container {
+            padding: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background-color: #f3f4f6;
+        }
+        #form-container input, #form-container button {
+            padding: 10px;
+            font-size: 1rem;
+            border-radius: 4px;
+        }
+        #form-container input {
+            border: 1px solid #ccc;
+            flex: 1;
+        }
+        #form-container button {
+            background-color: #0078d4;
             color: white;
             border: none;
             cursor: pointer;
-            border-radius: 8px;
-            font-size: 16px;
         }
-        button:hover {
-            background-color: #45a049;
+        #agenda-table-container {
+            overflow-x: auto;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
-            overflow-x: auto;
         }
         th, td {
-            padding: 12px;
+            padding: 10px;
             border: 1px solid #ddd;
             text-align: center;
-            min-width: 100px;
-            height: 60px;
+            min-width: 120px;
         }
         th {
-            background-color: #f4f4f4;
-            font-size: 16px;
+            background-color: #f3f4f6;
+            font-size: 1rem;
+            font-weight: 500;
         }
         td {
-            background-color: #fff;
             cursor: pointer;
+            font-size: 0.9rem;
         }
         td:hover {
-            background-color: #e8f7fc;
+            background-color: #e1effa;
         }
     </style>
 </head>
 <body>
 
-    <!-- Tela de Login -->
-    <div id="login-container">
-        <h1>Login</h1>
-        <input type="text" id="username" placeholder="Nome de usuário" autocomplete="username">
-        <input type="password" id="password" placeholder="Senha" autocomplete="current-password">
-        <button onclick="login()">Login</button>
-        <p>Não tem uma conta? <a href="#" onclick="showRegister()">Registre-se</a></p>
-    </div>
-
-    <!-- Tela de Registro -->
-    <div id="register-container" style="display: none;">
-        <h1>Registro</h1>
-        <input type="text" id="register-username" placeholder="Nome de usuário" autocomplete="username">
-        <input type="password" id="register-password" placeholder="Senha (até 4 números)" autocomplete="new-password">
-        <button onclick="register()">Registrar</button>
-        <p>Já tem uma conta? <a href="#" onclick="showLogin()">Faça Login</a></p>
-    </div>
-
-    <!-- Agenda -->
-    <div id="agenda-container" style="display: none;">
-        <h1>Sua Agenda</h1>
+<div id="app-container">
+    <div id="header">
+        <h1>Agenda Semanal</h1>
         <button onclick="logout()">Sair</button>
+    </div>
 
+    <!-- Formulário de criação e pesquisa de eventos -->
+    <div id="form-container">
+        <input type="datetime-local" id="event-date">
+        <input type="text" id="event-description" placeholder="Descrição do evento">
+        <button onclick="createEvent()">Criar Evento</button>
+        <button onclick="searchEvent()">Pesquisar Evento</button>
+    </div>
+
+    <!-- Tabela da Agenda -->
+    <div id="agenda-table-container">
         <table id="agenda-table">
             <thead>
                 <tr>
@@ -116,141 +129,105 @@
             </thead>
             <tbody id="agenda-body"></tbody>
         </table>
-
-        <!-- Campo para criar e pesquisar eventos -->
-        <div>
-            <input type="datetime-local" id="event-date">
-            <input type="text" id="event-description" placeholder="Descrição do evento">
-            <button onclick="createEvent()">Criar Evento</button>
-            <button onclick="searchEvent()">Pesquisar Evento</button>
-        </div>
     </div>
+</div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
-            authDomain: "agenda-6accc.firebaseapp.com",
-            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
-            projectId: "agenda-6accc",
-            storageBucket: "agenda-6accc.appspot.com",
-            messagingSenderId: "205960633520",
-            appId: "1:205960633520:web:c9b1b9e166a8e3daed1dc6"
-        };
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+<script>
+    // Configuração do Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+        authDomain: "agenda-6accc.firebaseapp.com",
+        databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+        projectId: "agenda-6accc",
+        storageBucket: "agenda-6accc.appspot.com",
+        messagingSenderId: "205960633520",
+        appId: "1:205960633520:web:c9b1b9e166a8e3daed1dc6"
+    };
 
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const database = firebase.database();
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const database = firebase.database();
 
-        let currentUserId = null;
+    let currentUserId = null;
 
-        function showLogin() {
-            document.getElementById('login-container').style.display = 'block';
-            document.getElementById('register-container').style.display = 'none';
-            document.getElementById('agenda-container').style.display = 'none';
-        }
-
-        function showRegister() {
-            document.getElementById('login-container').style.display = 'none';
-            document.getElementById('register-container').style.display = 'block';
-            document.getElementById('agenda-container').style.display = 'none';
-        }
-
-        function showAgenda() {
-            document.getElementById('login-container').style.display = 'none';
-            document.getElementById('register-container').style.display = 'none';
-            document.getElementById('agenda-container').style.display = 'block';
+    function initApp() {
+        currentUserId = localStorage.getItem('currentUserId');
+        if (currentUserId) {
             loadAgenda();
+        } else {
+            window.location.href = 'login.html'; // Redireciona para a tela de login
         }
+    }
 
-        function register() {
-            const username = document.getElementById('register-username').value;
-            const password = document.getElementById('register-password').value;
+    function loadAgenda() {
+        const agendaBody = document.getElementById('agenda-body');
+        agendaBody.innerHTML = '';
+        
+        const hours = Array.from({ length: 24 * 2 }, (_, i) => {
+            const hour = Math.floor(i / 2).toString().padStart(2, '0');
+            const minute = i % 2 === 0 ? "00" : "30";
+            return `${hour}:${minute}`;
+        });
 
-            if (!username || !/^[a-zA-Z0-9]+$/.test(username) || !/^\d{1,4}$/.test(password)) {
-                alert('Usuário ou senha inválidos.');
-                return;
-            }
+        hours.forEach(hour => {
+            const row = document.createElement('tr');
+            const hourCell = document.createElement('td');
+            hourCell.textContent = hour;
+            row.appendChild(hourCell);
 
-            database.ref('users/' + username).set({ password })
-                .then(() => {
-                    alert('Registrado com sucesso!');
-                    showLogin();
-                })
-                .catch(error => alert('Erro no registro: ' + error.message));
-        }
-
-        function login() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-
-            database.ref('users/' + username).once('value', snapshot => {
-                if (snapshot.exists() && snapshot.val().password === password) {
-                    currentUserId = username;
-                    showAgenda();
-                } else alert('Credenciais inválidas!');
+            ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].forEach(day => {
+                const cell = document.createElement('td');
+                cell.onclick = () => openEventModal(day, hour);
+                row.appendChild(cell);
             });
+            agendaBody.appendChild(row);
+        });
+    }
+
+    function createEvent() {
+        const dateTime = document.getElementById('event-date').value;
+        const description = document.getElementById('event-description').value;
+        if (!dateTime || !description || !currentUserId) {
+            alert('Preencha todos os campos.');
+            return;
         }
 
-        function logout() {
-            currentUserId = null;
-            showLogin();
+        database.ref(`events/${currentUserId}/${dateTime}`).set({ description })
+            .then(() => {
+                alert('Evento criado!');
+                loadAgenda();
+            })
+            .catch(error => alert('Erro ao criar evento: ' + error.message));
+    }
+
+    function searchEvent() {
+        const dateTime = document.getElementById('event-date').value;
+        if (!dateTime || !currentUserId) {
+            alert('Insira a data e a hora para pesquisar.');
+            return;
         }
 
-        function loadAgenda() {
-            const agendaBody = document.getElementById('agenda-body');
-            agendaBody.innerHTML = '';
-            const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0') + ":00");
+        database.ref(`events/${currentUserId}/${dateTime}`).once('value')
+            .then(snapshot => {
+                if (snapshot.exists()) {
+                    document.getElementById('event-description').value = snapshot.val().description;
+                } else {
+                    alert('Evento não encontrado.');
+                }
+            })
+            .catch(error => alert('Erro na pesquisa: ' + error.message));
+    }
 
-            hours.forEach(hour => {
-                const row = document.createElement('tr');
-                const hourCell = document.createElement('td');
-                hourCell.textContent = hour;
-                row.appendChild(hourCell);
+    function logout() {
+        localStorage.removeItem('currentUserId');
+        window.location.href = 'login.html';
+    }
 
-                ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].forEach(day => {
-                    const cell = document.createElement('td');
-                    cell.textContent = "Adicionar evento";
-                    cell.onclick = () => openEventModal(day, hour);
-                    row.appendChild(cell);
-                });
-
-                agendaBody.appendChild(row);
-            });
-        }
-
-        function createEvent() {
-            const dateTime = document.getElementById('event-date').value;
-            const description = document.getElementById('event-description').value;
-            if (!dateTime || !description || !currentUserId) {
-                alert('Preencha todos os campos.');
-                return;
-            }
-
-            database.ref(`events/${currentUserId}/${dateTime}`).set({ description })
-                .then(() => alert('Evento criado!'))
-                .catch(error => alert('Erro ao criar evento: ' + error.message));
-        }
-
-        function searchEvent() {
-            const dateTime = document.getElementById('event-date').value;
-            if (!dateTime || !currentUserId) {
-                alert('Insira a data e a hora para pesquisar.');
-                return;
-            }
-
-            database.ref(`events/${currentUserId}/${dateTime}`).once('value')
-                .then(snapshot => {
-                    if (snapshot.exists()) {
-                        document.getElementById('event-description').value = snapshot.val().description;
-                    } else {
-                        alert('Evento não encontrado.');
-                    }
-                })
-                .catch(error => alert('Erro na pesquisa: ' + error.message));
-        }
-    </script>
+    window.addEventListener('load', initApp);
+</script>
 </body>
 </html>
+
