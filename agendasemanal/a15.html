@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda Semanal com Autenticação</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+    <style>
+        body { font-family: 'Roboto', sans-serif; padding: 20px; }
+        h1 { text-align: center; }
+        input[type="text"], input[type="password"], input[type="date"] {
+            width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px;
+        }
+        button { background-color: #007bff; color: white; padding: 10px; border: none; border-radius: 5px; width: 100%; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        #agenda-table { width: 100%; margin-top: 20px; border-collapse: collapse; }
+        #agenda-table th, #agenda-table td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        .editable { cursor: pointer; }
+        #login-container, #register-container, #agenda-container { display: none; }
+        .terms-container { margin-top: 20px; font-size: 0.9em; color: #555; }
+        .terms-container a { color: #007bff; text-decoration: none; }
+        .terms-container input { margin-right: 10px; }
+    </style>
+</head>
+<body>
+
+    <!-- Tela de Login -->
+    <div id="login-container">
+        <h1>Login</h1>
+        <input type="text" id="username" placeholder="Nome de usuário" autocomplete="username">
+        <input type="password" id="password" placeholder="Senha" autocomplete="current-password">
+        <button onclick="login()">Login</button>
+        <p>Não tem uma conta? <a href="#" onclick="showRegister()">Registre-se</a></p>
+    </div>
+
+    <!-- Tela de Registro -->
+    <div id="register-container">
+        <h1>Registro</h1>
+        <input type="text" id="register-username" placeholder="Nome de usuário" autocomplete="username">
+        <input type="password" id="register-password" placeholder="Senha (até 4 números)" autocomplete="new-password">
+        
+        <!-- Política de Privacidade -->
+        <div class="terms-container">
+            <label>
+                <input type="checkbox" id="accept-terms"> 
+                Eu li e aceito a <a href="#" onclick="showTerms()">Política de Privacidade e Segurança</a>.
+            </label>
+        </div>
+        
+        <button onclick="register()" id="register-button" disabled>Registrar</button>
+        <p>Já tem uma conta? <a href="#" onclick="showLogin()">Faça Login</a></p>
+    </div>
+
+    <!-- Política de Privacidade e Segurança -->
+    <div id="terms-container" style="display:none;">
+        <h2>Política de Privacidade e Segurança</h2>
+        <p>Leia atentamente os termos abaixo:</p>
+        <ul>
+            <li>Seu nome de usuário e senha serão armazenados de forma segura.</li>
+            <li>Não compartilhamos suas informações pessoais com terceiros.</li>
+            <li>Usamos cookies para melhorar a experiência no aplicativo.</li>
+            <li>Você tem o direito de solicitar a exclusão de seus dados pessoais.</li>
+        </ul>
+        <button onclick="closeTerms()">Fechar</button>
+    </div>
+
+    <!-- Agenda -->
+    <div id="agenda-container">
+        <h1>Bem-vindo à sua Agenda</h1>
+        <label>Data de início da semana:</label>
+        <input type="date" id="start-date" onchange="loadAgenda()">
+        <button onclick="logout()">Sair</button>
+
+        <table id="agenda-table">
+            <thead>
+                <tr>
+                    <th>Hora</th>
+                    <th>Segunda</th>
+                    <th>Terça</th>
+                    <th>Quarta</th>
+                    <th>Quinta</th>
+                    <th>Sexta</th>
+                    <th>Sábado</th>
+                    <th>Domingo</th>
+                </tr>
+            </thead>
+            <tbody id="agenda-body"></tbody>
+        </table>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "205960633520",
+            appId: "1:205960633520:web:c9b1b9e166a8e3daed1dc6"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        let currentUserId = null;
+
+        // Carrega a agenda automaticamente na data atual ao abrir
+        window.onload = function() {
+            document.getElementById('start-date').valueAsDate = new Date();
+            checkUserLoggedIn();
+        }
+
+        function checkUserLoggedIn() {
+            const storedUser = localStorage.getItem('username');
+            if (storedUser) {
+                currentUserId = storedUser;
+                showAgenda();
+            } else {
+                showLogin();
+            }
+        }
+
+        function showLogin() {
+            document.getElementById('login-container').style.display = 'block';
+            document.getElementById('register-container').style.display = 'none';
+            document.getElementById('agenda-container').style.display = 'none';
+        }
+
+        function showRegister() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('register-container').style.display = 'block';
+            document.getElementById('agenda-container').style.display = 'none';
+        }
+
+        function showAgenda() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('register-container').style.display = 'none';
+            document.getElementById('agenda-container').style.display = 'block';
+            loadAgenda();
+        }
+
+        function register() {
+            const username = document.getElementById('register-username').value;
+            const password = document.getElementById('register-password').value;
+
+            if (!username || !/^[a-zA-Z0-9]+$/.test(username)) {
+                alert('Nome de usuário inválido. Deve ser uma palavra sem espaços.');
+                return;
+            }
+
+            if (!password || !/^\d{1,4}$/.test(password)) {
+                alert('Senha inválida. Deve ser um número de até 4 dígitos.');
+                return;
+            }
+
+            const userRef = database.ref('users/' + username);
+            userRef.once('value', snapshot => {
+                if (snapshot.exists()) {
+                    alert('Este nome de usuário já existe!');
+                    return;
+                }
+
+                userRef.set({ password: password })
+                .then(() => {
+                    alert('Usuário registrado com sucesso!');
+                    showLogin();
+                })
+                .catch(error => {
+                    alert('Erro no registro: ' + error.message);
+                });
+            });
+        }
+
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            const userRef = database.ref('users/' + username);
+            userRef.once('value', snapshot => {
+                const userData = snapshot.val();
+                if (userData && userData.password === password) {
+                    currentUserId = username;
+                    localStorage.setItem('username', username);
+                    showAgenda();
+                } else {
+                    alert('Credenciais inválidas!');
+                }
+            });
+        }
+
+        function logout() {
+            currentUserId = null;
+            localStorage.removeItem('username');
+            showLogin();
+        }
+
+        function loadAgenda() {
+            const startDateInput = document.getElementById('start-date').value;
+            if (!startDateInput) return;
+
+            const startDate = new Date(startDateInput);
+            startDate.setHours(0, 0, 0, 0);
+            startDate.setDate(startDate.getDate() - startDate.getDay() + 1);
+
+            const weekDates = getWeekDates(startDate);
+            updateTableHeaders(weekDates);
+
+            const agendaRef = database.ref('agendas/' + currentUserId);
+            agendaRef.once('value', snapshot => {
+                const agendaData = snapshot.val() || {};
+                renderAgendaTable(agendaData, weekDates);
+            });
+        }
+
+        function getWeekDates(startDate) {
+            const dates = [];
+            for (let i = 0; i < 7; i++) {
+                const currentDate = new Date(startDate);
+                currentDate.setDate(startDate.getDate() + i);
+                dates.push(currentDate);
+            }
+            return dates;
+        }
+
+        function updateTableHeaders(weekDates) {
+            const headers = document.querySelectorAll("#agenda-table th");
+            weekDates.forEach((date, index) => {
+                headers[index + 1].textContent = date.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
+            });
+        }
+
+        function renderAgendaTable(agendaData, weekDates) {
+            const tbody = document.getElementById('agenda-body');
+            tbody.innerHTML = '';
+
+            weekDates.forEach((date, index) => {
+                const row = document.createElement('tr');
+                const timeCell = document.createElement('td');
+                timeCell.textContent = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                row.appendChild(timeCell);
+
+                for (let i = 0; i < 7; i++) {
+                    const cell = document.createElement('td');
+                    const dayKey = date.toLocaleDateString('pt-BR');
+                    const dayAgenda = agendaData[dayKey] || '';
+                    cell.textContent = dayAgenda;
+                    row.appendChild(cell);
+                }
+
+                tbody.appendChild(row);
+            });
+        }
+
+        function showTerms() {
+            document.getElementById('terms-container').style.display = 'block';
+        }
+
+        function closeTerms() {
+            document.getElementById('terms-container').style.display = 'none';
+        }
+        
+        // Ativar ou desativar o botão de registro dependendo da aceitação dos termos
+        document.getElementById('accept-terms').addEventListener('change', function() {
+            document.getElementById('register-button').disabled = !this.checked;
+        });
+    </script>
+
+</body>
+</html>
