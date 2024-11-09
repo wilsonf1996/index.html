@@ -58,8 +58,10 @@
     <!-- Tela de Login -->
     <div id="login-container">
         <h1>Login</h1>
-        <input type="text" id="username" placeholder="Nome de usuário" autocomplete="username">
-        <input type="password" id="password" placeholder="Senha" autocomplete="current-password">
+        <label for="login-username">Nome de usuário</label>
+        <input type="text" id="login-username" name="login-username" placeholder="Nome de usuário" autocomplete="username">
+        <label for="login-password">Senha</label>
+        <input type="password" id="login-password" name="login-password" placeholder="Senha" autocomplete="current-password">
         <button onclick="login()">Login</button>
         <p>Não tem uma conta? <a href="#" onclick="showRegister()">Registre-se</a></p>
     </div>
@@ -67,8 +69,10 @@
     <!-- Tela de Registro -->
     <div id="register-container" style="display: none;">
         <h1>Registro</h1>
-        <input type="text" id="register-username" placeholder="Nome de usuário" autocomplete="username">
-        <input type="password" id="register-password" placeholder="Senha (até 4 números)" autocomplete="new-password">
+        <label for="register-username">Nome de usuário</label>
+        <input type="text" id="register-username" name="register-username" placeholder="Nome de usuário" autocomplete="username">
+        <label for="register-password">Senha (até 4 números)</label>
+        <input type="password" id="register-password" name="register-password" placeholder="Senha (até 4 números)" autocomplete="new-password">
         <button onclick="register()">Registrar</button>
         <p>Já tem uma conta? <a href="#" onclick="showLogin()">Faça Login</a></p>
     </div>
@@ -76,8 +80,8 @@
     <!-- Agenda -->
     <div id="agenda-container" style="display: none;">
         <h1>Bem-vindo à sua Agenda</h1>
-        <label>Data de início da semana:</label>
-        <input type="date" id="start-date" onchange="loadAgenda()">
+        <label for="start-date">Data de início da semana:</label>
+        <input type="date" id="start-date" name="start-date" onchange="loadAgenda()">
         <button onclick="logout()">Sair</button>
 
         <table id="agenda-table">
@@ -158,8 +162,8 @@
         }
 
         function login() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
 
             const userRef = database.ref('users/' + username);
             userRef.once('value', snapshot => {
@@ -190,70 +194,42 @@
             // Atualiza os cabeçalhos da agenda com as datas corretas
             updateTableHeaders(weekDates);
 
-            const formattedStartDate = formatDateToISO(weekDates[0]); // A primeira data (como a segunda-feira)
+            const formattedStartDate = formatDateToISO(weekDates[0]); // A primeira data da semana
 
+            // Busca os dados da agenda no Firebase para o usuário atual
             const agendaRef = database.ref('agendas/' + currentUserId + '/' + formattedStartDate);
             agendaRef.once('value', snapshot => {
                 const agendaData = snapshot.val() || {};
-                renderAgendaTable(agendaData, weekDates);
+
+                const tbody = document.getElementById('agenda-body');
+                tbody.innerHTML = '';
+
+                for (let hour = 7; hour <= 22; hour++) {
+                    const row = document.createElement('tr');
+                    const hourCell = document.createElement('td');
+                    hourCell.textContent = hour + ':00';
+                    row.appendChild(hourCell);
+
+                    weekDates.forEach((date, index) => {
+                        const dateStr = formatDateToISO(date);
+                        const cell = document.createElement('td');
+                        const cellData = agendaData[dateStr] && agendaData[dateStr][hour] || '';
+                        cell.textContent = cellData;
+                        cell.classList.add('editable');
+                        cell.onclick = () => editCell(cell, hour, index, dateStr);
+                        row.appendChild(cell);
+                    });
+
+                    tbody.appendChild(row);
+                }
             });
         }
 
         function updateTableHeaders(weekDates) {
-            const thElements = document.querySelectorAll('#agenda-table thead th');
-            for (let i = 1; i <= 7; i++) {
-                thElements[i].textContent = `${weekDates[i-1].toLocaleDateString('pt-BR', { weekday: 'short' })} (${weekDates[i-1].toLocaleDateString('pt-BR')})`;
-            }
-        }
-
-        function renderAgendaTable(agendaData, weekDates) {
-            const tbody = document.getElementById('agenda-body');
-            tbody.innerHTML = '';
-
-            let hours = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
-
-            hours.forEach(hour => {
-                const tr = document.createElement('tr');
-                const tdHour = document.createElement('td');
-                tdHour.textContent = hour;
-                tr.appendChild(tdHour);
-
-                weekDates.forEach((date, index) => {
-                    const td = document.createElement('td');
-                    const dateStr = formatDateToISO(date);
-                    td.textContent = agendaData[dateStr]?.[hour] || '';
-
-                    td.classList.add('editable');
-                    td.onclick = () => editCell(td, hour, index, dateStr);
-
-                    tr.appendChild(td);
-                });
-
-                tbody.appendChild(tr);
+            const headers = document.querySelectorAll('#agenda-table th');
+            weekDates.forEach((date, index) => {
+                headers[index + 1].textContent = formatDateToISO(date);
             });
-        }
-
-        function editCell(cell, hour, day, dateStr) {
-            const currentText = cell.textContent;
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.value = currentText;
-            input.onblur = () => updateCellData(cell, hour, day, dateStr, input.value);
-            input.onkeydown = (e) => {
-                if (e.key === 'Enter') input.blur();
-            };
-
-            cell.textContent = '';
-            cell.appendChild(input);
-            input.focus();
-        }
-
-        function updateCellData(cell, hour, day, dateStr, newValue) {
-            if (!currentUserId) return;
-
-            const agendaRef = database.ref('agendas/' + currentUserId + '/' + dateStr);
-            agendaRef.child(hour).set(newValue);
-            cell.textContent = newValue;
         }
 
         function getWeekDates(startDate) {
@@ -267,7 +243,30 @@
         }
 
         function formatDateToISO(date) {
-            return date.toISOString().split('T')[0];  // Retorna a data no formato "yyyy-mm-dd"
+            return date.toISOString().split('T')[0];
+        }
+
+        function editCell(cell, hour, dayIndex, dateStr) {
+            const currentText = cell.textContent;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentText;
+            input.onblur = () => updateCellData(cell, hour, dayIndex, dateStr, input.value);
+            input.onkeydown = (e) => {
+                if (e.key === 'Enter') input.blur();
+            };
+
+            cell.textContent = '';
+            cell.appendChild(input);
+            input.focus();
+        }
+
+        function updateCellData(cell, hour, dayIndex, dateStr, newValue) {
+            if (!currentUserId) return;
+
+            const agendaRef = database.ref('agendas/' + currentUserId + '/' + dateStr);
+            agendaRef.child(hour).set(newValue);
+            cell.textContent = newValue;
         }
 
         window.onload = showLogin;
