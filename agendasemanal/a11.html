@@ -8,14 +8,13 @@
     <style>
         body {
             font-family: 'Roboto', sans-serif;
-            margin: 0;
-            background-color: #f5f7fa;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
+            margin: 0;
+            background-color: #f5f7fa;
             flex-direction: column;
-            padding: 10px;
         }
         #login-container, #register-container, #agenda-container {
             max-width: 1000px;
@@ -60,7 +59,7 @@
             border: 1px solid #ddd;
             text-align: center;
             min-width: 120px;
-            height: 60px;
+            height: 100px;
         }
         th {
             background-color: #f4f4f4;
@@ -103,17 +102,12 @@
             background-color: #fff;
             font-size: 16px;
         }
-
-        /* Layout responsivo */
         @media (max-width: 768px) {
-            body {
-                padding: 20px;
-            }
             table {
                 font-size: 14px;
             }
-            input[type="text"], input[type="password"], button {
-                font-size: 14px;
+            button {
+                width: 100%;
             }
         }
     </style>
@@ -144,13 +138,9 @@
         <select id="week-selector" onchange="loadAgenda(this.value)">
             <!-- Opções de semanas serão preenchidas aqui -->
         </select>
+        <input type="datetime-local" id="search-date" onchange="searchEvent()">
+        <button onclick="createEvent()">Criar Evento</button>
         <button onclick="logout()">Sair</button>
-
-        <!-- Pesquisa por data e hora -->
-        <div>
-            <h3>Pesquisar Evento:</h3>
-            <input type="datetime-local" id="search-datetime" onchange="searchEvent()">
-        </div>
 
         <table id="agenda-table">
             <thead>
@@ -213,39 +203,32 @@
             const username = document.getElementById('register-username').value;
             const password = document.getElementById('register-password').value;
 
-            // Verificando se o nome de usuário já existe
+            // Verificar se o nome de usuário já existe
             const userRef = database.ref('users/' + username);
             userRef.once('value', snapshot => {
                 if (snapshot.exists()) {
-                    alert('Nome de usuário já existe. Escolha outro.');
-                    return;
-                }
+                    alert('Este nome de usuário já existe!');
+                } else {
+                    if (!username || !/^[a-zA-Z0-9]+$/.test(username)) {
+                        alert('Nome de usuário inválido. Deve ser uma palavra sem espaços.');
+                        return;
+                    }
 
-                // Validação para o nome de usuário ser uma palavra única e a senha ser numérica e até 4 dígitos
-                if (!username || !/^[a-zA-Z0-9]+$/.test(username)) {
-                    alert('Nome de usuário inválido.');
-                    return;
-                }
+                    if (!password || !/^\d{1,4}$/.test(password)) {
+                        alert('Senha inválida. Deve ser um número de até 4 dígitos.');
+                        return;
+                    }
 
-                if (password.length !== 4 || isNaN(password)) {
-                    alert('Senha deve ter 4 dígitos numéricos.');
-                    return;
-                }
-
-                auth.createUserWithEmailAndPassword(username + "@example.com", password)
-                    .then((userCredential) => {
-                        const user = userCredential.user;
-                        userRef.set({
-                            username: username,
-                            password: password
-                        }).then(() => {
-                            currentUserId = username;
-                            showAgenda();
-                        });
-                    })
-                    .catch((error) => {
-                        alert('Erro ao criar usuário: ' + error.message);
+                    userRef.set({
+                        username,
+                        password
+                    }).then(() => {
+                        alert('Usuário registrado com sucesso!');
+                        showLogin();
+                    }).catch((error) => {
+                        alert('Erro ao registrar usuário: ' + error.message);
                     });
+                }
             });
         }
 
@@ -253,19 +236,18 @@
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
 
-            // Buscando usuário no banco de dados
             const userRef = database.ref('users/' + username);
             userRef.once('value', snapshot => {
                 if (snapshot.exists()) {
-                    const user = snapshot.val();
-                    if (user.password === password) {
+                    const userData = snapshot.val();
+                    if (userData.password === password) {
                         currentUserId = username;
                         showAgenda();
                     } else {
-                        alert('Senha incorreta.');
+                        alert('Senha incorreta!');
                     }
                 } else {
-                    alert('Usuário não encontrado.');
+                    alert('Usuário não encontrado!');
                 }
             });
         }
@@ -276,65 +258,53 @@
         }
 
         function populateWeeks() {
-            const weeks = ['Semana 1', 'Semana 2', 'Semana 3', 'Semana 4', 'Semana 5'];
             const weekSelector = document.getElementById('week-selector');
-            weeks.forEach((week, index) => {
+            weekSelector.innerHTML = '';
+            for (let i = 1; i <= 52; i++) {
                 const option = document.createElement('option');
-                option.value = index + 1;
-                option.text = week;
+                option.value = i;
+                option.textContent = `Semana ${i}`;
                 weekSelector.appendChild(option);
-            });
-        }
-
-        function loadAgenda(week) {
-            const agendaRef = database.ref('agenda/' + currentUserId + '/semana_' + week);
-            agendaRef.once('value', snapshot => {
-                const agenda = snapshot.val();
-                const tbody = document.getElementById('agenda-body');
-                tbody.innerHTML = '';
-
-                // Criando a agenda para a semana
-                for (let hour = 0; hour < 24; hour++) {
-                    let row = '<tr>';
-                    row += '<td>' + hour + ':00</td>';
-
-                    for (let day = 1; day <= 7; day++) {
-                        const key = 'h' + hour + 'd' + day;
-                        row += '<td class="editable" onclick="editCell(this, \'' + key + '\', \'' + agenda[key] + '\')">';
-                        row += agenda[key] ? agenda[key] : 'Sem evento';
-                        row += '</td>';
-                    }
-                    row += '</tr>';
-                    tbody.innerHTML += row;
-                }
-            });
-        }
-
-        function editCell(cell, key, existingEvent) {
-            const event = prompt('Digite o evento:', existingEvent);
-            if (event) {
-                const agendaRef = database.ref('agenda/' + currentUserId);
-                agendaRef.child('semana_1/' + key).set(event).then(() => {
-                    cell.innerText = event;
-                });
             }
         }
 
-        function searchEvent() {
-            const searchDatetime = document.getElementById('search-datetime').value;
-            const datetime = new Date(searchDatetime);
-            const hour = datetime.getHours();
-            const day = datetime.getDay(); // 0 - Domingo, 1 - Segunda, etc.
+        function loadAgenda(weekNumber) {
+            const agendaBody = document.getElementById('agenda-body');
+            agendaBody.innerHTML = '';
 
-            // Consultar evento no banco de dados para a hora e dia
-            const key = 'h' + hour + 'd' + day;
-            const agendaRef = database.ref('agenda/' + currentUserId);
-            agendaRef.once('value', snapshot => {
-                const agenda = snapshot.val();
-                alert(agenda[key] || 'Nenhum evento encontrado para este horário.');
+            const times = [
+                '00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', 
+                '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30',
+                '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+                '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
+                '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30',
+                '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30'
+            ];
+            
+            times.forEach(time => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${time}</td>
+                                 <td class="editable" contenteditable="true" data-time="${time}" data-day="Segunda"> </td>
+                                 <td class="editable" contenteditable="true" data-time="${time}" data-day="Terça"> </td>
+                                 <td class="editable" contenteditable="true" data-time="${time}" data-day="Quarta"> </td>
+                                 <td class="editable" contenteditable="true" data-time="${time}" data-day="Quinta"> </td>
+                                 <td class="editable" contenteditable="true" data-time="${time}" data-day="Sexta"> </td>
+                                 <td class="editable" contenteditable="true" data-time="${time}" data-day="Sábado"> </td>
+                                 <td class="editable" contenteditable="true" data-time="${time}" data-day="Domingo"> </td>`;
+                agendaBody.appendChild(row);
             });
+        }
+
+        function createEvent() {
+            const eventDate = document.getElementById('search-date').value;
+            const eventTime = eventDate.split('T')[1];
+            alert(`Evento criado para ${eventTime}`);
+        }
+
+        function searchEvent() {
+            const searchDate = document.getElementById('search-date').value;
+            alert(`Pesquisando evento para ${searchDate}`);
         }
     </script>
 </body>
 </html>
-
