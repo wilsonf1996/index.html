@@ -183,14 +183,13 @@
             if (!startDateInput) return;
 
             const startDate = new Date(startDateInput);
-
             const weekDates = getWeekDates(startDate);
 
             updateTableHeaders(weekDates);
 
             const formattedStartDate = formatDateToISO(weekDates[0]); 
 
-            const agendaRef = database.ref('agendas/' + currentUserId + '/semana/' + formattedStartDate);
+            const agendaRef = database.ref('agendas/' + currentUserId + '/' + formattedStartDate);
             agendaRef.once('value', snapshot => {
                 const agendaData = snapshot.val() || {};
                 renderAgendaTable(agendaData, weekDates);
@@ -211,35 +210,34 @@
             let hours = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
 
             hours.forEach(hour => {
-                const tr = document.createElement('tr');
-                const tdHour = document.createElement('td');
-                tdHour.textContent = hour;
-                tr.appendChild(tdHour);
+                let row = document.createElement('tr');
+                let hourCell = document.createElement('td');
+                hourCell.textContent = hour;
+                row.appendChild(hourCell);
 
                 weekDates.forEach((date, index) => {
-                    const td = document.createElement('td');
                     const dateStr = formatDateToISO(date);
-                    td.textContent = agendaData[dateStr]?.[hour] || '';
-
-                    td.classList.add('editable');
-                    td.onclick = () => editCell(td, hour, index, dateStr);
-
-                    tr.appendChild(td);
+                    const data = agendaData[dateStr] ? agendaData[dateStr][hour] : '';
+                    const cell = document.createElement('td');
+                    cell.classList.add('editable');
+                    cell.textContent = data || '';
+                    cell.onclick = () => editCellData(cell, hour, dateStr);
+                    row.appendChild(cell);
                 });
 
-                tbody.appendChild(tr);
+                tbody.appendChild(row);
             });
         }
 
-        function editCell(cell, hour, day, dateStr) {
-            const currentText = cell.textContent;
+        function editCellData(cell, hour, dateStr) {
+            const oldValue = cell.textContent;
             const input = document.createElement('input');
             input.type = 'text';
-            input.value = currentText;
-            input.onblur = () => updateCellData(cell, hour, day, dateStr, input.value);
+            input.value = oldValue;
+            input.onblur = () => updateCellData(cell, hour, dateStr, input.value);
             input.onkeydown = (e) => {
                 if (e.key === 'Enter') {
-                    updateCellData(cell, hour, day, dateStr, input.value);
+                    updateCellData(cell, hour, dateStr, input.value);
                 }
             };
             cell.innerHTML = '';
@@ -247,10 +245,10 @@
             input.focus();
         }
 
-        function updateCellData(cell, hour, day, dateStr, newValue) {
+        function updateCellData(cell, hour, dateStr, newValue) {
             if (!currentUserId) return;
 
-            const agendaRef = database.ref('agendas/' + currentUserId + '/semana/' + dateStr);
+            const agendaRef = database.ref('agendas/' + currentUserId + '/' + dateStr);
             agendaRef.child(hour).set(newValue)
                 .then(() => {
                     cell.textContent = newValue;
@@ -280,5 +278,4 @@
     </script>
 </body>
 </html>
-
 
