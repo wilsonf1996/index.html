@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Treino Semanal com Autenticação</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+    <style>
+        body { 
+            font-family: 'Roboto', sans-serif; 
+            padding: 20px; 
+            background-color: #f4f7fb; 
+            color: #333; 
+            margin: 0;
+        }
+
+        h1 { 
+            text-align: center; 
+            color: #2c3e50; 
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+
+        input[type="text"], input[type="password"], input[type="date"] {
+            width: 100%; 
+            padding: 12px; 
+            margin: 12px 0; 
+            border: 1px solid #ccc; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); 
+            font-size: 16px;
+        }
+
+        button { 
+            background-color: #007bff; 
+            color: white; 
+            padding: 12px; 
+            border: none; 
+            border-radius: 8px; 
+            width: 100%; 
+            cursor: pointer; 
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover { 
+            background-color: #0056b3; 
+        }
+
+        #treino-table { 
+            width: 100%; 
+            margin-top: 20px; 
+            border-collapse: separate; 
+            border-spacing: 0 10px; 
+        }
+
+        #treino-table th, #treino-table td { 
+            border: 1px solid #ddd; 
+            padding: 12px; 
+            text-align: center; 
+            background-color: #fff; 
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); 
+        }
+
+        #treino-table th { 
+            position: sticky; 
+            top: 0; 
+            background-color: #007bff; 
+            color: white; 
+            z-index: 1; 
+        }
+
+        .editable { 
+            cursor: pointer; 
+            color: #007bff; 
+        }
+
+        #login-container, #register-container, #treino-container, #terms-container { 
+            display: none; 
+        }
+
+        footer { 
+            text-align: center; 
+            font-size: 14px; 
+            margin-top: 40px; 
+            color: #555; 
+            padding: 20px 0; 
+            background-color: #f8f9fa; 
+            border-top: 1px solid #ddd;
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            h1 { font-size: 1.5em; }
+            input[type="text"], input[type="password"], input[type="date"], button { font-size: 14px; }
+            #treino-table th, #treino-table td { padding: 10px; font-size: 14px; }
+            footer { font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Tela de Login -->
+    <div id="login-container">
+        <h1>Login</h1>
+        <input type="text" id="username" placeholder="Nome de usuário" autocomplete="username">
+        <input type="password" id="password" placeholder="Senha" autocomplete="current-password">
+        <button onclick="login()">Login</button>
+        <p>Não tem uma conta? <a href="#" onclick="showRegister()">Registre-se</a></p>
+    </div>
+
+    <!-- Tela de Registro -->
+    <div id="register-container">
+        <h1>Registro</h1>
+        <input type="text" id="register-username" placeholder="Nome de usuário" autocomplete="username">
+        <input type="password" id="register-password" placeholder="Senha (até 4 números)" autocomplete="new-password">
+        <button onclick="register()">Registrar</button>
+        <p>Já tem uma conta? <a href="#" onclick="showLogin()">Faça Login</a></p>
+    </div>
+
+    <!-- Tela de Treinos -->
+    <div id="treino-container">
+        <h1>Bem-vindo ao seu Treino Semanal</h1>
+        <label>Data de início da semana:</label>
+        <input type="date" id="start-date" onchange="loadTreino()">
+        <button onclick="logout()">Sair</button>
+
+        <table id="treino-table">
+            <thead>
+                <tr>
+                    <th>Hora</th>
+                    <th>Segunda</th>
+                    <th>Terça</th>
+                    <th>Quarta</th>
+                    <th>Quinta</th>
+                    <th>Sexta</th>
+                    <th>Sábado</th>
+                    <th>Domingo</th>
+                </tr>
+            </thead>
+            <tbody id="treino-body"></tbody>
+        </table>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "205960633520",
+            appId: "1:205960633520:web:c9b1b9e166a8e3daed1dc6"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        let currentUserId = null;
+
+        window.onload = function() {
+            document.getElementById('start-date').valueAsDate = new Date();
+            checkUserLoggedIn();
+        }
+
+        function checkUserLoggedIn() {
+            const storedUser = localStorage.getItem('username');
+            if (storedUser) {
+                currentUserId = storedUser;
+                showTreino();
+            } else {
+                showLogin();
+            }
+        }
+
+        function showLogin() {
+            document.getElementById('login-container').style.display = 'block';
+            document.getElementById('register-container').style.display = 'none';
+            document.getElementById('treino-container').style.display = 'none';
+        }
+
+        function showRegister() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('register-container').style.display = 'block';
+            document.getElementById('treino-container').style.display = 'none';
+        }
+
+        function showTreino() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('register-container').style.display = 'none';
+            document.getElementById('treino-container').style.display = 'block';
+            loadTreino();
+        }
+
+        function register() {
+            const username = document.getElementById('register-username').value;
+            const password = document.getElementById('register-password').value;
+
+            if (!username || !/^[a-zA-Z0-9]+$/.test(username)) {
+                alert('Nome de usuário inválido. Deve ser uma palavra sem espaços.');
+                return;
+            }
+
+            if (!password || !/^\d{1,4}$/.test(password)) {
+                alert('Senha inválida. Deve ser um número de até 4 dígitos.');
+                return;
+            }
+
+            const userRef = database.ref('users/' + username);
+            userRef.once('value', snapshot => {
+                if (snapshot.exists()) {
+                    alert('Este nome de usuário já existe!');
+                    return;
+                }
+
+                userRef.set({ password: password })
+                .then(() => {
+                    alert('Usuário registrado com sucesso!');
+                    showLogin();
+                })
+                .catch(error => {
+                    alert('Erro no registro: ' + error.message);
+                });
+            });
+        }
+
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            const userRef = database.ref('users/' + username);
+            userRef.once('value', snapshot => {
+                const userData = snapshot.val();
+                if (userData && userData.password === password) {
+                    currentUserId = username;
+                    localStorage.setItem('username', username);
+                    showTreino();
+                } else {
+                    alert('Usuário ou senha incorretos!');
+                }
+            });
+        }
+
+        function logout() {
+            localStorage.removeItem('username');
+            currentUserId = null;
+            showLogin();
+        }
+
+        function loadTreino() {
+            if (!currentUserId) return;
+            const treinoRef = database.ref('treinos/' + currentUserId);
+            treinoRef.once('value', snapshot => {
+                const treinoData = snapshot.val();
+                const startDate = document.getElementById('start-date').value;
+                const treinoBody = document.getElementById('treino-body');
+                treinoBody.innerHTML = '';
+
+                for (let i = 0; i < 7; i++) {
+                    const day = new Date(new Date(startDate).getTime() + i * 24 * 60 * 60 * 1000);
+                    const dayStr = day.toISOString().split('T')[0];
+                    const treinoRow = treinoData && treinoData[dayStr] ? treinoData[dayStr] : '';
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${dayStr}</td>
+                        <td class="editable" onclick="editTreino('${dayStr}', 'segunda')">${treinoRow.segunda || ''}</td>
+                        <td class="editable" onclick="editTreino('${dayStr}', 'terca')">${treinoRow.terca || ''}</td>
+                        <td class="editable" onclick="editTreino('${dayStr}', 'quarta')">${treinoRow.quarta || ''}</td>
+                        <td class="editable" onclick="editTreino('${dayStr}', 'quinta')">${treinoRow.quinta || ''}</td>
+                        <td class="editable" onclick="editTreino('${dayStr}', 'sexta')">${treinoRow.sexta || ''}</td>
+                        <td class="editable" onclick="editTreino('${dayStr}', 'sabado')">${treinoRow.sabado || ''}</td>
+                        <td class="editable" onclick="editTreino('${dayStr}', 'domingo')">${treinoRow.domingo || ''}</td>
+                    `;
+                    treinoBody.appendChild(row);
+                }
+            });
+        }
+
+        function editTreino(day, dayOfWeek) {
+            const treinoRef = database.ref('treinos/' + currentUserId + '/' + day);
+            const newTreino = prompt('Digite o treino para ' + dayOfWeek);
+            if (newTreino !== null) {
+                treinoRef.child(dayOfWeek).set(newTreino);
+            }
+        }
+    </script>
+</body>
+</html>
