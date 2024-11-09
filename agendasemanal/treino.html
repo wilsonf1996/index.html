@@ -337,30 +337,60 @@
             currentUserId = null;
             showLogin();
         }
+        function loadAgenda() {
+            const startDateInput = document.getElementById('start-date').value;
+            if (!startDateInput) return;
 
-      function loadAgenda() {
-    const startDateInput = document.getElementById('start-date').value;
-    if (!startDateInput) return;
+            const startDate = new Date(startDateInput);
+            const daysOfWeek = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
+            const agendaRef = database.ref('agenda/' + currentUserId);
 
-    const startDate = new Date(startDateInput);
-    
-    // Definir a hora para 00:00 para evitar problemas de fuso horário
-    startDate.setHours(0, 0, 0, 0);
-    
-    // Ajustar a data para a segunda-feira da semana
-    startDate.setDate(startDate.getDate() - startDate.getDay() + 1);
+            // Limpar a tabela antes de carregar os novos dados
+            const agendaBody = document.getElementById('agenda-body');
+            agendaBody.innerHTML = '';
 
-    const weekDates = getWeekDates(startDate);
+            // Carregar os dados da agenda para a semana a partir da data inicial
+            const dayOffset = startDate.getDay(); // 0 = Domingo, 1 = Segunda, etc.
+            const startOfWeek = new Date(startDate);
+            startOfWeek.setDate(startDate.getDate() - dayOffset); // Ajusta para o domingo anterior
 
-    // Chama a função para atualizar os cabeçalhos da tabela com as datas
-    updateTableHeaders(weekDates);
+            // Itera sobre os 7 dias da semana e monta as linhas da tabela
+            for (let i = 0; i < 7; i++) {
+                const currentDay = new Date(startOfWeek);
+                currentDay.setDate(startOfWeek.getDate() + i); // Avança um dia
 
-    const agendaRef = database.ref('agendas/' + currentUserId);
-    agendaRef.once('value', snapshot => {
-        const agendaData = snapshot.val() || {};
-        renderAgendaTable(agendaData, weekDates);
-    });
-}
+                // Formatar data para exibição
+                const formattedDate = currentDay.toISOString().split('T')[0];
+
+                // Criar linha da tabela
+                const row = document.createElement('tr');
+                const timeCell = document.createElement('td');
+                timeCell.innerText = formattedDate; // Exibe a data do dia
+                row.appendChild(timeCell);
+
+                // Adiciona a célula para cada dia da semana
+                for (let j = 0; j < 7; j++) {
+                    const cell = document.createElement('td');
+                    const day = daysOfWeek[j];
+                    const agendaForDayRef = agendaRef.child(`${formattedDate}/${day}`);
+
+                    // Recuperar e exibir as atividades do Firebase
+                    agendaForDayRef.once('value', snapshot => {
+                        const activities = snapshot.val();
+                        if (activities) {
+                            cell.innerHTML = activities.map(activity => activity).join('<br>');
+                        } else {
+                            cell.innerText = 'Sem atividades';
+                        }
+                    });
+
+                    row.appendChild(cell);
+                }
+
+                agendaBody.appendChild(row);
+            }
+        }
+
 
 function updateTableHeaders(weekDates) {
     const thElements = document.querySelectorAll('#agenda-table thead th');
