@@ -68,7 +68,7 @@
     <div id="login-container">
         <h1>Login</h1>
         <input type="text" id="email" placeholder="Email">
-        <input type="password" id="password" placeholder="Senha (mínimo 6 dígitos)">
+        <input type="password" id="password" placeholder="Senha (máximo 4 dígitos)">
         <button onclick="login()">Login</button>
         <p>Não tem uma conta? <a href="#" onclick="showRegister()">Registre-se</a></p>
     </div>
@@ -76,8 +76,8 @@
     <!-- Tela de Registro -->
     <div id="register-container" style="display: none;">
         <h1>Registro</h1>
-        <input type="text" id="register-email" placeholder="Email">
-        <input type="password" id="register-password" placeholder="Senha (mínimo 6 dígitos)">
+        <input type="text" id="register-name" placeholder="Nome de usuário (somente uma palavra)">
+        <input type="password" id="register-password" placeholder="Senha (máximo 4 dígitos)">
         <button onclick="register()">Registrar</button>
         <p>Já tem uma conta? <a href="#" onclick="showLogin()">Faça Login</a></p>
     </div>
@@ -149,10 +149,25 @@
         }
 
         function register() {
-            const email = document.getElementById('register-email').value;
+            const name = document.getElementById('register-name').value;
             const password = document.getElementById('register-password').value;
 
-            auth.createUserWithEmailAndPassword(email, password)
+            // Verificação do nome de usuário
+            const nameRegex = /^[a-zA-Z0-9]+$/; // Aceita letras e números, sem espaços
+            if (!name || !nameRegex.test(name)) {
+                alert('Nome de usuário inválido. Deve ser uma palavra sem espaços.');
+                return;
+            }
+
+            // Verificação da senha
+            const passwordRegex = /^\d{1,4}$/; // Aceita apenas números e no máximo 4 dígitos
+            if (!password || !passwordRegex.test(password)) {
+                alert('Senha inválida. Deve ser um número de até 4 dígitos.');
+                return;
+            }
+
+            // Criando o usuário com Firebase Authentication
+            auth.createUserWithEmailAndPassword(name + "@example.com", password)
                 .then(userCredential => {
                     currentUserId = userCredential.user.uid;
                     showAgenda();
@@ -215,36 +230,33 @@
             const agendaBody = document.getElementById('agenda-body');
             agendaBody.innerHTML = '';
 
-            for (let hour = 0; hour < 24; hour++) {
-                const row = agendaBody.insertRow();
-                const cellHour = row.insertCell(0);
-                cellHour.textContent = `${hour}:00`;
+            for (let hour = 7; hour <= 22; hour++) {
+                const row = document.createElement('tr');
+                const timeCell = document.createElement('td');
+                timeCell.textContent = `${hour}:00`;
+                row.appendChild(timeCell);
 
-                for (let day = 1; day <= 7; day++) {
-                    const cell = row.insertCell(day);
-                    const cellKey = `${hour}-${day}`;
-                    const cellData = agendaData[cellKey] || '';
-                    cell.className = 'editable';
-                    cell.innerHTML = `<div onclick="enterEditMode(this, '${cellKey}')">${cellData}</div>`;
+                for (let day of ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom']) {
+                    const cell = document.createElement('td');
+                    const activity = agendaData[day]?.[hour];
+                    cell.textContent = activity || 'Livre';
+                    cell.classList.add('editable');
+                    cell.addEventListener('click', () => editActivity(day, hour));
+                    row.appendChild(cell);
                 }
+
+                agendaBody.appendChild(row);
             }
         }
 
-        function enterEditMode(cell, cellKey) {
-            const value = prompt('Digite o conteúdo:', cell.textContent);
-            if (value !== null) {
-                updateCellData(cellKey, value);
+        function editActivity(day, hour) {
+            const activity = prompt("Digite a atividade para esta hora:");
+            if (activity) {
+                const agendaRef = database.ref(`users/${currentUserId}/agenda/1/${day}/${hour}`);
+                agendaRef.set(activity);
             }
         }
-
-        function updateCellData(cellKey, value) {
-            const agendaRef = database.ref(`users/${currentUserId}/agenda`);
-            agendaRef.child(cellKey).set(value);
-        }
-
-        showLogin(); // Exibe a tela de login ao carregar
     </script>
-
 </body>
 </html>
 
