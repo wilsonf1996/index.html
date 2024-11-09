@@ -3,117 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agenda Semanal</title>
+    <title>Agenda Semanal com Autenticação e Pesquisa</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
     <style>
-        /* Estilos de layout */
-        body {
-            font-family: 'Roboto', sans-serif;
-            display: flex;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            background-color: #f0f2f5;
-            flex-direction: column;
-            color: #333;
-        }
-        #app-container {
-            max-width: 1000px;
-            width: 100%;
-            margin: 20px;
-            background-color: white;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        #header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px;
-            background-color: #0078d4;
-            color: white;
-        }
-        #header h1 {
-            font-size: 1.5rem;
-            margin: 0;
-        }
-        #header button {
-            padding: 10px 20px;
-            background-color: #e81123;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1rem;
-        }
-        #form-container {
-            padding: 20px;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            background-color: #f3f4f6;
-        }
-        #form-container input, #form-container button {
-            padding: 10px;
-            font-size: 1rem;
-            border-radius: 4px;
-        }
-        #form-container input {
-            border: 1px solid #ccc;
-            flex: 1;
-        }
-        #form-container button {
-            background-color: #0078d4;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        #agenda-table-container {
-            overflow-x: auto;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            padding: 10px;
-            border: 1px solid #ddd;
-            text-align: center;
-            min-width: 120px;
-        }
-        th {
-            background-color: #f3f4f6;
-            font-size: 1rem;
-            font-weight: 500;
-        }
-        td {
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
-        td:hover {
-            background-color: #e1effa;
-        }
+        /* Estilos aqui */
     </style>
 </head>
 <body>
 
-<div id="app-container">
-    <div id="header">
-        <h1>Agenda Semanal</h1>
-        <button onclick="logout()">Sair</button>
+    <!-- Tela de Login -->
+    <div id="login-container">
+        <h1>Login</h1>
+        <input type="text" id="username" placeholder="Nome de usuário" autocomplete="username">
+        <input type="password" id="password" placeholder="Senha" autocomplete="current-password">
+        <button onclick="login()">Login</button>
+        <p>Não tem uma conta? <a href="#" onclick="showRegister()">Registre-se</a></p>
     </div>
 
-    <!-- Formulário de criação e pesquisa de eventos -->
-    <div id="form-container">
-        <input type="datetime-local" id="event-date">
-        <input type="text" id="event-description" placeholder="Descrição do evento">
-        <button onclick="createEvent()">Criar Evento</button>
-        <button onclick="searchEvent()">Pesquisar Evento</button>
+    <!-- Tela de Registro -->
+    <div id="register-container" style="display: none;">
+        <h1>Registro</h1>
+        <input type="text" id="register-username" placeholder="Nome de usuário" autocomplete="username">
+        <input type="password" id="register-password" placeholder="Senha (até 4 números)" autocomplete="new-password">
+        <button onclick="register()">Registrar</button>
+        <p>Já tem uma conta? <a href="#" onclick="showLogin()">Faça Login</a></p>
     </div>
 
-    <!-- Tabela da Agenda -->
-    <div id="agenda-table-container">
+    <!-- Agenda -->
+    <div id="agenda-container" style="display: none;">
+        <h1>Bem-vindo à sua Agenda</h1>
+        <div>
+            <select id="week-selector" onchange="loadAgenda(this.value)">
+                <!-- Opções de semanas serão preenchidas aqui -->
+            </select>
+            <input type="search" id="search-event" placeholder="Buscar eventos..." oninput="searchEvent()">
+            <button onclick="logout()">Sair</button>
+        </div>
         <table id="agenda-table">
             <thead>
                 <tr>
@@ -130,104 +55,153 @@
             <tbody id="agenda-body"></tbody>
         </table>
     </div>
-</div>
 
-<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
-<script>
-    // Configuração do Firebase
-    const firebaseConfig = {
-        apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
-        authDomain: "agenda-6accc.firebaseapp.com",
-        databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
-        projectId: "agenda-6accc",
-        storageBucket: "agenda-6accc.appspot.com",
-        messagingSenderId: "205960633520",
-        appId: "1:205960633520:web:c9b1b9e166a8e3daed1dc6"
-    };
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "205960633520",
+            appId: "1:205960633520:web:c9b1b9e166a8e3daed1dc6"
+        };
 
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const database = firebase.database();
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
 
-    let currentUserId = null;
+        let currentUserId = null;
 
-    function initApp() {
-        currentUserId = localStorage.getItem('currentUserId');
-        if (currentUserId) {
-            loadAgenda();
-        } else {
-            window.location.href = 'login.html'; // Redireciona para a tela de login
-        }
-    }
-
-    function loadAgenda() {
-        const agendaBody = document.getElementById('agenda-body');
-        agendaBody.innerHTML = '';
-        
-        const hours = Array.from({ length: 24 * 2 }, (_, i) => {
-            const hour = Math.floor(i / 2).toString().padStart(2, '0');
-            const minute = i % 2 === 0 ? "00" : "30";
-            return `${hour}:${minute}`;
-        });
-
-        hours.forEach(hour => {
-            const row = document.createElement('tr');
-            const hourCell = document.createElement('td');
-            hourCell.textContent = hour;
-            row.appendChild(hourCell);
-
-            ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].forEach(day => {
-                const cell = document.createElement('td');
-                cell.onclick = () => openEventModal(day, hour);
-                row.appendChild(cell);
-            });
-            agendaBody.appendChild(row);
-        });
-    }
-
-    function createEvent() {
-        const dateTime = document.getElementById('event-date').value;
-        const description = document.getElementById('event-description').value;
-        if (!dateTime || !description || !currentUserId) {
-            alert('Preencha todos os campos.');
-            return;
+        function showLogin() {
+            document.getElementById('login-container').style.display = 'block';
+            document.getElementById('register-container').style.display = 'none';
+            document.getElementById('agenda-container').style.display = 'none';
         }
 
-        database.ref(`events/${currentUserId}/${dateTime}`).set({ description })
-            .then(() => {
-                alert('Evento criado!');
-                loadAgenda();
-            })
-            .catch(error => alert('Erro ao criar evento: ' + error.message));
-    }
-
-    function searchEvent() {
-        const dateTime = document.getElementById('event-date').value;
-        if (!dateTime || !currentUserId) {
-            alert('Insira a data e a hora para pesquisar.');
-            return;
+        function showRegister() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('register-container').style.display = 'block';
+            document.getElementById('agenda-container').style.display = 'none';
         }
 
-        database.ref(`events/${currentUserId}/${dateTime}`).once('value')
-            .then(snapshot => {
+        function showAgenda() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('register-container').style.display = 'none';
+            document.getElementById('agenda-container').style.display = 'block';
+            populateWeeks();
+            loadAgenda(1); // Carrega a primeira semana por padrão
+        }
+
+        function register() {
+            const username = document.getElementById('register-username').value;
+            const password = document.getElementById('register-password').value;
+
+            if (!username || !/^[a-zA-Z0-9]+$/.test(username)) {
+                alert('Nome de usuário inválido. Deve ser uma palavra sem espaços.');
+                return;
+            }
+
+            if (!password || !/^\d{1,4}$/.test(password)) {
+                alert('Senha inválida. Deve ser um número de até 4 dígitos.');
+                return;
+            }
+
+            const userRef = database.ref('users/' + username);
+            userRef.once('value', snapshot => {
                 if (snapshot.exists()) {
-                    document.getElementById('event-description').value = snapshot.val().description;
+                    alert('Esse nome de usuário já está em uso. Escolha outro.');
                 } else {
-                    alert('Evento não encontrado.');
+                    userRef.set({ password: password })
+                        .then(() => {
+                            alert('Usuário registrado com sucesso!');
+                            showLogin();
+                        })
+                        .catch(error => {
+                            alert('Erro no registro: ' + error.message);
+                        });
                 }
-            })
-            .catch(error => alert('Erro na pesquisa: ' + error.message));
-    }
+            });
+        }
 
-    function logout() {
-        localStorage.removeItem('currentUserId');
-        window.location.href = 'login.html';
-    }
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
 
-    window.addEventListener('load', initApp);
-</script>
+            const userRef = database.ref('users/' + username);
+            userRef.once('value', snapshot => {
+                const userData = snapshot.val();
+                if (userData && userData.password === password) {
+                    currentUserId = username;
+                    showAgenda();
+                } else {
+                    alert('Credenciais inválidas!');
+                }
+            });
+        }
+
+        function logout() {
+            currentUserId = null;
+            showLogin();
+        }
+
+        function populateWeeks() {
+            const firstDayOfYear = new Date();
+            firstDayOfYear.setMonth(0, 1);
+            const options = [];
+            for (let week = 1; week <= 52; week++) {
+                const startDate = new Date(firstDayOfYear);
+                startDate.setDate(firstDayOfYear.getDate() + (week - 1) * 7);
+                const endDate = new Date(startDate);
+                endDate.setDate(startDate.getDate() + 6);
+                options.push(`<option value="${week}">Semana ${week}: ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}</option>`);
+            }
+            document.getElementById('week-selector').innerHTML = options.join('');
+        }
+
+        function loadAgenda(week) {
+            if (!currentUserId) return;
+            const agendaRef = database.ref('agenda/' + currentUserId + '/semana' + week);
+            agendaRef.once('value', snapshot => {
+                const agendaData = snapshot.val();
+                const agendaBody = document.getElementById('agenda-body');
+                agendaBody.innerHTML = '';
+                for (let hour = 7; hour <= 21; hour++) {
+                    const row = document.createElement('tr');
+                    const hourCell = document.createElement('td');
+                    hourCell.textContent = hour + ':00';
+                    row.appendChild(hourCell);
+                    for (let day = 1; day <= 7; day++) {
+                        const dayCell = document.createElement('td');
+                        const eventText = agendaData?.[day]?.[hour] || '';
+                        const editableDiv = document.createElement('div');
+                        editableDiv.classList.add('editable');
+                        editableDiv.contentEditable = true;
+                        editableDiv.textContent = eventText;
+                        editableDiv.onblur = () => {
+                            if (!editableDiv.isContentEditable) return;
+                            const updatedText = editableDiv.textContent;
+                            agendaRef.child(day).child(hour).set(updatedText);
+                        };
+                        dayCell.appendChild(editableDiv);
+                        row.appendChild(dayCell);
+                    }
+                    agendaBody.appendChild(row);
+                }
+            });
+        }
+
+        function searchEvent() {
+            const query = document.getElementById('search-event').value.toLowerCase();
+            const agendaCells = document.querySelectorAll('.editable');
+            agendaCells.forEach(cell => {
+                cell.style.backgroundColor = cell.textContent.toLowerCase().includes(query) ? '#FFFDD0' : '';
+            });
+        }
+    </script>
 </body>
 </html>
 
