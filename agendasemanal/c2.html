@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda Semanal com Autenticação</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+    <style>
+        body { 
+            font-family: 'Roboto', sans-serif; 
+            padding: 20px; 
+            background-color: #f4f7fb; /* Fundo mais suave */
+            color: #333; /* Cor de texto mais escura */
+            margin: 0;
+        }
+
+        h1 { 
+            text-align: center; 
+            color: #2c3e50; /* Cor mais escura para o título */
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+
+        button { 
+            background-color: #007bff; 
+            color: white; 
+            padding: 12px; 
+            border: none; 
+            border-radius: 8px; 
+            width: 100%; 
+            cursor: pointer; 
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover { 
+            background-color: #0056b3; 
+        }
+
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+
+        .button-container button {
+            width: 100%;
+        }
+
+        #login-container, #register-container, #button-container { 
+            display: none; 
+        }
+
+        footer { 
+            text-align: center; 
+            font-size: 14px; 
+            margin-top: 40px; 
+            color: #555; 
+            padding: 20px 0; 
+            background-color: #f8f9fa; 
+            border-top: 1px solid #ddd; /* Linha de separação no topo do rodapé */
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Tela de Login -->
+    <div id="login-container">
+        <h1>Login</h1>
+        <input type="text" id="username" placeholder="Nome de usuário" autocomplete="username">
+        <input type="password" id="password" placeholder="Senha" autocomplete="current-password">
+        <button onclick="login()">Login</button>
+        <p>Não tem uma conta? <a href="#" onclick="showRegister()">Registre-se</a></p>
+    </div>
+
+    <!-- Tela de Registro -->
+    <div id="register-container">
+        <h1>Registro</h1>
+        <input type="text" id="register-username" placeholder="Nome de usuário" autocomplete="username">
+        <input type="password" id="register-password" placeholder="Senha (até 4 números)" autocomplete="new-password">
+        <button onclick="register()">Registrar</button>
+        <p>Já tem uma conta? <a href="#" onclick="showLogin()">Faça Login</a></p>
+    </div>
+
+    <!-- Tela de Botões -->
+    <div id="button-container">
+        <h1>Bem-vindo ao seu App</h1>
+        <div class="button-container">
+            <button onclick="window.location.href='https://www.example1.com'">Ir para URL 1</button>
+            <button onclick="window.location.href='https://www.example2.com'">Ir para URL 2</button>
+            <button onclick="window.location.href='https://www.example3.com'">Ir para URL 3</button>
+            <button onclick="logout()">Sair</button>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "205960633520",
+            appId: "1:205960633520:web:c9b1b9e166a8e3daed1dc6"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        let currentUserId = null;
+
+        window.onload = function() {
+            checkUserLoggedIn();
+        }
+
+        function checkUserLoggedIn() {
+            const storedUser = localStorage.getItem('username');
+            if (storedUser) {
+                currentUserId = storedUser;
+                showButtons();
+            } else {
+                showLogin();
+            }
+        }
+
+        function showLogin() {
+            document.getElementById('login-container').style.display = 'block';
+            document.getElementById('register-container').style.display = 'none';
+            document.getElementById('button-container').style.display = 'none';
+        }
+
+        function showRegister() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('register-container').style.display = 'block';
+            document.getElementById('button-container').style.display = 'none';
+        }
+
+        function showButtons() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('register-container').style.display = 'none';
+            document.getElementById('button-container').style.display = 'block';
+        }
+
+        function register() {
+            const username = document.getElementById('register-username').value;
+            const password = document.getElementById('register-password').value;
+
+            if (!username || !/^[a-zA-Z0-9]+$/.test(username)) {
+                alert('Nome de usuário inválido. Deve ser uma palavra sem espaços.');
+                return;
+            }
+
+            if (!password || !/^\d{1,4}$/.test(password)) {
+                alert('Senha inválida. Deve ser um número de até 4 dígitos.');
+                return;
+            }
+
+            const userRef = database.ref('users/' + username);
+            userRef.once('value', snapshot => {
+                if (snapshot.exists()) {
+                    alert('Este nome de usuário já existe!');
+                    return;
+                }
+
+                userRef.set({ password: password })
+                .then(() => {
+                    alert('Usuário registrado com sucesso!');
+                    showLogin();
+                })
+                .catch(error => {
+                    alert('Erro no registro: ' + error.message);
+                });
+            });
+        }
+
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            const userRef = database.ref('users/' + username);
+            userRef.once('value', snapshot => {
+                const userData = snapshot.val();
+                if (userData && userData.password === password) {
+                    currentUserId = username;
+                    localStorage.setItem('username', username);
+                    showButtons();
+                } else {
+                    alert('Nome de usuário ou senha inválidos.');
+                }
+            });
+        }
+
+        function logout() {
+            localStorage.removeItem('username');
+            currentUserId = null;
+            showLogin();
+        }
+    </script>
+
+</body>
+</html>
