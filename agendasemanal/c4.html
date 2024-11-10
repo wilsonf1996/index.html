@@ -240,10 +240,18 @@
         function login() {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
+
             if (username && password) {
-                localStorage.setItem('username', username);
-                currentUserId = username;
-                showAgenda();
+                const userRef = database.ref('users/' + username);
+                userRef.once('value').then((snapshot) => {
+                    if (snapshot.exists() && snapshot.val().password === password) {
+                        localStorage.setItem('username', username);
+                        currentUserId = username;
+                        showAgenda();
+                    } else {
+                        alert('Nome de usuário ou senha incorretos.');
+                    }
+                });
             } else {
                 alert('Por favor, insira nome de usuário e senha.');
             }
@@ -252,15 +260,21 @@
         function register() {
             const username = document.getElementById('register-username').value;
             const password = document.getElementById('register-password').value;
+
             if (username && password.length === 4) {
-                // Registrando usuário no banco de dados Firebase
-                const newUserRef = database.ref('users/' + username);
-                newUserRef.set({
-                    username: username,
-                    password: password
+                const userRef = database.ref('users/' + username);
+                userRef.once('value').then((snapshot) => {
+                    if (snapshot.exists()) {
+                        alert('Este nome de usuário já está registrado.');
+                    } else {
+                        userRef.set({
+                            username: username,
+                            password: password
+                        });
+                        alert('Registro bem-sucedido! Faça login para continuar.');
+                        showLogin();
+                    }
                 });
-                alert('Registro bem-sucedido! Faça login para continuar.');
-                showLogin();
             } else {
                 alert('Por favor, insira um nome de usuário e uma senha de 4 números.');
             }
@@ -273,7 +287,6 @@
         }
 
         function acceptTerms() {
-            // Salvar no banco de dados se necessário
             alert("Termos aceitos! Faça login para continuar.");
             showLogin();
         }
@@ -284,3 +297,4 @@
     </script>
 </body>
 </html>
+
