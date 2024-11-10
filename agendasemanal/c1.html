@@ -208,15 +208,26 @@
 
     <!-- Agenda -->
     <div id="agenda-container">
-        <h1>Bem-vindo</h1>
-       <div>
-        <button onclick="window.open('https://www.exemplo1.com', '_blank')" style="margin: 10px 0; padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">Exemplo 1</button>
-     
-        <button onclick="window.open('https://www.exemplo2.com', '_blank')" style="margin: 10px 0; padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">Exemplo 2</button>
-        
-        <button onclick="window.open('https://www.exemplo3.com', '_blank')" style="margin: 10px 0; padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">Exemplo 3</button>
-    </div>
+        <h1>Bem-vindo à sua Agenda</h1>
+        <label>Data de início da semana:</label>
+        <input type="date" id="start-date" onchange="loadAgenda()">
         <button onclick="logout()">Sair</button>
+
+        <table id="agenda-table">
+            <thead>
+                <tr>
+                    <th>Hora</th>
+                    <th>Segunda</th>
+                    <th>Terça</th>
+                    <th>Quarta</th>
+                    <th>Quinta</th>
+                    <th>Sexta</th>
+                    <th>Sábado</th>
+                    <th>Domingo</th>
+                </tr>
+            </thead>
+            <tbody id="agenda-body"></tbody>
+        </table>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
@@ -327,6 +338,79 @@
             showLogin();
         }
 
+      function loadAgenda() {
+    const startDateInput = document.getElementById('start-date').value;
+    if (!startDateInput) return;
+
+    const startDate = new Date(startDateInput);
+    
+    // Definir a hora para 00:00 para evitar problemas de fuso horário
+    startDate.setHours(0, 0, 0, 0);
+    
+    // Ajustar a data para a segunda-feira da semana
+    startDate.setDate(startDate.getDate() - startDate.getDay() + 1);
+
+    const weekDates = getWeekDates(startDate);
+
+    // Chama a função para atualizar os cabeçalhos da tabela com as datas
+    updateTableHeaders(weekDates);
+
+    const agendaRef = database.ref('agendas/' + currentUserId);
+    agendaRef.once('value', snapshot => {
+        const agendaData = snapshot.val() || {};
+        renderAgendaTable(agendaData, weekDates);
+    });
+}
+
+function updateTableHeaders(weekDates) {
+    const thElements = document.querySelectorAll('#agenda-table thead th');
+    for (let i = 1; i <= 7; i++) {
+        // Formatar as datas para o formato dd/mm/yyyy
+        const formattedDate = `${weekDates[i - 1].getDate()}/${weekDates[i - 1].getMonth() + 1}/${weekDates[i - 1].getFullYear()}`;
+        
+        // Exibir o dia da semana e a data
+        thElements[i].textContent = `${new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(weekDates[i - 1])} (${formattedDate})`;
+    }
+}
+
+       function renderAgendaTable(agendaData, weekDates) {
+    const tbody = document.getElementById('agenda-body');
+    tbody.innerHTML = '';
+    const hours = [];
+    for (let hour = 0; hour < 24; hour++) {
+        const hourStr = hour < 10 ? `0${hour}:00` : `${hour}:00`;
+        const halfHourStr = hour < 10 ? `0${hour}:30` : `${hour}:30`;
+        hours.push(hourStr);
+        hours.push(halfHourStr);
+    }
+
+    hours.forEach(hour => {
+        const row = document.createElement('tr');
+        const hourCell = document.createElement('td');
+        hourCell.textContent = hour;
+        row.appendChild(hourCell);
+
+        for (let i = 0; i < 7; i++) {
+            const day = formatDateToISO(weekDates[i]);
+            const cell = document.createElement('td');
+            cell.classList.add('editable');
+            cell.dataset.date = day;
+            cell.dataset.hour = hour;
+            cell.textContent = agendaData[day]?.[hour] || '';
+            cell.contentEditable = true;
+            cell.addEventListener('blur', () => saveAgenda(day, hour, cell.textContent));
+            row.appendChild(cell);
+        }
+        tbody.appendChild(row);
+    });
+}
+       function saveAgenda(day, hour, content) {
+    const agendaRef = database.ref('agendas/' + currentUserId + '/' + day + '/' + hour);
+    agendaRef.set(content);
+}
+        function getWeekDates(startDate) {
+            return Array.from({ length: 7 }, (_, i) => new Date(startDate.getTime() + i * 86400000));
+        }
 
         function formatDateToISO(date) {
             return date.toISOString().split('T')[0];
