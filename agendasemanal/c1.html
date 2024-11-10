@@ -163,68 +163,101 @@
     </div>
 
     <script>
+       
+           firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        let currentUserId = null;
+
+        window.onload = function() {
+            document.getElementById('start-date').valueAsDate = new Date();
+            checkUserLoggedIn();
+        }
+
+        function checkUserLoggedIn() {
+            const storedUser = localStorage.getItem('username');
+            if (storedUser) {
+                currentUserId = storedUser;
+                showAgenda();
+            } else {
+                showLogin();
+            }
+        }
+
         function showLogin() {
             document.getElementById('login-container').style.display = 'block';
             document.getElementById('register-container').style.display = 'none';
-            document.getElementById('app-container').style.display = 'none';
+            document.getElementById('agenda-container').style.display = 'none';
             document.getElementById('terms-container').style.display = 'none';
-            document.getElementById('privacy-container').style.display = 'none';
         }
 
         function showRegister() {
             document.getElementById('login-container').style.display = 'none';
             document.getElementById('register-container').style.display = 'block';
-        }
-
-        function showTerms() {
-            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('agenda-container').style.display = 'none';
             document.getElementById('terms-container').style.display = 'block';
         }
 
-        function showPrivacy() {
-            document.getElementById('login-container').style.display = 'none';
-            document.getElementById('privacy-container').style.display = 'block';
-        }
-
-        function login() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            if (password.length <= 4) {
-                localStorage.setItem('username', username);
-                showApp();
-            } else {
-                alert("Senha inválida.");
-            }
-        }
-
-        function showApp() {
-            document.getElementById('app-container').style.display = 'block';
+        function showAgenda() {
             document.getElementById('login-container').style.display = 'none';
             document.getElementById('register-container').style.display = 'none';
-        }
-
-        function logout() {
-            localStorage.removeItem('username');
-            showLogin();
+            document.getElementById('agenda-container').style.display = 'block';
+            loadAgenda();
         }
 
         function register() {
             const username = document.getElementById('register-username').value;
             const password = document.getElementById('register-password').value;
-            if (password.length <= 4) {
-                localStorage.setItem('username', username);
-                showApp();
-            } else {
-                alert("Senha inválida.");
+
+            if (!username || !/^[a-zA-Z0-9]+$/.test(username)) {
+                alert('Nome de usuário inválido. Deve ser uma palavra sem espaços.');
+                return;
             }
+
+            if (!password || !/^\d{1,4}$/.test(password)) {
+                alert('Senha inválida. Deve ser um número de até 4 dígitos.');
+                return;
+            }
+
+            const userRef = database.ref('users/' + username);
+            userRef.once('value', snapshot => {
+                if (snapshot.exists()) {
+                    alert('Este nome de usuário já existe!');
+                    return;
+                }
+
+                userRef.set({ password: password })
+                .then(() => {
+                    alert('Usuário registrado com sucesso!');
+                    showLogin();
+                })
+                .catch(error => {
+                    alert('Erro no registro: ' + error.message);
+                });
+            });
         }
 
-        if (localStorage.getItem('username')) {
-            showApp();
-        } else {
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            const userRef = database.ref('users/' + username);
+            userRef.once('value', snapshot => {
+                const userData = snapshot.val();
+                if (userData && userData.password === password) {
+                    currentUserId = username;
+                    localStorage.setItem('username', username);
+                    showAgenda();
+                } else {
+                    alert('Nome de usuário ou senha inválidos.');
+                }
+            });
+        }
+
+        function logout() {
+            localStorage.removeItem('username');
+            currentUserId = null;
             showLogin();
         }
-
         function goToAgenda() {
             window.location.href = "URL_DA_PAGINA_DE_AGENDA";
         }
