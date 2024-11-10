@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checklist</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #444;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 900px;
+        }
+
+        .form-container {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        input[type="text"],
+        input[type="file"],
+        select {
+            padding: 10px;
+            font-size: 1rem;
+            width: 60%;
+            margin-right: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #5c6bc0;
+            color: white;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #3f51b5;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+            background-color: #ffffff;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f5f5f5;
+        }
+
+        td input,
+        td select {
+            width: 100%;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        td button {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            border-radius: 5px;
+        }
+
+        td button:hover {
+            background-color: #e53935;
+        }
+
+        .auth-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin-top: 30px;
+        }
+
+        .auth-container input,
+        .auth-container button {
+            margin-bottom: 10px;
+        }
+    </style>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+</head>
+
+<body>
+    <h1>Checklist</h1>
+
+    <!-- Container de Autenticação -->
+    <div class="auth-container" id="auth-container">
+        <input type="email" id="email" placeholder="Email" />
+        <input type="password" id="password" placeholder="Senha" />
+        <button onclick="login()">Entrar</button>
+        <button onclick="register()">Registrar</button>
+        <button onclick="logout()" style="display:none;">Sair</button>
+    </div>
+
+    <div class="container" id="checklist-container" style="display:none;">
+        <div class="form-container">
+            <input type="text" id="checklist-name" placeholder="Nome do Checklist">
+            <button onclick="createChecklist()">Criar Checklist</button>
+        </div>
+
+        <div class="form-container">
+            <select id="checklist-selector" onchange="loadSelectedChecklist()">
+                <option value="-1">Selecione um Checklist</option>
+            </select>
+            <button onclick="deleteChecklist()">Excluir Checklist</button>
+        </div>
+
+        <table id="checklist" style="display: none;">
+            <thead>
+                <tr>
+                    <th>Descrição da Atividade</th>
+                    <th>Situação</th>
+                    <th>Data Prevista</th>
+                    <th>Atrasada</th>
+                    <th>Data de Alteração</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="checklist-body"></tbody>
+        </table>
+
+        <div class="form-container">
+            <button onclick="addItem()">Adicionar Atividade</button>
+            <input type="file" id="file-input">
+            <button onclick="processFile()">Adicionar Atividades do Arquivo</button>
+            <button onclick="saveList()">Salvar Checklist</button>
+            <button onclick="clearList()">Limpar Checklist</button>
+        </div>
+
+        <div class="form-container">
+            <button onclick="window.location.href = 'https://wilsonf1996.github.io/index.html/';">Voltar para a Página Principal</button>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+            authDomain: "agenda-6accc.firebaseapp.com",
+            databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+            projectId: "agenda-6accc",
+            storageBucket: "agenda-6accc.appspot.com",
+            messagingSenderId: "794262176773",
+            appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+            measurementId: "G-CVBQ54PERH"
+        };
+
+        const app = firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+
+        let checklists = {};
+
+        // Verifica o estado de autenticação
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                document.getElementById('auth-container').style.display = 'none';
+                document.getElementById('checklist-container').style.display = 'block';
+                loadChecklists();
+            } else {
+                document.getElementById('auth-container').style.display = 'flex';
+                document.getElementById('checklist-container').style.display = 'none';
+            }
+        });
+
+        function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then(() => {
+                    console.log("Login bem-sucedido!");
+                })
+                .catch(error => {
+                    console.error("Erro ao fazer login:", error.message);
+                    alert(error.message);
+                });
+        }
+
+        function register() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            auth.createUserWithEmailAndPassword(email, password)
+                .then(() => {
+                    console.log("Registro bem-sucedido!");
+                })
+                .catch(error => {
+                    console.error("Erro ao registrar:", error.message);
+                    alert(error.message);
+                });
+        }
+
+        function logout() {
+            auth.signOut().then(() => {
+                console.log("Logout bem-sucedido!");
+            }).catch(error => {
+                console.error("Erro ao fazer logout:", error.message);
+            });
+        }
+
+        function loadChecklists() {
+            const userId = auth.currentUser.uid;
+            const checklistRef = database.ref('checklists/' + userId);
+
+            checklistRef.once('value', snapshot => {
+                checklists = snapshot.val() || {};
+                populateChecklistSelector();
+            });
+        }
+
+        function populateChecklistSelector() {
+            const checklistSelector = document.getElementById('checklist-selector');
+            checklistSelector.innerHTML = '<option value="-1">Selecione um Checklist</option>';
+
+            Object.keys(checklists).forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                checklistSelector.appendChild(option);
+            });
+        }
+
+        function createChecklist() {
+            const checklistName = document.getElementById('checklist-name').value;
+            if (checklistName.trim() === '') {
+                alert('Por favor, insira um nome para o checklist.');
+                return;
+            }
+
+            const userId = auth.currentUser.uid;
+            const checklistRef = database.ref('checklists/' + userId + '/' + checklistName);
+
+            checklistRef.set([]).then(() => {
+                console.log('Checklist criado!');
+                loadChecklists();
+            }).catch(error => {
+                console.error("Erro ao criar checklist:", error.message);
+                alert(error.message);
+            });
+        }
+
+        function loadSelectedChecklist() {
+            const checklistName = document.getElementById('checklist-selector').value;
+            if (checklistName === '-1') return;
+
+            const userId = auth.currentUser.uid;
+            const checklistRef = database.ref('checklists/' + userId + '/' + checklistName);
+
+            checklistRef.once('value', snapshot => {
+                const checklist = snapshot.val() || [];
+                loadChecklistTable(checklist);
+            });
+        }
+
+        function loadChecklistTable(checklist) {
+            const tbody = document.getElementById('checklist-body');
+            tbody.innerHTML = '';
+            checklist.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.description}</td>
+                    <td><input type="checkbox" ${item.status ? 'checked' : ''} /></td>
+                    <td>${item.dueDate}</td>
+                    <td>${item.isLate ? 'Sim' : 'Não'}</td>
+                    <td>${item.updatedAt}</td>
+                    <td><button onclick="deleteItem('${item.description}')">Excluir</button></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function deleteChecklist() {
+            const checklistName = document.getElementById('checklist-selector').value;
+            if (checklistName === '-1') return;
+
+            const userId = auth.currentUser.uid;
+            const checklistRef = database.ref('checklists/' + userId + '/' + checklistName);
+
+            checklistRef.remove().then(() => {
+                console.log('Checklist excluído!');
+                loadChecklists();
+            }).catch(error => {
+                console.error("Erro ao excluir checklist:", error.message);
+            });
+        }
+
+        function deleteItem(description) {
+            const checklistName = document.getElementById('checklist-selector').value;
+            if (checklistName === '-1') return;
+
+            const userId = auth.currentUser.uid;
+            const checklistRef = database.ref('checklists/' + userId + '/' + checklistName);
+
+            checklistRef.once('value', snapshot => {
+                const checklist = snapshot.val() || [];
+                const updatedChecklist = checklist.filter(item => item.description !== description);
+                checklistRef.set(updatedChecklist).then(() => {
+                    loadChecklistTable(updatedChecklist);
+                });
+            });
+        }
+
+        function addItem() {
+            const checklistName = document.getElementById('checklist-selector').value;
+            if (checklistName === '-1') return;
+
+            const description = prompt("Descrição da Atividade:");
+            if (!description) return;
+
+            const dueDate = prompt("Data Prevista (YYYY-MM-DD):");
+            const status = false;
+            const isLate = false;
+            const updatedAt = new Date().toISOString();
+
+            const newItem = { description, dueDate, status, isLate, updatedAt };
+
+            const userId = auth.currentUser.uid;
+            const checklistRef = database.ref('checklists/' + userId + '/' + checklistName);
+
+            checklistRef.once('value', snapshot => {
+                const checklist = snapshot.val() || [];
+                checklist.push(newItem);
+                checklistRef.set(checklist).then(() => {
+                    loadChecklistTable(checklist);
+                });
+            });
+        }
+
+        function processFile() {
+            const fileInput = document.getElementById('file-input');
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const contents = event.target.result;
+                const items = JSON.parse(contents);
+                const checklistName = document.getElementById('checklist-selector').value;
+                if (checklistName === '-1') return;
+
+                const userId = auth.currentUser.uid;
+                const checklistRef = database.ref('checklists/' + userId + '/' + checklistName);
+
+                checklistRef.once('value', snapshot => {
+                    const checklist = snapshot.val() || [];
+                    const updatedChecklist = checklist.concat(items);
+                    checklistRef.set(updatedChecklist).then(() => {
+                        loadChecklistTable(updatedChecklist);
+                    });
+                });
+            };
+            reader.readAsText(file);
+        }
+
+        function saveList() {
+            const checklistName = document.getElementById('checklist-selector').value;
+            if (checklistName === '-1') return;
+
+            const userId = auth.currentUser.uid;
+            const checklistRef = database.ref('checklists/' + userId + '/' + checklistName);
+
+            checklistRef.once('value', snapshot => {
+                const checklist = snapshot.val();
+                alert("Checklist salvo com " + checklist.length + " itens.");
+            });
+        }
+
+        function clearList() {
+            const checklistName = document.getElementById('checklist-selector').value;
+            if (checklistName === '-1') return;
+
+            const userId = auth.currentUser.uid;
+            const checklistRef = database.ref('checklists/' + userId + '/' + checklistName);
+
+            checklistRef.set([]).then(() => {
+                loadChecklistTable([]);
+            });
+        }
+    </script>
+</body>
+
+</html>
