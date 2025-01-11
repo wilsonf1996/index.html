@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyberpunk do Universo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=VT323&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/postprocessing@6.28.2/build/postprocessing.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000000;
+            font-family: 'Orbitron', sans-serif;
+            color: #00ffff;
+        }
+
+        .hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            color: #00ffff;
+            font-size: 1.2rem;
+            text-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="hud">
+        <h1>Cyberpunk - Universo Futurista</h1>
+    </div>
+    <script>
+        // Configurações Básicas
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
+
+        // Pós-processamento
+        const composer = new POSTPROCESSING.EffectComposer(renderer);
+        const renderPass = new POSTPROCESSING.RenderPass(scene, camera);
+        composer.addPass(renderPass);
+
+        const bloomEffect = new POSTPROCESSING.BloomEffect({
+            intensity: 1.5,
+            luminanceThreshold: 0.1,
+            luminanceSmoothing: 0.9,
+        });
+        const bloomPass = new POSTPROCESSING.EffectPass(camera, bloomEffect);
+        bloomPass.renderToScreen = true;
+        composer.addPass(bloomPass);
+
+        // Plano de Fundo com Imagem do Universo
+        const textureLoader = new THREE.TextureLoader();
+        const spaceTexture = textureLoader.load('https://www.nasa.gov/sites/default/files/thumbnails/image/01e017b57-43a7e0227a-o.jpg'); // Imagem do espaço
+        scene.background = spaceTexture;
+
+        // Adicionar Estrelas e Nebulosas
+        const starsGeometry = new THREE.BufferGeometry();
+        const starCount = 10000;
+        const positions = new Float32Array(starCount * 3);
+
+        for (let i = 0; i < starCount * 3; i++) {
+            positions[i] = (Math.random() - 0.5) * 2000; // Estrelas dispersas
+        }
+
+        starsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const starsMaterial = new THREE.PointsMaterial({
+            size: 1.2,
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending,
+        });
+
+        const stars = new THREE.Points(starsGeometry, starsMaterial);
+        scene.add(stars);
+
+        // Luzes do Universo
+        const pointLight1 = new THREE.PointLight(0x00ff00, 1, 500);
+        pointLight1.position.set(0, 500, 0);
+        scene.add(pointLight1);
+
+        const pointLight2 = new THREE.PointLight(0xff00ff, 1, 500);
+        pointLight2.position.set(-500, -500, -500);
+        scene.add(pointLight2);
+
+        // Animação de Estrelas
+        function animate() {
+            const elapsedTime = performance.now() * 0.001;
+
+            stars.rotation.x = elapsedTime * 0.1;
+            stars.rotation.y = elapsedTime * 0.2;
+
+            composer.render();
+            requestAnimationFrame(animate);
+        }
+
+        // Redimensionamento Dinâmico
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        camera.position.z = 200;
+
+        // Iniciar Animação
+        animate();
+    </script>
+</body>
+</html>
