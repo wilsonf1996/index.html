@@ -6,7 +6,7 @@
   <title>Checklist Avançado - Engenharia Civil</title>
   <link rel="icon" href="professional_icon.png" type="image/png">
   <meta name="theme-color" content="#2c3e50">
-  <!-- Manifesto será injetado via JavaScript -->
+  <!-- O manifesto será injetado via JavaScript -->
   
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -105,6 +105,29 @@
       font-size: 1rem;
     }
     
+    /* Área de filtros e ordenação */
+    .filter-area {
+      background-color: var(--secondary-bg);
+      padding: calc(var(--spacing) * 0.8);
+      border-radius: 4px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    
+    .filter-area label {
+      font-family: 'Open Sans', sans-serif;
+      font-size: 0.9rem;
+    }
+    
+    .filter-area input,
+    .filter-area select {
+      padding: 8px;
+      font-size: 0.9rem;
+    }
+    
     /* Feedback visual para foco */
     input:focus,
     select:focus,
@@ -199,7 +222,8 @@
       header h1 {
         font-size: 2rem;
       }
-      .section-form {
+      .section-form,
+      .filter-area {
         padding: 12px;
       }
       .button-group {
@@ -244,6 +268,30 @@
         <option value="-1">Selecione um Checklist</option>
       </select>
       <button id="btn-delete-checklist">Excluir Checklist</button>
+    </section>
+    
+    <!-- Área de Filtros e Ordenação -->
+    <section class="filter-area" aria-label="Filtros e Ordenação">
+      <label for="search-input">Pesquisar:</label>
+      <input type="text" id="search-input" placeholder="Pesquisar por descrição">
+      
+      <label for="filter-status">Status:</label>
+      <select id="filter-status">
+        <option value="all">Todos</option>
+        <option value="Atrasada">Atrasadas</option>
+        <option value="Dentro do prazo">Dentro do prazo</option>
+        <option value="Não Iniciada">Não Iniciadas</option>
+        <option value="Em Andamento">Em Andamento</option>
+        <option value="Concluída">Concluídas</option>
+      </select>
+      
+      <label for="sort-order">Ordenar por Data Prevista:</label>
+      <select id="sort-order">
+        <option value="asc">Ascendente</option>
+        <option value="desc">Descendente</option>
+      </select>
+      
+      <button id="btn-apply-filters">Aplicar Filtros</button>
     </section>
     
     <!-- Tabela para exibir as atividades -->
@@ -312,8 +360,8 @@
     /***************************************
      * VARIÁVEIS E ESTADO
      ***************************************/
-    let checklists = {};          // Objeto para armazenar todos os checklists
-    let currentChecklistName = null;  // Nome do checklist atualmente selecionado
+    let checklists = {};          // Armazena todos os checklists
+    let currentChecklistName = null;  // Checklist atualmente selecionado
     
     /***************************************
      * FUNÇÕES AUXILIARES DE INTERFACE
@@ -331,6 +379,39 @@
         option.textContent = name;
         selector.appendChild(option);
       });
+    }
+    
+    // Aplica filtros e ordenação na lista do checklist
+    function applyFilters() {
+      if (!currentChecklistName || currentChecklistName === "-1") return;
+      let items = [...checklists[currentChecklistName]];
+      
+      // Filtragem por texto (descrição)
+      const searchText = document.getElementById('search-input').value.toLowerCase();
+      if (searchText) {
+        items = items.filter(item => item.description.toLowerCase().includes(searchText));
+      }
+      
+      // Filtragem por status
+      const statusFilter = document.getElementById('filter-status').value;
+      if (statusFilter !== 'all') {
+        items = items.filter(item => item.status === statusFilter || item.situation === statusFilter || 
+          ((statusFilter === 'Atrasada' || statusFilter === 'Dentro do prazo') && 
+           ((item.estimatedDate && new Date(item.estimatedDate) < new Date() && statusFilter === 'Atrasada') ||
+            (item.estimatedDate && new Date(item.estimatedDate) >= new Date() && statusFilter === 'Dentro do prazo'))));
+      }
+      
+      // Ordenação por data prevista
+      const sortOrder = document.getElementById('sort-order').value;
+      items.sort((a, b) => {
+        if (!a.estimatedDate) return 1;
+        if (!b.estimatedDate) return -1;
+        return sortOrder === 'asc' 
+          ? new Date(a.estimatedDate) - new Date(b.estimatedDate)
+          : new Date(b.estimatedDate) - new Date(a.estimatedDate);
+      });
+      
+      loadChecklistTable(items);
     }
     
     function loadChecklistTable(items) {
@@ -354,7 +435,7 @@
         // Coluna: Data Prevista
         const cellEstimated = row.insertCell(2);
         cellEstimated.innerHTML = `<input type="text" value="${item.estimatedDate}" id="item-estimated-date-${index}" aria-label="Data prevista">`;
-        // Coluna: Status (com base na data)
+        // Coluna: Status
         const cellStatus = row.insertCell(3);
         const isLate = item.estimatedDate && new Date(item.estimatedDate) < new Date();
         cellStatus.textContent = isLate ? 'Atrasada' : 'Dentro do prazo';
@@ -369,10 +450,11 @@
         cellActions.appendChild(btnRemove);
       });
       
-      // Ativar drag & drop usando SortableJS
+      // Ativar drag & drop usando SortableJS (sobre o tbody)
       Sortable.create(tbody, {
         animation: 150,
         onEnd: function(evt) {
+          // Atualiza a ordem dos itens no array principal
           const moved = checklists[currentChecklistName].splice(evt.oldIndex, 1)[0];
           checklists[currentChecklistName].splice(evt.newIndex, 0, moved);
         }
@@ -415,7 +497,8 @@
       const selector = document.getElementById('checklist-selector');
       currentChecklistName = selector.value;
       if (currentChecklistName !== "-1") {
-        loadChecklistTable(checklists[currentChecklistName]);
+        // Ao carregar, aplica filtros (que podem ser nulos)
+        applyFilters();
       } else {
         document.getElementById('checklist').style.display = 'none';
       }
@@ -450,7 +533,7 @@
             date: new Date().toLocaleString()
           };
           checklists[currentChecklistName].push(newItem);
-          loadChecklistTable(checklists[currentChecklistName]);
+          applyFilters();  // Reaplica os filtros (se houver) para atualizar a visualização
           Swal.fire('Sucesso', 'Atividade adicionada.', 'success');
         }
       });
@@ -468,7 +551,7 @@
       }).then(result => {
         if (result.isConfirmed) {
           checklists[currentChecklistName].splice(index, 1);
-          loadChecklistTable(checklists[currentChecklistName]);
+          applyFilters();
           Swal.fire('Removido!', 'A atividade foi removida.', 'success');
         }
       });
@@ -541,7 +624,7 @@
       }).then(result => {
         if (result.isConfirmed) {
           checklists[currentChecklistName] = [];
-          loadChecklistTable(checklists[currentChecklistName]);
+          applyFilters();
           Swal.fire('Limpo', 'Checklist limpo com sucesso.', 'success');
         }
       });
@@ -569,14 +652,14 @@
             checklists[currentChecklistName].push(newItem);
           }
         });
-        loadChecklistTable(checklists[currentChecklistName]);
+        applyFilters();
         Swal.fire('Sucesso', 'Atividades adicionadas a partir do arquivo.', 'success');
       };
       reader.readAsText(file);
     }
     
     /***************************************
-     * EVENTOS DOS BOTÕES
+     * EVENTOS DOS BOTÕES E CAMPOS DE FILTRO
      ***************************************/
     document.getElementById('btn-create-checklist').addEventListener('click', createChecklist);
     document.getElementById('btn-delete-checklist').addEventListener('click', deleteChecklist);
@@ -585,6 +668,12 @@
     document.getElementById('btn-clear').addEventListener('click', clearList);
     document.getElementById('btn-process-file').addEventListener('click', processFile);
     document.getElementById('checklist-selector').addEventListener('change', loadSelectedChecklist);
+    document.getElementById('btn-apply-filters').addEventListener('click', applyFilters);
+    
+    // Opcional: Atualiza os filtros conforme o usuário digita no campo de busca
+    document.getElementById('search-input').addEventListener('input', applyFilters);
+    document.getElementById('filter-status').addEventListener('change', applyFilters);
+    document.getElementById('sort-order').addEventListener('change', applyFilters);
     
     /***************************************
      * SINCRONIZAÇÃO COM O FIREBASE AO INICIAR
@@ -604,28 +693,25 @@
      * REGISTRO DO SERVICE WORKER (PWA)
      ***************************************/
     if ('serviceWorker' in navigator) {
-      // Cria o código do Service Worker como uma string
+      // Cria o código do Service Worker como string
       const swCode = `
         const CACHE_NAME = 'checklist-cache-v1';
         const urlsToCache = [
           '/',
-          // Aqui você pode adicionar outros recursos que deseja cachear
+          // Adicione outros recursos que deseja cachear, se necessário
         ];
-        
         self.addEventListener('install', event => {
           event.waitUntil(
             caches.open(CACHE_NAME)
               .then(cache => cache.addAll(urlsToCache))
           );
         });
-        
         self.addEventListener('fetch', event => {
           event.respondWith(
             caches.match(event.request)
               .then(response => response || fetch(event.request))
           );
         });
-        
         self.addEventListener('activate', event => {
           const cacheWhitelist = [CACHE_NAME];
           event.waitUntil(
@@ -639,16 +725,11 @@
           );
         });
       `;
-      // Cria um Blob com o código do SW e registra
       const blob = new Blob([swCode], { type: 'text/javascript' });
       const swUrl = URL.createObjectURL(blob);
       navigator.serviceWorker.register(swUrl)
-        .then(registration => {
-          console.log('Service Worker registrado com sucesso:', registration);
-        })
-        .catch(error => {
-          console.error('Falha ao registrar o Service Worker:', error);
-        });
+        .then(registration => console.log('Service Worker registrado:', registration))
+        .catch(error => console.error('Erro ao registrar o Service Worker:', error));
     }
     
     /***************************************
@@ -679,3 +760,4 @@
   </script>
 </body>
 </html>
+
