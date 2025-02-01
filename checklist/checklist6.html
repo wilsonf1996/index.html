@@ -3,10 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Checklist - Engenharia Civil</title>
+  <title>Checklist Avançado - Engenharia Civil</title>
   <link rel="icon" href="professional_icon.png" type="image/png">
+  <meta name="theme-color" content="#2c3e50">
+  <!-- Manifesto será injetado via JavaScript -->
   
-  <!-- Google Fonts: Roboto e Open Sans -->
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
@@ -222,7 +224,7 @@
 </head>
 <body>
   <header>
-    <h1>Checklist</h1>
+    <h1>Checklist Avançado</h1>
   </header>
   
   <main class="container">
@@ -275,7 +277,7 @@
     </section>
   </main>
   
-  <!-- Spinner de carregamento (inicialmente oculto) -->
+  <!-- Spinner de carregamento -->
   <div id="loading-overlay" style="display: none;">
     <div class="spinner"></div>
   </div>
@@ -283,7 +285,7 @@
   <!-- Bibliotecas Externas -->
   <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <!-- SortableJS para drag and drop na tabela -->
+  <!-- SortableJS -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
@@ -292,7 +294,7 @@
   <!-- JavaScript do App -->
   <script>
     /***************************************
-     * Configuração e Inicialização do Firebase
+     * CONFIGURAÇÃO DO FIREBASE
      ***************************************/
     const firebaseConfig = {
       apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
@@ -304,54 +306,44 @@
       appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
       measurementId: "G-CVBQ54PERH"
     };
-
-    const appFirebase = firebase.initializeApp(firebaseConfig);
+    firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
-
+    
     /***************************************
-     * Variáveis e Inicialização do Estado
+     * VARIÁVEIS E ESTADO
      ***************************************/
-    let checklists = {}; // Armazena os checklists
-    let currentChecklistName = null; // Checklist atualmente selecionado
-
+    let checklists = {};          // Objeto para armazenar todos os checklists
+    let currentChecklistName = null;  // Nome do checklist atualmente selecionado
+    
     /***************************************
-     * Funções Auxiliares de Interface
+     * FUNÇÕES AUXILIARES DE INTERFACE
      ***************************************/
     function showLoading(show = true) {
       document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
     }
-
-    /**
-     * Atualiza o seletor com os checklists disponíveis.
-     */
+    
     function populateChecklistSelector() {
-      const checklistSelector = document.getElementById('checklist-selector');
-      checklistSelector.innerHTML = '<option value="-1">Selecione um Checklist</option>';
+      const selector = document.getElementById('checklist-selector');
+      selector.innerHTML = '<option value="-1">Selecione um Checklist</option>';
       Object.keys(checklists).forEach(name => {
         const option = document.createElement('option');
         option.value = name;
         option.textContent = name;
-        checklistSelector.appendChild(option);
+        selector.appendChild(option);
       });
     }
-
-    /**
-     * Renderiza a tabela de atividades do checklist selecionado.
-     * Permite também reordenar os itens via drag & drop.
-     * @param {Array} items Array de atividades.
-     */
+    
     function loadChecklistTable(items) {
       const table = document.getElementById('checklist');
-      const tableBody = document.getElementById('checklist-body');
-      tableBody.innerHTML = "";
+      const tbody = document.getElementById('checklist-body');
+      tbody.innerHTML = "";
       
       items.forEach((item, index) => {
-        const row = tableBody.insertRow();
-        // Descrição
+        const row = tbody.insertRow();
+        // Coluna: Descrição
         const cellDesc = row.insertCell(0);
         cellDesc.innerHTML = `<input type="text" value="${item.description}" id="item-description-${index}" aria-label="Descrição da atividade">`;
-        
-        // Situação
+        // Coluna: Situação
         const cellSituation = row.insertCell(1);
         cellSituation.innerHTML = `
           <select id="item-situation-${index}" aria-label="Situação da atividade">
@@ -359,21 +351,17 @@
             <option value="Em Andamento" ${item.situation === 'Em Andamento' ? 'selected' : ''}>Em Andamento</option>
             <option value="Concluída" ${item.situation === 'Concluída' ? 'selected' : ''}>Concluída</option>
           </select>`;
-        
-        // Data Prevista
-        const cellEstimatedDate = row.insertCell(2);
-        cellEstimatedDate.innerHTML = `<input type="text" value="${item.estimatedDate}" id="item-estimated-date-${index}" aria-label="Data prevista">`;
-        
-        // Status (Atrasada ou Dentro do prazo)
+        // Coluna: Data Prevista
+        const cellEstimated = row.insertCell(2);
+        cellEstimated.innerHTML = `<input type="text" value="${item.estimatedDate}" id="item-estimated-date-${index}" aria-label="Data prevista">`;
+        // Coluna: Status (com base na data)
         const cellStatus = row.insertCell(3);
         const isLate = item.estimatedDate && new Date(item.estimatedDate) < new Date();
         cellStatus.textContent = isLate ? 'Atrasada' : 'Dentro do prazo';
-        
-        // Data de Alteração
+        // Coluna: Data de Alteração
         const cellDate = row.insertCell(4);
         cellDate.textContent = item.date;
-        
-        // Ações
+        // Coluna: Ações
         const cellActions = row.insertCell(5);
         const btnRemove = document.createElement('button');
         btnRemove.textContent = 'Remover';
@@ -381,23 +369,21 @@
         cellActions.appendChild(btnRemove);
       });
       
-      // Ativa o drag & drop com SortableJS
-      Sortable.create(tableBody, {
+      // Ativar drag & drop usando SortableJS
+      Sortable.create(tbody, {
         animation: 150,
         onEnd: function(evt) {
-          // Atualiza a ordem dos itens no array com base na nova posição
-          const movedItem = checklists[currentChecklistName].splice(evt.oldIndex, 1)[0];
-          checklists[currentChecklistName].splice(evt.newIndex, 0, movedItem);
+          const moved = checklists[currentChecklistName].splice(evt.oldIndex, 1)[0];
+          checklists[currentChecklistName].splice(evt.newIndex, 0, moved);
         }
       });
       
-      table.style.display = items.length > 0 ? 'table' : 'none';
+      table.style.display = items.length ? 'table' : 'none';
     }
-
+    
     /***************************************
-     * Funções de Manipulação do Checklist
+     * MANIPULAÇÃO DO CHECKLIST
      ***************************************/
-    // Cria um novo checklist (usando SweetAlert2 para entrada de nome)
     function createChecklist() {
       Swal.fire({
         title: 'Criar Novo Checklist',
@@ -408,14 +394,14 @@
         confirmButtonText: 'Criar',
         preConfirm: (value) => {
           if (!value || value.trim() === '') {
-            Swal.showValidationMessage('O nome do checklist não pode ser vazio.');
+            Swal.showValidationMessage('O nome não pode ser vazio.');
           }
-          if (checklists[value]) {
+          if (checklists[value.trim()]) {
             Swal.showValidationMessage('Já existe um checklist com este nome.');
           }
           return value;
         }
-      }).then((result) => {
+      }).then(result => {
         if (result.isConfirmed) {
           const name = result.value.trim();
           checklists[name] = [];
@@ -424,8 +410,7 @@
         }
       });
     }
-
-    // Seleciona um checklist para gerenciamento
+    
     function loadSelectedChecklist() {
       const selector = document.getElementById('checklist-selector');
       currentChecklistName = selector.value;
@@ -435,8 +420,7 @@
         document.getElementById('checklist').style.display = 'none';
       }
     }
-
-    // Adiciona uma nova atividade via modal (usando SweetAlert2)
+    
     function addItem() {
       if (!currentChecklistName || currentChecklistName === "-1") {
         Swal.fire('Atenção', 'Selecione ou crie um checklist primeiro.', 'warning');
@@ -444,9 +428,8 @@
       }
       Swal.fire({
         title: 'Adicionar Atividade',
-        html:
-          `<input id="swal-input1" class="swal2-input" placeholder="Descrição da Atividade">` +
-          `<input id="swal-input2" class="swal2-input" placeholder="Data Prevista (ex.: 2025-12-31)">`,
+        html: `<input id="swal-input1" class="swal2-input" placeholder="Descrição da Atividade">
+               <input id="swal-input2" class="swal2-input" placeholder="Data Prevista (ex.: 2025-12-31)">`,
         focusConfirm: false,
         showCancelButton: true,
         preConfirm: () => {
@@ -457,7 +440,7 @@
           }
           return { description: description.trim(), estimatedDate: estimatedDate.trim() };
         }
-      }).then((result) => {
+      }).then(result => {
         if (result.isConfirmed) {
           const { description, estimatedDate } = result.value;
           const newItem = {
@@ -472,8 +455,7 @@
         }
       });
     }
-
-    // Remove uma atividade do checklist
+    
     function removeItem(index) {
       if (!currentChecklistName || currentChecklistName === "-1") return;
       Swal.fire({
@@ -483,7 +465,7 @@
         showCancelButton: true,
         confirmButtonText: 'Sim, remover!',
         cancelButtonText: 'Cancelar'
-      }).then((result) => {
+      }).then(result => {
         if (result.isConfirmed) {
           checklists[currentChecklistName].splice(index, 1);
           loadChecklistTable(checklists[currentChecklistName]);
@@ -491,8 +473,7 @@
         }
       });
     }
-
-    // Exclui o checklist selecionado
+    
     function deleteChecklist() {
       const selector = document.getElementById('checklist-selector');
       const name = selector.value;
@@ -507,7 +488,7 @@
         showCancelButton: true,
         confirmButtonText: 'Sim, excluir!',
         cancelButtonText: 'Cancelar'
-      }).then((result) => {
+      }).then(result => {
         if (result.isConfirmed) {
           delete checklists[name];
           currentChecklistName = null;
@@ -517,16 +498,14 @@
         }
       });
     }
-
-    // Salva o checklist atual no Firebase com spinner de carregamento
+    
     function saveList() {
       if (!currentChecklistName || currentChecklistName === "-1") {
         Swal.fire('Atenção', 'Selecione um checklist para salvar.', 'warning');
         return;
       }
-      
-      // Atualiza os itens com os valores atuais dos inputs
-      const updatedChecklist = checklists[currentChecklistName].map((item, index) => {
+      // Atualiza os itens com os valores atuais
+      const updated = checklists[currentChecklistName].map((item, index) => {
         const description = document.getElementById(`item-description-${index}`).value;
         const situation = document.getElementById(`item-situation-${index}`).value;
         const estimatedDate = document.getElementById(`item-estimated-date-${index}`).value;
@@ -534,20 +513,19 @@
       });
       
       showLoading(true);
-      const checklistRef = database.ref(`/checklists/${currentChecklistName}`);
-      checklistRef.set(updatedChecklist)
+      const ref = database.ref(`/checklists/${currentChecklistName}`);
+      ref.set(updated)
         .then(() => {
           showLoading(false);
           Swal.fire('Sucesso', 'Checklist salvo com sucesso!', 'success');
         })
-        .catch((error) => {
+        .catch(error => {
           showLoading(false);
-          console.error('Erro ao salvar checklist:', error);
+          console.error('Erro:', error);
           Swal.fire('Erro', 'Ocorreu um erro ao salvar o checklist.', 'error');
         });
     }
-
-    // Limpa todas as atividades do checklist atual
+    
     function clearList() {
       if (!currentChecklistName || currentChecklistName === "-1") {
         Swal.fire('Atenção', 'Selecione um checklist para limpar.', 'warning');
@@ -560,7 +538,7 @@
         showCancelButton: true,
         confirmButtonText: 'Sim, limpar!',
         cancelButtonText: 'Cancelar'
-      }).then((result) => {
+      }).then(result => {
         if (result.isConfirmed) {
           checklists[currentChecklistName] = [];
           loadChecklistTable(checklists[currentChecklistName]);
@@ -568,8 +546,7 @@
         }
       });
     }
-
-    // Processa um arquivo de texto e adiciona as atividades
+    
     function processFile() {
       const fileInput = document.getElementById('file-input');
       const file = fileInput.files[0];
@@ -579,8 +556,7 @@
       }
       const reader = new FileReader();
       reader.onload = function(e) {
-        const content = e.target.result;
-        const lines = content.split('\n');
+        const lines = e.target.result.split('\n');
         lines.forEach(line => {
           const description = line.trim();
           if (description !== '') {
@@ -598,9 +574,9 @@
       };
       reader.readAsText(file);
     }
-
+    
     /***************************************
-     * Eventos de Clique nos Botões
+     * EVENTOS DOS BOTÕES
      ***************************************/
     document.getElementById('btn-create-checklist').addEventListener('click', createChecklist);
     document.getElementById('btn-delete-checklist').addEventListener('click', deleteChecklist);
@@ -609,13 +585,13 @@
     document.getElementById('btn-clear').addEventListener('click', clearList);
     document.getElementById('btn-process-file').addEventListener('click', processFile);
     document.getElementById('checklist-selector').addEventListener('change', loadSelectedChecklist);
-
+    
     /***************************************
-     * Carrega checklists salvos do Firebase ao iniciar a página
+     * SINCRONIZAÇÃO COM O FIREBASE AO INICIAR
      ***************************************/
     document.addEventListener('DOMContentLoaded', () => {
-      const checklistRef = database.ref('/checklists');
-      checklistRef.on('value', (snapshot) => {
+      const ref = database.ref('/checklists');
+      ref.on('value', snapshot => {
         const data = snapshot.val();
         if (data) {
           checklists = data;
@@ -623,6 +599,83 @@
         }
       });
     });
+    
+    /***************************************
+     * REGISTRO DO SERVICE WORKER (PWA)
+     ***************************************/
+    if ('serviceWorker' in navigator) {
+      // Cria o código do Service Worker como uma string
+      const swCode = `
+        const CACHE_NAME = 'checklist-cache-v1';
+        const urlsToCache = [
+          '/',
+          // Aqui você pode adicionar outros recursos que deseja cachear
+        ];
+        
+        self.addEventListener('install', event => {
+          event.waitUntil(
+            caches.open(CACHE_NAME)
+              .then(cache => cache.addAll(urlsToCache))
+          );
+        });
+        
+        self.addEventListener('fetch', event => {
+          event.respondWith(
+            caches.match(event.request)
+              .then(response => response || fetch(event.request))
+          );
+        });
+        
+        self.addEventListener('activate', event => {
+          const cacheWhitelist = [CACHE_NAME];
+          event.waitUntil(
+            caches.keys().then(keyList => {
+              return Promise.all(keyList.map(key => {
+                if (cacheWhitelist.indexOf(key) === -1) {
+                  return caches.delete(key);
+                }
+              }));
+            })
+          );
+        });
+      `;
+      // Cria um Blob com o código do SW e registra
+      const blob = new Blob([swCode], { type: 'text/javascript' });
+      const swUrl = URL.createObjectURL(blob);
+      navigator.serviceWorker.register(swUrl)
+        .then(registration => {
+          console.log('Service Worker registrado com sucesso:', registration);
+        })
+        .catch(error => {
+          console.error('Falha ao registrar o Service Worker:', error);
+        });
+    }
+    
+    /***************************************
+     * CRIAÇÃO DINÂMICA DO MANIFESTO (PWA)
+     ***************************************/
+    const manifestData = {
+      name: "Checklist Avançado - Engenharia Civil",
+      short_name: "Checklist",
+      start_url: ".",
+      display: "standalone",
+      background_color: "#2c3e50",
+      theme_color: "#2c3e50",
+      icons: [
+        {
+          src: "professional_icon.png",
+          sizes: "192x192",
+          type: "image/png"
+        }
+      ]
+    };
+    const manifestBlob = new Blob([JSON.stringify(manifestData)], {type: 'application/json'});
+    const manifestURL = URL.createObjectURL(manifestBlob);
+    const manifestLink = document.createElement('link');
+    manifestLink.rel = 'manifest';
+    manifestLink.href = manifestURL;
+    document.head.appendChild(manifestLink);
+    
   </script>
 </body>
 </html>
