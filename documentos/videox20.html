@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MusicPro – Streaming Responsivo</title>
+  <title>MusicPro – Clone Spotify Avançado</title>
   <!-- Ícones (FontAwesome) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css" />
   <style>
@@ -40,7 +40,7 @@
       flex: 1;
       overflow: hidden;
     }
-    /* Sidebar – Navegação (desktop) */
+    /* Sidebar (desktop) */
     #sidebar {
       width: 240px;
       background-color: var(--sidebar-bg);
@@ -79,7 +79,7 @@
       cursor: pointer;
     }
 
-    /* Header do conteúdo */
+    /* Header e conteúdo principal */
     #main-content {
       flex: 1;
       background-color: var(--content-bg);
@@ -136,7 +136,7 @@
       color: var(--text-color);
     }
 
-    /* Grid de itens (pastas e mídias) */
+    /* Grid de itens (pastas, álbuns, faixas) */
     #item-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -168,7 +168,7 @@
     }
 
     /* ============================
-       PLAYER (fixo na parte inferior)
+       PLAYER (barra inferior)
     ============================ */
     #player-bar {
       height: 90px;
@@ -178,8 +178,9 @@
       align-items: center;
       justify-content: space-between;
       padding: 0 20px;
+      position: relative;
+      z-index: 100;
     }
-    /* Informações da faixa */
     #track-info {
       display: flex;
       align-items: center;
@@ -212,7 +213,6 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    /* Controles de reprodução */
     #playback-controls {
       display: flex;
       align-items: center;
@@ -231,7 +231,6 @@
     #playback-controls button:hover {
       color: var(--primary-color);
     }
-    /* Progresso */
     #progress-section {
       flex: 2;
       display: flex;
@@ -257,7 +256,6 @@
       justify-content: space-between;
       color: var(--muted-text);
     }
-    /* Controles extras (volume) */
     #extra-controls {
       display: flex;
       align-items: center;
@@ -315,11 +313,11 @@
     /* ============================
        RESPONSIVIDADE
     ============================ */
-    /* Para telas pequenas (celular) */
     @media (max-width: 600px) {
       #sidebar {
         position: fixed;
-        top: 0; left: 0;
+        top: 0;
+        left: 0;
         height: 100%;
         transform: translateX(-100%);
         z-index: 2000;
@@ -327,7 +325,6 @@
       #sidebar.show {
         transform: translateX(0);
       }
-      /* Botão de menu mobile */
       #mobile-menu-btn {
         display: block;
         position: fixed;
@@ -338,24 +335,22 @@
         z-index: 2500;
         cursor: pointer;
       }
-      /* Ajuste no conteúdo */
       #main-content {
         padding: 20px 10px 80px 10px;
       }
     }
-    /* Para telas maiores (desktop) */
     @media (min-width: 601px) {
       #mobile-menu-btn { display: none; }
     }
   </style>
 </head>
 <body>
-  <!-- Botão de menu para mobile -->
+  <!-- Botão de menu mobile -->
   <div id="mobile-menu-btn" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></div>
-  
-  <!-- CONTAINER GERAL: Sidebar + Conteúdo -->
+
+  <!-- CONTAINER GERAL -->
   <div id="app">
-    <!-- Sidebar (navegação) -->
+    <!-- Sidebar -->
     <aside id="sidebar">
       <div class="logo">MusicPro</div>
       <nav>
@@ -365,6 +360,7 @@
           <li onclick="navigateTo('library')"><i class="fas fa-book"></i> Biblioteca</li>
           <li onclick="navigateTo('favorites')"><i class="fas fa-heart"></i> Favoritos</li>
           <li onclick="navigateTo('playlists')"><i class="fas fa-list"></i> Playlists</li>
+          <li onclick="navigateTo('queue')"><i class="fas fa-stream"></i> Fila</li>
           <li onclick="openUploadModal()"><i class="fas fa-cloud-upload-alt"></i> Upload</li>
           <li onclick="createFolder()"><i class="fas fa-folder-plus"></i> Nova Pasta</li>
           <li onclick="createPlaylist()"><i class="fas fa-plus"></i> Criar Playlist</li>
@@ -372,7 +368,7 @@
       </nav>
       <div class="exit-btn" onclick="exitApp()"><i class="fas fa-sign-out-alt"></i> Sair</div>
     </aside>
-    
+
     <!-- Conteúdo Principal -->
     <main id="main-content">
       <div id="header">
@@ -384,12 +380,12 @@
         <div id="breadcrumb"></div>
       </div>
       <div id="item-grid">
-        <!-- Itens (pastas e mídias) serão carregados dinamicamente via Firestore -->
+        <!-- Pastas e mídias serão carregadas aqui -->
       </div>
     </main>
   </div>
-  
-  <!-- Barra do Player (fixa na parte inferior) -->
+
+  <!-- Barra do Player -->
   <div id="player-bar">
     <div id="track-info">
       <img id="track-art" src="https://dummyimage.com/60x60/000/fff&text=Capa" alt="Capa" />
@@ -400,9 +396,9 @@
     </div>
     <div id="playback-controls">
       <button id="shuffleBtn" onclick="toggleShuffle()" title="Shuffle"><i class="fas fa-random"></i></button>
-      <button id="prevBtn" onclick="playPrevious()" title="Faixa Anterior"><i class="fas fa-step-backward"></i></button>
+      <button id="prevBtn" onclick="playPrevious()" title="Anterior"><i class="fas fa-step-backward"></i></button>
       <button id="playPauseBtn" onclick="togglePlayPause()" title="Play/Pause"><i class="fas fa-play"></i></button>
-      <button id="nextBtn" onclick="playNext()" title="Próxima Faixa"><i class="fas fa-step-forward"></i></button>
+      <button id="nextBtn" onclick="playNext()" title="Próximo"><i class="fas fa-step-forward"></i></button>
       <button id="repeatBtn" onclick="toggleRepeat()" title="Repetir"><i class="fas fa-redo-alt"></i></button>
     </div>
     <div id="progress-section">
@@ -416,20 +412,20 @@
     </div>
     <div id="extra-controls">
       <div id="volume-control">
-        <button class="volume-btn" onclick="decreaseVolume()" title="Abaixar Volume"><i class="fas fa-volume-down"></i></button>
+        <button class="volume-btn" onclick="decreaseVolume()" title="Diminuir Volume"><i class="fas fa-volume-down"></i></button>
         <button class="volume-btn" onclick="toggleMute()" title="Mudo"><i id="muteIcon" class="fas fa-volume-up"></i></button>
         <button class="volume-btn" onclick="increaseVolume()" title="Aumentar Volume"><i class="fas fa-volume-up"></i></button>
         <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.5" onchange="adjustVolume()">
       </div>
     </div>
   </div>
-  
+
   <!-- Modal de Vídeo -->
   <div id="video-modal" class="modal">
     <div class="close-modal" onclick="closeVideoModal()"><i class="fas fa-times"></i></div>
     <video id="video-player" controls style="max-width:90%; max-height:90%; border-radius:8px;"></video>
   </div>
-  
+
   <!-- Modal de Busca Avançada -->
   <div id="advanced-search-modal" class="modal">
     <div class="modal-content">
@@ -439,17 +435,17 @@
       <button onclick="performAdvancedSearch()">Pesquisar</button>
     </div>
   </div>
-  
-  <!-- Input oculto para Upload (aceita apenas áudio e vídeo) -->
+
+  <!-- Input oculto para Upload (áudio/vídeo) -->
   <input type="file" id="upload-input" style="display:none" multiple accept="audio/*,video/*">
-  
+
   <!-- ============================
-       Firebase SDKs
+       Firebase SDKs (compat)
   ============================ -->
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
-  
+
   <script>
     /*******************************
      * CONFIGURAÇÃO DO FIREBASE
@@ -466,28 +462,30 @@
     firebase.initializeApp(firebaseConfig);
     const storage = firebase.storage();
     const db = firebase.firestore();
-    
+
     /*******************************
-     * VARIÁVEIS GLOBAIS E PLAYER
+     * VARIÁVEIS GLOBAIS, PLAYER E FILA
      *******************************/
-    let currentPath = "";         // Caminho atual (ex.: "" ou "Pasta1/")
-    let breadcrumbPaths = [];       // Histórico de navegação (ex.: ["Pasta1", "SubpastaA"])
-    let mediaList = [];           // Itens de mídia (documentos da coleção "media")
-    let folderList = [];          // Pastas (documentos da coleção "folders")
+    let currentPath = "";         // Ex.: "" ou "MinhaPasta/"
+    let breadcrumbPaths = [];       // Ex.: ["MinhaPasta", "Subpasta"]
+    let mediaList = [];           // Mídia da coleção "media"
+    let folderList = [];          // Pastas da coleção "folders"
     let currentTrackIndex = 0;
     let isShuffle = false;
     let isRepeat = false;
+    let playQueue = [];           // Fila de reprodução
     const audioPlayer = new Audio();
     audioPlayer.volume = 0.5;
-    
+
     /*******************************
      * FUNÇÕES DE NAVEGAÇÃO E CARREGAMENTO
      *******************************/
+    // Utiliza onSnapshot para atualizações em tempo real (caso queira mais reatividade)
     async function loadItems() {
       const grid = document.getElementById("item-grid");
       grid.innerHTML = "";
-      
-      // Carrega pastas (do Firestore)
+
+      // Carrega pastas
       try {
         const foldersSnapshot = await db.collection("folders")
           .where("parent", "==", currentPath)
@@ -515,8 +513,8 @@
       } catch (error) {
         alert("Erro ao carregar pastas: " + error.message);
       }
-      
-      // Carrega mídias (do Firestore)
+
+      // Carrega mídias
       try {
         const mediaSnapshot = await db.collection("media")
           .where("folder", "==", currentPath)
@@ -529,7 +527,7 @@
         mediaList.forEach((media, index) => {
           const div = document.createElement("div");
           div.className = "grid-item";
-          let iconURL = (media.type === "video")
+          let iconURL = media.type === "video"
             ? "https://img.icons8.com/fluency/96/ffffff/video.png"
             : "https://img.icons8.com/fluency/96/ffffff/musical-notes.png";
           div.innerHTML = `
@@ -544,7 +542,7 @@
         alert("Erro ao carregar mídias: " + error.message);
       }
     }
-    
+
     function updateBreadcrumb() {
       const breadcrumbEl = document.getElementById("breadcrumb");
       breadcrumbEl.innerHTML = "";
@@ -567,7 +565,7 @@
         breadcrumbEl.appendChild(span);
       });
     }
-    
+
     function searchItems(event) {
       const query = event.target.value.toLowerCase();
       const items = document.querySelectorAll("#item-grid .grid-item");
@@ -576,7 +574,7 @@
         item.style.display = title.includes(query) ? "block" : "none";
       });
     }
-    
+
     /*******************************
      * UPLOAD DE MÍDIA (ÁUDIO/VÍDEO)
      *******************************/
@@ -611,7 +609,7 @@
       }
       loadItems();
     });
-    
+
     /*******************************
      * CRIAÇÃO DE PASTA
      *******************************/
@@ -631,7 +629,7 @@
         }
       }
     }
-    
+
     /*******************************
      * CRIAÇÃO DE PLAYLIST
      *******************************/
@@ -650,10 +648,24 @@
         }
       }
     }
-    
+
     /*******************************
-     * FAVORITOS (exemplo para expansão)
+     * FAVORITOS (exemplo de função)
      *******************************/
+    async function addToFavorites(mediaIndex) {
+      const media = mediaList[mediaIndex];
+      if(!media) return;
+      try {
+        await db.collection("favorites").doc(media.id).set({
+          ...media,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        alert(`"${media.name}" adicionado aos Favoritos.`);
+      } catch (error) {
+        alert("Erro ao adicionar aos Favoritos: " + error.message);
+      }
+    }
+
     async function displayFavorites() {
       try {
         const favSnapshot = await db.collection("favorites")
@@ -672,7 +684,7 @@
         favs.forEach((fav, index) => {
           const div = document.createElement("div");
           div.className = "grid-item";
-          let iconURL = (fav.type === "video")
+          let iconURL = fav.type === "video"
             ? "https://img.icons8.com/fluency/96/ffffff/video.png"
             : "https://img.icons8.com/fluency/96/ffffff/musical-notes.png";
           div.innerHTML = `
@@ -684,10 +696,10 @@
         });
         updateBreadcrumb();
       } catch (error) {
-        alert("Erro ao carregar favoritos: " + error.message);
+        alert("Erro ao carregar Favoritos: " + error.message);
       }
     }
-    
+
     function playMediaByFavorite(fav) {
       if(fav.type === "video") {
         audioPlayer.pause();
@@ -702,13 +714,15 @@
         setPlayPauseIcon(true);
       }
     }
-    
+
     /*******************************
-     * REPRODUÇÃO DE MÍDIA
+     * REPRODUÇÃO DE MÍDIA E FILA (QUEUE)
      *******************************/
-    async function playMedia(index) {
+    function playMedia(index) {
       const media = mediaList[index];
       if(!media) return;
+      // Atualiza a fila de reprodução (para exemplo, simples)
+      playQueue = mediaList.slice(index);
       if(media.type === "video") {
         audioPlayer.pause();
         document.getElementById("video-player").src = media.url;
@@ -723,42 +737,7 @@
       }
       currentTrackIndex = index;
     }
-    
-    function updatePlayerInfo(title, artist, isVideo) {
-      document.getElementById("track-name").textContent = title;
-      document.getElementById("track-artist").textContent = artist;
-      document.getElementById("track-art").src = isVideo 
-        ? "https://dummyimage.com/60x60/000/fff&text=Video"
-        : "https://dummyimage.com/60x60/000/fff&text=Capa";
-    }
-    
-    function togglePlayPause() {
-      if(document.getElementById("video-modal").style.display === "flex") {
-        const videoPlayer = document.getElementById("video-player");
-        if(videoPlayer.paused) {
-          videoPlayer.play();
-          setPlayPauseIcon(true);
-        } else {
-          videoPlayer.pause();
-          setPlayPauseIcon(false);
-        }
-      } else {
-        if(!audioPlayer.src) return;
-        if(audioPlayer.paused) {
-          audioPlayer.play();
-          setPlayPauseIcon(true);
-        } else {
-          audioPlayer.pause();
-          setPlayPauseIcon(false);
-        }
-      }
-    }
-    
-    function setPlayPauseIcon(isPlaying) {
-      const btn = document.getElementById("playPauseBtn");
-      btn.innerHTML = isPlaying ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
-    }
-    
+
     function playNext() {
       if(isShuffle) {
         const randomIndex = Math.floor(Math.random() * mediaList.length);
@@ -769,25 +748,25 @@
         playMedia(0);
       }
     }
-    
+
     function playPrevious() {
       if(currentTrackIndex > 0) {
         playMedia(currentTrackIndex - 1);
       }
     }
-    
+
     function toggleShuffle() {
       isShuffle = !isShuffle;
       document.getElementById("shuffleBtn").style.color = isShuffle ? "var(--primary-color)" : "#fff";
     }
-    
+
     function toggleRepeat() {
       isRepeat = !isRepeat;
       document.getElementById("repeatBtn").style.color = isRepeat ? "var(--primary-color)" : "#fff";
     }
-    
+
     /*******************************
-     * CONTROLE DE VOLUME E PROGRESSO
+     * CONTROLE DO PLAYER: VOLUME E PROGRESSO
      *******************************/
     function adjustVolume() {
       const vol = document.getElementById("volume-slider").value;
@@ -795,19 +774,16 @@
       const videoPlayer = document.getElementById("video-player");
       if(videoPlayer) videoPlayer.volume = vol;
     }
-    
     function increaseVolume() {
       let vol = Math.min(audioPlayer.volume + 0.1, 1);
       audioPlayer.volume = vol;
       document.getElementById("volume-slider").value = vol;
     }
-    
     function decreaseVolume() {
       let vol = Math.max(audioPlayer.volume - 0.1, 0);
       audioPlayer.volume = vol;
       document.getElementById("volume-slider").value = vol;
     }
-    
     let isMuted = false;
     function toggleMute() {
       isMuted = !isMuted;
@@ -816,13 +792,11 @@
       if(videoPlayer) videoPlayer.muted = isMuted;
       document.getElementById("muteIcon").className = isMuted ? "fas fa-volume-mute" : "fas fa-volume-up";
     }
-    
     function formatTime(seconds) {
       const mins = Math.floor(seconds / 60);
       const secs = Math.floor(seconds % 60);
       return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
     }
-    
     function updateProgress() {
       const progressBar = document.getElementById("progress-bar");
       const currentTimeEl = document.getElementById("current-time");
@@ -843,7 +817,6 @@
         totalTimeEl.textContent = formatTime(duration);
       }
     }
-    
     function seekProgress(event) {
       const container = event.currentTarget;
       const rect = container.getBoundingClientRect();
@@ -859,14 +832,13 @@
         audioPlayer.currentTime = percentage * duration;
       }
     }
-    
     audioPlayer.addEventListener("timeupdate", updateProgress);
     document.getElementById("video-player").addEventListener("timeupdate", updateProgress);
     audioPlayer.addEventListener("ended", playNext);
     document.getElementById("video-player").addEventListener("ended", playNext);
-    
+
     /*******************************
-     * MODAIS: VÍDEO e BUSCA AVANÇADA
+     * MODAIS: VÍDEO E BUSCA AVANÇADA
      *******************************/
     function openVideoModal() {
       document.getElementById("video-modal").style.display = "flex";
@@ -881,7 +853,6 @@
         videoPlayer.currentTime = 0;
       }
     }
-    
     function openAdvancedSearchModal() {
       document.getElementById("advanced-search-modal").style.display = "flex";
     }
@@ -891,7 +862,7 @@
       const items = document.querySelectorAll("#item-grid .grid-item");
       items.forEach(item => {
         const title = item.querySelector(".item-title").textContent.toLowerCase();
-        // Lógica simplificada; pode ser aprimorada para usar metadados reais
+        // Lógica simplificada para identificar tipo de arquivo
         let isAudio = title.endsWith(".mp3") || title.endsWith(".aac") || title.endsWith(".wav") || title.endsWith(".flac");
         let isVideo = title.endsWith(".mp4") || title.endsWith(".mkv") || title.endsWith(".webm") || title.endsWith(".ogg");
         if(!filterAudio && isAudio) {
@@ -904,15 +875,17 @@
       });
       document.getElementById("advanced-search-modal").style.display = "none";
     }
-    
+    function selectAllItems() {
+      const items = document.querySelectorAll("#item-grid .grid-item");
+      items.forEach(item => item.style.outline = "2px solid var(--primary-color)");
+      alert("Todos os itens foram selecionados (simulação).");
+    }
+
     /*******************************
      * ATALHOS DE TECLADO E SAÍDA
      *******************************/
     document.addEventListener("keydown", (e) => {
-      if(e.code === "Space") {
-        e.preventDefault();
-        togglePlayPause();
-      }
+      if(e.code === "Space") { e.preventDefault(); togglePlayPause(); }
       if(e.code === "ArrowRight") { playNext(); }
       if(e.code === "ArrowLeft") { playPrevious(); }
       if(e.code === "ArrowUp") {
@@ -930,26 +903,48 @@
         document.getElementById("advanced-search-modal").style.display = "none";
       }
     });
-    
     function exitApp() {
       if(confirm("Deseja sair do aplicativo?")) {
         alert("Encerrando sessão (simulação).");
       }
     }
-    
+    function setPlayPauseIcon(isPlaying) {
+      const btn = document.getElementById("playPauseBtn");
+      btn.innerHTML = isPlaying ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
+    }
+
     /*******************************
-     * MENU MOBILE (telas pequenas)
+     * MENU MOBILE
      *******************************/
     function toggleMobileMenu() {
       const sidebar = document.getElementById("sidebar");
       sidebar.classList.toggle("show");
     }
-    
+
+    /*******************************
+     * TRATAMENTO DE CONEXÃO COM FIRESTORE
+     *******************************/
+    // Se ocorrerem erros de conexão (como 400 Bad Request), exibe uma mensagem
+    function checkFirestoreConnection() {
+      // Essa função pode ser expandida para exibir um toast ou modal informando ao usuário
+      if(!navigator.onLine) {
+        console.warn("Sem conexão com a Internet. O app está em modo offline.");
+      }
+    }
+    window.addEventListener('offline', () => {
+      alert("Você está offline. Algumas funcionalidades podem não funcionar.");
+    });
+    window.addEventListener('online', () => {
+      alert("Conexão restabelecida!");
+      loadItems();
+    });
+
     /*******************************
      * INICIALIZAÇÃO
      *******************************/
     loadItems();
     setInterval(updateProgress, 500);
+    setInterval(checkFirestoreConnection, 10000);
   </script>
 </body>
 </html>
