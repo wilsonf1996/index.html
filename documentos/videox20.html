@@ -5,21 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Music Player</title>
   <style>
-    /* Estilos básicos, inspirados no exemplo fornecido */
+    /* Estilos inspirados no exemplo enviado – interface escura e responsiva */
     body {
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
-      background-color: #232323;
-      color: #fff;
+      background-color: #232323; /* Fundo escuro */
+      color: #fff; /* Texto branco */
     }
     #app-container {
       padding: 20px;
-      max-width: 480px;
-      margin: 0 auto;
+      max-width: 480px; /* Largura máxima */
+      margin: 0 auto; /* Centraliza */
     }
     h1 {
-      color: #fff;
       text-align: center;
       margin-bottom: 20px;
       font-size: 24px;
@@ -51,7 +50,7 @@
       background-color: #4cae4c;
     }
     ul {
-      list-style-type: none;
+      list-style: none;
       padding: 0;
       margin: 0;
     }
@@ -60,11 +59,11 @@
       padding: 15px;
       margin-bottom: 10px;
       border-radius: 5px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       display: flex;
+      flex-wrap: wrap;
       justify-content: space-between;
       align-items: center;
-      flex-wrap: wrap;
     }
     li button {
       flex: 1;
@@ -90,7 +89,6 @@
       background-color: #000;
       z-index: 9999;
     }
-    /* Esconder a lista de arquivos em tela cheia */
     .hide-file-list {
       display: none;
     }
@@ -114,17 +112,23 @@
 <body>
   <div id="app-container">
     <h1>My Music Player</h1>
+    <!-- Seletor de arquivos -->
     <input type="file" id="fileInput" multiple>
+    <!-- Botões de ação -->
     <button id="uploadButton">Upload</button>
     <button id="createFolderButton">Create Folder</button>
     <button id="goToRootButton">Go to Root</button>
     <button onclick="goToHomePage()">Back to Homepage</button>
-    <h2 id="currentPathDisplay">Current Path: /</h2>
+    <h2 id="currentPath">Current Path: /</h2>
+    <!-- Lista de arquivos e pastas -->
     <ul id="fileList"></ul>
     <p id="currentFileName">File Name: None</p>
+    <!-- Players de áudio e vídeo -->
     <audio id="audioPlayer" controls></audio>
-    <video id="videoPlayer" controls style="width: 100%; display: none;"></video>
+    <video id="videoPlayer" controls style="display: none;"></video>
+    <!-- Controle de volume -->
     <input type="range" id="volumeControl" min="0" max="1" step="0.1" value="0.5">
+    <!-- Controles do player -->
     <button id="playPauseButton">Play/Pause</button>
     <button id="stopButton">Stop</button>
     <button id="prevButton">Previous</button>
@@ -132,10 +136,10 @@
     <button id="fullscreenButton">Full Screen</button>
   </div>
 
-  <!-- Firebase SDKs (Compat versions) -->
+  <!-- Firebase SDKs (compat) -->
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+  <!-- Não usamos Firestore neste exemplo, seguindo o modelo do código fornecido -->
 
   <script>
     /*******************************
@@ -153,26 +157,20 @@
     firebase.initializeApp(firebaseConfig);
     const storage = firebase.storage();
     const storageRef = storage.ref();
-    const db = firebase.firestore();
 
     /*******************************
      * VARIÁVEIS GLOBAIS
      *******************************/
-    let currentPath = "";  // Caminho atual ("" para raiz)
+    let currentPath = ""; // Caminho atual ("" para raiz)
     let currentMusicIndex = 0;
-    let uploadedFiles = []; // Array para armazenar os metadados dos arquivos (do Firestore)
-    
-    const fileListElement = document.getElementById('fileList');
+    let fileItems = []; // Array para armazenar os itens (arquivos e pastas) listados
+    const fileListEl = document.getElementById('fileList');
+    const currentPathEl = document.getElementById('currentPath');
+    const currentFileNameEl = document.getElementById('currentFileName');
     const audioPlayer = document.getElementById('audioPlayer');
     const videoPlayer = document.getElementById('videoPlayer');
-    const playPauseButton = document.getElementById('playPauseButton');
-    const stopButton = document.getElementById('stopButton');
-    const prevButton = document.getElementById('prevButton');
-    const nextButton = document.getElementById('nextButton');
     const volumeControl = document.getElementById('volumeControl');
-    const currentFileNameDisplay = document.getElementById('currentFileName');
-    const currentPathDisplay = document.getElementById('currentPathDisplay');
-    const appContainer = document.getElementById('app-container');
+    const playPauseButton = document.getElementById('playPauseButton');
 
     /*******************************
      * EVENTOS DOS BOTÕES
@@ -191,120 +189,92 @@
     /*******************************
      * FUNÇÃO: UPLOAD DE ARQUIVOS
      *******************************/
-    async function uploadFiles() {
+    function uploadFiles() {
       const fileInput = document.getElementById('fileInput');
       const files = fileInput.files;
       if (files.length === 0) {
         alert('Select one or more files to upload.');
         return;
       }
-      for (const file of files) {
-        // Permitir apenas arquivos de áudio e vídeo
+      Array.from(files).forEach(file => {
+        // Permite apenas áudio e vídeo
         if (!file.type.startsWith('audio/') && !file.type.startsWith('video/')) {
-          alert(`File ${file.name} is not supported. Only audio and video files are allowed.`);
-          continue;
+          alert(`File ${file.name} is not allowed. Only audio and video are permitted.`);
+          return;
         }
-        try {
-          const filePath = currentPath + file.name;
-          const fileRef = storageRef.child(filePath);
-          await fileRef.put(file);
-          const url = await fileRef.getDownloadURL();
-          const fileType = file.type.startsWith('video/') ? 'video' : 'audio';
-          // Salva os metadados no Firestore na coleção "files"
-          await db.collection('files').add({
-            name: file.name,
-            url: url,
-            folder: currentPath,
-            type: fileType,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-        } catch (error) {
-          alert(`Error uploading file ${file.name}: ${error.message}`);
-        }
-      }
-      listFiles();
+        const filePath = currentPath + file.name;
+        const fileRef = storageRef.child(filePath);
+        fileRef.put(file).then(() => {
+          listFiles();
+        }).catch(error => {
+          alert(`Error uploading ${file.name}: ${error.message}`);
+        });
+      });
     }
 
     /*******************************
      * FUNÇÃO: LISTAR ARQUIVOS E PASTAS
      *******************************/
-    async function listFiles() {
-      fileListElement.innerHTML = "";
-      currentPathDisplay.textContent = "Current Path: /" + currentPath;
-      uploadedFiles = [];
-      // Listar pastas armazenadas no Firestore (coleção "folders")
-      try {
-        const foldersSnapshot = await db.collection('folders')
-          .where('parent', '==', currentPath)
-          .orderBy('createdAt')
-          .get();
-        foldersSnapshot.forEach(doc => {
-          const folder = doc.data();
+    function listFiles() {
+      fileListEl.innerHTML = "";
+      currentPathEl.textContent = "Current Path: /" + currentPath;
+      fileItems = [];
+      storageRef.child(currentPath).listAll().then(result => {
+        // Primeiro, lista os “prefixos” (pastas)
+        result.prefixes.forEach(prefix => {
+          // Cada prefix representa uma pasta – criamos um item de pasta
           const li = document.createElement('li');
-          li.textContent = folder.name;
-          const openFolderBtn = createButton('Open Folder', () => openFolder(folder));
+          li.textContent = prefix.name;
+          const openFolderBtn = createButton('Open Folder', () => openFolder(prefix));
           li.appendChild(openFolderBtn);
-          fileListElement.appendChild(li);
+          fileListEl.appendChild(li);
+          fileItems.push({ type: 'folder', ref: prefix, name: prefix.name });
         });
-      } catch (error) {
-        alert(`Error listing folders: ${error.message}`);
-      }
-      // Listar arquivos (coleção "files")
-      try {
-        const filesSnapshot = await db.collection('files')
-          .where('folder', '==', currentPath)
-          .orderBy('createdAt')
-          .get();
-        filesSnapshot.forEach(doc => {
-          const fileData = doc.data();
-          uploadedFiles.push(fileData);
+        // Em seguida, lista os arquivos
+        result.items.forEach((item, index) => {
           const li = document.createElement('li');
-          li.textContent = fileData.name;
-          const playBtn = createButton('Play', () => playSelectedFile(uploadedFiles.length - 1));
-          const downloadBtn = createButton('Download', () => downloadFile(fileData));
-          const deleteBtn = createButton('Delete', () => deleteFile(doc.id, fileData.name));
+          li.textContent = item.name;
+          const playBtn = createButton('Play', () => playSelectedFile(index + fileItems.length));
+          const downloadBtn = createButton('Download', () => downloadFile(item));
+          const deleteBtn = createButton('Delete', () => deleteFile(item));
           li.appendChild(playBtn);
           li.appendChild(downloadBtn);
           li.appendChild(deleteBtn);
-          fileListElement.appendChild(li);
+          fileListEl.appendChild(li);
+          fileItems.push({ type: 'file', ref: item, name: item.name });
         });
-      } catch (error) {
+      }).catch(error => {
         alert(`Error listing files: ${error.message}`);
-      }
+      });
     }
 
     /*******************************
      * FUNÇÃO: CRIAR PASTA
      *******************************/
-    async function createFolder() {
+    function createFolder() {
       const folderName = prompt('Enter folder name:');
       if (!folderName) return;
-      try {
-        // Cria a pasta no Storage (enviando um blob vazio)
-        const folderRef = storageRef.child(currentPath + folderName + '/');
-        await folderRef.put(new Blob([]));
-        // Salva os metadados da pasta no Firestore (coleção "folders")
-        await db.collection('folders').add({
-          name: folderName,
-          parent: currentPath,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+      const folderPath = currentPath + folderName + '/';
+      const folderRef = storageRef.child(folderPath);
+      // Envia um Blob vazio para criar a pasta
+      folderRef.put(new Blob([])).then(() => {
         listFiles();
-      } catch (error) {
+      }).catch(error => {
         alert(`Error creating folder ${folderName}: ${error.message}`);
-      }
+      });
     }
 
     /*******************************
      * FUNÇÃO: ABRIR PASTA
      *******************************/
-    function openFolder(folder) {
-      currentPath += folder.name + "/";
+    function openFolder(prefixRef) {
+      // Atualiza o currentPath para a pasta selecionada
+      currentPath = prefixRef.fullPath + '/';
       listFiles();
     }
 
     /*******************************
-     * FUNÇÃO: VOLTAR PARA RAIZ
+     * FUNÇÃO: VOLTAR PARA A RAIZ
      *******************************/
     function goToRoot() {
       currentPath = "";
@@ -312,7 +282,7 @@
     }
 
     /*******************************
-     * FUNÇÃO: CRIAR BOTÃO
+     * FUNÇÃO: CRIAR BOTÃO (helper)
      *******************************/
     function createButton(text, onClick) {
       const btn = document.createElement('button');
@@ -324,25 +294,33 @@
     /*******************************
      * FUNÇÃO: REPRODUZIR ARQUIVO SELECIONADO
      *******************************/
-    async function playSelectedFile(index) {
-      const selectedFile = uploadedFiles[index];
-      if (!selectedFile) return;
-      const fileExtension = selectedFile.name.split('.').pop().toLowerCase();
-      if (selectedFile.type === 'video' || fileExtension === 'mp4') {
-        // Exibe o player de vídeo
-        audioPlayer.style.display = 'none';
-        videoPlayer.style.display = 'block';
-        videoPlayer.src = selectedFile.url;
-        videoPlayer.play();
-      } else {
-        // Exibe o player de áudio
-        videoPlayer.style.display = 'none';
-        audioPlayer.style.display = 'block';
-        audioPlayer.src = selectedFile.url;
-        audioPlayer.play();
+    function playSelectedFile(index) {
+      // Como fileItems contém tanto pastas quanto arquivos, reproduz apenas se for arquivo
+      const selectedItem = fileItems[index];
+      if (!selectedItem || selectedItem.type !== 'file') {
+        alert('Select a valid file to play.');
+        return;
       }
-      currentMusicIndex = index;
-      currentFileNameDisplay.textContent = 'File Name: ' + selectedFile.name;
+      selectedItem.ref.getDownloadURL().then(url => {
+        const ext = selectedItem.name.split('.').pop().toLowerCase();
+        if (ext === 'mp4') {
+          // Se for vídeo, exibe o player de vídeo
+          audioPlayer.style.display = 'none';
+          videoPlayer.style.display = 'block';
+          videoPlayer.src = url;
+          videoPlayer.play();
+        } else {
+          // Caso seja áudio
+          videoPlayer.style.display = 'none';
+          audioPlayer.style.display = 'block';
+          audioPlayer.src = url;
+          audioPlayer.play();
+        }
+        currentMusicIndex = index;
+        document.getElementById('currentFileName').textContent = 'File Name: ' + selectedItem.name;
+      }).catch(error => {
+        alert(`Error getting playback URL: ${error.message}`);
+      });
     }
 
     /*******************************
@@ -367,60 +345,54 @@
         }
       }
     }
-
     function stopMusic() {
       audioPlayer.pause();
       audioPlayer.currentTime = 0;
       playPauseButton.textContent = 'Play';
     }
-
     function playNextMusic() {
-      if (currentMusicIndex < uploadedFiles.length - 1) {
+      // Se houver próximo arquivo na lista, reproduz o próximo
+      if (currentMusicIndex < fileItems.length - 1) {
         currentMusicIndex++;
         playSelectedFile(currentMusicIndex);
       }
     }
-
     function playPreviousMusic() {
       if (currentMusicIndex > 0) {
         currentMusicIndex--;
         playSelectedFile(currentMusicIndex);
       }
     }
-
     function adjustVolume() {
       audioPlayer.volume = volumeControl.value;
       videoPlayer.volume = volumeControl.value;
     }
-
-    function downloadFile(fileData) {
-      const link = document.createElement('a');
-      link.href = fileData.url;
-      link.setAttribute('download', fileData.name);
-      link.click();
+    function downloadFile(itemRef) {
+      itemRef.getDownloadURL().then(url => {
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', itemRef.name);
+        link.click();
+      }).catch(error => {
+        alert(`Error getting download URL: ${error.message}`);
+      });
     }
-
-    async function deleteFile(docId, fileName) {
-      if (confirm(`Are you sure you want to delete ${fileName}?`)) {
-        try {
-          // Remove do Firestore
-          await db.collection('files').doc(docId).delete();
-          // Remove do Storage
-          const fileRef = storageRef.child(currentPath + fileName);
-          await fileRef.delete();
+    function deleteFile(itemRef) {
+      if (confirm(`Are you sure you want to delete ${itemRef.name}?`)) {
+        itemRef.delete().then(() => {
           listFiles();
-        } catch (error) {
-          alert(`Error deleting file ${fileName}: ${error.message}`);
-        }
+        }).catch(error => {
+          alert(`Error deleting ${itemRef.name}: ${error.message}`);
+        });
       }
     }
 
     /*******************************
      * FUNÇÃO: FULLSCREEN
      *******************************/
-    const fullscreenButton = document.getElementById('fullscreenButton');
-    fullscreenButton.addEventListener('click', toggleFullScreen);
     function toggleFullScreen() {
+      const appContainer = document.getElementById('app-container');
+      const fileListEl = document.getElementById('fileList');
       if (!document.fullscreenElement) {
         if (appContainer.requestFullscreen) {
           appContainer.requestFullscreen();
@@ -432,21 +404,15 @@
           appContainer.msRequestFullscreen();
         }
         appContainer.classList.add('fullscreen');
-        fileListElement.classList.add('hide-file-list');
-        fullscreenButton.textContent = 'Exit Full Screen';
+        fileListEl.classList.add('hide-file-list');
+        document.getElementById('fullscreenButton').textContent = 'Exit Full Screen';
       } else {
         if (document.exitFullscreen) {
           document.exitFullscreen();
-        } else if (document.mozCancelFullScreen) {
-          document.mozCancelFullScreen();
-        } else if (document.webkitExitFullscreen) {
-          document.webkitExitFullscreen();
-        } else if (document.msExitFullscreen) {
-          document.msExitFullscreen();
         }
         appContainer.classList.remove('fullscreen');
-        fileListElement.classList.remove('hide-file-list');
-        fullscreenButton.textContent = 'Full Screen';
+        fileListEl.classList.remove('hide-file-list');
+        document.getElementById('fullscreenButton').textContent = 'Full Screen';
       }
     }
 
@@ -459,8 +425,9 @@
     }
 
     /*******************************
-     * INICIALIZAÇÃO: LISTAR ARQUIVOS/PASTAS
+     * INICIALIZAÇÃO
      *******************************/
+    // Ao carregar a página, lista os arquivos/pastas do currentPath (raiz inicialmente)
     listFiles();
   </script>
 </body>
