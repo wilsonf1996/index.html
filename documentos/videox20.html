@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt">
 <head>
@@ -428,7 +427,12 @@
           <li onclick="createPlaylist()"><i class="fas fa-plus"></i> Criar Playlist</li>
         </ul>
       </nav>
+      <div id="playlist-list" class="sidebar-section">
+  <h3>Playlists</h3>
+  <!-- As playlists criadas aparecerão aqui dinamicamente -->
+</div>
       <div class="exit-btn" onclick="exitApp()"><i class="fas fa-sign-out-alt"></i> Sair</div>
+      
     </div>
     
     <!-- Conteúdo Principal -->
@@ -655,13 +659,11 @@
     /*******************************
      * CRIAÇÃO DE PLAYLIST PERSONALIZADA
      *******************************/
- function createPlaylist() {
+function createPlaylist() {
     const playlistName = prompt("Digite o nome da nova playlist:");
     if (playlistName) {
-        // Criar subpastas para músicas e vídeos dentro da playlist
         const musicFolderRef = storageRef.child(`Playlists/${playlistName}/musicas/placeholder.txt`);
         const videoFolderRef = storageRef.child(`Playlists/${playlistName}/videos/placeholder.txt`);
-
         const dummyFile = new Blob([""], { type: "text/plain" });
 
         Promise.all([
@@ -669,11 +671,13 @@
             videoFolderRef.put(dummyFile)
         ])
         .then(() => {
-            alert(`Playlist "${playlistName}" criada com subpastas "musicas" e "videos".`);
+            alert(`Playlist "${playlistName}" criada com sucesso.`);
+            loadPlaylists(); // Atualiza a exibição das playlists
         })
         .catch(err => alert("Erro ao criar playlist: " + err.message));
     }
 }
+
 
 
     
@@ -780,6 +784,28 @@
         alert("Erro ao carregar itens: " + error.message);
       }
     }
+
+    function loadPlaylists() {
+    const playlistContainer = document.getElementById("playlist-list");
+    playlistContainer.innerHTML = "<h3>Playlists</h3>"; // Reinicia a lista
+
+    storageRef.child("Playlists/").listAll()
+    .then(result => {
+        if (result.prefixes.length === 0) {
+            playlistContainer.innerHTML += "<p>Nenhuma playlist encontrada.</p>";
+        } else {
+            result.prefixes.forEach(playlist => {
+                const div = document.createElement("div");
+                div.className = "playlist-item";
+                div.textContent = playlist.name;
+                div.onclick = () => openPlaylist(playlist.name);
+                playlistContainer.appendChild(div);
+            });
+        }
+    })
+    .catch(err => alert("Erro ao carregar playlists: " + err.message));
+}
+
     
     /*******************************
      * MENU DE CONTEXTO – FUNÇÕES
@@ -1186,7 +1212,8 @@
     /*******************************
      * INICIALIZAÇÃO
      *******************************/
-    loadItems();
+    loadItems()
+    loadPlaylists();
     setInterval(updateProgress, 500);
   </script>
 </body>
