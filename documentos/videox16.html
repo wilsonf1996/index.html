@@ -1,0 +1,1885 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MusicPro – Streaming App Clone</title>
+  <!-- Favicon mínimo para evitar erro 404 -->
+  <link rel="icon" href="data:," />
+  <!-- FontAwesome para ícones (versão atualizada, sem integrity) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
+  <style>
+    /* ========================================================
+       CSS RESET & VARIÁVEIS DO TEMA
+    ======================================================== */
+    :root {
+      --primary-color: #1db954;
+      --background-color: #121212;
+      --sidebar-bg: #000;
+      --content-bg: #181818;
+      --player-bg: #000;
+      --text-color: #fff;
+      --muted-text: #b3b3b3;
+      --transition-speed: 0.3s;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background-color: var(--background-color);
+      color: var(--text-color);
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    a { text-decoration: none; color: inherit; }
+    
+    /* ========================================================
+       LAYOUT GERAL: SIDEBAR + CONTEÚDO
+    ======================================================== */
+    #app {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    /* Sidebar – Navegação lateral */
+    #sidebar {
+      width: 240px;
+      background-color: var(--sidebar-bg);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+    #sidebar .logo {
+      font-size: 1.8rem;
+      font-weight: bold;
+      margin-bottom: 30px;
+      letter-spacing: 1px;
+    }
+    #sidebar nav ul {
+      list-style: none;
+      flex: 1;
+    }
+    #sidebar nav ul li {
+      padding: 12px 0;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: color var(--transition-speed);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #sidebar nav ul li:hover {
+      color: var(--primary-color);
+    }
+    /* Botões extras na sidebar */
+    #sidebar nav ul li.extra {
+      font-size: 0.95rem;
+    }
+    /* Botão “Sair” (na parte inferior da sidebar) */
+    #sidebar .exit-btn {
+      margin-top: auto;
+      padding-top: 10px;
+      border-top: 1px solid #282828;
+      cursor: pointer;
+    }
+    
+    /* ========================================================
+       Conteúdo Principal
+    ======================================================== */
+    #main-content {
+      flex: 1;
+      background-color: var(--content-bg);
+      padding: 20px;
+      overflow-y: auto;
+      position: relative;
+    }
+    /* Header: busca, botões e breadcrumb */
+    #header {
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    #search-bar {
+      width: 100%;
+      padding: 10px 15px;
+      border-radius: 25px;
+      border: none;
+      background-color: #282828;
+      color: var(--text-color);
+      font-size: 1rem;
+    }
+    #header-buttons {
+      display: flex;
+      gap: 4%;
+      justify-content: space-between;
+    }
+    #advanced-search-btn, #select-all-btn {
+      padding: 8px 12px;
+      background-color: var(--primary-color);
+      border: none;
+      border-radius: 5px;
+      color: var(--text-color);
+      cursor: pointer;
+      transition: background-color var(--transition-speed);
+      font-size: 0.9rem;
+      width: 48%;
+    }
+    #advanced-search-btn:hover, #select-all-btn:hover {
+      background-color: #17a14a;
+    }
+    #breadcrumb {
+      font-size: 0.9rem;
+      color: var(--muted-text);
+    }
+    #breadcrumb span {
+      cursor: pointer;
+      color: var(--primary-color);
+      margin-right: 5px;
+    }
+    #breadcrumb span:not(:last-child)::after {
+      content: "›";
+      margin-left: 5px;
+      color: var(--text-color);
+    }
+    
+    /* ========================================================
+       Grid de Itens: álbuns, playlists, faixas e Favoritos
+    ======================================================== */
+    #item-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 20px;
+    }
+    .grid-item {
+      background-color: #282828;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+      transition: transform var(--transition-speed), background-color var(--transition-speed);
+      cursor: pointer;
+      position: relative;
+    }
+    .grid-item:hover {
+      transform: scale(1.03);
+      background-color: #383838;
+    }
+    .grid-item img {
+      width: 100%;
+      border-radius: 4px;
+      object-fit: cover;
+    }
+    .grid-item .item-title {
+      margin-top: 10px;
+      font-size: 0.95rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    /* ========================================================
+       Menu de Contexto (Botão Direito)
+    ======================================================== */
+    #context-menu {
+      position: absolute;
+      background-color: #282828;
+      border: 1px solid #404040;
+      border-radius: 4px;
+      display: none;
+      z-index: 2000;
+      min-width: 150px;
+    }
+    #context-menu ul {
+      list-style: none;
+      padding: 5px 0;
+      margin: 0;
+    }
+    #context-menu ul li {
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: background-color var(--transition-speed);
+    }
+    #context-menu ul li:hover {
+      background-color: #383838;
+    }
+    
+    /* ========================================================
+       Modal de Busca Avançada
+    ======================================================== */
+    #advanced-search-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1500;
+    }
+    #advanced-search-modal .modal-content {
+      background-color: var(--content-bg);
+      padding: 20px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 400px;
+    }
+    #advanced-search-modal h2 {
+      margin-bottom: 15px;
+      font-size: 1.2rem;
+      text-align: center;
+    }
+    #advanced-search-modal label {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+    }
+    #advanced-search-modal button {
+      padding: 8px 12px;
+      background-color: var(--primary-color);
+      border: none;
+      border-radius: 5px;
+      color: var(--text-color);
+      cursor: pointer;
+      transition: background-color var(--transition-speed);
+      font-size: 0.9rem;
+      width: 100%;
+      margin-top: 10px;
+    }
+    #advanced-search-modal button:hover {
+      background-color: #17a14a;
+    }
+    
+    /* ========================================================
+       Modal para Vídeo
+    ======================================================== */
+    #video-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    #video-modal video {
+      max-width: 90%;
+      max-height: 90%;
+      border-radius: 8px;
+    }
+    #video-modal .close-modal {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      font-size: 2rem;
+      cursor: pointer;
+      color: var(--text-color);
+    }
+    
+    /* ========================================================
+       Barra do Player (fixada na parte inferior)
+    ======================================================== */
+    #player-bar {
+      height: 90px;
+      background-color: var(--player-bg);
+      border-top: 1px solid #282828;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+    }
+    /* Informações da Faixa */
+    #track-info {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      flex: 1;
+      min-width: 200px;
+    }
+    #track-info img {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+    #track-details {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #track-details .track-name {
+      font-size: 1rem;
+      font-weight: bold;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #track-details .track-artist {
+      font-size: 0.85rem;
+      color: var(--muted-text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    /* Controles de Reprodução */
+    #playback-controls {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex: 1;
+      justify-content: center;
+    }
+    #playback-controls button {
+      background: none;
+      border: none;
+      color: var(--text-color);
+      font-size: 1.4rem;
+      cursor: pointer;
+      transition: color var(--transition-speed);
+    }
+    #playback-controls button:hover {
+      color: var(--primary-color);
+    }
+    /* Seção de Progresso */
+    #progress-section {
+      flex: 2;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    #progress-bar-container {
+      width: 100%;
+      height: 5px;
+      background-color: #404040;
+      border-radius: 2.5px;
+      cursor: pointer;
+    }
+    #progress-bar {
+      width: 0%;
+      height: 100%;
+      background-color: var(--primary-color);
+      border-radius: 2.5px;
+    }
+    #time-info {
+      font-size: 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted-text);
+    }
+    /* Controles Extras: Volume e Botões de Aumentar/Abaixar/Mudo */
+    #extra-controls {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    #volume-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #volume-slider {
+      width: 80px;
+    }
+    .volume-btn {
+      background: none;
+      border: none;
+      color: var(--text-color);
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: color var(--transition-speed);
+    }
+    .volume-btn:hover {
+      color: var(--primary-color);
+    }
+    
+    /* ========================================================
+       RESPONSIVIDADE
+    ======================================================== */
+    @media (max-width: 800px) {
+      #sidebar { width: 200px; }
+      #playback-controls button { font-size: 1.2rem; }
+      #track-info img { width: 50px; height: 50px; }
+    }
+    @media (max-width: 600px) {
+      #sidebar { display: none; }
+      /* Aqui você pode ajustar mais o layout para mobile */
+    }
+  </style>
+</head>
+<body>
+  <!-- CONTAINER GERAL: Sidebar + Conteúdo -->
+  <div id="app">
+    <!-- Sidebar de Navegação -->
+    <div id="sidebar">
+      <div class="logo">MusicPro</div>
+      <nav>
+        <ul>
+          <li onclick="navigateTo('home')"><i class="fas fa-home"></i> Home</li>
+          <li onclick="navigateTo('search')"><i class="fas fa-search"></i> Buscar</li>
+          <li onclick="navigateTo('library')"><i class="fas fa-book"></i> Sua Biblioteca</li>
+          <li onclick="navigateTo('favorites')"><i class="fas fa-heart"></i> Favoritos</li>
+          <li onclick="openUploadModal()"><i class="fas fa-cloud-upload-alt"></i> Upload</li>
+          <li onclick="createFolder()"><i class="fas fa-folder-plus"></i> Nova Pasta</li>
+          <li onclick="createPlaylist()"><i class="fas fa-plus"></i> Criar Playlist</li>
+        </ul>
+      </nav>
+      <div class="exit-btn" onclick="exitApp()"><i class="fas fa-sign-out-alt"></i> Sair</div>
+    </div>
+    
+    <!-- Conteúdo Principal -->
+    <div id="main-content">
+      <div id="header">
+        <input type="text" id="search-bar" placeholder="Buscar músicas, artistas, álbuns..." onkeyup="searchItems(event)">
+        <!-- Botões para Busca Avançada e Selecionar Tudo -->
+        <div id="header-buttons">
+          <button id="advanced-search-btn" onclick="openAdvancedSearchModal()">Busca Avançada</button>
+          <button id="select-all-btn" onclick="selectAllItems()">Selecionar Tudo</button>
+        </div>
+        <div id="breadcrumb"></div>
+      </div>
+      <div id="item-grid">
+        <!-- Itens (álbuns, playlists, faixas) serão inseridos dinamicamente -->
+      </div>
+    </div>
+  </div>
+  
+  <!-- Modal para Vídeo -->
+  <div id="video-modal">
+    <div class="close-modal" onclick="closeVideoModal()"><i class="fas fa-times"></i></div>
+    <video id="video-player" controls></video>
+  </div>
+  
+  <!-- Modal para Busca Avançada -->
+  <div id="advanced-search-modal">
+    <div class="modal-content">
+      <h2>Busca Avançada</h2>
+      <label>
+        <input type="checkbox" id="filter-audio" checked> Música
+      </label>
+      <label>
+        <input type="checkbox" id="filter-video" checked> Vídeo
+      </label>
+      <button onclick="performAdvancedSearch()">Pesquisar</button>
+    </div>
+  </div>
+  
+  <!-- Menu de Contexto (botão direito) -->
+  <div id="context-menu"></div>
+  
+  <!-- Barra do Player (fixa na parte inferior) -->
+  <div id="player-bar">
+    <!-- Informações da Faixa -->
+    <div id="track-info">
+      <!-- Use um placeholder alternativo se via.placeholder.com não resolver -->
+      <img id="track-art" src="https://dummyimage.com/60x60/000/fff&text=Capa" alt="Capa">
+      <div id="track-details">
+        <div class="track-name" id="track-name">Nenhuma faixa</div>
+        <div class="track-artist" id="track-artist">—</div>
+      </div>
+    </div>
+    <!-- Controles de Reprodução -->
+    <div id="playback-controls">
+      <button id="shuffleBtn" onclick="toggleShuffle()" title="Shuffle"><i class="fas fa-random"></i></button>
+      <button id="prevBtn" onclick="playPrevious()" title="Faixa Anterior"><i class="fas fa-step-backward"></i></button>
+      <button id="playPauseBtn" onclick="togglePlayPause()" title="Play/Pause"><i class="fas fa-play"></i></button>
+      <button id="nextBtn" onclick="playNext()" title="Próxima Faixa"><i class="fas fa-step-forward"></i></button>
+      <button id="repeatBtn" onclick="toggleRepeat()" title="Repetir"><i class="fas fa-redo-alt"></i></button>
+    </div>
+    <!-- Progresso e Tempo -->
+    <div id="progress-section">
+      <div id="progress-bar-container" onclick="seekProgress(event)">
+        <div id="progress-bar"></div>
+      </div>
+      <div id="time-info">
+        <span id="current-time">0:00</span>
+        <span id="total-time">0:00</span>
+      </div>
+    </div>
+    <!-- Controles Extras: Volume e Botões de Aumentar/Abaixar/Mudo -->
+    <div id="extra-controls">
+      <div id="volume-control">
+        <button class="volume-btn" onclick="decreaseVolume()" title="Abaixar Volume"><i class="fas fa-volume-down"></i></button>
+        <button class="volume-btn" onclick="toggleMute()" title="Mudo"><i id="muteIcon" class="fas fa-volume-up"></i></button>
+        <button class="volume-btn" onclick="increaseVolume()" title="Aumentar Volume"><i class="fas fa-volume-up"></i></button>
+        <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.5" onchange="adjustVolume()">
+      </div>
+    </div>
+  </div>
+  
+  <!-- ========================================================
+       Firebase SDKs
+  ======================================================== -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+  
+  <script>
+    /*******************************
+     * CONFIGURAÇÃO DO FIREBASE
+     *******************************/
+    const firebaseConfig = {
+      apiKey: "AIzaSyDxMWPu_CnXV-u4-vlDFd-IZ8fzlyKJHng",
+      authDomain: "financeiro-5.firebaseapp.com",
+      projectId: "financeiro-5",
+      storageBucket: "financeiro-5.appspot.com",
+      messagingSenderId: "686639785223",
+      appId: "1:686639785223:web:0314689c82c6dd1c2951a2",
+      measurementId: "G-Q5REWML5DX"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const storage = firebase.storage();
+    const storageRef = storage.ref();
+    const db = firebase.firestore();
+    
+    /*******************************
+     * VARIÁVEIS DE ESTADO & PLAYER
+     *******************************/
+    let currentPath = "";       // "" para raiz ou "Album/" para itens de um álbum
+    let breadcrumbPaths = [];   // Diretórios navegados
+    let itemList = [];          // Itens (pastas/mídias) listados
+    let currentTrackIndex = 0;  // Índice da faixa em reprodução
+    let isShuffle = false;
+    let isRepeat = false;
+    
+    // Persistência de favoritos em Firestore
+    // Para este exemplo, cada favorito será um documento na coleção "favorites" com id igual ao nome do item.
+    
+    // Objeto Audio para reprodução de áudio (para vídeos, usamos o modal)
+    const audioPlayer = new Audio();
+    audioPlayer.volume = document.getElementById("volume-slider").value;
+    
+    /*******************************
+     * FUNÇÕES DE NAVEGAÇÃO & UI
+     *******************************/
+    function navigateTo(page) {
+      if (page === "home" || page === "search" || page === "library") {
+        currentPath = "";
+        breadcrumbPaths = [];
+        loadItems();
+      } else if (page === "favorites") {
+        displayFavorites();
+      }
+    }
+    
+    function updateBreadcrumb() {
+      const breadcrumbEl = document.getElementById("breadcrumb");
+      breadcrumbEl.innerHTML = "";
+      const homeSpan = document.createElement("span");
+      homeSpan.textContent = "Home";
+      homeSpan.onclick = () => {
+        currentPath = "";
+        breadcrumbPaths = [];
+        loadItems();
+      };
+      breadcrumbEl.appendChild(homeSpan);
+      breadcrumbPaths.forEach((folder, index) => {
+        const span = document.createElement("span");
+        span.textContent = folder;
+        span.onclick = () => {
+          breadcrumbPaths = breadcrumbPaths.slice(0, index + 1);
+          currentPath = breadcrumbPaths.join("/") + "/";
+          loadItems();
+        };
+        breadcrumbEl.appendChild(span);
+      });
+    }
+    
+    function searchItems(event) {
+      const query = event.target.value.toLowerCase();
+      const grid = document.getElementById("item-grid");
+      const items = grid.getElementsByClassName("grid-item");
+      Array.from(items).forEach(item => {
+        const title = item.querySelector(".item-title").textContent.toLowerCase();
+        item.style.display = title.indexOf(query) > -1 ? "block" : "none";
+      });
+    }
+    
+    /*******************************
+     * UPLOAD DE ARQUIVOS (Apenas áudio/vídeo)
+     *******************************/
+    function openUploadModal() {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.multiple = true;
+      input.onchange = async () => {
+        const files = input.files;
+        if (files.length) {
+          for (const file of files) {
+            // Verifica se o arquivo é de áudio ou vídeo
+            if (!file.type.startsWith("audio/") && !file.type.startsWith("video/")) {
+              alert(`Arquivo ${file.name} não suportado. Apenas áudio e vídeo são permitidos.`);
+              continue;
+            }
+            try {
+              const folder = prompt("Digite o caminho de upload (deixe vazio para usar o atual):", currentPath);
+              const path = (folder && folder.trim() !== "") ? folder + "/" : currentPath;
+              const fileRef = storageRef.child(path + file.name);
+              await fileRef.put(file);
+            } catch (error) {
+              alert("Erro no upload: " + error.message);
+            }
+          }
+          loadItems();
+        }
+      };
+      input.click();
+    }
+    
+    /*******************************
+     * CRIAÇÃO DE NOVAS PASTAS
+     *******************************/
+    function createFolder() {
+      const folderName = prompt("Digite o nome da nova pasta:");
+      if (folderName) {
+        // Cria a pasta no Storage (simulação) e também salva no Firestore
+        storageRef.child(currentPath + folderName + "/").put(new Blob([]))
+          .then(() => {
+            return db.collection("folders").add({
+              name: folderName,
+              path: currentPath + folderName + "/",
+              createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          })
+          .then(() => {
+            alert(`Pasta "${folderName}" criada.`);
+            loadItems();
+          })
+          .catch(err => alert("Erro ao criar pasta: " + err.message));
+      }
+    }
+    
+    /*******************************
+     * CRIAÇÃO DE PLAYLIST PERSONALIZADA
+     *******************************/
+    function createPlaylist() {
+      const playlistName = prompt("Digite o nome da nova playlist:");
+      if (playlistName) {
+        // Cria uma pasta na coleção "playlists" (simulação)
+        storageRef.child("Playlists/" + playlistName + "/").put(new Blob([]))
+          .then(() => {
+            return db.collection("playlists").add({
+              name: playlistName,
+              path: "Playlists/" + playlistName + "/",
+              createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          })
+          .then(() => {
+            alert(`Playlist "${playlistName}" criada.`);
+            // Opcionalmente, atualize a visualização das playlists
+          })
+          .catch(err => alert("Erro ao criar playlist: " + err.message));
+      }
+    }
+    
+    /*******************************
+     * SELECIONAR TUDO
+     *******************************/
+    function selectAllItems() {
+      const items = document.querySelectorAll("#item-grid .grid-item");
+      items.forEach(item => item.style.outline = "2px solid var(--primary-color)");
+      alert("Todos os itens foram selecionados (simulação).");
+    }
+    
+    /*******************************
+     * EXIBIR FAVORITOS (Persistentes via Firestore)
+     *******************************/
+    function displayFavorites() {
+      db.collection("favorites").get().then(querySnapshot => {
+        const favs = [];
+        querySnapshot.forEach(doc => {
+          favs.push(doc.data());
+        });
+        if (favs.length === 0) {
+          alert("Nenhum item nos Favoritos.");
+          return;
+        }
+        const grid = document.getElementById("item-grid");
+        grid.innerHTML = "";
+        favs.forEach((fav, index) => {
+          const div = document.createElement("div");
+          div.className = "grid-item";
+          let ext = getExtension(fav.name);
+          let iconURL = "https://img.icons8.com/fluency/96/ffffff/musical-notes.png";
+          if (["mp4", "webm", "ogg"].includes(ext)) {
+            iconURL = "https://img.icons8.com/fluency/96/ffffff/video.png";
+          }
+          div.innerHTML = `
+            <img src="${iconURL}" alt="Mídia">
+            <div class="item-title">${fav.name}</div>
+          `;
+          div.onclick = () => {
+            if (["mp4", "webm", "ogg"].includes(ext)) {
+              audioPlayer.pause();
+              document.getElementById("video-player").src = fav.url;
+              openVideoModal();
+              updatePlayerInfo(fav.name, "Favorito (Vídeo)", true);
+            } else {
+              closeVideoModal();
+              audioPlayer.src = fav.url;
+              audioPlayer.play();
+              updatePlayerInfo(fav.name, "Favorito (Áudio)", false);
+              setPlayPauseIcon(true);
+            }
+          };
+          addContextMenu(div, fav, "favorite");
+          grid.appendChild(div);
+        });
+        updateBreadcrumb();
+      }).catch(err => {
+        alert("Erro ao carregar favoritos: " + err.message);
+      });
+    }
+    
+    /*******************************
+     * LISTAGEM DE ITENS (PASTAS & MÍDIAS)
+     *******************************/
+    async function loadItems() {
+      try {
+        const result = await storageRef.child(currentPath).listAll();
+        const grid = document.getElementById("item-grid");
+        grid.innerHTML = "";
+        
+        // Listar pastas (ex.: álbuns, playlists) – aqui também poderíamos integrar com Firestore para exibir as criadas
+        result.prefixes.forEach(prefix => {
+          const div = document.createElement("div");
+          div.className = "grid-item";
+          div.innerHTML = `
+            <img src="https://img.icons8.com/color/96/000000/folder-invoices.png" alt="Pasta">
+            <div class="item-title">${prefix.name}</div>
+          `;
+          div.onclick = () => {
+            currentPath += prefix.name + "/";
+            breadcrumbPaths.push(prefix.name);
+            loadItems();
+          };
+          addContextMenu(div, prefix, "folder");
+          grid.appendChild(div);
+        });
+        
+        // Listar mídias (faixas e vídeos)
+        itemList = result.items;
+        itemList.forEach((item, index) => {
+          const div = document.createElement("div");
+          div.className = "grid-item";
+          const ext = getExtension(item.name);
+          let iconURL = "https://img.icons8.com/fluency/96/ffffff/musical-notes.png";
+          if (["mp4", "webm", "ogg"].includes(ext)) {
+            iconURL = "https://img.icons8.com/fluency/96/ffffff/video.png";
+          }
+          div.innerHTML = `
+            <img src="${iconURL}" alt="Mídia">
+            <div class="item-title">${item.name}</div>
+          `;
+          div.onclick = () => playMedia(index, ext);
+          addContextMenu(div, item, "media", index);
+          grid.appendChild(div);
+        });
+        updateBreadcrumb();
+      } catch (error) {
+        alert("Erro ao carregar itens: " + error.message);
+      }
+    }
+    
+    /*******************************
+     * MENU DE CONTEXTO – FUNÇÕES
+     *******************************/
+    const contextMenu = document.getElementById("context-menu");
+    let contextItem = null;
+    
+    function addContextMenu(element, itemData, type, index) {
+      element.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        contextItem = { itemData, type, index };
+        contextMenu.style.top = `${e.clientY}px`;
+        contextMenu.style.left = `${e.clientX}px`;
+        contextMenu.style.display = "block";
+        updateContextMenu();
+      });
+    }
+    
+    function updateContextMenu() {
+      if (!contextItem) return;
+      if (contextItem.type === "media") {
+        contextMenu.innerHTML = `
+          <ul>
+            <li onclick="playMediaContext()">Tocar</li>
+            <li onclick="addToFavorites()">Adicionar aos Favoritos</li>
+            <li onclick="addToPlaylist()">Adicionar à Playlist</li>
+            <li onclick="downloadMedia()">Baixar</li>
+            <li onclick="deleteMedia()">Excluir</li>
+          </ul>
+        `;
+      } else if (contextItem.type === "folder") {
+        contextMenu.innerHTML = `
+          <ul>
+            <li onclick="renameFolder()">Renomear Pasta</li>
+            <li onclick="deleteFolder()">Excluir Pasta</li>
+            <li onclick="organizeFolder()">Organizar Pasta</li>
+          </ul>
+        `;
+      } else if (contextItem.type === "favorite") {
+        contextMenu.innerHTML = `
+          <ul>
+            <li onclick="playMediaContext()">Tocar</li>
+            <li onclick="removeFromFavorites()">Remover dos Favoritos</li>
+            <li onclick="addToPlaylist()">Adicionar à Playlist</li>
+            <li onclick="downloadMedia()">Baixar</li>
+            <li onclick="deleteMedia()">Excluir</li>
+          </ul>
+        `;
+      }
+    }
+    
+    function playMediaContext() {
+      if (contextItem && contextItem.type === "media" && contextItem.index !== undefined) {
+        playMedia(contextItem.index, getExtension(contextItem.itemData.name));
+      } else if (contextItem && contextItem.type === "favorite") {
+        let favIndex = -1;
+        // Procura o favorito no Firestore (simulação simples: usamos o nome como id)
+        db.collection("favorites").doc(contextItem.itemData.name).get().then(doc => {
+          if (doc.exists) {
+            const data = doc.data();
+            favIndex = 0; // Se encontrado, apenas reproduz
+            if (["mp4", "webm", "ogg"].includes(getExtension(data.name))) {
+              audioPlayer.pause();
+              document.getElementById("video-player").src = data.url;
+              openVideoModal();
+              updatePlayerInfo(data.name, "Favorito (Vídeo)", true);
+            } else {
+              closeVideoModal();
+              audioPlayer.src = data.url;
+              audioPlayer.play();
+              updatePlayerInfo(data.name, "Favorito (Áudio)", false);
+              setPlayPauseIcon(true);
+            }
+          }
+        });
+      }
+    }
+    
+    function addToFavorites() {
+      if (contextItem) {
+        const itemName = contextItem.itemData.name;
+        contextItem.itemData.getDownloadURL().then(url => {
+          db.collection("favorites").doc(itemName).set({
+            name: itemName,
+            url: url,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          }).then(() => {
+            alert(`"${itemName}" adicionado aos Favoritos.`);
+          }).catch(err => alert("Erro ao adicionar aos favoritos: " + err.message));
+        }).catch(err => alert("Erro ao obter URL: " + err.message));
+      }
+    }
+    
+    function removeFromFavorites() {
+      if (contextItem) {
+        const itemName = contextItem.itemData.name;
+        db.collection("favorites").doc(itemName).delete().then(() => {
+          alert(`"${itemName}" removido dos Favoritos.`);
+          displayFavorites();
+        }).catch(err => alert("Erro ao remover dos favoritos: " + err.message));
+      }
+    }
+    
+    function addToPlaylist() {
+      if (contextItem) {
+        const playlist = prompt("Digite o nome da playlist para adicionar:");
+        if (playlist) {
+          alert(`"${contextItem.itemData.name}" adicionado à playlist "${playlist}" (simulação).`);
+        }
+      }
+    }
+    
+    function downloadMedia() {
+      if (contextItem) {
+        contextItem.itemData.getDownloadURL().then(url => {
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = contextItem.itemData.name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }).catch(err => alert("Erro ao baixar: " + err.message));
+      }
+    }
+    
+    function deleteMedia() {
+      if (contextItem) {
+        if (confirm(`Deseja excluir "${contextItem.itemData.name}"?`)) {
+          contextItem.itemData.delete().then(() => {
+            alert("Excluído com sucesso (simulação).");
+            loadItems();
+          }).catch(err => alert("Erro ao excluir: " + err.message));
+        }
+      }
+    }
+    
+    function renameFolder() {
+      if (contextItem && contextItem.type === "folder") {
+        const newName = prompt("Digite o novo nome para a pasta:", contextItem.itemData.name);
+        if (newName) {
+          alert(`Pasta renomeada para "${newName}" (simulação).`);
+          loadItems();
+        }
+      }
+    }
+    
+    function deleteFolder() {
+      if (contextItem && contextItem.type === "folder") {
+        if (confirm(`Deseja excluir a pasta "${contextItem.itemData.name}"? (Simulação)`)) {
+          alert(`Pasta "${contextItem.itemData.name}" excluída (simulação).`);
+          loadItems();
+        }
+      }
+    }
+    
+    function organizeFolder() {
+      if (contextItem && contextItem.type === "folder") {
+        alert(`Organizando a pasta "${contextItem.itemData.name}" (simulação).`);
+      }
+    }
+    
+    /*******************************
+     * CONTROLE DE REPRODUÇÃO (ÁUDIO & VÍDEO)
+     *******************************/
+    async function playMedia(index, ext) {
+      try {
+        const mediaItem = itemList[index];
+        const url = await mediaItem.getDownloadURL();
+        currentTrackIndex = index;
+        if (["mp4", "webm", "ogg"].includes(ext)) {
+          audioPlayer.pause();
+          document.getElementById("video-player").src = url;
+          openVideoModal();
+          updatePlayerInfo(mediaItem.name, "Vídeo Desconhecido", true);
+        } else {
+          closeVideoModal();
+          audioPlayer.src = url;
+          audioPlayer.play();
+          updatePlayerInfo(mediaItem.name, "Artista Desconhecido", false);
+          setPlayPauseIcon(true);
+        }
+      } catch (error) {
+        if (error.name === "NotSupportedError") {
+          alert("Formato de mídia não suportado.");
+        } else {
+          alert("Erro ao reproduzir a mídia: " + error.message);
+        }
+      }
+    }
+    
+    function updatePlayerInfo(title, artist, isVideo) {
+      document.getElementById("track-name").textContent = title;
+      document.getElementById("track-artist").textContent = artist;
+      // Se via.placeholder.com não resolver, usamos um placeholder alternativo:
+      document.getElementById("track-art").src = isVideo 
+        ? "https://dummyimage.com/60x60/000/fff&text=Video" 
+        : "https://dummyimage.com/60x60/000/fff&text=Capa";
+    }
+    
+    function togglePlayPause() {
+      if (document.getElementById("video-modal").style.display === "flex") {
+        const videoPlayer = document.getElementById("video-player");
+        if (videoPlayer.paused) {
+          videoPlayer.play();
+          setPlayPauseIcon(true);
+        } else {
+          videoPlayer.pause();
+          setPlayPauseIcon(false);
+        }
+      } else {
+        if (!audioPlayer.src) return;
+        if (audioPlayer.paused) {
+          audioPlayer.play();
+          setPlayPauseIcon(true);
+        } else {
+          audioPlayer.pause();
+          setPlayPauseIcon(false);
+        }
+      }
+    }
+    
+    function setPlayPauseIcon(isPlaying) {
+      const btn = document.getElementById("playPauseBtn");
+      btn.innerHTML = isPlaying ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
+      console.log("Play/Pause:", isPlaying);
+    }
+    
+    function playNext() {
+      if (isShuffle) {
+        const randomIndex = Math.floor(Math.random() * itemList.length);
+        playMedia(randomIndex, getExtension(itemList[randomIndex].name));
+      } else if (currentTrackIndex < itemList.length - 1) {
+        playMedia(currentTrackIndex + 1, getExtension(itemList[currentTrackIndex + 1].name));
+      } else if (isRepeat) {
+        playMedia(0, getExtension(itemList[0].name));
+      }
+    }
+    
+    function playPrevious() {
+      if (currentTrackIndex > 0) {
+        playMedia(currentTrackIndex - 1, getExtension(itemList[currentTrackIndex - 1].name));
+      }
+    }
+    
+    function toggleShuffle() {
+      isShuffle = !isShuffle;
+      document.getElementById("shuffleBtn").style.color = isShuffle ? getComputedStyle(document.documentElement).getPropertyValue('--primary-color') : "#fff";
+    }
+    
+    function toggleRepeat() {
+      isRepeat = !isRepeat;
+      document.getElementById("repeatBtn").style.color = isRepeat ? getComputedStyle(document.documentElement).getPropertyValue('--primary-color') : "#fff";
+    }
+    
+    function getExtension(filename) {
+      return filename.split('.').pop().toLowerCase();
+    }
+    
+    /*******************************
+     * CONTROLE DE VOLUME
+     *******************************/
+    function adjustVolume() {
+      const vol = document.getElementById("volume-slider").value;
+      audioPlayer.volume = vol;
+      const videoPlayer = document.getElementById("video-player");
+      if (videoPlayer) videoPlayer.volume = vol;
+    }
+    
+    function increaseVolume() {
+      let vol = Math.min(audioPlayer.volume + 0.1, 1);
+      audioPlayer.volume = vol;
+      document.getElementById("volume-slider").value = vol;
+    }
+    
+    function decreaseVolume() {
+      let vol = Math.max(audioPlayer.volume - 0.1, 0);
+      audioPlayer.volume = vol;
+      document.getElementById("volume-slider").value = vol;
+    }
+    
+    let isMuted = false;
+    function toggleMute() {
+      isMuted = !isMuted;
+      audioPlayer.muted = isMuted;
+      const videoPlayer = document.getElementById("video-player");
+      if (videoPlayer) videoPlayer.muted = isMuted;
+      document.getElementById("muteIcon").className = isMuted ? "fas fa-volume-mute" : "fas fa-volume-up";
+    }
+    
+    /*******************************
+     * BARRA DE PROGRESSO
+     *******************************/
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+    }
+    
+    function updateProgress() {
+      const progressBar = document.getElementById("progress-bar");
+      const currentTimeEl = document.getElementById("current-time");
+      const totalTimeEl = document.getElementById("total-time");
+      let duration = 0, currentTime = 0;
+      if (document.getElementById("video-modal").style.display === "flex") {
+        const videoPlayer = document.getElementById("video-player");
+        duration = videoPlayer.duration;
+        currentTime = videoPlayer.currentTime;
+      } else {
+        duration = audioPlayer.duration;
+        currentTime = audioPlayer.currentTime;
+      }
+      if (duration) {
+        const progressPercent = (currentTime / duration) * 100;
+        progressBar.style.width = progressPercent + "%";
+        currentTimeEl.textContent = formatTime(currentTime);
+        totalTimeEl.textContent = formatTime(duration);
+      }
+    }
+    
+    function seekProgress(event) {
+      const container = event.currentTarget;
+      const rect = container.getBoundingClientRect();
+      const clickX = event.clientX - rect.left;
+      const percentage = clickX / rect.width;
+      let duration = 0;
+      if (document.getElementById("video-modal").style.display === "flex") {
+        const videoPlayer = document.getElementById("video-player");
+        duration = videoPlayer.duration;
+        videoPlayer.currentTime = percentage * duration;
+      } else {
+        duration = audioPlayer.duration;
+        audioPlayer.currentTime = percentage * duration;
+      }
+    }
+    
+    audioPlayer.addEventListener("timeupdate", updateProgress);
+    document.getElementById("video-player").addEventListener("timeupdate", updateProgress);
+    audioPlayer.addEventListener("ended", playNext);
+    document.getElementById("video-player").addEventListener("ended", playNext);
+    
+    /*******************************
+     * MODAL DE VÍDEO
+     *******************************/
+    function openVideoModal() {
+      document.getElementById("video-modal").style.display = "flex";
+      setPlayPauseIcon(true);
+    }
+    function closeVideoModal() {
+      const modal = document.getElementById("video-modal");
+      if (modal.style.display === "flex") {
+        modal.style.display = "none";
+        const videoPlayer = document.getElementById("video-player");
+        videoPlayer.pause();
+        videoPlayer.currentTime = 0;
+      }
+    }
+    
+    /*******************************
+     * MODAL DE BUSCA AVANÇADA
+     *******************************/
+    function openAdvancedSearchModal() {
+      document.getElementById("advanced-search-modal").style.display = "flex";
+    }
+    function performAdvancedSearch() {
+      const filterAudio = document.getElementById("filter-audio").checked;
+      const filterVideo = document.getElementById("filter-video").checked;
+      const grid = document.getElementById("item-grid");
+      const items = grid.getElementsByClassName("grid-item");
+      Array.from(items).forEach(item => {
+        const title = item.querySelector(".item-title").textContent.toLowerCase();
+        const ext = getExtension(title);
+        if (!filterVideo && ["mp4","webm","ogg"].includes(ext)) {
+          item.style.display = "none";
+        } else if (!filterAudio && !["mp4","webm","ogg"].includes(ext)) {
+          item.style.display = "none";
+        } else {
+          item.style.display = "block";
+        }
+      });
+      document.getElementById("advanced-search-modal").style.display = "none";
+    }
+    
+    /*******************************
+     * ATALHOS DE TECLADO
+     *******************************/
+    document.addEventListener("keydown", (e) => {
+      if (e.code === "Space") {
+        e.preventDefault();
+        togglePlayPause();
+      }
+      if (e.code === "ArrowRight") {
+        playNext();
+      }
+      if (e.code === "ArrowLeft") {
+        playPrevious();
+      }
+      if (e.code === "ArrowUp") {
+        let vol = Math.min(audioPlayer.volume + 0.05, 1);
+        audioPlayer.volume = vol;
+        document.getElementById("volume-slider").value = vol;
+      }
+      if (e.code === "ArrowDown") {
+        let vol = Math.max(audioPlayer.volume - 0.05, 0);
+        audioPlayer.volume = vol;
+        document.getElementById("volume-slider").value = vol;
+      }
+      if (e.code === "Escape") {
+        closeVideoModal();
+        document.getElementById("advanced-search-modal").style.display = "none";
+      }
+    });
+    
+    /*******************************
+     * FUNÇÃO PARA SAIR DO APLICATIVO
+     *******************************/
+    function exitApp() {
+      if (confirm("Deseja sair do aplicativo?")) {
+        alert("Encerrando sessão (simulação).");
+      }
+    }
+    
+    /*******************************
+     * PERSISTÊNCIA DE FAVORITOS VIA FIRESTORE
+     *******************************/
+    function addToFavorites() {
+      if (contextItem) {
+        const itemName = contextItem.itemData.name;
+        contextItem.itemData.getDownloadURL().then(url => {
+          db.collection("favorites").doc(itemName).set({
+            name: itemName,
+            url: url,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          }).then(() => {
+            alert(`"${itemName}" adicionado aos Favoritos.`);
+          }).catch(err => alert("Erro ao adicionar aos favoritos: " + err.message));
+        }).catch(err => alert("Erro ao obter URL: " + err.message));
+      }
+    }
+    
+    function removeFromFavorites() {
+      if (contextItem) {
+        const itemName = contextItem.itemData.name;
+        db.collection("favorites").doc(itemName).delete().then(() => {
+          alert(`"${itemName}" removido dos Favoritos.`);
+          displayFavorites();
+        }).catch(err => alert("Erro ao remover dos favoritos: " + err.message));
+      }
+    }
+    
+    function displayFavorites() {
+      db.collection("favorites").get().then(querySnapshot => {
+        const favs = [];
+        querySnapshot.forEach(doc => {
+          favs.push(doc.data());
+        });
+        if (favs.length === 0) {
+          alert("Nenhum item nos Favoritos.");
+          return;
+        }
+        const grid = document.getElementById("item-grid");
+        grid.innerHTML = "";
+        favs.forEach((fav, index) => {
+          const div = document.createElement("div");
+          div.className = "grid-item";
+          let ext = getExtension(fav.name);
+          let iconURL = "https://img.icons8.com/fluency/96/ffffff/musical-notes.png";
+          if (["mp4", "webm", "ogg"].includes(ext)) {
+            iconURL = "https://img.icons8.com/fluency/96/ffffff/video.png";
+          }
+          div.innerHTML = `
+            <img src="${iconURL}" alt="Mídia">
+            <div class="item-title">${fav.name}</div>
+          `;
+          div.onclick = () => {
+            if (["mp4", "webm", "ogg"].includes(ext)) {
+              audioPlayer.pause();
+              document.getElementById("video-player").src = fav.url;
+              openVideoModal();
+              updatePlayerInfo(fav.name, "Favorito (Vídeo)", true);
+            } else {
+              closeVideoModal();
+              audioPlayer.src = fav.url;
+              audioPlayer.play();
+              updatePlayerInfo(fav.name, "Favorito (Áudio)", false);
+              setPlayPauseIcon(true);
+            }
+          };
+          addContextMenu(div, fav, "favorite");
+          grid.appendChild(div);
+        });
+        updateBreadcrumb();
+      }).catch(err => alert("Erro ao carregar favoritos: " + err.message));
+    }
+    
+    /*******************************
+     * CONTROLE DE REPRODUÇÃO (ÁUDIO & VÍDEO)
+     *******************************/
+    async function playMedia(index, ext) {
+      try {
+        const mediaItem = itemList[index];
+        const url = await mediaItem.getDownloadURL();
+        currentTrackIndex = index;
+        if (["mp4", "webm", "ogg"].includes(ext)) {
+          audioPlayer.pause();
+          document.getElementById("video-player").src = url;
+          openVideoModal();
+          updatePlayerInfo(mediaItem.name, "Vídeo Desconhecido", true);
+        } else {
+          closeVideoModal();
+          audioPlayer.src = url;
+          audioPlayer.play();
+          updatePlayerInfo(mediaItem.name, "Artista Desconhecido", false);
+          setPlayPauseIcon(true);
+        }
+      } catch (error) {
+        if (error.name === "NotSupportedError") {
+          alert("Formato de mídia não suportado.");
+        } else {
+          alert("Erro ao reproduzir a mídia: " + error.message);
+        }
+      }
+    }
+    
+    function updatePlayerInfo(title, artist, isVideo) {
+      document.getElementById("track-name").textContent = title;
+      document.getElementById("track-artist").textContent = artist;
+      // Se o placeholder via.placeholder.com estiver com erro, usamos um alternativo (dummyimage.com)
+      document.getElementById("track-art").src = isVideo 
+        ? "https://dummyimage.com/60x60/000/fff&text=Video" 
+        : "https://dummyimage.com/60x60/000/fff&text=Capa";
+    }
+    
+    function togglePlayPause() {
+      if (document.getElementById("video-modal").style.display === "flex") {
+        const videoPlayer = document.getElementById("video-player");
+        if (videoPlayer.paused) {
+          videoPlayer.play();
+          setPlayPauseIcon(true);
+        } else {
+          videoPlayer.pause();
+          setPlayPauseIcon(false);
+        }
+      } else {
+        if (!audioPlayer.src) return;
+        if (audioPlayer.paused) {
+          audioPlayer.play();
+          setPlayPauseIcon(true);
+        } else {
+          audioPlayer.pause();
+          setPlayPauseIcon(false);
+        }
+      }
+    }
+    
+    function setPlayPauseIcon(isPlaying) {
+      const btn = document.getElementById("playPauseBtn");
+      btn.innerHTML = isPlaying ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
+      console.log("Play/Pause:", isPlaying);
+    }
+    
+    function playNext() {
+      if (isShuffle) {
+        const randomIndex = Math.floor(Math.random() * itemList.length);
+        playMedia(randomIndex, getExtension(itemList[randomIndex].name));
+      } else if (currentTrackIndex < itemList.length - 1) {
+        playMedia(currentTrackIndex + 1, getExtension(itemList[currentTrackIndex + 1].name));
+      } else if (isRepeat) {
+        playMedia(0, getExtension(itemList[0].name));
+      }
+    }
+    
+    function playPrevious() {
+      if (currentTrackIndex > 0) {
+        playMedia(currentTrackIndex - 1, getExtension(itemList[currentTrackIndex - 1].name));
+      }
+    }
+    
+    function toggleShuffle() {
+      isShuffle = !isShuffle;
+      document.getElementById("shuffleBtn").style.color = isShuffle ? getComputedStyle(document.documentElement).getPropertyValue('--primary-color') : "#fff";
+    }
+    
+    function toggleRepeat() {
+      isRepeat = !isRepeat;
+      document.getElementById("repeatBtn").style.color = isRepeat ? getComputedStyle(document.documentElement).getPropertyValue('--primary-color') : "#fff";
+    }
+    
+    function getExtension(filename) {
+      return filename.split('.').pop().toLowerCase();
+    }
+    
+    /*******************************
+     * CONTROLE DE VOLUME
+     *******************************/
+    function adjustVolume() {
+      const vol = document.getElementById("volume-slider").value;
+      audioPlayer.volume = vol;
+      const videoPlayer = document.getElementById("video-player");
+      if (videoPlayer) videoPlayer.volume = vol;
+    }
+    
+    function increaseVolume() {
+      let vol = Math.min(audioPlayer.volume + 0.1, 1);
+      audioPlayer.volume = vol;
+      document.getElementById("volume-slider").value = vol;
+    }
+    
+    function decreaseVolume() {
+      let vol = Math.max(audioPlayer.volume - 0.1, 0);
+      audioPlayer.volume = vol;
+      document.getElementById("volume-slider").value = vol;
+    }
+    
+    let isMuted = false;
+    function toggleMute() {
+      isMuted = !isMuted;
+      audioPlayer.muted = isMuted;
+      const videoPlayer = document.getElementById("video-player");
+      if (videoPlayer) videoPlayer.muted = isMuted;
+      document.getElementById("muteIcon").className = isMuted ? "fas fa-volume-mute" : "fas fa-volume-up";
+    }
+    
+    /*******************************
+     * BARRA DE PROGRESSO
+     *******************************/
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+    }
+    
+    function updateProgress() {
+      const progressBar = document.getElementById("progress-bar");
+      const currentTimeEl = document.getElementById("current-time");
+      const totalTimeEl = document.getElementById("total-time");
+      let duration = 0, currentTime = 0;
+      if (document.getElementById("video-modal").style.display === "flex") {
+        const videoPlayer = document.getElementById("video-player");
+        duration = videoPlayer.duration;
+        currentTime = videoPlayer.currentTime;
+      } else {
+        duration = audioPlayer.duration;
+        currentTime = audioPlayer.currentTime;
+      }
+      if (duration) {
+        const progressPercent = (currentTime / duration) * 100;
+        progressBar.style.width = progressPercent + "%";
+        currentTimeEl.textContent = formatTime(currentTime);
+        totalTimeEl.textContent = formatTime(duration);
+      }
+    }
+    
+    function seekProgress(event) {
+      const container = event.currentTarget;
+      const rect = container.getBoundingClientRect();
+      const clickX = event.clientX - rect.left;
+      const percentage = clickX / rect.width;
+      let duration = 0;
+      if (document.getElementById("video-modal").style.display === "flex") {
+        const videoPlayer = document.getElementById("video-player");
+        duration = videoPlayer.duration;
+        videoPlayer.currentTime = percentage * duration;
+      } else {
+        duration = audioPlayer.duration;
+        audioPlayer.currentTime = percentage * duration;
+      }
+    }
+    
+    audioPlayer.addEventListener("timeupdate", updateProgress);
+    document.getElementById("video-player").addEventListener("timeupdate", updateProgress);
+    audioPlayer.addEventListener("ended", playNext);
+    document.getElementById("video-player").addEventListener("ended", playNext);
+    
+    /*******************************
+     * MODAL DE VÍDEO
+     *******************************/
+    function openVideoModal() {
+      document.getElementById("video-modal").style.display = "flex";
+      setPlayPauseIcon(true);
+    }
+    function closeVideoModal() {
+      const modal = document.getElementById("video-modal");
+      if (modal.style.display === "flex") {
+        modal.style.display = "none";
+        const videoPlayer = document.getElementById("video-player");
+        videoPlayer.pause();
+        videoPlayer.currentTime = 0;
+      }
+    }
+    
+    /*******************************
+     * MODAL DE BUSCA AVANÇADA
+     *******************************/
+    function openAdvancedSearchModal() {
+      document.getElementById("advanced-search-modal").style.display = "flex";
+    }
+    function performAdvancedSearch() {
+      const filterAudio = document.getElementById("filter-audio").checked;
+      const filterVideo = document.getElementById("filter-video").checked;
+      const grid = document.getElementById("item-grid");
+      const items = grid.getElementsByClassName("grid-item");
+      Array.from(items).forEach(item => {
+        const title = item.querySelector(".item-title").textContent.toLowerCase();
+        const ext = getExtension(title);
+        if (!filterVideo && ["mp4","webm","ogg"].includes(ext)) {
+          item.style.display = "none";
+        } else if (!filterAudio && !["mp4","webm","ogg"].includes(ext)) {
+          item.style.display = "none";
+        } else {
+          item.style.display = "block";
+        }
+      });
+      document.getElementById("advanced-search-modal").style.display = "none";
+    }
+    
+    /*******************************
+     * ATALHOS DE TECLADO
+     *******************************/
+    document.addEventListener("keydown", (e) => {
+      if (e.code === "Space") {
+        e.preventDefault();
+        togglePlayPause();
+      }
+      if (e.code === "ArrowRight") {
+        playNext();
+      }
+      if (e.code === "ArrowLeft") {
+        playPrevious();
+      }
+      if (e.code === "ArrowUp") {
+        let vol = Math.min(audioPlayer.volume + 0.05, 1);
+        audioPlayer.volume = vol;
+        document.getElementById("volume-slider").value = vol;
+      }
+      if (e.code === "ArrowDown") {
+        let vol = Math.max(audioPlayer.volume - 0.05, 0);
+        audioPlayer.volume = vol;
+        document.getElementById("volume-slider").value = vol;
+      }
+      if (e.code === "Escape") {
+        closeVideoModal();
+        document.getElementById("advanced-search-modal").style.display = "none";
+      }
+    });
+    
+    /*******************************
+     * FUNÇÃO PARA SAIR DO APLICATIVO
+     *******************************/
+    function exitApp() {
+      if (confirm("Deseja sair do aplicativo?")) {
+        alert("Encerrando sessão (simulação).");
+      }
+    }
+    
+    /*******************************
+     * PERSISTÊNCIA DE FAVORITOS VIA FIRESTORE
+     *******************************/
+    function addToFavorites() {
+      if (contextItem) {
+        const itemName = contextItem.itemData.name;
+        contextItem.itemData.getDownloadURL().then(url => {
+          db.collection("favorites").doc(itemName).set({
+            name: itemName,
+            url: url,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          }).then(() => {
+            alert(`"${itemName}" adicionado aos Favoritos.`);
+          }).catch(err => alert("Erro ao adicionar aos favoritos: " + err.message));
+        }).catch(err => alert("Erro ao obter URL: " + err.message));
+      }
+    }
+    
+    function removeFromFavorites() {
+      if (contextItem) {
+        const itemName = contextItem.itemData.name;
+        db.collection("favorites").doc(itemName).delete().then(() => {
+          alert(`"${itemName}" removido dos Favoritos.`);
+          displayFavorites();
+        }).catch(err => alert("Erro ao remover dos Favoritos: " + err.message));
+      }
+    }
+    
+    function displayFavorites() {
+      db.collection("favorites").get().then(querySnapshot => {
+        const favs = [];
+        querySnapshot.forEach(doc => {
+          favs.push(doc.data());
+        });
+        if (favs.length === 0) {
+          alert("Nenhum item nos Favoritos.");
+          return;
+        }
+        const grid = document.getElementById("item-grid");
+        grid.innerHTML = "";
+        favs.forEach((fav, index) => {
+          const div = document.createElement("div");
+          div.className = "grid-item";
+          let ext = getExtension(fav.name);
+          let iconURL = "https://img.icons8.com/fluency/96/ffffff/musical-notes.png";
+          if (["mp4", "webm", "ogg"].includes(ext)) {
+            iconURL = "https://img.icons8.com/fluency/96/ffffff/video.png";
+          }
+          div.innerHTML = `
+            <img src="${iconURL}" alt="Mídia">
+            <div class="item-title">${fav.name}</div>
+          `;
+          div.onclick = () => {
+            if (["mp4", "webm", "ogg"].includes(ext)) {
+              audioPlayer.pause();
+              document.getElementById("video-player").src = fav.url;
+              openVideoModal();
+              updatePlayerInfo(fav.name, "Favorito (Vídeo)", true);
+            } else {
+              closeVideoModal();
+              audioPlayer.src = fav.url;
+              audioPlayer.play();
+              updatePlayerInfo(fav.name, "Favorito (Áudio)", false);
+              setPlayPauseIcon(true);
+            }
+          };
+          addContextMenu(div, fav, "favorite");
+          grid.appendChild(div);
+        });
+        updateBreadcrumb();
+      }).catch(err => {
+        alert("Erro ao carregar Favoritos: " + err.message);
+      });
+    }
+    
+    /*******************************
+     * CONTROLE DE REPRODUÇÃO (ÁUDIO & VÍDEO)
+     *******************************/
+    async function playMedia(index, ext) {
+      try {
+        const mediaItem = itemList[index];
+        const url = await mediaItem.getDownloadURL();
+        currentTrackIndex = index;
+        if (["mp4", "webm", "ogg"].includes(ext)) {
+          audioPlayer.pause();
+          document.getElementById("video-player").src = url;
+          openVideoModal();
+          updatePlayerInfo(mediaItem.name, "Vídeo Desconhecido", true);
+        } else {
+          closeVideoModal();
+          audioPlayer.src = url;
+          audioPlayer.play();
+          updatePlayerInfo(mediaItem.name, "Artista Desconhecido", false);
+          setPlayPauseIcon(true);
+        }
+      } catch (error) {
+        if (error.name === "NotSupportedError") {
+          alert("Formato de mídia não suportado.");
+        } else {
+          alert("Erro ao reproduzir a mídia: " + error.message);
+        }
+      }
+    }
+    
+    function updatePlayerInfo(title, artist, isVideo) {
+      document.getElementById("track-name").textContent = title;
+      document.getElementById("track-artist").textContent = artist;
+      // Se o via.placeholder.com não resolver, usamos dummyimage.com
+      document.getElementById("track-art").src = isVideo 
+        ? "https://dummyimage.com/60x60/000/fff&text=Video" 
+        : "https://dummyimage.com/60x60/000/fff&text=Capa";
+    }
+    
+    function togglePlayPause() {
+      if (document.getElementById("video-modal").style.display === "flex") {
+        const videoPlayer = document.getElementById("video-player");
+        if (videoPlayer.paused) {
+          videoPlayer.play();
+          setPlayPauseIcon(true);
+        } else {
+          videoPlayer.pause();
+          setPlayPauseIcon(false);
+        }
+      } else {
+        if (!audioPlayer.src) return;
+        if (audioPlayer.paused) {
+          audioPlayer.play();
+          setPlayPauseIcon(true);
+        } else {
+          audioPlayer.pause();
+          setPlayPauseIcon(false);
+        }
+      }
+    }
+    
+    function setPlayPauseIcon(isPlaying) {
+      const btn = document.getElementById("playPauseBtn");
+      btn.innerHTML = isPlaying ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
+      console.log("Play/Pause:", isPlaying);
+    }
+    
+    function playNext() {
+      if (isShuffle) {
+        const randomIndex = Math.floor(Math.random() * itemList.length);
+        playMedia(randomIndex, getExtension(itemList[randomIndex].name));
+      } else if (currentTrackIndex < itemList.length - 1) {
+        playMedia(currentTrackIndex + 1, getExtension(itemList[currentTrackIndex + 1].name));
+      } else if (isRepeat) {
+        playMedia(0, getExtension(itemList[0].name));
+      }
+    }
+    
+    function playPrevious() {
+      if (currentTrackIndex > 0) {
+        playMedia(currentTrackIndex - 1, getExtension(itemList[currentTrackIndex - 1].name));
+      }
+    }
+    
+    function toggleShuffle() {
+      isShuffle = !isShuffle;
+      document.getElementById("shuffleBtn").style.color = isShuffle ? getComputedStyle(document.documentElement).getPropertyValue('--primary-color') : "#fff";
+    }
+    
+    function toggleRepeat() {
+      isRepeat = !isRepeat;
+      document.getElementById("repeatBtn").style.color = isRepeat ? getComputedStyle(document.documentElement).getPropertyValue('--primary-color') : "#fff";
+    }
+    
+    function getExtension(filename) {
+      return filename.split('.').pop().toLowerCase();
+    }
+    
+    /*******************************
+     * CONTROLE DE VOLUME
+     *******************************/
+    function adjustVolume() {
+      const vol = document.getElementById("volume-slider").value;
+      audioPlayer.volume = vol;
+      const videoPlayer = document.getElementById("video-player");
+      if (videoPlayer) videoPlayer.volume = vol;
+    }
+    
+    function increaseVolume() {
+      let vol = Math.min(audioPlayer.volume + 0.1, 1);
+      audioPlayer.volume = vol;
+      document.getElementById("volume-slider").value = vol;
+    }
+    
+    function decreaseVolume() {
+      let vol = Math.max(audioPlayer.volume - 0.1, 0);
+      audioPlayer.volume = vol;
+      document.getElementById("volume-slider").value = vol;
+    }
+    
+    let isMuted = false;
+    function toggleMute() {
+      isMuted = !isMuted;
+      audioPlayer.muted = isMuted;
+      const videoPlayer = document.getElementById("video-player");
+      if (videoPlayer) videoPlayer.muted = isMuted;
+      document.getElementById("muteIcon").className = isMuted ? "fas fa-volume-mute" : "fas fa-volume-up";
+    }
+    
+    /*******************************
+     * BARRA DE PROGRESSO
+     *******************************/
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+    }
+    
+    function updateProgress() {
+      const progressBar = document.getElementById("progress-bar");
+      const currentTimeEl = document.getElementById("current-time");
+      const totalTimeEl = document.getElementById("total-time");
+      let duration = 0, currentTime = 0;
+      if (document.getElementById("video-modal").style.display === "flex") {
+        const videoPlayer = document.getElementById("video-player");
+        duration = videoPlayer.duration;
+        currentTime = videoPlayer.currentTime;
+      } else {
+        duration = audioPlayer.duration;
+        currentTime = audioPlayer.currentTime;
+      }
+      if (duration) {
+        const progressPercent = (currentTime / duration) * 100;
+        progressBar.style.width = progressPercent + "%";
+        currentTimeEl.textContent = formatTime(currentTime);
+        totalTimeEl.textContent = formatTime(duration);
+      }
+    }
+    
+    function seekProgress(event) {
+      const container = event.currentTarget;
+      const rect = container.getBoundingClientRect();
+      const clickX = event.clientX - rect.left;
+      const percentage = clickX / rect.width;
+      let duration = 0;
+      if (document.getElementById("video-modal").style.display === "flex") {
+        const videoPlayer = document.getElementById("video-player");
+        duration = videoPlayer.duration;
+        videoPlayer.currentTime = percentage * duration;
+      } else {
+        duration = audioPlayer.duration;
+        audioPlayer.currentTime = percentage * duration;
+      }
+    }
+    
+    audioPlayer.addEventListener("timeupdate", updateProgress);
+    document.getElementById("video-player").addEventListener("timeupdate", updateProgress);
+    audioPlayer.addEventListener("ended", playNext);
+    document.getElementById("video-player").addEventListener("ended", playNext);
+    
+    /*******************************
+     * MODAL DE VÍDEO
+     *******************************/
+    function openVideoModal() {
+      document.getElementById("video-modal").style.display = "flex";
+      setPlayPauseIcon(true);
+    }
+    function closeVideoModal() {
+      const modal = document.getElementById("video-modal");
+      if (modal.style.display === "flex") {
+        modal.style.display = "none";
+        const videoPlayer = document.getElementById("video-player");
+        videoPlayer.pause();
+        videoPlayer.currentTime = 0;
+      }
+    }
+    
+    /*******************************
+     * MODAL DE BUSCA AVANÇADA
+     *******************************/
+    function openAdvancedSearchModal() {
+      document.getElementById("advanced-search-modal").style.display = "flex";
+    }
+    function performAdvancedSearch() {
+      const filterAudio = document.getElementById("filter-audio").checked;
+      const filterVideo = document.getElementById("filter-video").checked;
+      const grid = document.getElementById("item-grid");
+      const items = grid.getElementsByClassName("grid-item");
+      Array.from(items).forEach(item => {
+        const title = item.querySelector(".item-title").textContent.toLowerCase();
+        const ext = getExtension(title);
+        if (!filterVideo && ["mp4","webm","ogg"].includes(ext)) {
+          item.style.display = "none";
+        } else if (!filterAudio && !["mp4","webm","ogg"].includes(ext)) {
+          item.style.display = "none";
+        } else {
+          item.style.display = "block";
+        }
+      });
+      document.getElementById("advanced-search-modal").style.display = "none";
+    }
+    
+    /*******************************
+     * ATALHOS DE TECLADO
+     *******************************/
+    document.addEventListener("keydown", (e) => {
+      if (e.code === "Space") {
+        e.preventDefault();
+        togglePlayPause();
+      }
+      if (e.code === "ArrowRight") {
+        playNext();
+      }
+      if (e.code === "ArrowLeft") {
+        playPrevious();
+      }
+      if (e.code === "ArrowUp") {
+        let vol = Math.min(audioPlayer.volume + 0.05, 1);
+        audioPlayer.volume = vol;
+        document.getElementById("volume-slider").value = vol;
+      }
+      if (e.code === "ArrowDown") {
+        let vol = Math.max(audioPlayer.volume - 0.05, 0);
+        audioPlayer.volume = vol;
+        document.getElementById("volume-slider").value = vol;
+      }
+      if (e.code === "Escape") {
+        closeVideoModal();
+        document.getElementById("advanced-search-modal").style.display = "none";
+      }
+    });
+    
+    /*******************************
+     * FUNÇÃO PARA SAIR DO APLICATIVO
+     *******************************/
+    function exitApp() {
+      if (confirm("Deseja sair do aplicativo?")) {
+        alert("Encerrando sessão (simulação).");
+      }
+    }
+    
+    /*******************************
+     * INICIALIZAÇÃO E PERSISTÊNCIA
+     *******************************/
+    // Carrega os itens do Storage para a pasta atual
+    loadItems();
+    // Atualiza a barra de progresso a cada 500ms
+    setInterval(updateProgress, 500);
+  </script>
+</body>
+</html>
