@@ -9,7 +9,9 @@
   <!-- FontAwesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
   <style>
-    /* CSS RESET & VARIÁVEIS DO TEMA */
+    /* ========================================================
+       CSS RESET & VARIÁVEIS DO TEMA
+    ======================================================== */
     :root {
       --primary-color: #1db954;
       --background-color: #121212;
@@ -32,7 +34,9 @@
     }
     a { text-decoration: none; color: inherit; }
     
-    /* Layout geral: Sidebar + Conteúdo */
+    /* ========================================================
+       Layout Geral: Sidebar + Conteúdo
+    ======================================================== */
     #app {
       display: flex;
       flex: 1;
@@ -67,10 +71,6 @@
     }
     #sidebar nav ul li:hover {
       color: var(--primary-color);
-    }
-    /* Botões extras na sidebar */
-    #sidebar nav ul li.extra {
-      font-size: 0.95rem;
     }
     /* Área de playlists na sidebar */
     #playlist-list {
@@ -150,7 +150,9 @@
       color: var(--text-color);
     }
     
-    /* Grid de Itens */
+    /* ========================================================
+       Grid de Itens: Álbuns, Mídias, etc.
+    ======================================================== */
     #item-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -182,7 +184,9 @@
       text-overflow: ellipsis;
     }
     
-    /* Menu de Contexto */
+    /* ========================================================
+       Menu de Contexto
+    ======================================================== */
     #context-menu {
       position: absolute;
       background-color: #282828;
@@ -206,7 +210,9 @@
       background-color: #383838;
     }
     
-    /* Modal de Busca Avançada */
+    /* ========================================================
+       Modal de Busca Avançada
+    ======================================================== */
     #advanced-search-modal {
       position: fixed;
       top: 0;
@@ -252,7 +258,9 @@
       background-color: #17a14a;
     }
     
-    /* Modal para Vídeo */
+    /* ========================================================
+       Modal para Vídeo
+    ======================================================== */
     #video-modal {
       position: fixed;
       top: 0;
@@ -279,7 +287,9 @@
       color: var(--text-color);
     }
     
-    /* Barra do Player */
+    /* ========================================================
+       Barra do Player (fixada na parte inferior)
+    ======================================================== */
     #player-bar {
       height: 90px;
       background-color: var(--player-bg);
@@ -389,7 +399,9 @@
       color: var(--primary-color);
     }
     
-    /* Botão de Menu Mobile */
+    /* ========================================================
+       Botão de Menu Mobile
+    ======================================================== */
     #mobile-menu-toggle {
       display: none;
       position: fixed;
@@ -400,7 +412,9 @@
       z-index: 3000;
     }
     
-    /* Responsividade */
+    /* ========================================================
+       Responsividade
+    ======================================================== */
     @media (max-width: 800px) {
       #sidebar { width: 200px; }
       #playback-controls button { font-size: 1.2rem; }
@@ -561,7 +575,11 @@
     let isShuffle = false;
     let isRepeat = false;
     
-    // Audio player
+    // Variáveis para diferenciar as views
+    // "library" (pasta geral), "favorites" ou "playlist"
+    let currentView = "library";
+    let currentPlaylistId = null;
+    
     const audioPlayer = new Audio();
     audioPlayer.volume = document.getElementById("volume-slider").value;
     
@@ -570,10 +588,14 @@
      *******************************/
     function navigateTo(page) {
       if (page === "home" || page === "search" || page === "library") {
+        currentView = "library";
+        currentPlaylistId = null;
         currentPath = "";
         breadcrumbPaths = [];
         loadItems();
       } else if (page === "favorites") {
+        currentView = "favorites";
+        currentPlaylistId = null;
         displayFavorites();
       }
       if (window.innerWidth < 600) {
@@ -587,6 +609,8 @@
       const homeSpan = document.createElement("span");
       homeSpan.textContent = "Home";
       homeSpan.onclick = () => {
+        currentView = "library";
+        currentPlaylistId = null;
         currentPath = "";
         breadcrumbPaths = [];
         loadItems();
@@ -615,7 +639,7 @@
     }
     
     /*******************************
-     * UPLOAD DE ARQUIVOS (SOMENTE ÁUDIO/VÍDEO)
+     * UPLOAD DE ARQUIVOS (ÁUDIO/VÍDEO)
      *******************************/
     function openUploadModal() {
       const input = document.createElement("input");
@@ -630,15 +654,41 @@
               continue;
             }
             try {
-              const folder = prompt("Digite o caminho de upload (deixe vazio para usar o atual):", currentPath);
-              const path = (folder && folder.trim() !== "") ? folder + "/" : currentPath;
-              const fileRef = storageRef.child(path + file.name);
-              await fileRef.put(file);
+              if (currentView === "library") {
+                const folder = prompt("Digite o caminho de upload (deixe vazio para usar o atual):", currentPath);
+                const path = (folder && folder.trim() !== "") ? folder + "/" : currentPath;
+                const fileRef = storageRef.child(path + file.name);
+                await fileRef.put(file);
+              } else if (currentView === "favorites") {
+                const fileRef = storageRef.child("Favorites/" + file.name);
+                await fileRef.put(file);
+                const url = await fileRef.getDownloadURL();
+                await firestore.collection("favorites").add({
+                  name: file.name,
+                  url: url,
+                  addedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+              } else if (currentView === "playlist" && currentPlaylistId) {
+                const fileRef = storageRef.child("Playlists/" + currentPlaylistId + "/" + file.name);
+                await fileRef.put(file);
+                const url = await fileRef.getDownloadURL();
+                await firestore.collection("playlists").doc(currentPlaylistId).collection("songs").add({
+                  name: file.name,
+                  url: url,
+                  addedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+              }
             } catch (error) {
               alert("Erro no upload: " + error.message);
             }
           }
-          loadItems();
+          if (currentView === "library") {
+            loadItems();
+          } else if (currentView === "favorites") {
+            displayFavorites();
+          } else if (currentView === "playlist") {
+            openPlaylist(currentPlaylistId, breadcrumbPaths[0] || "Playlist");
+          }
         }
       };
       input.click();
@@ -650,6 +700,7 @@
     function createFolder() {
       const folderName = prompt("Digite o nome da nova pasta:");
       if (folderName) {
+        // Continua a simulação: cria uma pasta com dois arquivos txt de placeholder
         const musicFolderRef = storageRef.child(`${currentPath}${folderName}/musicas/placeholder.txt`);
         const videoFolderRef = storageRef.child(`${currentPath}${folderName}/videos/placeholder.txt`);
         const dummyFile = new Blob([""], { type: "text/plain" });
@@ -666,7 +717,7 @@
     }
     
     /*******************************
-     * CRIAÇÃO DE PLAYLIST (PERSISTENTE)
+     * CRIAÇÃO DE PLAYLIST (USANDO FIRESTORE)
      *******************************/
     function createPlaylist() {
       const playlistName = prompt("Digite o nome da nova playlist:");
@@ -674,7 +725,7 @@
         firestore.collection("playlists").add({
           name: playlistName,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        }).then(() => {
+        }).then(docRef => {
           alert(`Playlist "${playlistName}" criada com sucesso.`);
           loadPlaylists();
         }).catch(err => alert("Erro ao criar playlist: " + err.message));
@@ -682,6 +733,8 @@
     }
     
     function openPlaylistsFolder() {
+      currentView = "library";
+      currentPlaylistId = null;
       currentPath = "Playlists/";
       breadcrumbPaths = ["Playlists"];
       loadItems();
@@ -697,7 +750,7 @@
     }
     
     /*******************************
-     * FAVORITOS PERSISTENTES (Firestore)
+     * FAVORITOS – PERSISTÊNCIA COM FIRESTORE
      *******************************/
     async function displayFavorites() {
       const grid = document.getElementById("item-grid");
@@ -774,7 +827,7 @@
         const grid = document.getElementById("item-grid");
         grid.innerHTML = "";
         
-        // Exibir pastas
+        // Listar pastas
         result.prefixes.forEach(prefix => {
           const div = document.createElement("div");
           div.className = "grid-item";
@@ -791,7 +844,7 @@
           grid.appendChild(div);
         });
         
-        // Exibir mídias filtrando apenas arquivos de áudio ou vídeo
+        // Listar mídias (somente áudio ou vídeo)
         itemList = result.items.filter(item => {
           const ext = getExtension(item.name);
           return supportedAudio.includes(ext) || supportedVideo.includes(ext);
@@ -832,6 +885,7 @@
               const div = document.createElement("div");
               div.className = "playlist-item";
               div.textContent = playlist.name;
+              // Ao clicar, abre a playlist e seta a view e currentPlaylistId
               div.onclick = () => openPlaylist(doc.id, playlist.name);
               playlistContainer.appendChild(div);
             });
@@ -841,7 +895,60 @@
     }
     
     /*******************************
-     * MENU DE CONTEXTO
+     * ABRIR UMA PLAYLIST (exibe os arquivos salvos no Firestore)
+     *******************************/
+    function openPlaylist(playlistId, playlistName) {
+      currentView = "playlist";
+      currentPlaylistId = playlistId;
+      breadcrumbPaths = [playlistName];
+      const grid = document.getElementById("item-grid");
+      grid.innerHTML = "";
+      firestore.collection("playlists").doc(playlistId).collection("songs").orderBy("addedAt", "desc").get()
+        .then(snapshot => {
+          if (snapshot.empty) {
+            grid.innerHTML = "<p>Nenhuma música nessa playlist.</p>";
+          } else {
+            snapshot.forEach(doc => {
+              const song = doc.data();
+              const div = document.createElement("div");
+              div.className = "grid-item";
+              let iconURL = "https://img.icons8.com/fluency/96/ffffff/musical-notes.png";
+              const ext = getExtension(song.name);
+              if (supportedVideo.includes(ext)) {
+                iconURL = "https://img.icons8.com/fluency/96/ffffff/video.png";
+              }
+              div.innerHTML = `
+                <img src="${iconURL}" alt="Mídia">
+                <div class="item-title">${song.name}</div>
+              `;
+              div.onclick = () => playMediaFromPlaylist(song);
+              addContextMenu(div, song, "playlist");
+              grid.appendChild(div);
+            });
+          }
+          updateBreadcrumb();
+        })
+        .catch(err => alert("Erro ao carregar a playlist: " + err.message));
+    }
+    
+    function playMediaFromPlaylist(song) {
+      const ext = getExtension(song.name);
+      if (supportedVideo.includes(ext)) {
+        audioPlayer.pause();
+        document.getElementById("video-player").src = song.url;
+        openVideoModal();
+        updatePlayerInfo(song.name, "Playlist (Vídeo)", true);
+      } else {
+        closeVideoModal();
+        audioPlayer.src = song.url;
+        audioPlayer.play();
+        updatePlayerInfo(song.name, "Playlist (Áudio)", false);
+        setPlayPauseIcon(true);
+      }
+    }
+    
+    /*******************************
+     * MENU DE CONTEXTO – FUNÇÕES
      *******************************/
     const contextMenu = document.getElementById("context-menu");
     let contextItem = null;
@@ -1207,6 +1314,7 @@
       document.getElementById("video-modal").style.display = "flex";
       setPlayPauseIcon(true);
     }
+    
     function closeVideoModal() {
       const modal = document.getElementById("video-modal");
       if (modal.style.display === "flex") {
@@ -1223,6 +1331,7 @@
     function openAdvancedSearchModal() {
       document.getElementById("advanced-search-modal").style.display = "flex";
     }
+    
     function performAdvancedSearch() {
       const filterAudio = document.getElementById("filter-audio").checked;
       const filterVideo = document.getElementById("filter-video").checked;
@@ -1302,4 +1411,3 @@
   </script>
 </body>
 </html>
-
