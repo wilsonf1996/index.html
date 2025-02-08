@@ -563,16 +563,13 @@
     /*******************************
      * VARIÁVEIS DE ESTADO & PLAYER
      *******************************/
-    let currentPath = "";       // Caminho atual (ex: "" ou "Playlists/")
-    let breadcrumbPaths = [];   // Caminho para o breadcrumb
-    let itemList = [];          // Itens listados (pastas e arquivos)
+    let currentPath = "";       // Ex: "", "Playlists/", "Favorites/"
+    let breadcrumbPaths = [];
+    let itemList = [];
     let currentTrackIndex = 0;
     let isShuffle = false;
     let isRepeat = false;
     const allowedAudioExtensions = ["mp3", "wav", "ogg", "flac"];
-    
-    // Array para favoritos (simulação)
-    let favorites = [];
     
     const audioPlayer = new Audio();
     audioPlayer.volume = document.getElementById("volume-slider").value;
@@ -698,61 +695,21 @@
     }
     
     /*******************************
+     * FAVORITOS – Exibição Real
+     *******************************/
+    function displayFavorites() {
+      currentPath = "Favorites/";
+      breadcrumbPaths = ["Favorites"];
+      loadItems();
+    }
+    
+    /*******************************
      * SELEÇÃO MULTIPLA (Ctrl + Clique)
      *******************************/
     function selectAllItems() {
       const items = document.querySelectorAll("#item-grid .grid-item");
       items.forEach(item => item.classList.add("selected"));
       alert("Todos os itens foram selecionados (simulação).");
-    }
-    
-    /*******************************
-     * EXIBIR FAVORITOS
-     *******************************/
-    function displayFavorites() {
-      if (favorites.length === 0) {
-        alert("Nenhum item nos Favoritos.");
-        return;
-      }
-      const grid = document.getElementById("item-grid");
-      grid.innerHTML = "";
-      favorites.forEach((fav, index) => {
-        const div = document.createElement("div");
-        div.className = "grid-item";
-        div.setAttribute("data-type", "favorite");
-        let iconURL = "https://img.icons8.com/fluency/96/ffffff/musical-notes.png";
-        const ext = getExtension(fav.name);
-        if (["mp4", "webm", "ogg"].includes(ext)) {
-          iconURL = "https://img.icons8.com/fluency/96/ffffff/video.png";
-        }
-        div.innerHTML = `
-          <img src="${iconURL}" alt="Mídia">
-          <div class="item-title">${fav.name}</div>
-        `;
-        div.onclick = (e) => {
-          if(e.ctrlKey) { div.classList.toggle("selected"); return; }
-          playMediaFromFavorites(index, ext);
-        };
-        addContextMenu(div, fav, "favorite");
-        grid.appendChild(div);
-      });
-      updateBreadcrumb();
-    }
-    
-    function playMediaFromFavorites(index, ext) {
-      const favItem = favorites[index];
-      if (["mp4", "webm", "ogg"].includes(ext)) {
-        audioPlayer.pause();
-        document.getElementById("video-player").src = favItem.url;
-        openVideoModal();
-        updatePlayerInfo(favItem.name, "Favorito (Vídeo)", true);
-      } else {
-        closeVideoModal();
-        audioPlayer.src = favItem.url;
-        audioPlayer.play();
-        updatePlayerInfo(favItem.name, "Favorito (Áudio)", false);
-        setPlayPauseIcon(true);
-      }
     }
     
     /*******************************
@@ -764,7 +721,7 @@
         const grid = document.getElementById("item-grid");
         grid.innerHTML = "";
         
-        // Listar pastas – adiciona atributo data-type="folder"
+        // Listar pastas – para cada pasta, definindo data-type "folder"
         result.prefixes.forEach(prefix => {
           const div = document.createElement("div");
           div.className = "grid-item";
@@ -779,7 +736,6 @@
             breadcrumbPaths.push(prefix.name);
             loadItems();
           };
-          // Habilitar drag & drop apenas no PC (largura >= 600px)
           if(window.innerWidth >= 600){
             div.setAttribute("draggable", true);
             div.addEventListener("dragstart", handleDragStart);
@@ -791,16 +747,18 @@
           grid.appendChild(div);
         });
         
-        // Listar arquivos – somente áudio
+        // Listar arquivos – apenas de áudio
         result.items.forEach((item, index) => {
           const ext = getExtension(item.name);
           if(!allowedAudioExtensions.includes(ext)) return;
           const div = document.createElement("div");
           div.className = "grid-item";
-          div.setAttribute("data-type", "media");
+          // Se estivermos na pasta Favorites, definimos data-type como "favorite"
+          const type = (currentPath === "Favorites/") ? "favorite" : "media";
+          div.setAttribute("data-type", type);
           let iconURL = "https://img.icons8.com/fluency/96/ffffff/musical-notes.png";
           div.innerHTML = `
-            <img src="${iconURL}" alt="Mídia">
+            <img src="${iconURL}" alt="Áudio">
             <div class="item-title">${item.name}</div>
           `;
           div.onclick = (e) => {
@@ -811,7 +769,7 @@
             div.setAttribute("draggable", true);
             div.addEventListener("dragstart", handleDragStart);
           }
-          addContextMenu(div, item, "media", index);
+          addContextMenu(div, item, type, index);
           grid.appendChild(div);
         });
         updateBreadcrumb();
@@ -857,8 +815,8 @@
         const selected = document.querySelectorAll(".grid-item.selected");
         selected.forEach(el => {
           const name = el.querySelector(".item-title").textContent;
-          const type = el.getAttribute("data-type") || "media";
-          draggedItems.push({ name: name, sourcePath: currentPath, type: type });
+          const t = el.getAttribute("data-type") || "media";
+          draggedItems.push({ name: name, sourcePath: currentPath, type: t });
         });
       } else {
         const name = this.querySelector(".item-title").textContent;
@@ -920,6 +878,51 @@
     }
     
     /*******************************
+     * FAVORITOS – ADICIONAR E REMOVER (Pasta Real)
+     *******************************/
+    function addToFavorites() {
+      if (contextItem) {
+        const itemName = contextItem.itemData.name;
+        const favRef = storageRef.child("Favorites/" + itemName);
+        // Verifica se o arquivo já existe em Favorites
+        favRef.getMetadata().then(() => {
+          alert(`"${itemName}" já está nos Favoritos.`);
+        }).catch(err => {
+          if(err.code === "storage/object-not-found"){
+            // Não existe: copia o arquivo
+            contextItem.itemData.getDownloadURL().then(url => {
+              return fetch(url);
+            }).then(response => {
+              return response.blob();
+            }).then(blob => {
+              return favRef.put(blob);
+            }).then(() => {
+              alert(`"${itemName}" adicionado aos Favoritos com sucesso.`);
+              if(currentPath === "Favorites/") loadItems();
+            }).catch(err => {
+              alert("Erro ao adicionar aos favoritos: " + err.message);
+            });
+          } else {
+            alert("Erro ao verificar favoritos: " + err.message);
+          }
+        });
+      }
+    }
+    
+    function removeFromFavorites() {
+      if (contextItem) {
+        const itemName = contextItem.itemData.name;
+        const favRef = storageRef.child("Favorites/" + itemName);
+        favRef.delete().then(() => {
+          alert(`"${itemName}" removido dos Favoritos com sucesso.`);
+          if(currentPath === "Favorites/") loadItems();
+        }).catch(err => {
+          alert("Erro ao remover dos favoritos: " + err.message);
+        });
+      }
+    }
+    
+    /*******************************
      * MENU DE CONTEXTO
      *******************************/
     const contextMenu = document.getElementById("context-menu");
@@ -973,33 +976,8 @@
       if (contextItem && contextItem.type === "media" && contextItem.index !== undefined) {
         playMedia(contextItem.index, getExtension(contextItem.itemData.name));
       } else if (contextItem && contextItem.type === "favorite") {
-        let favIndex = favorites.findIndex(fav => fav.name === contextItem.itemData.name);
-        if (favIndex !== -1) {
-          playMediaFromFavorites(favIndex, getExtension(contextItem.itemData.name));
-        }
-      }
-    }
-    
-    function addToFavorites() {
-      if (contextItem) {
-        const itemName = contextItem.itemData.name;
-        if (!favorites.find(fav => fav.name === itemName)) {
-          contextItem.itemData.getDownloadURL().then(url => {
-            favorites.push({ name: itemName, url });
-            alert(`"${itemName}" adicionado aos Favoritos (simulação).`);
-          }).catch(err => alert("Erro ao adicionar aos favoritos: " + err.message));
-        } else {
-          alert(`"${itemName}" já está nos Favoritos.`);
-        }
-      }
-    }
-    
-    function removeFromFavorites() {
-      if (contextItem) {
-        const itemName = contextItem.itemData.name;
-        favorites = favorites.filter(fav => fav.name !== itemName);
-        alert(`"${itemName}" removido dos Favoritos (simulação).`);
-        displayFavorites();
+        // Em Favorites, o mesmo playMedia é utilizado
+        playMedia(contextItem.index, getExtension(contextItem.itemData.name));
       }
     }
     
@@ -1029,7 +1007,7 @@
       if (contextItem) {
         if (confirm(`Deseja excluir "${contextItem.itemData.name}"?`)) {
           contextItem.itemData.delete().then(() => {
-            alert("Excluído com sucesso (simulação).");
+            alert("Excluído com sucesso.");
             loadItems();
           }).catch(err => alert("Erro ao excluir: " + err.message));
         }
