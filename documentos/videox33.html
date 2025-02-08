@@ -157,6 +157,8 @@
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
       gap: 20px;
+      /* posição relativa para possibilitar o clique no fundo */
+      position: relative;
     }
     .grid-item {
       background-color: #282828;
@@ -659,7 +661,6 @@
                 const fileRef = storageRef.child(path + file.name);
                 await fileRef.put(file);
               } else if (currentView === "favorites") {
-                // Na abordagem original, registra a URL do arquivo
                 const fileRef = storageRef.child("Favorites/" + file.name);
                 await fileRef.put(file);
                 const url = await fileRef.getDownloadURL();
@@ -689,6 +690,31 @@
           } else if (currentView === "playlist") {
             openPlaylist(currentPlaylistId, breadcrumbPaths[0] || "Playlist");
           }
+        }
+      };
+      input.click();
+    }
+    
+    // Função para upload de pasta (usando o atributo webkitdirectory)
+    function openFolderUploadModal() {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.multiple = true;
+      input.webkitdirectory = true; // Permite selecionar uma pasta (suportado em alguns navegadores)
+      input.onchange = async () => {
+        const files = input.files;
+        if(files.length) {
+          for(const file of files) {
+            // Usa a propriedade file.webkitRelativePath para preservar a estrutura de pastas
+            const fileRef = storageRef.child(currentPath + file.webkitRelativePath);
+            try {
+              await fileRef.put(file);
+            } catch(err) {
+              alert("Erro no upload: " + err.message);
+            }
+          }
+          alert("Upload de pasta concluído.");
+          loadItems();
         }
       };
       input.click();
@@ -819,9 +845,11 @@
     const contextMenu = document.getElementById("context-menu");
     let contextItem = null;
     
+    // Função para adicionar o menu de contexto aos itens (arquivos/pastas)
     function addContextMenu(element, itemData, type, index) {
       element.addEventListener("contextmenu", (e) => {
         e.preventDefault();
+        // Se o clique for em um item (grid-item) já existente
         contextItem = { itemData, type, index };
         contextMenu.style.top = `${e.clientY}px`;
         contextMenu.style.left = `${e.clientX}px`;
@@ -998,7 +1026,7 @@
       }
     }
     
-    // Função para upload de arquivos via menu de contexto (na pasta)
+    // Função para upload de arquivos via menu de contexto em uma pasta
     function uploadToFolder() {
       if (contextItem && contextItem.type === "folder") {
         const folderName = contextItem.itemData.name;
@@ -1024,6 +1052,34 @@
         input.click();
       }
     }
+    
+    /*******************************
+     * NOVA FUNCIONALIDADE:
+     * Menu de Contexto na Área Vazia (fora dos itens)
+     *******************************/
+    const itemGrid = document.getElementById("item-grid");
+    itemGrid.addEventListener("contextmenu", (e) => {
+      // Se o clique não ocorrer em um item (.grid-item), mostre o menu customizado
+      if (!e.target.closest('.grid-item')) {
+        e.preventDefault();
+        contextItem = null; // não há item selecionado
+        contextMenu.style.top = `${e.clientY}px`;
+        contextMenu.style.left = `${e.clientX}px`;
+        contextMenu.style.display = "block";
+        // Menu com opções de upload de arquivos e upload de pastas
+        contextMenu.innerHTML = `
+          <ul>
+            <li onclick="openUploadModal()">Upload Arquivo(s)</li>
+            <li onclick="openFolderUploadModal()">Upload Pasta</li>
+          </ul>
+        `;
+      }
+    });
+    
+    // Fecha o menu de contexto ao clicar em qualquer lugar
+    document.addEventListener("click", () => {
+      contextMenu.style.display = "none";
+    });
     
     /*******************************
      * CONTROLE DE REPRODUÇÃO (ÁUDIO & VÍDEO)
