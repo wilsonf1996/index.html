@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MusicPro – Player Profissional</title>
+  <!-- Ícones (FontAwesome) para enriquecer a interface -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha512-Fo3rlrZj/k7ujTnHg4C+2XWIK1FqIjY+Vq/4Y+8BzYv5qSdyRzOlOqXRu9ZQIv6Eiyz+Q6mfrcX+zGJ4y0kQGA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <style>
+    /* RESET E CONFIGURAÇÕES GLOBAIS */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background-color: #121212;
+      color: #fff;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    a { text-decoration: none; color: inherit; }
+    
+    /* CONTAINER GERAL: SIDEBAR + CONTEÚDO */
+    #app {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    /* SIDEBAR – NAVEGAÇÃO ESQUERDA */
+    #sidebar {
+      width: 240px;
+      background-color: #000;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+    #sidebar .logo {
+      font-size: 1.8rem;
+      font-weight: bold;
+      margin-bottom: 30px;
+      letter-spacing: 1px;
+    }
+    #sidebar nav ul {
+      list-style: none;
+    }
+    #sidebar nav ul li {
+      padding: 12px 0;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    #sidebar nav ul li:hover {
+      color: #1db954;
+    }
+    /* CONTEÚDO PRINCIPAL */
+    #main-content {
+      flex: 1;
+      background-color: #181818;
+      padding: 20px;
+      overflow-y: auto;
+      position: relative;
+    }
+    /* CABEÇALHO COM BUSCA E BREADCRUMB */
+    #header {
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    #search-bar {
+      width: 100%;
+      padding: 10px 15px;
+      border-radius: 25px;
+      border: none;
+      background-color: #282828;
+      color: #fff;
+      font-size: 1rem;
+    }
+    #breadcrumb {
+      font-size: 0.9rem;
+      color: #b3b3b3;
+    }
+    #breadcrumb span {
+      cursor: pointer;
+      color: #1db954;
+      margin-right: 5px;
+    }
+    #breadcrumb span:not(:last-child)::after {
+      content: "›";
+      margin-left: 5px;
+      color: #fff;
+    }
+    /* GRID DE ITENS (ALBUNS/PLAYLISTS/FAIXAS) */
+    #item-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 20px;
+    }
+    .grid-item {
+      background-color: #282828;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+      transition: transform 0.2s, background-color 0.2s;
+      cursor: pointer;
+    }
+    .grid-item:hover {
+      transform: scale(1.03);
+      background-color: #383838;
+    }
+    .grid-item img {
+      width: 100%;
+      border-radius: 4px;
+      object-fit: cover;
+    }
+    .grid-item .item-title {
+      margin-top: 10px;
+      font-size: 0.95rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    /* BARRA DO PLAYER – FIXA NA PARTE INFERIOR */
+    #player-bar {
+      height: 90px;
+      background-color: #000;
+      border-top: 1px solid #282828;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+    }
+    /* ESQUERDA: INFORMAÇÕES DO FAIXA */
+    #track-info {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      flex: 1;
+      min-width: 200px;
+    }
+    #track-info img {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+    #track-details {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #track-details .track-name {
+      font-size: 1rem;
+      font-weight: bold;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #track-details .track-artist {
+      font-size: 0.85rem;
+      color: #b3b3b3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    /* CENTRO: CONTROLES DE REPRODUÇÃO */
+    #playback-controls {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex: 1;
+      justify-content: center;
+    }
+    #playback-controls button {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 1.4rem;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    #playback-controls button:hover {
+      color: #1db954;
+    }
+    /* BARRA DE PROGRESSO */
+    #progress-section {
+      flex: 2;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    #progress-bar-container {
+      width: 100%;
+      height: 5px;
+      background-color: #404040;
+      border-radius: 2.5px;
+      cursor: pointer;
+    }
+    #progress-bar {
+      width: 0%;
+      height: 100%;
+      background-color: #1db954;
+      border-radius: 2.5px;
+    }
+    #time-info {
+      font-size: 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      color: #b3b3b3;
+    }
+    /* DIREITA: CONTROLE DE VOLUME E OUTROS */
+    #extra-controls {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    #volume-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #volume-slider {
+      width: 80px;
+    }
+    /* RESPONSIVIDADE */
+    @media (max-width: 800px) {
+      #sidebar { width: 200px; }
+      #playback-controls button { font-size: 1.2rem; }
+      #track-info img { width: 50px; height: 50px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- CONTAINER GERAL -->
+  <div id="app">
+    <!-- SIDEBAR DE NAVEGAÇÃO -->
+    <div id="sidebar">
+      <div class="logo">MusicPro</div>
+      <nav>
+        <ul>
+          <li onclick="navigateTo('home')"><i class="fas fa-home"></i> Home</li>
+          <li onclick="navigateTo('library')"><i class="fas fa-book"></i> Biblioteca</li>
+          <li onclick="navigateTo('favorites')"><i class="fas fa-heart"></i> Favoritos</li>
+          <li onclick="openUploadModal()"><i class="fas fa-cloud-upload-alt"></i> Upload</li>
+        </ul>
+      </nav>
+    </div>
+    
+    <!-- CONTEÚDO PRINCIPAL -->
+    <div id="main-content">
+      <div id="header">
+        <input type="text" id="search-bar" placeholder="Buscar músicas, artistas, álbuns..." onkeyup="searchItems(event)">
+        <div id="breadcrumb"></div>
+      </div>
+      <div id="item-grid">
+        <!-- Os itens (pastas, álbuns, músicas) serão injetados aqui -->
+      </div>
+    </div>
+  </div>
+  
+  <!-- BARRA DE PLAYER (FIXA NA BASE) -->
+  <div id="player-bar">
+    <!-- INFORMAÇÕES DO FAIXA -->
+    <div id="track-info">
+      <img id="track-art" src="https://via.placeholder.com/60?text=Cover" alt="Capa">
+      <div id="track-details">
+        <div class="track-name" id="track-name">Nenhuma faixa</div>
+        <div class="track-artist" id="track-artist">—</div>
+      </div>
+    </div>
+    <!-- CONTROLES DE REPRODUÇÃO -->
+    <div id="playback-controls">
+      <button id="shuffleBtn" onclick="toggleShuffle()" title="Shuffle"><i class="fas fa-random"></i></button>
+      <button id="prevBtn" onclick="playPrevious()" title="Anterior"><i class="fas fa-step-backward"></i></button>
+      <button id="playPauseBtn" onclick="togglePlayPause()" title="Play/Pause"><i class="fas fa-play"></i></button>
+      <button id="nextBtn" onclick="playNext()" title="Próximo"><i class="fas fa-step-forward"></i></button>
+      <button id="repeatBtn" onclick="toggleRepeat()" title="Repetir"><i class="fas fa-redo-alt"></i></button>
+    </div>
+    <!-- PROGRESSO E TEMPO -->
+    <div id="progress-section">
+      <div id="progress-bar-container" onclick="seekProgress(event)">
+        <div id="progress-bar"></div>
+      </div>
+      <div id="time-info">
+        <span id="current-time">0:00</span>
+        <span id="total-time">0:00</span>
+      </div>
+    </div>
+    <!-- CONTROLES EXTRAS -->
+    <div id="extra-controls">
+      <div id="volume-control">
+        <i class="fas fa-volume-up"></i>
+        <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.5" onchange="adjustVolume()">
+      </div>
+    </div>
+  </div>
+  
+  <!-- Firebase SDK (compatível) -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+  
+  <script>
+    /*******************************
+     * CONFIGURAÇÃO DO FIREBASE
+     *******************************/
+    const firebaseConfig = {
+      apiKey: "AIzaSyDxMWPu_CnXV-u4-vlDFd-IZ8fzlyKJHng",
+      authDomain: "financeiro-5.firebaseapp.com",
+      projectId: "financeiro-5",
+      storageBucket: "financeiro-5.appspot.com",
+      messagingSenderId: "686639785223",
+      appId: "1:686639785223:web:0314689c82c6dd1c2951a2",
+      measurementId: "G-Q5REWML5DX"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const storage = firebase.storage();
+    const storageRef = storage.ref();
+    
+    /*******************************
+     * VARIÁVEIS DE ESTADO & PLAYER
+     *******************************/
+    let currentPath = "";       // Ex.: "" para raiz, "Album/" para itens de um álbum
+    let breadcrumbPaths = [];   // Array com os nomes dos diretórios navegados
+    let itemList = [];          // Array para itens listados (pastas, músicas, etc.)
+    let currentTrackIndex = 0;  // Índice da faixa em reprodução
+    let isShuffle = false;
+    let isRepeat = false;
+    
+    // Criação de um objeto Audio para reprodução
+    const audioPlayer = new Audio();
+    audioPlayer.volume = document.getElementById("volume-slider").value;
+    
+    /*******************************
+     * FUNÇÕES DE NAVEGAÇÃO E UI
+     *******************************/
+    function navigateTo(page) {
+      // Para fins de demonstração, redireciona para "home" ou "library"
+      if (page === "home" || page === "library") {
+        currentPath = "";
+        breadcrumbPaths = [];
+        loadItems();
+      } else if (page === "favorites") {
+        // Exemplo: implementar favoritos
+        alert("Funcionalidade de Favoritos não implementada neste exemplo.");
+      }
+    }
+    
+    function updateBreadcrumb() {
+      const breadcrumbEl = document.getElementById("breadcrumb");
+      breadcrumbEl.innerHTML = "";
+      const homeSpan = document.createElement("span");
+      homeSpan.textContent = "Home";
+      homeSpan.onclick = () => {
+        currentPath = "";
+        breadcrumbPaths = [];
+        loadItems();
+      };
+      breadcrumbEl.appendChild(homeSpan);
+      breadcrumbPaths.forEach((folder, index) => {
+        const span = document.createElement("span");
+        span.textContent = folder;
+        span.onclick = () => {
+          breadcrumbPaths = breadcrumbPaths.slice(0, index + 1);
+          currentPath = breadcrumbPaths.join("/") + "/";
+          loadItems();
+        };
+        breadcrumbEl.appendChild(span);
+      });
+    }
+    
+    function searchItems(event) {
+      // Filtra os itens carregados conforme a busca (para demonstração, filtra pelo título)
+      const query = event.target.value.toLowerCase();
+      const grid = document.getElementById("item-grid");
+      const items = grid.getElementsByClassName("grid-item");
+      Array.from(items).forEach(item => {
+        const title = item.querySelector(".item-title").textContent.toLowerCase();
+        item.style.display = title.indexOf(query) > -1 ? "block" : "none";
+      });
+    }
+    
+    /*******************************
+     * UPLOAD (SIMPLIFICADO)
+     *******************************/
+    function openUploadModal() {
+      // Simula um modal de upload via input file
+      const input = document.createElement("input");
+      input.type = "file";
+      input.multiple = true;
+      input.onchange = async () => {
+        const files = input.files;
+        if (files.length) {
+          for (const file of files) {
+            try {
+              // Envia para o caminho atual ou especificado pelo usuário
+              const folder = prompt("Digite o caminho de upload (deixe vazio para usar o atual):", currentPath);
+              const path = (folder && folder.trim() !== "") ? folder + "/" : currentPath;
+              const fileRef = storageRef.child(path + file.name);
+              await fileRef.put(file);
+            } catch (error) {
+              alert("Erro no upload: " + error.message);
+            }
+          }
+          loadItems();
+        }
+      };
+      input.click();
+    }
+    
+    /*******************************
+     * LISTAGEM DE ITENS (PASTAS & FAIXAS)
+     *******************************/
+    async function loadItems() {
+      try {
+        const result = await storageRef.child(currentPath).listAll();
+        const grid = document.getElementById("item-grid");
+        grid.innerHTML = "";
+        
+        // Listar pastas (ex.: álbuns ou playlists)
+        result.prefixes.forEach(prefix => {
+          const div = document.createElement("div");
+          div.className = "grid-item";
+          div.innerHTML = `
+            <img src="https://img.icons8.com/color/96/000000/folder-invoices.png" alt="Pasta">
+            <div class="item-title">${prefix.name}</div>
+          `;
+          div.onclick = () => {
+            currentPath += prefix.name + "/";
+            breadcrumbPaths.push(prefix.name);
+            loadItems();
+          };
+          grid.appendChild(div);
+        });
+        
+        // Listar arquivos (faixas)
+        itemList = result.items;
+        itemList.forEach((item, index) => {
+          const div = document.createElement("div");
+          div.className = "grid-item";
+          // Para demonstração, usamos um ícone de nota musical
+          div.innerHTML = `
+            <img src="https://img.icons8.com/fluency/96/ffffff/musical-notes.png" alt="Música">
+            <div class="item-title">${item.name}</div>
+          `;
+          div.onclick = () => playTrack(index);
+          grid.appendChild(div);
+        });
+        updateBreadcrumb();
+      } catch (error) {
+        alert("Erro ao carregar itens: " + error.message);
+      }
+    }
+    
+    /*******************************
+     * CONTROLE DE REPRODUÇÃO
+     *******************************/
+    async function playTrack(index) {
+      try {
+        const trackItem = itemList[index];
+        const url = await trackItem.getDownloadURL();
+        currentTrackIndex = index;
+        audioPlayer.src = url;
+        audioPlayer.play();
+        updatePlayerInfo(trackItem.name);
+        setPlayPauseIcon(true);
+      } catch (error) {
+        alert("Erro ao reproduzir a faixa: " + error.message);
+      }
+    }
+    
+    function updatePlayerInfo(title) {
+      // Atualiza os elementos da barra de player (aqui, usamos imagens/placeholder fixos)
+      document.getElementById("track-name").textContent = title;
+      document.getElementById("track-artist").textContent = "Artista Desconhecido";
+      // Para a capa, em um projeto real, use metadados ou extraia a capa do álbum
+      document.getElementById("track-art").src = "https://via.placeholder.com/60?text=Capa";
+    }
+    
+    function togglePlayPause() {
+      if (!audioPlayer.src) return;
+      if (audioPlayer.paused) {
+        audioPlayer.play();
+        setPlayPauseIcon(true);
+      } else {
+        audioPlayer.pause();
+        setPlayPauseIcon(false);
+      }
+    }
+    
+    function setPlayPauseIcon(isPlaying) {
+      const btn = document.getElementById("playPauseBtn");
+      btn.innerHTML = isPlaying ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
+    }
+    
+    function playNext() {
+      if (isShuffle) {
+        const randomIndex = Math.floor(Math.random() * itemList.length);
+        playTrack(randomIndex);
+      } else if (currentTrackIndex < itemList.length - 1) {
+        playTrack(currentTrackIndex + 1);
+      } else if (isRepeat) {
+        playTrack(0);
+      }
+    }
+    
+    function playPrevious() {
+      if (currentTrackIndex > 0) {
+        playTrack(currentTrackIndex - 1);
+      }
+    }
+    
+    function toggleShuffle() {
+      isShuffle = !isShuffle;
+      document.getElementById("shuffleBtn").style.color = isShuffle ? "#1db954" : "#fff";
+    }
+    
+    function toggleRepeat() {
+      isRepeat = !isRepeat;
+      document.getElementById("repeatBtn").style.color = isRepeat ? "#1db954" : "#fff";
+    }
+    
+    function adjustVolume() {
+      audioPlayer.volume = document.getElementById("volume-slider").value;
+    }
+    
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+    }
+    
+    // Atualiza a barra de progresso e os tempos exibidos
+    audioPlayer.addEventListener("timeupdate", () => {
+      const progressBar = document.getElementById("progress-bar");
+      const currentTimeEl = document.getElementById("current-time");
+      const totalTimeEl = document.getElementById("total-time");
+      if (audioPlayer.duration) {
+        const progressPercent = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+        progressBar.style.width = progressPercent + "%";
+        currentTimeEl.textContent = formatTime(audioPlayer.currentTime);
+        totalTimeEl.textContent = formatTime(audioPlayer.duration);
+      }
+    });
+    
+    function seekProgress(event) {
+      const container = event.currentTarget;
+      const rect = container.getBoundingClientRect();
+      const clickX = event.clientX - rect.left;
+      const percentage = clickX / rect.width;
+      if (audioPlayer.duration) {
+        audioPlayer.currentTime = percentage * audioPlayer.duration;
+      }
+    }
+    
+    audioPlayer.addEventListener("ended", () => {
+      playNext();
+    });
+    
+    /*******************************
+     * ATALHOS DE TECLADO
+     *******************************/
+    document.addEventListener("keydown", (e) => {
+      // Barra de espaço: play/pause
+      if (e.code === "Space") {
+        e.preventDefault();
+        togglePlayPause();
+      }
+      // Setas esquerda/direita para faixa anterior/próxima
+      if (e.code === "ArrowRight") {
+        playNext();
+      }
+      if (e.code === "ArrowLeft") {
+        playPrevious();
+      }
+      // Setas para volume (opcional)
+      if (e.code === "ArrowUp") {
+        let vol = Math.min(audioPlayer.volume + 0.05, 1);
+        audioPlayer.volume = vol;
+        document.getElementById("volume-slider").value = vol;
+      }
+      if (e.code === "ArrowDown") {
+        let vol = Math.max(audioPlayer.volume - 0.05, 0);
+        audioPlayer.volume = vol;
+        document.getElementById("volume-slider").value = vol;
+      }
+    });
+    
+    /*******************************
+     * INICIALIZAÇÃO
+     *******************************/
+    loadItems();
+  </script>
+</body>
+</html>
