@@ -583,7 +583,7 @@
     audioPlayer.volume = document.getElementById("volume-slider").value;
     
     /*******************************
-     * FUNÇÕES DE NAVEGAÇÃO & INTERFACE
+     * NAVEGAÇÃO & INTERFACE
      *******************************/
     function navigateTo(page) {
       if (page === "home" || page === "search" || page === "library") {
@@ -659,6 +659,7 @@
                 const fileRef = storageRef.child(path + file.name);
                 await fileRef.put(file);
               } else if (currentView === "favorites") {
+                // Na abordagem original, registra a URL do arquivo
                 const fileRef = storageRef.child("Favorites/" + file.name);
                 await fileRef.put(file);
                 const url = await fileRef.getDownloadURL();
@@ -813,35 +814,6 @@
     }
     
     /*******************************
-     * FUNÇÕES DE CÓPIA / MOVIMENTAÇÃO DE ARQUIVOS
-     *******************************/
-    async function copyFileToFolder(sourceFileRef, destinationPath) {
-      try {
-        // Obtém a URL do arquivo e converte para Blob
-        const url = await sourceFileRef.getDownloadURL();
-        const response = await fetch(url);
-        const blob = await response.blob();
-        const destinationFileRef = storageRef.child(destinationPath + sourceFileRef.name);
-        await destinationFileRef.put(blob);
-        return destinationFileRef;
-      } catch (error) {
-        alert("Erro ao copiar o arquivo: " + error.message);
-        throw error;
-      }
-    }
-    
-    async function moveFileToFolder(sourceFileRef, destinationPath) {
-      try {
-        const newFileRef = await copyFileToFolder(sourceFileRef, destinationPath);
-        await sourceFileRef.delete();
-        return newFileRef;
-      } catch (error) {
-        alert("Erro ao mover o arquivo: " + error.message);
-        throw error;
-      }
-    }
-    
-    /*******************************
      * MENU DE CONTEXTO – FUNÇÕES
      *******************************/
     const contextMenu = document.getElementById("context-menu");
@@ -909,13 +881,23 @@
     
     function addToFavorites() {
       if (contextItem) {
-        const sourceFile = contextItem.itemData; // referência do arquivo selecionado
-        const destination = "Favorites/"; // pasta de favoritos
-        copyFileToFolder(sourceFile, destination)
-          .then(() => {
-            alert(`"${sourceFile.name}" copiado para Favoritos.`);
-          })
-          .catch(err => console.error(err));
+        const itemName = contextItem.itemData.name;
+        firestore.collection("favorites").where("name", "==", itemName).get()
+          .then(snapshot => {
+            if (!snapshot.empty) {
+              alert(`"${itemName}" já está nos Favoritos.`);
+            } else {
+              contextItem.itemData.getDownloadURL().then(url => {
+                firestore.collection("favorites").add({
+                  name: itemName,
+                  url: url,
+                  addedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }).then(() => {
+                  alert(`"${itemName}" adicionado aos Favoritos.`);
+                }).catch(err => alert("Erro ao adicionar aos favoritos: " + err.message));
+              });
+            }
+          });
       }
     }
     
@@ -952,13 +934,15 @@
             });
             const selectedPlaylistId = prompt(`Digite o ID da playlist para adicionar:\n${playlistOptions}`);
             if (selectedPlaylistId) {
-              const sourceFile = contextItem.itemData;
-              const destination = "Playlists/" + selectedPlaylistId + "/";
-              copyFileToFolder(sourceFile, destination)
-                .then(() => {
-                  alert(`"${sourceFile.name}" adicionado à playlist.`);
-                })
-                .catch(err => console.error(err));
+              contextItem.itemData.getDownloadURL().then(url => {
+                firestore.collection("playlists").doc(selectedPlaylistId).collection("songs").add({
+                  name: contextItem.itemData.name,
+                  url: url,
+                  addedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }).then(() => {
+                  alert(`"${contextItem.itemData.name}" adicionado à playlist.`);
+                }).catch(err => alert("Erro ao adicionar à playlist: " + err.message));
+              });
             }
           })
           .catch(err => alert("Erro ao carregar playlists: " + err.message));
@@ -1018,7 +1002,6 @@
     function uploadToFolder() {
       if (contextItem && contextItem.type === "folder") {
         const folderName = contextItem.itemData.name;
-        // Aqui, assumindo que o currentPath seja o caminho da pasta-pai; a pasta clicada é adicionada
         const folderPath = currentPath + folderName + "/";
         const input = document.createElement("input");
         input.type = "file";
@@ -1322,7 +1305,7 @@
     loadPlaylists();
     
     /*******************************
-     * FUNÇÃO DE LISTAGEM DE ITENS (PASTAS & MÍDIAS)
+     * LISTAGEM DE ITENS (PASTAS & MÍDIAS)
      *******************************/
     async function loadItems() {
       try {
