@@ -2,159 +2,205 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Music Player - Professional</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Music Player Pro</title>
   <style>
-    /* Reset e configurações básicas */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    /* RESET E CONFIGURAÇÕES GLOBAIS */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: Arial, sans-serif;
-      background-color: #232323;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background-color: #121212;
       color: #fff;
+      overflow: hidden;
+    }
+    /* LAYOUT GERAL: BARRA LATERAL, CONTEÚDO E PLAYER */
+    #container {
+      display: flex;
+      height: calc(100vh - 70px); /* Deduzindo a altura da barra de player */
+    }
+    /* BARRA LATERAL – NAVEGAÇÃO */
+    #sidebar {
+      width: 240px;
+      background-color: #181818;
+      padding: 20px;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-      padding: 20px;
     }
-    /* Container principal */
-    #app-container {
-      max-width: 600px;
-      width: 100%;
-      background-color: #2c2c2c;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    #sidebar .logo {
+      font-size: 1.8rem;
+      font-weight: bold;
+      margin-bottom: 30px;
     }
-    h1 {
-      text-align: center;
+    #sidebar nav ul {
+      list-style: none;
+    }
+    #sidebar nav ul li {
+      padding: 10px 0;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    #sidebar nav ul li:hover {
+      color: #1db954;
+    }
+    /* ÁREA PRINCIPAL – LISTA DE ITENS E BREADCRUMB */
+    #main {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    #breadcrumb {
       margin-bottom: 20px;
-      font-size: 2rem;
+      font-size: 0.9rem;
     }
-    h2 {
-      margin-bottom: 15px;
-      font-size: 1.2rem;
-      text-align: center;
+    #breadcrumb span {
+      cursor: pointer;
+      color: #1db954;
+      margin-right: 5px;
     }
-    /* Estilo do input de arquivos */
-    input[type="file"] {
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 15px;
-      border: 2px dashed #888;
-      border-radius: 5px;
-      background-color: #444;
-      font-size: 16px;
+    #breadcrumb span:not(:last-child)::after {
+      content: " / ";
       color: #fff;
     }
-    /* Grupos de botões */
-    .button-group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 15px;
+    .item-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 20px;
     }
-    button {
-      flex: 1;
-      background-color: #5bc0de;
-      border: none;
-      border-radius: 5px;
-      padding: 10px;
-      font-size: 1rem;
+    .item {
+      background-color: #1e1e1e;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
       cursor: pointer;
-      transition: background-color 0.3s ease;
+      transition: transform 0.2s, background 0.2s;
     }
-    button:hover {
-      background-color: #4cae4c;
+    .item:hover {
+      transform: scale(1.05);
+      background-color: #252525;
     }
-    /* Listagem de pastas e arquivos */
-    ul {
-      list-style: none;
-      margin-bottom: 15px;
+    .item img {
+      width: 64px;
+      height: 64px;
+      object-fit: contain;
     }
-    li {
-      background-color: #333;
-      padding: 10px;
-      margin-bottom: 10px;
-      border-radius: 5px;
+    .item .title {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      word-break: break-word;
     }
-    .item-header {
+    /* BARRA DE PLAYER – CONTROLES FIXOS */
+    #player-bar {
+      height: 70px;
+      background-color: #181818;
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      margin-bottom: 5px;
-      flex-wrap: wrap;
+      justify-content: space-between;
+      padding: 0 20px;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
     }
-    .item-actions {
+    #player-controls {
       display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
+      align-items: center;
+      gap: 20px;
     }
-    /* Estilos para players */
-    audio, video {
+    #player-controls button {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 1.4rem;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    #player-controls button:hover {
+      color: #1db954;
+    }
+    #progress-container {
+      flex: 1;
+      margin: 0 20px;
+    }
+    #progress-bar {
       width: 100%;
-      margin-top: 10px;
-      border-radius: 5px;
+      height: 5px;
+      background-color: #404040;
+      border-radius: 2.5px;
+      overflow: hidden;
+      cursor: pointer;
     }
-    input[type="range"] {
-      width: 100%;
-      margin-top: 10px;
+    #progress {
+      height: 100%;
+      width: 0%;
+      background-color: #1db954;
     }
-    /* Responsividade */
+    #volume-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #volume-slider {
+      width: 100px;
+    }
+    /* RESPONSIVIDADE */
+    @media (max-width: 800px) {
+      #sidebar { width: 200px; }
+      .item-list { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+    }
     @media (max-width: 600px) {
-      h1 {
-        font-size: 1.5rem;
-      }
-      button {
-        font-size: 0.9rem;
-        padding: 8px;
-      }
+      #sidebar { display: none; } /* Em telas pequenas, a navegação pode ser adaptada */
+      #container { height: calc(100vh - 70px); }
     }
   </style>
 </head>
 <body>
-  <div id="app-container">
-    <h1>My Music Player</h1>
-    <!-- Upload e gerenciamento de pastas -->
-    <input type="file" id="fileInput" multiple>
-    <div class="button-group">
-      <button id="uploadButton">Upload</button>
-      <button id="createFolderButton">Criar Pasta</button>
-      <button id="goToRootButton">Pasta Principal</button>
-      <button id="backHomeButton">Página Inicial</button>
+  <!-- LAYOUT: BARRA LATERAL E CONTEÚDO -->
+  <div id="container">
+    <!-- BARRA LATERAL -->
+    <div id="sidebar">
+      <div class="logo">Music Pro</div>
+      <nav>
+        <ul>
+          <li onclick="goHome()">Home</li>
+          <li onclick="showLibrary()">Library</li>
+          <li onclick="openUploadModal()">Upload</li>
+        </ul>
+      </nav>
     </div>
-    <h2 id="currentPath">Pasta Atual: Pasta Principal</h2>
-    
-    <!-- Listagem de pastas e arquivos -->
-    <ul id="folderList"></ul>
-    <ul id="fileList"></ul>
-    <p id="currentFileName">Nenhum arquivo selecionado</p>
-    
-    <!-- Players de áudio e vídeo -->
-    <audio id="audioPlayer" controls style="display: none;"></audio>
-    <video id="videoPlayer" controls style="display: none;"></video>
-    
-    <!-- Controles de reprodução -->
-    <input type="range" id="volumeControl" min="0" max="1" step="0.1" value="0.5">
-    <div class="button-group">
-      <button id="playPauseButton">Play</button>
-      <button id="stopButton">Stop</button>
-      <button id="prevButton">Anterior</button>
-      <button id="nextButton">Próximo</button>
-      <button id="fullscreenButton">Tela Cheia</button>
+    <!-- ÁREA PRINCIPAL -->
+    <div id="main">
+      <div id="breadcrumb"></div>
+      <div class="item-list" id="itemList">
+        <!-- Os itens (pastas e arquivos) serão injetados aqui -->
+      </div>
     </div>
   </div>
-
-  <!-- Firebase SDK (versões compat) -->
+  
+  <!-- BARRA DE PLAYER (CONTROLES DE REPRODUÇÃO) -->
+  <div id="player-bar">
+    <div id="player-controls">
+      <button id="prevBtn" onclick="playPrevious()">&#9664;&#9664;</button>
+      <button id="playPauseBtn" onclick="togglePlayPause()">&#9654;</button>
+      <button id="nextBtn" onclick="playNext()">&#9654;&#9654;</button>
+    </div>
+    <div id="progress-container">
+      <div id="progress-bar" onclick="seek(event)">
+        <div id="progress"></div>
+      </div>
+    </div>
+    <div id="volume-container">
+      <span>&#128266;</span>
+      <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.5" onchange="adjustVolume()">
+    </div>
+  </div>
+  
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+  
   <script>
     /*******************************
-     * Configuração e Inicialização
+     * CONFIGURAÇÃO DO FIREBASE
      *******************************/
     const firebaseConfig = {
       apiKey: "AIzaSyDxMWPu_CnXV-u4-vlDFd-IZ8fzlyKJHng",
@@ -170,300 +216,199 @@
     const storageRef = storage.ref();
 
     /*******************************
-     * Seleção de Elementos DOM
+     * VARIÁVEIS DE ESTADO
      *******************************/
-    const fileInput          = document.getElementById('fileInput');
-    const uploadButton       = document.getElementById('uploadButton');
-    const createFolderButton = document.getElementById('createFolderButton');
-    const goToRootButton     = document.getElementById('goToRootButton');
-    const backHomeButton     = document.getElementById('backHomeButton');
-    const currentPathEl      = document.getElementById('currentPath');
-    const folderListEl       = document.getElementById('folderList');
-    const fileListEl         = document.getElementById('fileList');
-    const currentFileNameEl  = document.getElementById('currentFileName');
-    const audioPlayer        = document.getElementById('audioPlayer');
-    const videoPlayer        = document.getElementById('videoPlayer');
-    const volumeControl      = document.getElementById('volumeControl');
-    const playPauseButton    = document.getElementById('playPauseButton');
-    const stopButton         = document.getElementById('stopButton');
-    const prevButton         = document.getElementById('prevButton');
-    const nextButton         = document.getElementById('nextButton');
-    const fullscreenButton   = document.getElementById('fullscreenButton');
-    const appContainer       = document.getElementById('app-container');
-
+    let currentPath = "";              // Ex: "" para raiz ou "Pasta1/Pasta2/"
+    let breadcrumbPaths = [];          // Array com os nomes das pastas no caminho atual
+    let currentFiles = [];             // Array dos arquivos (itens) listados
+    let currentFileIndex = 0;          // Índice do arquivo em reprodução
+    let audioPlayer = new Audio();
+    let isPlaying = false;
+    
+    // Elementos da barra de player
+    const playPauseBtn = document.getElementById("playPauseBtn");
+    const progressBar = document.getElementById("progress");
+    const volumeSlider = document.getElementById("volume-slider");
+    
+    // Configura volume inicial
+    audioPlayer.volume = volumeSlider.value;
+    
     /*******************************
-     * Estado da Aplicação
+     * FUNÇÕES DE NAVEGAÇÃO E UI
      *******************************/
-    let currentPath = "";
-    let currentFiles = [];    // Armazena a lista de arquivos para reprodução
-    let currentFileIndex = 0; // Índice do arquivo atualmente em reprodução
-
-    /*******************************
-     * Eventos
-     *******************************/
-    uploadButton.addEventListener('click', uploadFiles);
-    createFolderButton.addEventListener('click', createFolder);
-    goToRootButton.addEventListener('click', () => {
+    function updateBreadcrumb() {
+      const breadcrumbEl = document.getElementById("breadcrumb");
+      breadcrumbEl.innerHTML = "";
+      // Sempre exibe "Home" como ponto inicial
+      const homeSpan = document.createElement("span");
+      homeSpan.textContent = "Home";
+      homeSpan.onclick = () => {
+        currentPath = "";
+        breadcrumbPaths = [];
+        listItems();
+      };
+      breadcrumbEl.appendChild(homeSpan);
+      
+      // Exibe as pastas do caminho, se houver
+      breadcrumbPaths.forEach((folder, index) => {
+        const span = document.createElement("span");
+        span.textContent = folder;
+        span.onclick = () => {
+          // Retorna para o nível desejado
+          breadcrumbPaths = breadcrumbPaths.slice(0, index + 1);
+          currentPath = breadcrumbPaths.join("/") + "/";
+          listItems();
+        };
+        breadcrumbEl.appendChild(span);
+      });
+    }
+    
+    function goHome() {
       currentPath = "";
-      updateCurrentPath();
+      breadcrumbPaths = [];
       listItems();
-    });
-    backHomeButton.addEventListener('click', goToHomePage);
-    playPauseButton.addEventListener('click', togglePlayPause);
-    stopButton.addEventListener('click', stopPlayback);
-    prevButton.addEventListener('click', playPrevious);
-    nextButton.addEventListener('click', playNext);
-    volumeControl.addEventListener('input', adjustVolume);
-    fullscreenButton.addEventListener('click', toggleFullScreen);
-    
-    // Quando o player terminar a reprodução, passa para o próximo arquivo
-    audioPlayer.addEventListener('ended', playNext);
-    videoPlayer.addEventListener('ended', playNext);
-    
-    // Define o volume inicial
-    adjustVolume();
-
-    /*******************************
-     * Funções Auxiliares e de UI
-     *******************************/
-    function updateCurrentPath() {
-      currentPathEl.textContent = currentPath ? `Pasta Atual: ${currentPath}` : 'Pasta Atual: Pasta Principal';
     }
-
-    function createButton(text, onClick) {
-      const btn = document.createElement('button');
-      btn.textContent = text;
-      btn.addEventListener('click', onClick);
-      return btn;
+    
+    function showLibrary() {
+      goHome();
     }
-
-    /*******************************
-     * Funções de Upload e Gerenciamento
-     *******************************/
-    async function uploadFiles() {
-      const files = fileInput.files;
-      if (!files.length) {
-        alert('Selecione um ou mais arquivos para upload.');
-        return;
-      }
-      try {
-        for (const file of files) {
-          const fileRef = storageRef.child(currentPath + file.name);
-          await fileRef.put(file);
+    
+    function openUploadModal() {
+      // Usa prompt para definir (ou confirmar) o caminho de upload
+      const folder = prompt("Digite o caminho da pasta para upload (deixe vazio para raiz):", currentPath);
+      if (folder === null) return;
+      // Cria um input para seleção dos arquivos
+      const fileInput = document.createElement("input");
+      fileInput.type = "file";
+      fileInput.multiple = true;
+      fileInput.onchange = async () => {
+        const files = fileInput.files;
+        if (files.length) {
+          for (const file of files) {
+            try {
+              const fileRef = storageRef.child((folder ? folder + "/" : currentPath) + file.name);
+              await fileRef.put(file);
+            } catch (error) {
+              alert("Erro ao fazer upload: " + error.message);
+            }
+          }
+          listItems();
         }
-        alert('Upload concluído!');
-        await listItems();
-      } catch (error) {
-        console.error('Upload Error:', error);
-        alert(`Erro no upload: ${error.message}`);
-      }
+      };
+      fileInput.click();
     }
-
-    async function createFolder() {
-      const folderName = prompt('Digite o nome da nova pasta:');
-      if (!folderName) return;
-      try {
-        // Criação de "pasta" no Firebase Storage via Blob vazio
-        const folderRef = storageRef.child(currentPath + folderName + '/');
-        await folderRef.put(new Blob([]));
-        alert(`Pasta "${folderName}" criada com sucesso!`);
-        await listItems();
-      } catch (error) {
-        console.error('Create Folder Error:', error);
-        alert(`Erro ao criar pasta: ${error.message}`);
-      }
-    }
-
+    
     /*******************************
-     * Listagem de Pastas e Arquivos
+     * LISTAGEM DE PASTAS E ARQUIVOS
      *******************************/
     async function listItems() {
       try {
-        // Limpa as listas antes de exibir os itens atualizados
-        folderListEl.innerHTML = '';
-        fileListEl.innerHTML = '';
-        
-        // Recupera itens e pastas da pasta atual
         const result = await storageRef.child(currentPath).listAll();
-
-        // Exibe as pastas (prefixes)
+        const itemList = document.getElementById("itemList");
+        itemList.innerHTML = "";
+        
+        // Listar pastas (prefixes)
         result.prefixes.forEach(prefix => {
-          const li = document.createElement('li');
-          li.classList.add('folder-item');
-          const header = document.createElement('div');
-          header.classList.add('item-header');
-          header.textContent = prefix.name;
-          const openBtn = createButton('Abrir', () => {
-            currentPath = prefix.fullPath + '/';
-            updateCurrentPath();
+          const folderDiv = document.createElement("div");
+          folderDiv.className = "item";
+          // Ícone de pasta (você pode substituir por um SVG ou imagem personalizada)
+          folderDiv.innerHTML = `<img src="https://img.icons8.com/fluency/48/ffffff/folder-invoices.png" alt="Folder" /><div class="title">${prefix.name}</div>`;
+          folderDiv.onclick = () => {
+            currentPath += prefix.name + "/";
+            breadcrumbPaths.push(prefix.name);
             listItems();
-          });
-          header.appendChild(openBtn);
-          li.appendChild(header);
-          folderListEl.appendChild(li);
+          };
+          itemList.appendChild(folderDiv);
         });
-
-        // Exibe os arquivos (items)
+        
+        // Listar arquivos (items)
         currentFiles = result.items;
         currentFiles.forEach((item, index) => {
-          const li = document.createElement('li');
-          li.classList.add('file-item');
-          const header = document.createElement('div');
-          header.classList.add('item-header');
-          header.textContent = item.name;
-          const actions = document.createElement('div');
-          actions.classList.add('item-actions');
-          const playBtn = createButton('Play', () => playSelected(index));
-          const downloadBtn = createButton('Baixar', () => downloadFile(item));
-          const deleteBtn = createButton('Excluir', () => deleteFile(item));
-          actions.appendChild(playBtn);
-          actions.appendChild(downloadBtn);
-          actions.appendChild(deleteBtn);
-          header.appendChild(actions);
-          li.appendChild(header);
-          fileListEl.appendChild(li);
+          const fileDiv = document.createElement("div");
+          fileDiv.className = "item";
+          // Ícone de música (substitua conforme o tipo de arquivo se desejar)
+          fileDiv.innerHTML = `<img src="https://img.icons8.com/fluency/48/ffffff/musical-notes.png" alt="File" /><div class="title">${item.name}</div>`;
+          fileDiv.onclick = () => playFile(index);
+          itemList.appendChild(fileDiv);
         });
+        updateBreadcrumb();
       } catch (error) {
-        console.error('List Items Error:', error);
-        alert(`Erro ao listar itens: ${error.message}`);
+        alert("Erro ao listar itens: " + error.message);
       }
     }
-
+    
     /*******************************
-     * Funções de Reprodução e Controles
+     * CONTROLE DE REPRODUÇÃO
      *******************************/
-    async function playSelected(index) {
+    async function playFile(index) {
       try {
-        const selectedItem = currentFiles[index];
-        const url = await selectedItem.getDownloadURL();
-        const fileExt = selectedItem.name.split('.').pop().toLowerCase();
+        const fileItem = currentFiles[index];
+        const url = await fileItem.getDownloadURL();
         currentFileIndex = index;
-        currentFileNameEl.textContent = `Arquivo: ${selectedItem.name}`;
-        // Diferencia áudio e vídeo (adicione outros formatos se necessário)
-        if (['mp4', 'webm', 'ogg'].includes(fileExt)) {
-          audioPlayer.style.display = 'none';
-          videoPlayer.style.display = 'block';
-          videoPlayer.src = url;
-          videoPlayer.play();
-        } else {
-          videoPlayer.style.display = 'none';
-          audioPlayer.style.display = 'block';
-          audioPlayer.src = url;
-          audioPlayer.play();
-        }
-        playPauseButton.textContent = 'Pause';
+        audioPlayer.src = url;
+        audioPlayer.play();
+        isPlaying = true;
+        playPauseBtn.innerHTML = "&#10074;&#10074;"; // Ícone de pause
       } catch (error) {
-        console.error('Play Selected Error:', error);
-        alert(`Erro ao reproduzir o arquivo: ${error.message}`);
+        alert("Erro ao reproduzir o arquivo: " + error.message);
       }
     }
-
-    // Retorna o player ativo (vídeo se estiver visível ou áudio)
-    function getActivePlayer() {
-      return videoPlayer.style.display === 'block' ? videoPlayer : audioPlayer;
-    }
-
+    
     function togglePlayPause() {
-      const player = getActivePlayer();
-      if (!player.src) return;
-      if (player.paused) {
-        player.play();
-        playPauseButton.textContent = 'Pause';
+      if (!audioPlayer.src) return;
+      if (isPlaying) {
+        audioPlayer.pause();
+        playPauseBtn.innerHTML = "&#9654;"; // Ícone de play
       } else {
-        player.pause();
-        playPauseButton.textContent = 'Play';
+        audioPlayer.play();
+        playPauseBtn.innerHTML = "&#10074;&#10074;";
       }
+      isPlaying = !isPlaying;
     }
-
-    function stopPlayback() {
-      const player = getActivePlayer();
-      player.pause();
-      player.currentTime = 0;
-      playPauseButton.textContent = 'Play';
-    }
-
+    
     function playNext() {
       if (currentFileIndex < currentFiles.length - 1) {
-        playSelected(currentFileIndex + 1);
+        playFile(currentFileIndex + 1);
       }
     }
-
+    
     function playPrevious() {
       if (currentFileIndex > 0) {
-        playSelected(currentFileIndex - 1);
+        playFile(currentFileIndex - 1);
       }
     }
-
+    
     function adjustVolume() {
-      const volume = volumeControl.value;
-      audioPlayer.volume = volume;
-      videoPlayer.volume = volume;
+      audioPlayer.volume = volumeSlider.value;
     }
-
-    async function downloadFile(item) {
-      try {
-        const url = await item.getDownloadURL();
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = item.name;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } catch (error) {
-        console.error('Download Error:', error);
-        alert(`Erro ao baixar o arquivo: ${error.message}`);
+    
+    // Atualiza a barra de progresso de acordo com o tempo do áudio
+    audioPlayer.addEventListener("timeupdate", () => {
+      if (audioPlayer.duration) {
+        const progressPercent = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+        progressBar.style.width = progressPercent + "%";
+      }
+    });
+    
+    // Permite que o usuário avance ao clicar na barra de progresso
+    function seek(event) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const offsetX = event.clientX - rect.left;
+      const percentage = offsetX / rect.width;
+      if (audioPlayer.duration) {
+        audioPlayer.currentTime = percentage * audioPlayer.duration;
       }
     }
-
-    async function deleteFile(item) {
-      if (confirm(`Deseja excluir "${item.name}"?`)) {
-        try {
-          await item.delete();
-          alert('Arquivo excluído!');
-          listItems();
-        } catch (error) {
-          console.error('Delete Error:', error);
-          alert(`Erro ao excluir o arquivo: ${error.message}`);
-        }
-      }
-    }
-
-    function goToHomePage() {
-      // Redireciona para a página inicial desejada
-      window.location.href = 'https://wilsonf1996.github.io/index.html/';
-    }
-
+    
+    audioPlayer.addEventListener("ended", () => {
+      playNext();
+    });
+    
     /*******************************
-     * Controle de Tela Cheia
+     * INICIALIZAÇÃO
      *******************************/
-    function toggleFullScreen() {
-      const player = getActivePlayer();
-      if (!document.fullscreenElement) {
-        if (player.requestFullscreen) {
-          player.requestFullscreen();
-        } else if (player.webkitRequestFullscreen) {
-          player.webkitRequestFullscreen();
-        } else if (player.msRequestFullscreen) {
-          player.msRequestFullscreen();
-        }
-        fullscreenButton.textContent = 'Sair da Tela Cheia';
-      } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
-        } else if (document.webkitExitFullscreen) {
-          document.webkitExitFullscreen();
-        } else if (document.msExitFullscreen) {
-          document.msExitFullscreen();
-        }
-        fullscreenButton.textContent = 'Tela Cheia';
-      }
-    }
-
-    /*******************************
-     * Inicialização
-     *******************************/
-    updateCurrentPath();
     listItems();
   </script>
 </body>
 </html>
+
