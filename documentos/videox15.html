@@ -145,7 +145,7 @@
     }
     
     /* ========================================================
-       Grid de Itens: álbuns, playlists, faixas
+       Grid de Itens: álbuns, playlists, faixas, e Favoritos
     ======================================================== */
     #item-grid {
       display: grid;
@@ -558,7 +558,6 @@
         breadcrumbPaths = [];
         loadItems();
       } else if (page === "favorites") {
-        // Exibe os itens favoritos (simulação)
         displayFavorites();
       }
     }
@@ -644,7 +643,6 @@
       const playlistName = prompt("Digite o nome da nova playlist:");
       if (playlistName) {
         alert(`Playlist "${playlistName}" criada (simulação).`);
-        // Em um projeto real, você salvaria a playlist num banco de dados
       }
     }
     
@@ -670,7 +668,6 @@
       favorites.forEach((fav, index) => {
         const div = document.createElement("div");
         div.className = "grid-item";
-        // Se for mídia, define o ícone conforme extensão
         let iconURL = "https://img.icons8.com/fluency/96/ffffff/musical-notes.png";
         const ext = getExtension(fav.name);
         if (["mp4", "webm", "ogg"].includes(ext)) {
@@ -680,17 +677,15 @@
           <img src="${iconURL}" alt="Mídia">
           <div class="item-title">${fav.name}</div>
         `;
-        // Ao clicar, toca o item
         div.onclick = () => playMediaFromFavorites(index, ext);
+        addContextMenu(div, fav, "favorite");
         grid.appendChild(div);
       });
       updateBreadcrumb();
     }
     
     function playMediaFromFavorites(index, ext) {
-      // Aqui, usamos o array favorites para reproduzir o item
       const favItem = favorites[index];
-      // Essa simulação pressupõe que o item favorito contém uma propriedade "url"
       if (["mp4", "webm", "ogg"].includes(ext)) {
         audioPlayer.pause();
         document.getElementById("video-player").src = favItem.url;
@@ -759,7 +754,7 @@
      * MENU DE CONTEXTO – FUNÇÕES
      *******************************/
     const contextMenu = document.getElementById("context-menu");
-    let contextItem = null; // Armazena o item clicado
+    let contextItem = null;
     
     function addContextMenu(element, itemData, type, index) {
       element.addEventListener("contextmenu", (e) => {
@@ -792,23 +787,35 @@
             <li onclick="organizeFolder()">Organizar Pasta</li>
           </ul>
         `;
+      } else if (contextItem.type === "favorite") {
+        contextMenu.innerHTML = `
+          <ul>
+            <li onclick="playMediaContext()">Tocar</li>
+            <li onclick="removeFromFavorites()">Remover dos Favoritos</li>
+            <li onclick="addToPlaylist()">Adicionar à Playlist</li>
+            <li onclick="downloadMedia()">Baixar</li>
+            <li onclick="deleteMedia()">Excluir</li>
+          </ul>
+        `;
       }
     }
     
     function playMediaContext() {
       if (contextItem && contextItem.type === "media" && contextItem.index !== undefined) {
         playMedia(contextItem.index, getExtension(contextItem.itemData.name));
+      } else if (contextItem && contextItem.type === "favorite") {
+        // Se o item for do tipo favorite, procure-o no array favorites
+        let favIndex = favorites.findIndex(fav => fav.name === contextItem.itemData.name);
+        if (favIndex !== -1) {
+          playMediaFromFavorites(favIndex, getExtension(contextItem.itemData.name));
+        }
       }
     }
     
-    // Funções para mídias (já existentes)
     function addToFavorites() {
       if (contextItem) {
-        // Adiciona o item ao array favorites, se ainda não estiver adicionado
         const itemName = contextItem.itemData.name;
-        // Verifica se já está nos favoritos
         if (!favorites.find(fav => fav.name === itemName)) {
-          // Obter a URL do item e armazenar junto com o nome
           contextItem.itemData.getDownloadURL().then(url => {
             favorites.push({ name: itemName, url });
             alert(`"${itemName}" adicionado aos Favoritos (simulação).`);
@@ -816,6 +823,15 @@
         } else {
           alert(`"${itemName}" já está nos Favoritos.`);
         }
+      }
+    }
+    
+    function removeFromFavorites() {
+      if (contextItem) {
+        const itemName = contextItem.itemData.name;
+        favorites = favorites.filter(fav => fav.name !== itemName);
+        alert(`"${itemName}" removido dos Favoritos (simulação).`);
+        displayFavorites();
       }
     }
     
@@ -852,7 +868,6 @@
       }
     }
     
-    // Funções para pastas
     function renameFolder() {
       if (contextItem && contextItem.type === "folder") {
         const newName = prompt("Digite o novo nome para a pasta:", contextItem.itemData.name);
@@ -1141,3 +1156,4 @@
   </script>
 </body>
 </html>
+
