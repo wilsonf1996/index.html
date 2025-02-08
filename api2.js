@@ -7,7 +7,7 @@ async function sendMessage() {
         return;
     }
 
-    const apiKey = "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"; 
+    const apiKey = "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"; 
     const apiUrl = "https://api.openai.com/v1/chat/completions";
 
     const headers = {
