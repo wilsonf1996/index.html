@@ -40,7 +40,7 @@
       flex: 1;
       overflow: hidden;
     }
-    /* Sidebar – Visível em desktop */
+    /* Sidebar – Navegação (desktop) */
     #sidebar {
       width: 240px;
       background-color: var(--sidebar-bg);
@@ -79,7 +79,7 @@
       cursor: pointer;
     }
 
-    /* Header do conteúdo principal */
+    /* Header do conteúdo */
     #main-content {
       flex: 1;
       background-color: var(--content-bg);
@@ -167,7 +167,9 @@
       text-overflow: ellipsis;
     }
 
-    /* Barra do Player (fixa na parte inferior) */
+    /* ============================
+       PLAYER (fixo na parte inferior)
+    ============================ */
     #player-bar {
       height: 90px;
       background-color: var(--player-bg);
@@ -229,7 +231,7 @@
     #playback-controls button:hover {
       color: var(--primary-color);
     }
-    /* Seção de progresso */
+    /* Progresso */
     #progress-section {
       flex: 2;
       display: flex;
@@ -286,10 +288,7 @@
     ============================ */
     .modal {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
+      top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0,0,0,0.9);
       display: none;
       align-items: center;
@@ -316,12 +315,11 @@
     /* ============================
        RESPONSIVIDADE
     ============================ */
-    /* Em telas pequenas (celular) */
+    /* Para telas pequenas (celular) */
     @media (max-width: 600px) {
       #sidebar {
         position: fixed;
-        top: 0;
-        left: 0;
+        top: 0; left: 0;
         height: 100%;
         transform: translateX(-100%);
         z-index: 2000;
@@ -329,7 +327,7 @@
       #sidebar.show {
         transform: translateX(0);
       }
-      /* Botão para abrir o menu mobile */
+      /* Botão de menu mobile */
       #mobile-menu-btn {
         display: block;
         position: fixed;
@@ -340,12 +338,12 @@
         z-index: 2500;
         cursor: pointer;
       }
-      /* Ajusta o conteúdo para ocupar 100% da tela */
+      /* Ajuste no conteúdo */
       #main-content {
         padding: 20px 10px 80px 10px;
       }
     }
-    /* Em telas maiores (desktop) */
+    /* Para telas maiores (desktop) */
     @media (min-width: 601px) {
       #mobile-menu-btn { display: none; }
     }
@@ -391,7 +389,7 @@
     </main>
   </div>
   
-  <!-- Barra do Player -->
+  <!-- Barra do Player (fixa na parte inferior) -->
   <div id="player-bar">
     <div id="track-info">
       <img id="track-art" src="https://dummyimage.com/60x60/000/fff&text=Capa" alt="Capa" />
@@ -456,8 +454,7 @@
     /*******************************
      * CONFIGURAÇÃO DO FIREBASE
      *******************************/
-
- const firebaseConfig = {
+    const firebaseConfig = {
       apiKey: "AIzaSyDxMWPu_CnXV-u4-vlDFd-IZ8fzlyKJHng",
       authDomain: "financeiro-5.firebaseapp.com",
       projectId: "financeiro-5",
@@ -466,7 +463,6 @@
       appId: "1:686639785223:web:0314689c82c6dd1c2951a2",
       measurementId: "G-Q5REWML5DX"
     };
-
     firebase.initializeApp(firebaseConfig);
     const storage = firebase.storage();
     const db = firebase.firestore();
@@ -474,25 +470,24 @@
     /*******************************
      * VARIÁVEIS GLOBAIS E PLAYER
      *******************************/
-    let currentPath = "";         // Representa o caminho da pasta atual (ex: "" ou "Pasta1/")
-    let breadcrumbPaths = [];       // Histórico de navegação (ex: ["Pasta1", "SubpastaA"])
-    let mediaList = [];           // Itens de mídia carregados (documentos da coleção "media")
-    let folderList = [];          // Pastas carregadas (documentos da coleção "folders")
+    let currentPath = "";         // Caminho atual (ex.: "" ou "Pasta1/")
+    let breadcrumbPaths = [];       // Histórico de navegação (ex.: ["Pasta1", "SubpastaA"])
+    let mediaList = [];           // Itens de mídia (documentos da coleção "media")
+    let folderList = [];          // Pastas (documentos da coleção "folders")
     let currentTrackIndex = 0;
     let isShuffle = false;
     let isRepeat = false;
-    
     const audioPlayer = new Audio();
     audioPlayer.volume = 0.5;
     
     /*******************************
-     * NAVEGAÇÃO E CARREGAMENTO DE ITENS
+     * FUNÇÕES DE NAVEGAÇÃO E CARREGAMENTO
      *******************************/
     async function loadItems() {
       const grid = document.getElementById("item-grid");
       grid.innerHTML = "";
       
-      // Carrega pastas registradas no Firestore cuja propriedade "parent" seja o caminho atual
+      // Carrega pastas (do Firestore)
       try {
         const foldersSnapshot = await db.collection("folders")
           .where("parent", "==", currentPath)
@@ -505,7 +500,6 @@
         folderList.forEach(folder => {
           const div = document.createElement("div");
           div.className = "grid-item";
-          // Ícone de pasta (substitua a URL se desejar)
           div.innerHTML = `
             <img src="https://img.icons8.com/color/96/000000/folder-invoices.png" alt="Pasta">
             <div class="item-title">${folder.name}</div>
@@ -522,7 +516,7 @@
         alert("Erro ao carregar pastas: " + error.message);
       }
       
-      // Carrega itens de mídia registrados no Firestore com folder === currentPath
+      // Carrega mídias (do Firestore)
       try {
         const mediaSnapshot = await db.collection("media")
           .where("folder", "==", currentPath)
@@ -535,7 +529,6 @@
         mediaList.forEach((media, index) => {
           const div = document.createElement("div");
           div.className = "grid-item";
-          // Define o ícone com base no tipo de mídia
           let iconURL = (media.type === "video")
             ? "https://img.icons8.com/fluency/96/ffffff/video.png"
             : "https://img.icons8.com/fluency/96/ffffff/musical-notes.png";
@@ -585,7 +578,7 @@
     }
     
     /*******************************
-     * UPLOAD DE MÍDIA (Áudio/Vídeo)
+     * UPLOAD DE MÍDIA (ÁUDIO/VÍDEO)
      *******************************/
     function openUploadModal() {
       document.getElementById("upload-input").click();
@@ -604,7 +597,6 @@
           await fileRef.put(file);
           const url = await fileRef.getDownloadURL();
           const mediaType = file.type.startsWith("video/") ? "video" : "audio";
-          // Salva os metadados na coleção "media"
           await db.collection("media").add({
             name: file.name,
             url: url,
@@ -653,7 +645,6 @@
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
           });
           alert("Playlist criada: " + playlistName);
-          // Você pode implementar a visualização das playlists em outra rota
         } catch (error) {
           alert("Erro ao criar playlist: " + error.message);
         }
@@ -661,7 +652,7 @@
     }
     
     /*******************************
-     * EXIBIR FAVORITOS
+     * FAVORITOS (exemplo para expansão)
      *******************************/
     async function displayFavorites() {
       try {
@@ -875,7 +866,7 @@
     document.getElementById("video-player").addEventListener("ended", playNext);
     
     /*******************************
-     * MODAL DE VÍDEO & BUSCA AVANÇADA
+     * MODAIS: VÍDEO e BUSCA AVANÇADA
      *******************************/
     function openVideoModal() {
       document.getElementById("video-modal").style.display = "flex";
@@ -894,14 +885,13 @@
     function openAdvancedSearchModal() {
       document.getElementById("advanced-search-modal").style.display = "flex";
     }
-    
     function performAdvancedSearch() {
       const filterAudio = document.getElementById("filter-audio").checked;
       const filterVideo = document.getElementById("filter-video").checked;
       const items = document.querySelectorAll("#item-grid .grid-item");
       items.forEach(item => {
         const title = item.querySelector(".item-title").textContent.toLowerCase();
-        // Essa lógica é simplificada; você pode aprimorar para identificar a extensão ou metadados
+        // Lógica simplificada; pode ser aprimorada para usar metadados reais
         let isAudio = title.endsWith(".mp3") || title.endsWith(".aac") || title.endsWith(".wav") || title.endsWith(".flac");
         let isVideo = title.endsWith(".mp4") || title.endsWith(".mkv") || title.endsWith(".webm") || title.endsWith(".ogg");
         if(!filterAudio && isAudio) {
@@ -916,7 +906,7 @@
     }
     
     /*******************************
-     * ATALHOS DE TECLADO & SAÍDA
+     * ATALHOS DE TECLADO E SAÍDA
      *******************************/
     document.addEventListener("keydown", (e) => {
       if(e.code === "Space") {
@@ -948,7 +938,7 @@
     }
     
     /*******************************
-     * MENU MOBILE (para telas pequenas)
+     * MENU MOBILE (telas pequenas)
      *******************************/
     function toggleMobileMenu() {
       const sidebar = document.getElementById("sidebar");
@@ -963,3 +953,4 @@
   </script>
 </body>
 </html>
+
