@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MusicPro – Streaming App Clone</title>
-  <!-- Favicon mínimo -->
   <link rel="icon" href="data:,">
   <!-- FontAwesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
@@ -70,18 +69,6 @@
       gap: 10px;
     }
     #sidebar nav ul li:hover {
-      color: var(--primary-color);
-    }
-    /* Área de playlists na sidebar */
-    #playlist-list {
-      margin-top: 20px;
-    }
-    .playlist-item {
-      padding: 8px 0;
-      cursor: pointer;
-      transition: color var(--transition-speed);
-    }
-    .playlist-item:hover {
       color: var(--primary-color);
     }
     /* Botão “Sair” */
@@ -456,10 +443,9 @@
           <li onclick="navigateTo('playlists')"><i class="fas fa-list"></i> Playlists</li>
           <li onclick="openUploadModal()"><i class="fas fa-cloud-upload-alt"></i> Upload</li>
           <li onclick="createFolder()"><i class="fas fa-folder-plus"></i> Nova Pasta</li>
-          <li onclick="createPlaylist()"> <i class="fas fa-plus"></i> Criar Playlist</li>
+          <li onclick="createPlaylist()"><i class="fas fa-plus"></i> Criar Playlist</li>
         </ul>
       </nav>
-      <!-- A listagem de playlists será feita ao navegar para a view "playlists" -->
       <div class="exit-btn" onclick="exitApp()"><i class="fas fa-sign-out-alt"></i> Sair</div>
     </div>
     
@@ -474,7 +460,7 @@
         <div id="breadcrumb"></div>
       </div>
       <div id="item-grid">
-        <!-- Os itens (pastas e arquivos) serão listados aqui -->
+        <!-- Itens (pastas e arquivos) serão listados aqui -->
       </div>
     </div>
   </div>
@@ -505,7 +491,6 @@
   <!-- Barra do Player -->
   <div id="player-bar">
     <div id="track-info">
-      <!-- Caso o placeholder não esteja resolvendo, experimente outro serviço de imagem -->
       <img id="track-art" src="https://via.placeholder.com/60?text=Capa" alt="Capa">
       <div id="track-details">
         <div class="track-name" id="track-name">Nenhuma faixa</div>
@@ -538,7 +523,7 @@
     </div>
   </div>
   
-  <!-- Firebase SDK (somente Storage será usado) -->
+  <!-- Firebase SDK (Storage) -->
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
   <script>
@@ -567,16 +552,13 @@
     /*******************************
      * VARIÁVEIS DE ESTADO & PLAYER
      *******************************/
-    let currentPath = "";  // caminho atual no Storage
-    let breadcrumbPaths = []; // para mostrar a navegação
-    let itemList = []; // lista de itens (arquivos) na pasta atual
+    let currentPath = "";       // caminho atual no Storage
+    let breadcrumbPaths = [];   // para mostrar a navegação
+    let itemList = [];          // lista de itens (arquivos) na pasta atual
     let currentTrackIndex = 0;
     let isShuffle = false;
     let isRepeat = false;
-    
-    // View pode ser: "library", "favorites" ou "playlists"
-    let currentView = "library";
-    
+    let currentView = "library";  // "library", "favorites" ou "playlists"
     const audioPlayer = new Audio();
     audioPlayer.volume = document.getElementById("volume-slider").value;
     
@@ -585,13 +567,13 @@
      *******************************/
     function navigateTo(page) {
       currentView = page;
-      if(page === "library"){
+      if (page === "library") {
         currentPath = "";
         breadcrumbPaths = [];
-      } else if(page === "favorites"){
+      } else if (page === "favorites") {
         currentPath = "Favorites/";
         breadcrumbPaths = ["Favorites"];
-      } else if(page === "playlists"){
+      } else if (page === "playlists") {
         currentPath = "Playlists/";
         breadcrumbPaths = ["Playlists"];
       }
@@ -632,14 +614,16 @@
       input.multiple = true;
       input.onchange = async () => {
         const files = input.files;
-        if(files.length){
-          for(const file of files){
-            // Envia para a pasta atual (currentPath)
-            const fileRef = storageRef.child(currentPath + file.name);
+        if (files.length) {
+          for (const file of files) {
+            const filePath = `${currentPath}${file.name}`;
+            const fileRef = storageRef.child(filePath);
             try {
               await fileRef.put(file);
-            } catch(err){
-              alert("Erro no upload: " + err.message);
+              console.log(`Upload concluído: ${filePath}`);
+            } catch (err) {
+              console.error(`Erro no upload de ${file.name}:`, err);
+              alert(`Erro ao enviar ${file.name}: ${err.message}`);
             }
           }
           loadItems();
@@ -648,7 +632,6 @@
       input.click();
     }
     
-    // Upload de pasta (usando webkitdirectory; só funciona em alguns navegadores)
     function openFolderUploadModal() {
       const input = document.createElement("input");
       input.type = "file";
@@ -656,14 +639,16 @@
       input.webkitdirectory = true;
       input.onchange = async () => {
         const files = input.files;
-        if(files.length){
-          for(const file of files){
-            // Usa file.webkitRelativePath para preservar a estrutura
-            const fileRef = storageRef.child(currentPath + file.webkitRelativePath);
+        if (files.length) {
+          for (const file of files) {
+            const filePath = currentPath + file.webkitRelativePath;
+            const fileRef = storageRef.child(filePath);
             try {
               await fileRef.put(file);
-            } catch(err){
-              alert("Erro no upload: " + err.message);
+              console.log(`Upload concluído: ${filePath}`);
+            } catch (err) {
+              console.error(`Erro no upload de ${file.webkitRelativePath}:`, err);
+              alert(`Erro no upload: ${err.message}`);
             }
           }
           alert("Upload de pasta concluído.");
@@ -674,79 +659,95 @@
     }
     
     /*******************************
-     * CRIAÇÃO DE PASTAS / PLAYLISTS (via upload de placeholder)
+     * CRIAÇÃO DE PASTAS / PLAYLISTS
      *******************************/
     function createFolder() {
       const folderName = prompt("Digite o nome da nova pasta:");
-      if(folderName){
-        const folderPath = currentPath + folderName + "/";
-        // Cria um arquivo TXT com o nome da pasta para forçar a criação
-        const txtBlob = new Blob([folderName], {type:"text/plain"});
-        const txtRef = storageRef.child(folderPath + folderName + ".txt");
-        txtRef.put(txtBlob)
-          .then(() => {
-            alert(`Pasta "${folderName}" criada com sucesso.`);
-            loadItems();
-          })
-          .catch(err => alert("Erro ao criar pasta: " + err.message));
-      }
+      if (!folderName) return;
+      const folderPath = currentPath + folderName + "/";
+      // Cria um arquivo placeholder para garantir que a pasta seja criada
+      const txtBlob = new Blob([folderName], { type: "text/plain" });
+      const txtRef = storageRef.child(folderPath + folderName + ".txt");
+      txtRef.put(txtBlob)
+        .then(() => {
+          alert(`Pasta "${folderName}" criada com sucesso.`);
+          loadItems();
+        })
+        .catch(err => alert("Erro ao criar pasta: " + err.message));
     }
     
     function createPlaylist() {
       const playlistName = prompt("Digite o nome da nova playlist:");
-      if(playlistName){
-        // A playlist será criada dentro da pasta "Playlists/"
-        const folderPath = "Playlists/" + playlistName + "/";
-        const txtBlob = new Blob([playlistName], {type:"text/plain"});
-        const txtRef = storageRef.child(folderPath + playlistName + ".txt");
-        txtRef.put(txtBlob)
-          .then(() => {
-            alert(`Playlist "${playlistName}" criada com sucesso.`);
-            // Ao criar uma playlist, atualizamos a view para "playlists"
-            navigateTo("playlists");
-          })
-          .catch(err => alert("Erro ao criar playlist: " + err.message));
-      }
+      if (!playlistName) return;
+      const folderPath = "Playlists/" + playlistName + "/";
+      // Cria um placeholder para garantir que a pasta exista
+      const placeholderBlob = new Blob(["Playlist Criada"], { type: "text/plain" });
+      const placeholderRef = storageRef.child(folderPath + "placeholder.txt");
+      placeholderRef.put(placeholderBlob)
+        .then(() => {
+          alert(`Playlist "${playlistName}" criada com sucesso.`);
+          navigateTo("playlists");
+        })
+        .catch(err => alert("Erro ao criar playlist: " + err.message));
     }
     
     /*******************************
-     * FUNÇÃO DE CÓPIA (para Favoritos e Playlists)
+     * FUNÇÃO DE CÓPIA (FAVORITOS & PLAYLISTS)
      *******************************/
     async function copyFileToFolder(sourceRef, destinationPath) {
       try {
         const url = await sourceRef.getDownloadURL();
         const response = await fetch(url);
         const blob = await response.blob();
-        const destRef = storageRef.child(destinationPath + sourceRef.name);
+        const destRef = storageRef.child(`${destinationPath}${sourceRef.name}`);
         await destRef.put(blob);
+        console.log(`Arquivo ${sourceRef.name} copiado para ${destinationPath}`);
         return destRef;
-      } catch(err){
-        alert("Erro ao copiar arquivo: " + err.message);
+      } catch (err) {
+        console.error("Erro ao copiar arquivo:", err);
         throw err;
       }
     }
     
-    // Ao clicar em "Adicionar aos Favoritos" ou "Adicionar à Playlist"
-    // o menu de contexto exibirá essas opções e elas executarão a cópia
-    function addToFavorites() {
-      if(contextItem && contextItem.type === "media"){
-        copyFileToFolder(contextItem.itemData, "Favorites/")
-          .then(() => {
-            alert(`"${contextItem.itemData.name}" adicionado aos Favoritos.`);
-          });
+    async function addToFavorites() {
+      if (!contextItem || contextItem.type !== "media") {
+        alert("Selecione um arquivo de mídia para adicionar aos Favoritos.");
+        return;
+      }
+      try {
+        await copyFileToFolder(contextItem.itemData, "Favorites/");
+        alert(`"${contextItem.itemData.name}" adicionado aos Favoritos.`);
+      } catch (err) {
+        alert("Erro ao adicionar aos Favoritos: " + err.message);
       }
     }
     
-    function addToPlaylist() {
-      if(contextItem && contextItem.type === "media"){
-        const plName = prompt("Digite o nome da playlist para adicionar:");
-        if(plName){
-          const destination = "Playlists/" + plName + "/";
-          copyFileToFolder(contextItem.itemData, destination)
-            .then(() => {
-              alert(`"${contextItem.itemData.name}" adicionado à Playlist "${plName}".`);
-            });
+    async function addToPlaylist() {
+      if (!contextItem || contextItem.type !== "media") {
+        alert("Selecione um arquivo de mídia para adicionar à Playlist.");
+        return;
+      }
+      const plName = prompt("Digite o nome da playlist para adicionar:");
+      if (!plName) {
+        alert("Nome de playlist inválido.");
+        return;
+      }
+      const destination = `Playlists/${plName}/`;
+      try {
+        // Verifica se a playlist existe (se não, cria um placeholder)
+        const placeholderRef = storageRef.child(`${destination}placeholder.txt`);
+        try {
+          await placeholderRef.getDownloadURL();
+          console.log("Playlist já existe");
+        } catch (e) {
+          const placeholderBlob = new Blob(["Playlist Criada"], { type: "text/plain" });
+          await placeholderRef.put(placeholderBlob);
+          console.log("Placeholder criado para a playlist");
         }
+        await copyFileToFolder(contextItem.itemData, destination);
+        alert(`"${contextItem.itemData.name}" adicionado à Playlist "${plName}".`);
+      } catch (err) {
+        alert("Erro ao adicionar à Playlist: " + err.message);
       }
     }
     
@@ -756,7 +757,6 @@
     const contextMenu = document.getElementById("context-menu");
     let contextItem = null;
     
-    // Adiciona o menu de contexto aos itens existentes
     function addContextMenu(element, itemData, type, index) {
       element.addEventListener("contextmenu", (e) => {
         e.preventDefault();
@@ -769,8 +769,8 @@
     }
     
     function updateContextMenu() {
-      if(!contextItem) return;
-      if(contextItem.type === "media"){
+      if (!contextItem) return;
+      if (contextItem.type === "media") {
         contextMenu.innerHTML = `
           <ul>
             <li onclick="playMediaContext()">Tocar</li>
@@ -780,7 +780,7 @@
             <li onclick="deleteMedia()">Excluir</li>
           </ul>
         `;
-      } else if(contextItem.type === "folder"){
+      } else if (contextItem.type === "folder") {
         contextMenu.innerHTML = `
           <ul>
             <li onclick="createFolder()">Criar Pasta</li>
@@ -791,13 +791,13 @@
     }
     
     function playMediaContext() {
-      if(contextItem && contextItem.type === "media" && contextItem.index !== undefined){
+      if (contextItem && contextItem.type === "media" && contextItem.index !== undefined) {
         playMedia(contextItem.index, getExtension(contextItem.itemData.name));
       }
     }
     
     function downloadMedia() {
-      if(contextItem){
+      if (contextItem) {
         contextItem.itemData.getDownloadURL()
           .then(url => {
             const a = document.createElement("a");
@@ -812,8 +812,8 @@
     }
     
     function deleteMedia() {
-      if(contextItem){
-        if(confirm(`Deseja excluir "${contextItem.itemData.name}"?`)){
+      if (contextItem) {
+        if (confirm(`Deseja excluir "${contextItem.itemData.name}"?`)) {
           contextItem.itemData.delete()
             .then(() => {
               alert("Excluído com sucesso.");
@@ -824,9 +824,8 @@
       }
     }
     
-    // Para upload de arquivo dentro de uma pasta clicada (menu de contexto em pastas)
     function uploadToFolder() {
-      if(contextItem && contextItem.type === "folder"){
+      if (contextItem && contextItem.type === "folder") {
         const folderName = contextItem.itemData.name;
         const folderPath = currentPath + folderName + "/";
         const input = document.createElement("input");
@@ -834,12 +833,14 @@
         input.multiple = true;
         input.onchange = async () => {
           const files = input.files;
-          if(files.length){
-            for(const file of files){
+          if (files.length) {
+            for (const file of files) {
               const fileRef = storageRef.child(folderPath + file.name);
               try {
                 await fileRef.put(file);
-              } catch(err){
+                console.log(`Arquivo ${file.name} enviado para ${folderName}`);
+              } catch (err) {
+                console.error(`Erro no upload para ${folderName}:`, err);
                 alert("Erro no upload: " + err.message);
               }
             }
@@ -851,12 +852,10 @@
       }
     }
     
-    /*******************************
-     * NOVA FUNÇÃO: MENU DE CONTEXTO NA ÁREA VAZIA
-     *******************************/
+    // Menu de contexto na área vazia
     const itemGrid = document.getElementById("item-grid");
     itemGrid.addEventListener("contextmenu", (e) => {
-      if(!e.target.closest('.grid-item')){
+      if (!e.target.closest('.grid-item')) {
         e.preventDefault();
         contextItem = null;
         contextMenu.style.top = `${e.clientY}px`;
@@ -884,7 +883,7 @@
         const mediaItem = itemList[index];
         const url = await mediaItem.getDownloadURL();
         currentTrackIndex = index;
-        if(supportedVideo.includes(ext)){
+        if (supportedVideo.includes(ext)) {
           audioPlayer.pause();
           document.getElementById("video-player").src = url;
           openVideoModal();
@@ -896,7 +895,7 @@
           updatePlayerInfo(mediaItem.name, "Artista Desconhecido", false);
           setPlayPauseIcon(true);
         }
-      } catch(error){
+      } catch (error) {
         alert("Erro ao reproduzir a mídia: " + error.message);
       }
     }
@@ -904,16 +903,15 @@
     function updatePlayerInfo(title, artist, isVideo) {
       document.getElementById("track-name").textContent = title;
       document.getElementById("track-artist").textContent = artist;
-      // Caso o via.placeholder.com não funcione, use outro URL de placeholder
       document.getElementById("track-art").src = isVideo 
         ? "https://via.placeholder.com/60?text=Video" 
         : "https://via.placeholder.com/60?text=Capa";
     }
     
     function togglePlayPause() {
-      if(document.getElementById("video-modal").style.display === "flex"){
+      if (document.getElementById("video-modal").style.display === "flex") {
         const videoPlayer = document.getElementById("video-player");
-        if(videoPlayer.paused){
+        if (videoPlayer.paused) {
           videoPlayer.play();
           setPlayPauseIcon(true);
         } else {
@@ -921,8 +919,8 @@
           setPlayPauseIcon(false);
         }
       } else {
-        if(!audioPlayer.src) return;
-        if(audioPlayer.paused){
+        if (!audioPlayer.src) return;
+        if (audioPlayer.paused) {
           audioPlayer.play();
           setPlayPauseIcon(true);
         } else {
@@ -938,18 +936,18 @@
     }
     
     function playNext() {
-      if(isShuffle){
+      if (isShuffle) {
         const randomIndex = Math.floor(Math.random() * itemList.length);
         playMedia(randomIndex, getExtension(itemList[randomIndex].name));
-      } else if(currentTrackIndex < itemList.length - 1){
+      } else if (currentTrackIndex < itemList.length - 1) {
         playMedia(currentTrackIndex + 1, getExtension(itemList[currentTrackIndex + 1].name));
-      } else if(isRepeat){
+      } else if (isRepeat) {
         playMedia(0, getExtension(itemList[0].name));
       }
     }
     
     function playPrevious() {
-      if(currentTrackIndex > 0){
+      if (currentTrackIndex > 0) {
         playMedia(currentTrackIndex - 1, getExtension(itemList[currentTrackIndex - 1].name));
       }
     }
@@ -975,7 +973,7 @@
       const vol = document.getElementById("volume-slider").value;
       audioPlayer.volume = vol;
       const videoPlayer = document.getElementById("video-player");
-      if(videoPlayer) videoPlayer.volume = vol;
+      if (videoPlayer) videoPlayer.volume = vol;
     }
     
     function increaseVolume() {
@@ -995,13 +993,10 @@
       isMuted = !isMuted;
       audioPlayer.muted = isMuted;
       const videoPlayer = document.getElementById("video-player");
-      if(videoPlayer) videoPlayer.muted = isMuted;
+      if (videoPlayer) videoPlayer.muted = isMuted;
       document.getElementById("muteIcon").className = isMuted ? "fas fa-volume-mute" : "fas fa-volume-up";
     }
     
-    /*******************************
-     * BARRA DE PROGRESSO
-     *******************************/
     function formatTime(seconds) {
       const mins = Math.floor(seconds / 60);
       const secs = Math.floor(seconds % 60);
@@ -1013,7 +1008,7 @@
       const currentTimeEl = document.getElementById("current-time");
       const totalTimeEl = document.getElementById("total-time");
       let duration = 0, currentTime = 0;
-      if(document.getElementById("video-modal").style.display === "flex"){
+      if (document.getElementById("video-modal").style.display === "flex") {
         const videoPlayer = document.getElementById("video-player");
         duration = videoPlayer.duration;
         currentTime = videoPlayer.currentTime;
@@ -1021,7 +1016,7 @@
         duration = audioPlayer.duration;
         currentTime = audioPlayer.currentTime;
       }
-      if(duration){
+      if (duration) {
         const progressPercent = (currentTime / duration) * 100;
         progressBar.style.width = progressPercent + "%";
         currentTimeEl.textContent = formatTime(currentTime);
@@ -1035,7 +1030,7 @@
       const clickX = event.clientX - rect.left;
       const percentage = clickX / rect.width;
       let duration = 0;
-      if(document.getElementById("video-modal").style.display === "flex"){
+      if (document.getElementById("video-modal").style.display === "flex") {
         const videoPlayer = document.getElementById("video-player");
         duration = videoPlayer.duration;
         videoPlayer.currentTime = percentage * duration;
@@ -1050,9 +1045,6 @@
     audioPlayer.addEventListener("ended", playNext);
     document.getElementById("video-player").addEventListener("ended", playNext);
     
-    /*******************************
-     * MODAL DE VÍDEO
-     *******************************/
     function openVideoModal() {
       document.getElementById("video-modal").style.display = "flex";
       setPlayPauseIcon(true);
@@ -1060,7 +1052,7 @@
     
     function closeVideoModal() {
       const modal = document.getElementById("video-modal");
-      if(modal.style.display === "flex"){
+      if (modal.style.display === "flex") {
         modal.style.display = "none";
         const videoPlayer = document.getElementById("video-player");
         videoPlayer.pause();
@@ -1068,9 +1060,6 @@
       }
     }
     
-    /*******************************
-     * MODAL DE BUSCA AVANÇADA
-     *******************************/
     function openAdvancedSearchModal() {
       document.getElementById("advanced-search-modal").style.display = "flex";
     }
@@ -1083,9 +1072,9 @@
       Array.from(items).forEach(item => {
         const title = item.querySelector(".item-title").textContent.toLowerCase();
         const ext = getExtension(title);
-        if(!filterVideo && supportedVideo.includes(ext)){
+        if (!filterVideo && supportedVideo.includes(ext)) {
           item.style.display = "none";
-        } else if(!filterAudio && supportedAudio.includes(ext)){
+        } else if (!filterAudio && supportedAudio.includes(ext)) {
           item.style.display = "none";
         } else {
           item.style.display = "block";
@@ -1094,64 +1083,56 @@
       document.getElementById("advanced-search-modal").style.display = "none";
     }
     
-    /*******************************
-     * ATALHOS DE TECLADO
-     *******************************/
     document.addEventListener("keydown", (e) => {
-      if(e.code === "Space"){
+      if (e.code === "Space") {
         e.preventDefault();
         togglePlayPause();
       }
-      if(e.code === "ArrowRight"){
+      if (e.code === "ArrowRight") {
         playNext();
       }
-      if(e.code === "ArrowLeft"){
+      if (e.code === "ArrowLeft") {
         playPrevious();
       }
-      if(e.code === "ArrowUp"){
+      if (e.code === "ArrowUp") {
         let vol = Math.min(audioPlayer.volume + 0.05, 1);
         audioPlayer.volume = vol;
         document.getElementById("volume-slider").value = vol;
       }
-      if(e.code === "ArrowDown"){
+      if (e.code === "ArrowDown") {
         let vol = Math.max(audioPlayer.volume - 0.05, 0);
         audioPlayer.volume = vol;
         document.getElementById("volume-slider").value = vol;
       }
-      if(e.code === "Escape"){
+      if (e.code === "Escape") {
         closeVideoModal();
         document.getElementById("advanced-search-modal").style.display = "none";
       }
     });
     
-    /*******************************
-     * FUNÇÃO PARA SAIR DO APLICATIVO
-     *******************************/
     function exitApp() {
-      if(confirm("Deseja sair do aplicativo?")){
+      if (confirm("Deseja sair do aplicativo?")) {
         alert("Encerrando sessão (simulação).");
       }
     }
     
-    /*******************************
-     * ALTERNAR SIDEBAR EM MOBILE
-     *******************************/
     function toggleSidebar() {
       const sidebar = document.getElementById("sidebar");
       sidebar.style.display = (sidebar.style.display === "block") ? "none" : "block";
     }
     
-    // Atualiza a barra de progresso a cada 500ms
     setInterval(updateProgress, 500);
     
-    // Função para listar os itens (arquivos e “pastas”) da pasta atual
     async function loadItems() {
       try {
         const result = await storageRef.child(currentPath).listAll();
         const grid = document.getElementById("item-grid");
         grid.innerHTML = "";
-        
-        // Listar “pastas” (prefixes)
+    
+        if (result.prefixes.length === 0 && result.items.length === 0) {
+          grid.innerHTML = "<p style='color: white;'>Nenhum arquivo ou pasta encontrado.</p>";
+        }
+    
         result.prefixes.forEach(prefix => {
           const div = document.createElement("div");
           div.className = "grid-item";
@@ -1160,24 +1141,23 @@
             <div class="item-title">${prefix.name}</div>
           `;
           div.onclick = () => {
-            currentPath += prefix.name + "/";
+            currentPath += `${prefix.name}/`;
             breadcrumbPaths.push(prefix.name);
             loadItems();
           };
           addContextMenu(div, prefix, "folder");
           grid.appendChild(div);
         });
-        
-        // Listar arquivos (mídias)
+    
         itemList = result.items.filter(item => {
           const ext = getExtension(item.name);
           return supportedAudio.includes(ext) || supportedVideo.includes(ext);
         });
-        
+    
         itemList.forEach((item, index) => {
           const ext = getExtension(item.name);
           let iconURL = "https://img.icons8.com/fluency/96/ffffff/musical-notes.png";
-          if(supportedVideo.includes(ext)){
+          if (supportedVideo.includes(ext)) {
             iconURL = "https://img.icons8.com/fluency/96/ffffff/video.png";
           }
           const div = document.createElement("div");
@@ -1191,11 +1171,14 @@
           grid.appendChild(div);
         });
         updateBreadcrumb();
-      } catch(error){
-        alert("Erro ao carregar itens: " + error.message);
+      } catch (error) {
+        console.error("Erro ao carregar itens:", error);
+        alert(`Erro ao carregar itens: ${error.message}`);
       }
     }
+    
+    // Inicializa a visualização
+    loadItems();
   </script>
 </body>
 </html>
-
