@@ -145,7 +145,7 @@
     }
     
     /* ========================================================
-       Grid de Itens: álbuns, playlists, faixas, e Favoritos
+       Grid de Itens: álbuns, playlists, faixas e Favoritos
     ======================================================== */
     #item-grid {
       display: grid;
@@ -596,7 +596,7 @@
     }
     
     /*******************************
-     * UPLOAD DE ARQUIVOS
+     * UPLOAD DE ARQUIVOS (Apenas Áudio/Vídeo)
      *******************************/
     function openUploadModal() {
       const input = document.createElement("input");
@@ -606,6 +606,11 @@
         const files = input.files;
         if (files.length) {
           for (const file of files) {
+            // Verifica se o arquivo é do tipo áudio ou vídeo
+            if (!file.type.startsWith("audio/") && !file.type.startsWith("video/")) {
+              alert(`Arquivo ${file.name} não suportado. Apenas áudio e vídeo são permitidos.`);
+              continue;
+            }
             try {
               const folder = prompt("Digite o caminho de upload (deixe vazio para usar o atual):", currentPath);
               const path = (folder && folder.trim() !== "") ? folder + "/" : currentPath;
@@ -642,7 +647,13 @@
     function createPlaylist() {
       const playlistName = prompt("Digite o nome da nova playlist:");
       if (playlistName) {
-        alert(`Playlist "${playlistName}" criada (simulação).`);
+        // Aqui, vamos criar uma pasta dentro de "Playlists/"
+        storageRef.child("Playlists/" + playlistName + "/").put(new Blob([]))
+          .then(() => {
+            alert(`Playlist "${playlistName}" criada (simulação).`);
+            // Se desejar, você pode atualizar a navegação para mostrar as playlists
+          })
+          .catch(err => alert("Erro ao criar playlist: " + err.message));
       }
     }
     
@@ -804,7 +815,6 @@
       if (contextItem && contextItem.type === "media" && contextItem.index !== undefined) {
         playMedia(contextItem.index, getExtension(contextItem.itemData.name));
       } else if (contextItem && contextItem.type === "favorite") {
-        // Se o item for do tipo favorite, procure-o no array favorites
         let favIndex = favorites.findIndex(fav => fav.name === contextItem.itemData.name);
         if (favIndex !== -1) {
           playMediaFromFavorites(favIndex, getExtension(contextItem.itemData.name));
@@ -914,7 +924,12 @@
           setPlayPauseIcon(true);
         }
       } catch (error) {
-        alert("Erro ao reproduzir a mídia: " + error.message);
+        // Se o erro indicar que o formato não é suportado, informe ao usuário.
+        if (error.name === "NotSupportedError") {
+          alert("Formato de mídia não suportado.");
+        } else {
+          alert("Erro ao reproduzir a mídia: " + error.message);
+        }
       }
     }
     
