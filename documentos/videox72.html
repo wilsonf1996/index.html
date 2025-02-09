@@ -9,16 +9,15 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <!-- FontAwesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
-  <!-- JSZip para compactar pastas -->
+  <!-- JSZip (mantido para referência, mas download de pastas em lote não será realizado via JSZip neste exemplo) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.0/jszip.min.js"></script>
   <style>
-    /* =============================================
+    /* ====================================================
        ESTILOS GERAIS, ANIMAÇÕES E FUNDO DINÂMICO
-    ============================================== */
+    ==================================================== */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: 'Roboto', sans-serif;
-      /* Fundo com gradiente animado em tons de azul vivos */
       background: linear-gradient(-45deg, #007AFF, #00C6FF, #005BBB, #007AFF);
       background-size: 400% 400%;
       animation: gradientBG 10s ease infinite, fadeIn 1s ease;
@@ -38,7 +37,7 @@
 
     /* ======================================
        VARIÁVEIS E LAYOUT BASE
-    ======================================= */
+    ====================================== */
     :root {
       --nav-height: 60px;
       --player-height: 60px;
@@ -62,7 +61,7 @@
 
     /* ======================================
        SIDEBAR (Desktop)
-    ======================================= */
+    ====================================== */
     #sidebar {
       background: var(--element-bg);
       padding: 20px;
@@ -98,7 +97,7 @@
 
     /* ======================================
        ÁREA DE CONTEÚDO
-    ======================================= */
+    ====================================== */
     #content {
       flex: 1;
       background: rgba(32, 58, 67, 0.75);
@@ -129,6 +128,7 @@
       display: flex;
       gap: 10px;
     }
+    /* Botões de ação adicionais para o modo seleção múltipla */
     #header-buttons button {
       flex: 1;
       padding: var(--button-padding);
@@ -158,19 +158,19 @@
 
     /* ======================================
        GRID DE ITENS (CARDS)
-    ======================================= */
+    ====================================== */
     #item-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
       gap: 15px;
     }
     .grid-item {
+      position: relative;
       background: var(--element-bg);
       border-radius: 8px;
       padding: 10px;
       text-align: center;
       cursor: pointer;
-      /* Inicialmente oculto para animação */
       opacity: 0;
       transform: translateY(20px);
       transition: opacity 0.5s ease, transform 0.5s ease;
@@ -179,7 +179,10 @@
       opacity: 1;
       transform: translateY(0);
     }
-    .grid-item:hover { transform: scale(1.03); background: rgba(32, 58, 67, 0.95); }
+    .grid-item:hover {
+      transform: scale(1.03);
+      background: rgba(32, 58, 67, 0.95);
+    }
     .grid-item img {
       width: 100%;
       border-radius: 4px;
@@ -192,10 +195,28 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    /* Marcação de seleção múltipla */
+    .grid-item.selected {
+      border: 2px solid #fff;
+    }
+    .checkbox-overlay {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      width: 20px;
+      height: 20px;
+      background: rgba(255,255,255,0.8);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      color: #007AFF;
+    }
 
     /* ======================================
        PLAYER FIXO (para áudio e vídeo)
-    ======================================= */
+    ====================================== */
     #player-bar {
       position: fixed;
       left: 0;
@@ -260,7 +281,7 @@
 
     /* ======================================
        NAVEGAÇÃO INFERIOR (Mobile)
-    ======================================= */
+    ====================================== */
     #mobile-nav {
       position: fixed;
       left: 0;
@@ -288,7 +309,7 @@
 
     /* ======================================
        MODAIS E MENU DE CONTEXTO
-    ======================================= */
+    ====================================== */
     #advanced-search-modal, #video-modal {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -360,7 +381,7 @@
 
     /* ======================================
        BREAKPOINTS
-    ======================================= */
+    ====================================== */
     @media (max-width: 600px) {
       :root {
         --nav-height: 60px;
@@ -401,11 +422,9 @@
         <div class="logo">MusicPro</div>
         <nav>
           <ul>
-            <!-- Itens de navegação -->
             <li onclick="navigateTo('home')"><i class="fas fa-home"></i> Início</li>
             <li onclick="navigateTo('search')"><i class="fas fa-search"></i> Buscar</li>
             <li onclick="navigateTo('playlists')"><i class="fas fa-list"></i> Playlists</li>
-            <!-- Funções de upload e criação de nova pasta (playlist) -->
             <li onclick="openUploadModal()"><i class="fas fa-cloud-upload-alt"></i> Upload</li>
             <li onclick="createFolder()"><i class="fas fa-folder-plus"></i> Nova Pasta</li>
           </ul>
@@ -418,13 +437,16 @@
         <div id="header">
           <input type="text" id="search-bar" placeholder="Buscar músicas, artistas, álbuns..." onkeyup="searchItems(event)">
           <div id="header-buttons">
-            <button id="advanced-search-btn" onclick="openAdvancedSearchModal()">Busca Avançada</button>
-            <button id="select-all-btn" onclick="selectAllItems()">Selecionar Tudo</button>
+            <button onclick="openAdvancedSearchModal()">Busca Avançada</button>
+            <button onclick="toggleMultiSelectMode()">Modo Seleção</button>
+            <!-- Botões para ações em massa (visíveis somente em modo seleção) -->
+            <button id="btn-download-selected" style="display:none;" onclick="downloadSelectedItems()">Baixar Selecionados</button>
+            <button id="btn-delete-selected" style="display:none;" onclick="deleteSelectedItems()">Excluir Selecionados</button>
           </div>
           <div id="breadcrumb"></div>
         </div>
         <div id="item-grid">
-          <!-- Os itens (pastas e mídias) serão carregados aqui -->
+          <!-- Itens (pastas e mídias) serão carregados aqui -->
         </div>
       </div>
     </div>
@@ -472,10 +494,10 @@
       <button onclick="performAdvancedSearch()">Pesquisar</button>
     </div>
   </div>
-  <!-- Menu de Contexto -->
+  <!-- Menu de Contexto (mantido, mas se o modo seleção estiver ativo, as ações serão por seleção) -->
   <div id="context-menu"></div>
 
-  <!-- Firebase SDK -->
+  <!-- Firebase SDK (app e storage) -->
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
   <script>
@@ -513,9 +535,50 @@
     let currentView = "home";
     const audioPlayer = new Audio();
     audioPlayer.volume = 0.5;
+    // Tratamento de erro no player de áudio
     audioPlayer.addEventListener("error", (e) => {
       console.error("Erro no player de áudio:", e);
+      alert("Não foi possível reproduzir este arquivo. Verifique se o formato é suportado.");
     });
+
+    /*******************************
+     * MODO SELEÇÃO MULTIPLA
+     *******************************/
+    let multiSelectMode = false;
+    let selectedItems = []; // Armazena as referências (ou índices) dos itens selecionados
+
+    function toggleMultiSelectMode() {
+      multiSelectMode = !multiSelectMode;
+      selectedItems = []; // Limpa seleção ao alternar modo
+      // Atualiza botões de ação
+      document.getElementById("btn-download-selected").style.display = multiSelectMode ? "block" : "none";
+      document.getElementById("btn-delete-selected").style.display = multiSelectMode ? "block" : "none";
+      // Atualiza a interface dos itens
+      loadItems();
+    }
+
+    // Função para alternar a seleção de um item (arquivo ou pasta)
+    function toggleItemSelection(itemRef, element) {
+      const idx = selectedItems.indexOf(itemRef);
+      if (idx > -1) {
+        selectedItems.splice(idx, 1);
+        element.classList.remove("selected");
+        // Remove o overlay de seleção, se existir
+        const chk = element.querySelector(".checkbox-overlay");
+        if (chk) chk.innerHTML = "";
+      } else {
+        selectedItems.push(itemRef);
+        element.classList.add("selected");
+        // Adiciona overlay de seleção
+        let chk = element.querySelector(".checkbox-overlay");
+        if (!chk) {
+          chk = document.createElement("div");
+          chk.className = "checkbox-overlay";
+          element.appendChild(chk);
+        }
+        chk.innerHTML = "<i class='fas fa-check'></i>";
+      }
+    }
 
     /*******************************
      * NAVEGAÇÃO & INTERFACE
@@ -530,8 +593,9 @@
         currentPath = "Playlists/";
         breadcrumbPaths = ["Playlists"];
       }
+      // Se o modo seleção estiver ativo, desativa
+      if (multiSelectMode) toggleMultiSelectMode();
       loadItems();
-      // Atualiza itens ativos na navegação mobile
       document.querySelectorAll("#mobile-nav .nav-item").forEach(item => item.classList.remove("active"));
       if (event && event.currentTarget) {
         event.currentTarget.classList.add("active");
@@ -563,7 +627,7 @@
     }
 
     function selectAllItems() {
-      alert("Função 'Selecionar Tudo' ainda não implementada.");
+      alert("Função 'Selecionar Tudo' não está implementada – use o Modo Seleção.");
     }
 
     /*******************************
@@ -623,7 +687,6 @@
      * CRIAÇÃO DE PASTAS (Playlists)
      *******************************/
     function createFolder() {
-      // Se não estivermos em "Playlists", forçamos a navegação para lá
       if (currentView !== "playlists") {
         alert("As pastas (playlists) devem ser criadas na área 'Playlists'. Redirecionando...");
         navigateTo("playlists");
@@ -631,9 +694,7 @@
       }
       const folderName = prompt("Digite o nome da nova playlist (pasta):");
       if (!folderName) return;
-      // Sempre cria a pasta dentro de "Playlists/"
       const folderPath = currentPath + folderName + "/";
-      // Cria um arquivo marcador dentro da pasta
       const txtBlob = new Blob([folderName], { type: "text/plain" });
       const txtRef = storageRef.child(folderPath + folderName + ".txt");
       txtRef.put(txtBlob)
@@ -645,178 +706,79 @@
     }
 
     /*******************************
-     * RENOMEAÇÃO DE PASTAS
+     * EXCLUSÃO DE ITENS
      *******************************/
-    async function renameFolder() {
-      if (!contextItem) return;
-      const oldFolderName = contextItem.itemData.name;
-      const newFolderName = prompt("Digite o novo nome da pasta:", oldFolderName);
-      if (!newFolderName || newFolderName === oldFolderName) return;
-      // Caminho antigo e novo (dentro da área Playlists)
-      const basePath = currentPath; // já contém "Playlists/"
-      const oldFolderPath = basePath + oldFolderName + "/";
-      const newFolderPath = basePath + newFolderName + "/";
-
-      try {
-        // Função auxiliar para copiar recursivamente arquivos e subpastas
-        async function copyFolder(oldPath, newPath) {
-          const folderRef = storageRef.child(oldPath);
-          const result = await folderRef.listAll();
-          // Copia os arquivos
-          for (const fileRef of result.items) {
-            const url = await fileRef.getDownloadURL();
-            const response = await fetch(url);
-            const blob = await response.blob();
-            const newFileRef = storageRef.child(newPath + fileRef.name);
-            await newFileRef.put(blob);
-            await fileRef.delete();
-          }
-          // Processa subpastas recursivamente
-          for (const subfolderRef of result.prefixes) {
-            const subfolderOldPath = oldPath + subfolderRef.name + "/";
-            const subfolderNewPath = newPath + subfolderRef.name + "/";
-            await copyFolder(subfolderOldPath, subfolderNewPath);
-          }
+    async function deleteSelectedItems() {
+      if (selectedItems.length === 0) {
+        alert("Nenhum item selecionado.");
+        return;
+      }
+      if (!confirm("Deseja excluir os itens selecionados?")) return;
+      for (const itemRef of selectedItems) {
+        try {
+          await itemRef.delete();
+          console.log("Excluído:", itemRef.name);
+        } catch (err) {
+          console.error("Erro ao excluir", itemRef.name, err);
+          alert("Erro ao excluir " + itemRef.name + ": " + err.message);
         }
-        await copyFolder(oldFolderPath, newFolderPath);
-        alert("Pasta renomeada com sucesso.");
+      }
+      selectedItems = [];
+      loadItems();
+    }
+
+    // Exclusão individual via menu de contexto (para itens não selecionados em modo múltiplo)
+    async function deleteMedia() {
+      if (!contextItem) return;
+      if (!confirm(`Deseja excluir "${contextItem.itemData.name}"?`)) return;
+      try {
+        await contextItem.itemData.delete();
+        alert("Excluído com sucesso.");
         loadItems();
       } catch (err) {
-        alert("Erro ao renomear pasta: " + err.message);
+        alert("Erro ao excluir: " + err.message);
       }
     }
 
     /*******************************
-     * DOWNLOAD DE PASTAS COM JSZIP
+     * DOWNLOAD DE ITENS
      *******************************/
-    async function downloadFolder() {
-      if (!contextItem) return;
-      const folderName = contextItem.itemData.name;
-      const folderPath = currentPath + folderName + "/";
-      const zip = new JSZip();
-      async function addFolderToZip(folderPath, zipFolder) {
-        const folderRef = storageRef.child(folderPath);
-        const result = await folderRef.listAll();
-        // Adiciona os arquivos do nível atual
-        for (const fileRef of result.items) {
-          const url = await fileRef.getDownloadURL();
-          const response = await fetch(url);
-          const blob = await response.blob();
-          zipFolder.file(fileRef.name, blob);
-        }
-        // Processa subpastas
-        for (const subfolderRef of result.prefixes) {
-          const subfolderZip = zipFolder.folder(subfolderRef.name);
-          await addFolderToZip(folderPath + subfolderRef.name + "/", subfolderZip);
-        }
-      }
-      await addFolderToZip(folderPath, zip.folder(folderName));
-      zip.generateAsync({type:"blob"})
-        .then(function(content) {
-          const a = document.createElement("a");
-          a.href = URL.createObjectURL(content);
-          a.download = folderName + ".zip";
-          a.click();
-        });
-    }
-
-    /*******************************
-     * MENU DE CONTEXTO
-     *******************************/
-    const contextMenu = document.getElementById("context-menu");
-    let contextItem = null;
-    function addContextMenu(element, itemData, type, index) {
-      element.addEventListener("contextmenu", (e) => {
-        e.preventDefault();
-        contextItem = { itemData, type, index };
-        contextMenu.style.top = `${e.clientY}px`;
-        contextMenu.style.left = `${e.clientX}px`;
-        contextMenu.style.display = "block";
-        updateContextMenu();
-      });
-    }
-    function updateContextMenu() {
-      if (!contextItem) return;
-      // Se for pasta, as opções serão: Renomear, Baixar Pasta, Excluir, Upload para Pasta
-      // Se for mídia, as opções serão: Tocar, Baixar e Excluir
-      if (contextItem.type === "folder") {
-        contextMenu.innerHTML = `
-          <ul>
-            <li onclick="uploadToFolder()">Upload para Pasta</li>
-            <li onclick="renameFolder()">Renomear</li>
-            <li onclick="downloadFolder()">Baixar Pasta</li>
-            <li onclick="deleteMedia()">Excluir</li>
-          </ul>
-        `;
-      } else if (contextItem.type === "media") {
-        contextMenu.innerHTML = `
-          <ul>
-            <li onclick="playMediaContext()">Tocar</li>
-            <li onclick="downloadMedia()">Baixar</li>
-            <li onclick="deleteMedia()">Excluir</li>
-          </ul>
-        `;
-      }
-    }
-    document.addEventListener("click", () => { contextMenu.style.display = "none"; });
-
-    function playMediaContext() {
-      if (contextItem && contextItem.type === "media" && contextItem.index !== undefined) {
-        playMedia(contextItem.index, getExtension(contextItem.itemData.name));
-      }
-    }
+    // Para download individual (usado no menu de contexto)
     function downloadMedia() {
-      if (contextItem) {
-        contextItem.itemData.getDownloadURL()
-          .then(url => {
+      if (!contextItem) return;
+      contextItem.itemData.getDownloadURL()
+        .then(url => {
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = contextItem.itemData.name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        })
+        .catch(err => alert("Erro ao baixar: " + err.message));
+    }
+
+    // Download dos itens selecionados (apenas arquivos – para pastas, mostra mensagem)
+    async function downloadSelectedItems() {
+      if (selectedItems.length === 0) {
+        alert("Nenhum item selecionado.");
+        return;
+      }
+      selectedItems.forEach(itemRef => {
+        // Se o item for uma pasta, não compactamos via cliente (evite erros de fetch/CORS)
+        if (itemRef.fullPath.endsWith("/")) {
+          alert("O download em massa de pastas não é suportado via cliente. Baixe os arquivos individualmente.");
+        } else {
+          itemRef.getDownloadURL().then(url => {
             const a = document.createElement("a");
             a.href = url;
-            a.download = contextItem.itemData.name;
+            a.download = itemRef.name;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-          })
-          .catch(err => alert("Erro ao baixar: " + err.message));
-      }
-    }
-    function deleteMedia() {
-      if (contextItem) {
-        if (confirm(`Deseja excluir "${contextItem.itemData.name}"?`)) {
-          contextItem.itemData.delete()
-            .then(() => {
-              alert("Excluído com sucesso.");
-              loadItems();
-            })
-            .catch(err => alert("Erro ao excluir: " + err.message));
+          }).catch(err => console.error("Erro ao baixar:", itemRef.name, err));
         }
-      }
-    }
-    function uploadToFolder() {
-      if (contextItem && contextItem.type === "folder") {
-        const folderName = contextItem.itemData.name;
-        const folderPath = currentPath + folderName + "/";
-        const input = document.createElement("input");
-        input.type = "file";
-        input.multiple = true;
-        input.onchange = async () => {
-          const files = input.files;
-          if (files.length) {
-            for (const file of files) {
-              const fileRef = storageRef.child(folderPath + file.name);
-              try {
-                await fileRef.put(file);
-                console.log(`Arquivo ${file.name} enviado para ${folderName}`);
-              } catch (err) {
-                console.error(`Erro no upload para ${folderName}:`, err);
-                alert("Erro no upload: " + err.message);
-              }
-            }
-            alert(`Arquivos enviados para a playlist "${folderName}"`);
-            loadItems();
-          }
-        };
-        input.click();
-      }
+      });
     }
 
     /*******************************
@@ -839,21 +801,27 @@
             <img src="https://img.icons8.com/color/96/000000/folder-invoices.png" alt="Playlist">
             <div class="item-title">${prefix.name}</div>
           `;
-          div.onclick = () => {
-            currentPath += `${prefix.name}/`;
-            breadcrumbPaths.push(prefix.name);
-            loadItems();
+          // Em modo de seleção múltipla, o clique alterna a seleção; caso contrário, navega para a pasta
+          div.onclick = (e) => {
+            if (multiSelectMode) {
+              toggleItemSelection(prefix, div);
+            } else {
+              currentPath += `${prefix.name}/`;
+              breadcrumbPaths.push(prefix.name);
+              loadItems();
+            }
           };
-          addContextMenu(div, prefix, "folder");
+          // Se não estiver em modo seleção, adiciona menu de contexto
+          if (!multiSelectMode) addContextMenu(div, prefix, "folder");
           grid.appendChild(div);
         });
-        // Carrega arquivos de mídia (filtrados pelos formatos suportados)
+        // Processa arquivos de mídia (filtrados pelos formatos suportados)
         itemList = result.items.filter(item => {
-          const ext = getExtension(item.name);
+          const ext = item.name.split('.').pop().toLowerCase();
           return supportedAudio.includes(ext) || supportedVideo.includes(ext);
         });
         itemList.forEach((item, index) => {
-          const ext = getExtension(item.name);
+          const ext = item.name.split('.').pop().toLowerCase();
           let iconURL = "https://img.icons8.com/fluency/96/ffffff/musical-notes.png";
           if (supportedVideo.includes(ext)) {
             iconURL = "https://img.icons8.com/fluency/96/ffffff/video.png";
@@ -864,21 +832,23 @@
             <img src="${iconURL}" alt="Mídia">
             <div class="item-title">${item.name}</div>
           `;
-          div.onclick = () => playMedia(index, ext);
-          addContextMenu(div, item, "media", index);
+          div.onclick = () => {
+            if (multiSelectMode) {
+              toggleItemSelection(item, div);
+            } else {
+              playMedia(index, ext);
+            }
+          };
+          if (!multiSelectMode) addContextMenu(div, item, "media", index);
           grid.appendChild(div);
         });
         updateBreadcrumb();
-
-        // Animação: aplica classe "visible" com efeito stagger para cada item
+        // Aplica animação com efeito stagger para cada item
         setTimeout(() => {
           document.querySelectorAll('.grid-item').forEach((item, idx) => {
-            setTimeout(() => {
-              item.classList.add('visible');
-            }, idx * 100);
+            setTimeout(() => { item.classList.add('visible'); }, idx * 100);
           });
         }, 100);
-
       } catch (error) {
         console.error("Erro ao carregar itens:", error);
         alert(`Erro ao carregar itens: ${error.message}`);
@@ -919,22 +889,12 @@
     function togglePlayPause() {
       if (document.getElementById("video-modal").style.display === "flex") {
         const videoPlayer = document.getElementById("video-player");
-        if (videoPlayer.paused) {
-          videoPlayer.play();
-          setPlayPauseIcon(true);
-        } else {
-          videoPlayer.pause();
-          setPlayPauseIcon(false);
-        }
+        if (videoPlayer.paused) { videoPlayer.play(); setPlayPauseIcon(true); }
+        else { videoPlayer.pause(); setPlayPauseIcon(false); }
       } else {
         if (!audioPlayer.src) return;
-        if (audioPlayer.paused) {
-          audioPlayer.play();
-          setPlayPauseIcon(true);
-        } else {
-          audioPlayer.pause();
-          setPlayPauseIcon(false);
-        }
+        if (audioPlayer.paused) { audioPlayer.play(); setPlayPauseIcon(true); }
+        else { audioPlayer.pause(); setPlayPauseIcon(false); }
       }
     }
     function setPlayPauseIcon(isPlaying) {
@@ -944,23 +904,20 @@
     function playNext() {
       if (isShuffle) {
         const randomIndex = Math.floor(Math.random() * itemList.length);
-        playMedia(randomIndex, getExtension(itemList[randomIndex].name));
+        playMedia(randomIndex, itemList[randomIndex].name.split('.').pop().toLowerCase());
       } else if (currentTrackIndex < itemList.length - 1) {
-        playMedia(currentTrackIndex + 1, getExtension(itemList[currentTrackIndex + 1].name));
+        playMedia(currentTrackIndex + 1, itemList[currentTrackIndex + 1].name.split('.').pop().toLowerCase());
       } else if (isRepeat) {
-        playMedia(0, getExtension(itemList[0].name));
+        playMedia(0, itemList[0].name.split('.').pop().toLowerCase());
       }
     }
     function playPrevious() {
       if (currentTrackIndex > 0) {
-        playMedia(currentTrackIndex - 1, getExtension(itemList[currentTrackIndex - 1].name));
+        playMedia(currentTrackIndex - 1, itemList[currentTrackIndex - 1].name.split('.').pop().toLowerCase());
       }
     }
     function toggleShuffle() { isShuffle = !isShuffle; }
     function toggleRepeat() { isRepeat = !isRepeat; }
-    function getExtension(filename) {
-      return filename.split('.').pop().toLowerCase();
-    }
 
     /*******************************
      * CONTROLE DE VOLUME
@@ -978,60 +935,11 @@
       if (videoPlayer) videoPlayer.muted = isMuted;
       document.getElementById("muteIcon").className = isMuted ? "fas fa-volume-mute" : "fas fa-volume-up";
     }
-    function formatTime(seconds) {
-      const mins = Math.floor(seconds / 60);
-      const secs = Math.floor(seconds % 60);
-      return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
-    }
-    function updateProgress() {
-      // Aqui pode-se implementar barra de progresso, se desejado
-    }
-    audioPlayer.addEventListener("ended", playNext);
-    document.getElementById("video-player").addEventListener("ended", playNext);
-    function openVideoModal() {
-      document.getElementById("video-modal").style.display = "flex";
-      setPlayPauseIcon(true);
-    }
-    function closeVideoModal() {
-      const modal = document.getElementById("video-modal");
-      if (modal.style.display === "flex") {
-        modal.style.display = "none";
-        const videoPlayer = document.getElementById("video-player");
-        videoPlayer.pause();
-        videoPlayer.currentTime = 0;
-      }
-    }
-    function openAdvancedSearchModal() {
-      document.getElementById("advanced-search-modal").style.display = "flex";
-    }
-    function performAdvancedSearch() {
-      const filterAudio = document.getElementById("filter-audio").checked;
-      const filterVideo = document.getElementById("filter-video").checked;
-      const items = document.querySelectorAll("#item-grid .grid-item");
-      items.forEach(item => {
-        const title = item.querySelector(".item-title").textContent.toLowerCase();
-        const ext = getExtension(title);
-        if (!filterVideo && supportedVideo.includes(ext)) {
-          item.style.display = "none";
-        } else if (!filterAudio && supportedAudio.includes(ext)) {
-          item.style.display = "none";
-        } else {
-          item.style.display = "block";
-        }
-      });
-      document.getElementById("advanced-search-modal").style.display = "none";
-    }
+
     document.addEventListener("keydown", (e) => {
-      if (e.code === "Space") {
-        e.preventDefault();
-        togglePlayPause();
-      }
-      if (e.code === "ArrowRight") {
-        playNext();
-      }
-      if (e.code === "ArrowLeft") {
-        playPrevious();
-      }
+      if (e.code === "Space") { e.preventDefault(); togglePlayPause(); }
+      if (e.code === "ArrowRight") { playNext(); }
+      if (e.code === "ArrowLeft") { playPrevious(); }
       if (e.code === "ArrowUp") {
         let vol = Math.min(audioPlayer.volume + 0.05, 1);
         audioPlayer.volume = vol;
@@ -1056,9 +964,45 @@
       const sidebar = document.getElementById("sidebar");
       sidebar.style.display = (sidebar.style.display === "block") ? "none" : "block";
     }
-    // Atualiza a cada 500ms (se necessário)
-    setInterval(updateProgress, 500);
-    // Inicializa o carregamento dos itens
+
+    /*******************************
+     * MODAIS DE REPRODUÇÃO
+     *******************************/
+    function openVideoModal() {
+      document.getElementById("video-modal").style.display = "flex";
+      setPlayPauseIcon(true);
+    }
+    function closeVideoModal() {
+      const modal = document.getElementById("video-modal");
+      if (modal.style.display === "flex") {
+        modal.style.display = "none";
+        const videoPlayer = document.getElementById("video-player");
+        videoPlayer.pause();
+        videoPlayer.currentTime = 0;
+      }
+    }
+    function openAdvancedSearchModal() {
+      document.getElementById("advanced-search-modal").style.display = "flex";
+    }
+    function performAdvancedSearch() {
+      const filterAudio = document.getElementById("filter-audio").checked;
+      const filterVideo = document.getElementById("filter-video").checked;
+      const items = document.querySelectorAll("#item-grid .grid-item");
+      items.forEach(item => {
+        const title = item.querySelector(".item-title").textContent.toLowerCase();
+        const ext = title.split('.').pop();
+        if (!filterVideo && supportedVideo.includes(ext)) {
+          item.style.display = "none";
+        } else if (!filterAudio && supportedAudio.includes(ext)) {
+          item.style.display = "none";
+        } else {
+          item.style.display = "block";
+        }
+      });
+      document.getElementById("advanced-search-modal").style.display = "none";
+    }
+
+    // Inicia o carregamento dos itens
     loadItems();
   </script>
 </body>
