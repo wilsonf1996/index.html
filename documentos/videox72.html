@@ -9,10 +9,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <!-- FontAwesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
-  <!-- JSZip (para referência, se necessário) -->
+  <!-- JSZip (mantido para referência, se necessário) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.0/jszip.min.js"></script>
   
-  <!-- CSS -->
   <style>
     /* =============================================
        ESTILOS GERAIS, ANIMAÇÕES E FUNDO DINÂMICO
@@ -385,9 +384,78 @@
       #playback-controls button { font-size: 1.8rem; }
     }
   </style>
-  
-  <!-- Bloco de JavaScript com defer para garantir que as funções sejam definidas globalmente antes da interação -->
-  <script defer>
+</head>
+<body>
+  <!-- Estrutura HTML -->
+  <div class="container">
+    <div class="main">
+      <div id="sidebar">
+        <div class="logo">MusicPro</div>
+        <nav>
+          <ul>
+            <li onclick="navigateTo('home')"><i class="fas fa-home"></i> Início</li>
+            <li onclick="navigateTo('search')"><i class="fas fa-search"></i> Buscar</li>
+            <li onclick="navigateTo('playlists')"><i class="fas fa-list"></i> Playlists</li>
+            <li onclick="openUploadModal()"><i class="fas fa-cloud-upload-alt"></i> Upload</li>
+            <li onclick="createFolder()"><i class="fas fa-folder-plus"></i> Nova Pasta</li>
+          </ul>
+        </nav>
+        <div class="exit-btn" onclick="exitApp()"><i class="fas fa-sign-out-alt"></i> Sair</div>
+      </div>
+      <div id="content">
+        <div id="header">
+          <input type="text" id="search-bar" placeholder="Buscar músicas, artistas, álbuns..." onkeyup="searchItems(event)">
+          <div id="header-buttons">
+            <button onclick="openAdvancedSearchModal()">Busca Avançada</button>
+            <button onclick="toggleMultiSelectMode()">Modo Seleção</button>
+            <button id="btn-download-selected" style="display:none;" onclick="downloadSelectedItems()">Baixar Selecionados</button>
+            <button id="btn-delete-selected" style="display:none;" onclick="deleteSelectedItems()">Excluir Selecionados</button>
+          </div>
+          <div id="breadcrumb"></div>
+        </div>
+        <div id="item-grid"></div>
+      </div>
+    </div>
+  </div>
+  <div id="mobile-nav">
+    <div class="nav-item" onclick="navigateTo('home')"><i class="fas fa-home"></i><span>Início</span></div>
+    <div class="nav-item" onclick="navigateTo('search')"><i class="fas fa-search"></i><span>Buscar</span></div>
+    <div class="nav-item" onclick="navigateTo('playlists')"><i class="fas fa-list"></i><span>Playlists</span></div>
+  </div>
+  <div id="player-bar">
+    <div id="track-info">
+      <img id="track-art" src="https://dummyimage.com/60x60/000/fff.png&text=Capa" alt="Capa">
+      <div id="track-details">
+        <div class="track-name" id="track-name">Nenhuma faixa</div>
+        <div class="track-artist" id="track-artist">—</div>
+      </div>
+    </div>
+    <div id="playback-controls">
+      <button id="prevBtn" onclick="playPrevious()" title="Faixa Anterior"><i class="fas fa-step-backward"></i></button>
+      <button id="playPauseBtn" onclick="togglePlayPause()" title="Play/Pause"><i class="fas fa-play"></i></button>
+      <button id="nextBtn" onclick="playNext()" title="Próxima Faixa"><i class="fas fa-step-forward"></i></button>
+    </div>
+    <div id="volume-controls">
+      <button id="muteBtn" onclick="toggleMute()" title="Mutar/Desmutar"><i id="muteIcon" class="fas fa-volume-up"></i></button>
+      <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.5" onchange="adjustVolume()">
+    </div>
+  </div>
+  <div id="video-modal">
+    <div class="close-modal" onclick="closeVideoModal()"><i class="fas fa-times"></i></div>
+    <video id="video-player"></video>
+  </div>
+  <div id="advanced-search-modal">
+    <div class="modal-content">
+      <h2>Busca Avançada</h2>
+      <label><input type="checkbox" id="filter-audio" checked> Música</label>
+      <label><input type="checkbox" id="filter-video" checked> Vídeo</label>
+      <button onclick="performAdvancedSearch()">Pesquisar</button>
+    </div>
+  </div>
+  <div id="context-menu"></div>
+
+  <!-- Bloco de JavaScript colocado no final para garantir que as funções estejam definidas -->
+  <script>
     /*******************************
      * CONFIGURAÇÃO DO FIREBASE
      *******************************/
@@ -823,11 +891,10 @@
       });
       document.getElementById("advanced-search-modal").style.display = "none";
     }
-
-    // Chama o carregamento dos itens após o script ser executado
+    // Inicia o carregamento dos itens
     loadItems();
 
-    // Expondo funções globalmente para uso nos atributos inline
+    // Expor funções globalmente para os eventos inline
     window.navigateTo = navigateTo;
     window.openUploadModal = openUploadModal;
     window.createFolder = createFolder;
@@ -840,73 +907,5 @@
     window.openAdvancedSearchModal = openAdvancedSearchModal;
     window.toggleSidebar = toggleSidebar;
   </script>
-</head>
-<body>
-  <div class="container">
-    <div class="main">
-      <div id="sidebar">
-        <div class="logo">MusicPro</div>
-        <nav>
-          <ul>
-            <li onclick="navigateTo('home')"><i class="fas fa-home"></i> Início</li>
-            <li onclick="navigateTo('search')"><i class="fas fa-search"></i> Buscar</li>
-            <li onclick="navigateTo('playlists')"><i class="fas fa-list"></i> Playlists</li>
-            <li onclick="openUploadModal()"><i class="fas fa-cloud-upload-alt"></i> Upload</li>
-            <li onclick="createFolder()"><i class="fas fa-folder-plus"></i> Nova Pasta</li>
-          </ul>
-        </nav>
-        <div class="exit-btn" onclick="exitApp()"><i class="fas fa-sign-out-alt"></i> Sair</div>
-      </div>
-      <div id="content">
-        <div id="header">
-          <input type="text" id="search-bar" placeholder="Buscar músicas, artistas, álbuns..." onkeyup="searchItems(event)">
-          <div id="header-buttons">
-            <button onclick="openAdvancedSearchModal()">Busca Avançada</button>
-            <button onclick="toggleMultiSelectMode()">Modo Seleção</button>
-            <button id="btn-download-selected" style="display:none;" onclick="downloadSelectedItems()">Baixar Selecionados</button>
-            <button id="btn-delete-selected" style="display:none;" onclick="deleteSelectedItems()">Excluir Selecionados</button>
-          </div>
-          <div id="breadcrumb"></div>
-        </div>
-        <div id="item-grid"></div>
-      </div>
-    </div>
-  </div>
-  <div id="mobile-nav">
-    <div class="nav-item" onclick="navigateTo('home')"><i class="fas fa-home"></i><span>Início</span></div>
-    <div class="nav-item" onclick="navigateTo('search')"><i class="fas fa-search"></i><span>Buscar</span></div>
-    <div class="nav-item" onclick="navigateTo('playlists')"><i class="fas fa-list"></i><span>Playlists</span></div>
-  </div>
-  <div id="player-bar">
-    <div id="track-info">
-      <img id="track-art" src="https://dummyimage.com/60x60/000/fff.png&text=Capa" alt="Capa">
-      <div id="track-details">
-        <div class="track-name" id="track-name">Nenhuma faixa</div>
-        <div class="track-artist" id="track-artist">—</div>
-      </div>
-    </div>
-    <div id="playback-controls">
-      <button id="prevBtn" onclick="playPrevious()" title="Faixa Anterior"><i class="fas fa-step-backward"></i></button>
-      <button id="playPauseBtn" onclick="togglePlayPause()" title="Play/Pause"><i class="fas fa-play"></i></button>
-      <button id="nextBtn" onclick="playNext()" title="Próxima Faixa"><i class="fas fa-step-forward"></i></button>
-    </div>
-    <div id="volume-controls">
-      <button id="muteBtn" onclick="toggleMute()" title="Mutar/Desmutar"><i id="muteIcon" class="fas fa-volume-up"></i></button>
-      <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.5" onchange="adjustVolume()">
-    </div>
-  </div>
-  <div id="video-modal">
-    <div class="close-modal" onclick="closeVideoModal()"><i class="fas fa-times"></i></div>
-    <video id="video-player"></video>
-  </div>
-  <div id="advanced-search-modal">
-    <div class="modal-content">
-      <h2>Busca Avançada</h2>
-      <label><input type="checkbox" id="filter-audio" checked> Música</label>
-      <label><input type="checkbox" id="filter-video" checked> Vídeo</label>
-      <button onclick="performAdvancedSearch()">Pesquisar</button>
-    </div>
-  </div>
-  <div id="context-menu"></div>
 </body>
 </html>
