@@ -13,11 +13,11 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   <!-- Lottie para microinterações (opcional) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.7.11/lottie.min.js"></script>
-  <!-- Firebase SDK (App, Storage, Auth e Firestore) -->
+  <!-- Firebase SDK (App, Auth, Storage, Realtime Database) -->
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
   <style>
     /* RESET & VARIÁVEIS */
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -46,429 +46,90 @@
       overflow-x: hidden;
       transition: background var(--transition-speed), color var(--transition-speed);
     }
-    /* Modal de Autenticação – Interface profissional com abas */
-    #auth-modal {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background-color: var(--background-dark);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 3000;
-    }
-    #auth-container {
-      width: 320px;
-      background: #1e1e1e;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.4);
-    }
-    #auth-tabs {
-      display: flex;
-      margin-bottom: 15px;
-      border-bottom: 1px solid #444;
-    }
-    #auth-tabs button {
-      flex: 1;
-      background: none;
-      border: none;
-      color: #aaa;
-      font-size: 1rem;
-      padding: 10px;
-      cursor: pointer;
-      transition: color 0.3s;
-    }
-    #auth-tabs button.active {
-      color: var(--primary-color);
-      border-bottom: 2px solid var(--primary-color);
-    }
-    .auth-form {
-      display: none;
-    }
-    .auth-form.active {
-      display: block;
-    }
-    .auth-form h2 {
-      text-align: center;
-      margin-bottom: 15px;
-      color: #fff;
-    }
-    .auth-form input {
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 10px;
-      border: none;
-      border-radius: 4px;
-      font-size: 1rem;
-    }
-    .auth-form label {
-      font-size: 0.9rem;
-      color: #ccc;
-      margin-bottom: 10px;
-      display: block;
-    }
-    .auth-form button {
-      width: 100%;
-      padding: 10px;
-      background-color: var(--primary-color);
-      border: none;
-      border-radius: 4px;
-      color: #fff;
-      font-size: 1rem;
-      cursor: pointer;
-      margin-bottom: 10px;
-    }
-    .auth-form p {
-      text-align: center;
-      font-size: 0.9rem;
-      color: #ccc;
-    }
-    .auth-form p a {
-      color: var(--primary-color);
-      text-decoration: none;
-      cursor: pointer;
-    }
-    .error-message {
-      color: #ff6b6b;
-      font-size: 0.9rem;
-      margin-bottom: 10px;
-      text-align: center;
-    }
-    /* Modal de Política de Privacidade */
-    #policy-modal {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background-color: rgba(0,0,0,0.9);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 3500;
-    }
-    #policy-modal .modal-content {
-      background-color: #181818;
-      padding: 20px;
-      border-radius: 8px;
-      width: 90%;
-      max-width: 600px;
-      max-height: 80%;
-      overflow-y: auto;
-      color: #fff;
-    }
-    #policy-modal .modal-content h2 {
-      margin-bottom: 15px;
-    }
-    #policy-modal .modal-content button {
-      padding: 10px 20px;
-      background-color: var(--primary-color);
-      border: none;
-      border-radius: 5px;
-      color: #fff;
-      cursor: pointer;
-      margin-top: 15px;
-    }
+    /* Modal de Autenticação */
+    #auth-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--background-dark); display: flex; align-items: center; justify-content: center; z-index: 3000; }
+    #auth-container { width: 320px; background: #1e1e1e; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.4); }
+    #auth-tabs { display: flex; margin-bottom: 15px; border-bottom: 1px solid #444; }
+    #auth-tabs button { flex: 1; background: none; border: none; color: #aaa; font-size: 1rem; padding: 10px; cursor: pointer; transition: color 0.3s; }
+    #auth-tabs button.active { color: var(--primary-color); border-bottom: 2px solid var(--primary-color); }
+    .auth-form { display: none; }
+    .auth-form.active { display: block; }
+    .auth-form h2 { text-align: center; margin-bottom: 15px; color: #fff; }
+    .auth-form input { width: 100%; padding: 10px; margin-bottom: 10px; border: none; border-radius: 4px; font-size: 1rem; }
+    .auth-form label { font-size: 0.9rem; color: #ccc; margin-bottom: 10px; display: block; }
+    .auth-form button { width: 100%; padding: 10px; background-color: var(--primary-color); border: none; border-radius: 4px; color: #fff; font-size: 1rem; cursor: pointer; margin-bottom: 10px; }
+    .auth-form p { text-align: center; font-size: 0.9rem; color: #ccc; }
+    .auth-form p a { color: var(--primary-color); text-decoration: none; cursor: pointer; }
+    .error-message { color: #ff6b6b; font-size: 0.9rem; margin-bottom: 10px; text-align: center; }
+    /* Modal de Política */
+    #policy-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 3500; }
+    #policy-modal .modal-content { background-color: #181818; padding: 20px; border-radius: 8px; width: 90%; max-width: 600px; max-height: 80%; overflow-y: auto; color: #fff; }
+    #policy-modal .modal-content h2 { margin-bottom: 15px; }
+    #policy-modal .modal-content button { padding: 10px 20px; background-color: var(--primary-color); border: none; border-radius: 5px; color: #fff; cursor: pointer; margin-top: 15px; }
     /* App MusicPro – Conteúdo principal */
     #app { display: none; }
-    /* (Estilos do app mantidos conforme o original) */
-    #mobile-nav {
-      display: flex; position: fixed; bottom: 0; left: 0; right: 0; height: 45px;
-      background-color: #000; border-top: 1px solid #282828;
-      justify-content: space-around; align-items: center; z-index: 3000;
-    }
+    #mobile-nav { display: flex; position: fixed; bottom: 0; left: 0; right: 0; height: 45px; background-color: #000; border-top: 1px solid #282828; justify-content: space-around; align-items: center; z-index: 3000; }
     #mobile-nav i { font-size: 1rem; }
-    #mobile-menu-toggle, #sidebar-toggle {
-      position: absolute; top: 20px;
-      background-color: var(--primary-color);
-      border: none; border-radius: 5px; padding: 5px 10px;
-      color: #fff; cursor: pointer; transition: background var(--transition-speed);
-      z-index: 1001; font-size: 0.8rem;
-    }
+    #mobile-menu-toggle, #sidebar-toggle { position: absolute; top: 20px; background-color: var(--primary-color); border: none; border-radius: 5px; padding: 5px 10px; color: #fff; cursor: pointer; transition: background var(--transition-speed); z-index: 1001; font-size: 0.8rem; }
     #mobile-menu-toggle { left: calc(var(--sidebar-width) + 10px); }
     #mobile-menu-toggle:hover, #sidebar-toggle:hover { background-color: var(--accent-color); }
     #sidebar-toggle { left: calc(var(--sidebar-width) + 10px); }
     #app-content { display: flex; height: calc(100vh - 90px); transition: all var(--transition-speed); }
-    #sidebar {
-      width: var(--sidebar-width);
-      background-color: var(--secondary-color);
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      transition: width var(--transition-speed);
-    }
+    #sidebar { width: var(--sidebar-width); background-color: var(--secondary-color); padding: 20px; display: flex; flex-direction: column; transition: width var(--transition-speed); }
     #sidebar.collapsed { width: var(--sidebar-collapsed-width); }
-    #sidebar .logo {
-      font-size: 1.8rem; font-weight: 700; margin-bottom: 30px; letter-spacing: 1px;
-      color: var(--primary-color);
-      transition: opacity var(--transition-speed);
-    }
+    #sidebar .logo { font-size: 1.8rem; font-weight: 700; margin-bottom: 30px; letter-spacing: 1px; color: var(--primary-color); transition: opacity var(--transition-speed); }
     #sidebar.collapsed .logo { opacity: 0; }
     #sidebar nav ul { list-style: none; flex-grow: 1; }
-    #sidebar nav ul li {
-      padding: 12px 10px; font-size: 1rem; display: flex; align-items: center; gap: 10px;
-      cursor: pointer; border-radius: 4px; transition: background var(--transition-speed);
-    }
+    #sidebar nav ul li { padding: 12px 10px; font-size: 1rem; display: flex; align-items: center; gap: 10px; cursor: pointer; border-radius: 4px; transition: background var(--transition-speed); }
     #sidebar nav ul li:hover { background-color: var(--nav-item-hover); }
     #sidebar nav ul li i { width: 20px; text-align: center; }
-    #sidebar .exit-btn {
-      padding-top: 10px; border-top: 1px solid #444; cursor: pointer; font-size: 0.9rem;
-    }
-    #main-content {
-      flex: 1;
-      background-color: #181818;
-      padding: 20px;
-      overflow-y: auto;
-      transition: background var(--transition-speed);
-    }
-    #header {
-      margin-bottom: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    #search-bar {
-      padding: 10px 15px;
-      border-radius: 25px;
-      border: none;
-      background-color: #282828;
-      color: #fff;
-      font-size: 1rem;
-      transition: background var(--transition-speed);
-    }
-    #theme-toggle {
-      align-self: flex-end;
-      background-color: var(--primary-color);
-      border: none;
-      border-radius: 5px;
-      padding: 5px 10px;
-      color: #fff;
-      cursor: pointer;
-      transition: background var(--transition-speed);
-      font-size: 0.8rem;
-    }
+    #sidebar .exit-btn { padding-top: 10px; border-top: 1px solid #444; cursor: pointer; font-size: 0.9rem; }
+    #main-content { flex: 1; background-color: #181818; padding: 20px; overflow-y: auto; transition: background var(--transition-speed); }
+    #header { margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; }
+    #search-bar { padding: 10px 15px; border-radius: 25px; border: none; background-color: #282828; color: #fff; font-size: 1rem; transition: background var(--transition-speed); }
+    #theme-toggle { align-self: flex-end; background-color: var(--primary-color); border: none; border-radius: 5px; padding: 5px 10px; color: #fff; cursor: pointer; transition: background var(--transition-speed); font-size: 0.8rem; }
     #theme-toggle:hover { background-color: var(--accent-color); }
     #header-buttons, #breadcrumb { display: flex; gap: 10px; }
-    #advanced-search-btn, #select-all-btn {
-      padding: 8px;
-      background-color: var(--primary-color);
-      border: none;
-      border-radius: 5px;
-      color: #fff;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: background var(--transition-speed);
-    }
+    #advanced-search-btn, #select-all-btn { padding: 8px; background-color: var(--primary-color); border: none; border-radius: 5px; color: #fff; font-size: 0.9rem; cursor: pointer; transition: background var(--transition-speed); }
     #advanced-search-btn:hover, #select-all-btn:hover { background-color: var(--accent-color); }
     #breadcrumb { font-size: 0.9rem; color: #bbb; }
     #breadcrumb span { cursor: pointer; color: var(--primary-color); margin-right: 5px; }
-    #breadcrumb span:not(:last-child)::after {
-      content: "›"; margin-left: 5px;
-    }
-    #item-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      gap: 20px;
-      transition: gap var(--transition-speed);
-    }
-    .grid-item {
-      background-color: #282828;
-      padding: 15px;
-      border-radius: 8px;
-      text-align: center;
-      cursor: pointer;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-      transition: transform var(--transition-speed), background var(--transition-speed), box-shadow var(--transition-speed);
-      overflow: hidden;
-    }
-    .grid-item:hover {
-      transform: scale(1.03);
-      background-color: #383838;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.7);
-    }
-    .grid-item img {
-      width: 100%;
-      max-width: 100px;
-      border-radius: 4px;
-      object-fit: cover;
-      transition: width var(--transition-speed), height var(--transition-speed);
-    }
-    .grid-item .item-title {
-      margin-top: 10px;
-      font-size: 0.9rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+    #breadcrumb span:not(:last-child)::after { content: "›"; margin-left: 5px; }
+    #item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 20px; transition: gap var(--transition-speed); }
+    .grid-item { background-color: #282828; padding: 15px; border-radius: 8px; text-align: center; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.5); transition: transform var(--transition-speed), background var(--transition-speed), box-shadow var(--transition-speed); overflow: hidden; }
+    .grid-item:hover { transform: scale(1.03); background-color: #383838; box-shadow: 0 4px 8px rgba(0,0,0,0.7); }
+    .grid-item img { width: 100%; max-width: 100px; border-radius: 4px; object-fit: cover; transition: width var(--transition-speed), height var(--transition-speed); }
+    .grid-item .item-title { margin-top: 10px; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     /* Modais (Busca Avançada, Vídeo) */
-    #advanced-search-modal, #video-modal {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background-color: rgba(0,0,0,0.9);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 1500;
-    }
-    #advanced-search-modal .modal-content, #video-modal .modal-content {
-      background-color: #181818;
-      padding: 20px;
-      border-radius: 8px;
-      width: 90%;
-      max-width: 400px;
-    }
-    #advanced-search-modal h2 {
-      margin-bottom: 15px;
-      font-size: 1.2rem;
-      text-align: center;
-    }
-    #advanced-search-modal label {
-      display: block;
-      margin-bottom: 10px;
-      font-size: 0.9rem;
-    }
-    #advanced-search-modal button {
-      width: 100%;
-      padding: 8px;
-      background-color: var(--primary-color);
-      border: none;
-      border-radius: 5px;
-      color: #fff;
-      font-size: 0.9rem;
-      margin-top: 10px;
-      cursor: pointer;
-      transition: background var(--transition-speed);
-    }
+    #advanced-search-modal, #video-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 1500; }
+    #advanced-search-modal .modal-content, #video-modal .modal-content { background-color: #181818; padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; }
+    #advanced-search-modal h2 { margin-bottom: 15px; font-size: 1.2rem; text-align: center; }
+    #advanced-search-modal label { display: block; margin-bottom: 10px; font-size: 0.9rem; }
+    #advanced-search-modal button { width: 100%; padding: 8px; background-color: var(--primary-color); border: none; border-radius: 5px; color: #fff; font-size: 0.9rem; margin-top: 10px; cursor: pointer; transition: background var(--transition-speed); }
     #advanced-search-modal button:hover { background-color: var(--accent-color); }
-    #video-modal video {
-      max-width: 90%;
-      max-height: 90%;
-      border-radius: 8px;
-    }
-    #video-modal .close-modal {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      font-size: 2rem;
-      cursor: pointer;
-      color: #fff;
-    }
+    #video-modal video { max-width: 90%; max-height: 90%; border-radius: 8px; }
+    #video-modal .close-modal { position: absolute; top: 20px; right: 20px; font-size: 2rem; cursor: pointer; color: #fff; }
     /* Barra do Player */
-    #player-bar {
-      height: 90px;
-      background-color: #000;
-      border-top: 1px solid #282828;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 20px;
-      transition: all var(--transition-speed);
-    }
-    #track-info {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      flex: 1;
-      min-width: 200px;
-    }
-    #track-info img {
-      width: 60px;
-      height: 60px;
-      object-fit: cover;
-      border-radius: 4px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-      transition: width var(--transition-speed), height var(--transition-speed);
-    }
-    #track-details .track-name {
-      font-size: 1rem;
-      font-weight: 700;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    #track-details .track-artist {
-      font-size: 0.85rem;
-      color: #b3b3b3;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    #playback-controls {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      flex: 1;
-      justify-content: center;
-    }
-    #playback-controls button {
-      background: none;
-      border: none;
-      color: #fff;
-      font-size: 1.4rem;
-      cursor: pointer;
-      transition: color var(--transition-speed);
-    }
+    #player-bar { height: 90px; background-color: #000; border-top: 1px solid #282828; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; transition: all var(--transition-speed); }
+    #track-info { display: flex; align-items: center; gap: 15px; flex: 1; min-width: 200px; }
+    #track-info img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.5); transition: width var(--transition-speed), height var(--transition-speed); }
+    #track-details .track-name { font-size: 1rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #track-details .track-artist { font-size: 0.85rem; color: #b3b3b3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #playback-controls { display: flex; align-items: center; gap: 20px; flex: 1; justify-content: center; }
+    #playback-controls button { background: none; border: none; color: #fff; font-size: 1.4rem; cursor: pointer; transition: color var(--transition-speed); }
     #playback-controls button:hover { color: var(--primary-color); }
-    #progress-section {
-      flex: 2;
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-    #progress-bar-container {
-      width: 100%;
-      height: 5px;
-      background-color: #404040;
-      border-radius: 2.5px;
-      cursor: pointer;
-    }
-    #progress-bar {
-      width: 0%;
-      height: 100%;
-      background-color: var(--primary-color);
-      border-radius: 2.5px;
-    }
-    #time-info {
-      font-size: 0.75rem;
-      display: flex;
-      justify-content: space-between;
-      color: #b3b3b3;
-    }
-    #extra-controls {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-    }
-    #volume-control {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+    #progress-section { flex: 2; display: flex; flex-direction: column; gap: 5px; }
+    #progress-bar-container { width: 100%; height: 5px; background-color: #404040; border-radius: 2.5px; cursor: pointer; }
+    #progress-bar { width: 0%; height: 100%; background-color: var(--primary-color); border-radius: 2.5px; }
+    #time-info { font-size: 0.75rem; display: flex; justify-content: space-between; color: #b3b3b3; }
+    #extra-controls { display: flex; align-items: center; gap: 15px; }
+    #volume-control { display: flex; align-items: center; gap: 10px; }
     #volume-slider { width: 80px; }
-    .volume-btn {
-      background: none;
-      border: none;
-      color: #fff;
-      font-size: 1.2rem;
-      cursor: pointer;
-      transition: color var(--transition-speed);
-    }
+    .volume-btn { background: none; border: none; color: #fff; font-size: 1.2rem; cursor: pointer; transition: color var(--transition-speed); }
     .volume-btn:hover { color: var(--primary-color); }
     /* Snackbar */
-    #snackbar {
-      visibility: hidden;
-      min-width: 250px;
-      background-color: #333;
-      color: #fff;
-      text-align: center;
-      border-radius: 2px;
-      padding: 16px;
-      position: fixed;
-      z-index: 4000;
-      left: 50%;
-      bottom: 30px;
-      transform: translateX(-50%);
-      font-size: 0.9rem;
-      opacity: 0;
-      transition: opacity 0.5s, bottom 0.5s;
-    }
-    #snackbar.show {
-      visibility: visible;
-      opacity: 1;
-      bottom: 50px;
-    }
+    #snackbar { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 2px; padding: 16px; position: fixed; z-index: 4000; left: 50%; bottom: 30px; transform: translateX(-50%); font-size: 0.9rem; opacity: 0; transition: opacity 0.5s, bottom 0.5s; }
+    #snackbar.show { visibility: visible; opacity: 1; bottom: 50px; }
   </style>
 </head>
 <body>
@@ -511,13 +172,9 @@
       <h2>Termos de Uso e Política de Privacidade</h2>
       <p>
         Este é um exemplo dos Termos de Uso e Política de Privacidade do MusicPro.
-        Ao utilizar este aplicativo, você concorda com as nossas práticas de tratamento
-        de dados, conforme definido pela LGPD e GDPR. Seus dados serão utilizados exclusivamente
-        para personalizar sua experiência no app e nunca serão compartilhados sem sua autorização.
+        Ao utilizar este aplicativo, você concorda com as nossas práticas de tratamento de dados, conforme definido pela LGPD e GDPR.
       </p>
-      <p>
-        [Inclua aqui o conteúdo completo dos termos e políticas exigidos.]
-      </p>
+      <p>[Inclua aqui o conteúdo completo dos termos e políticas exigidos.]</p>
       <button onclick="closePolicyModal()">Fechar</button>
     </div>
   </div>
@@ -564,7 +221,7 @@
             </li>
           </ul>
         </nav>
-        <!-- Botão Sair que agora realiza o signOut -->
+        <!-- Botão Sair -->
         <div class="exit-btn" onclick="exitApp()">
           <i class="fas fa-sign-out-alt"></i>
           <span class="nav-text">Sair</span>
@@ -647,6 +304,7 @@
     const firebaseConfig = {
       apiKey: "AIzaSyDxMWPu_CnXV-u4-vlDFd-IZ8fzlyKJHng",
       authDomain: "financeiro-5.firebaseapp.com",
+      databaseURL: "https://financeiro-5-default-rtdb.firebaseio.com",
       projectId: "financeiro-5",
       storageBucket: "financeiro-5.appspot.com",
       messagingSenderId: "686639785223",
@@ -657,15 +315,13 @@
     
     // Serviços do Firebase
     const auth = firebase.auth();
-    const db = firebase.firestore();
+    const database = firebase.database(); // Realtime Database
     const storage = firebase.storage();
-    let storageRef = storage.ref();
-    
-    // Variável para controlar o caminho exclusivo do usuário
+    // currentPath define o diretório atual no Storage
     let currentPath = "";
     
     /*******************************
-     * Funções de Exibição dos Formularios de Autenticação
+     * Funções de Exibição dos Formulários de Autenticação
      *******************************/
     function showLogin() {
       document.getElementById("login-form").classList.add("active");
@@ -715,7 +371,7 @@
     /*******************************
      * Funções de Autenticação
      *******************************/
-    // Registro
+    // Registro: Cria usuário via Auth e salva dados no Realtime Database
     function register() {
       clearErrors();
       const usuario = document.getElementById("register-username").value.trim();
@@ -742,10 +398,10 @@
       
       auth.createUserWithEmailAndPassword(email, senha)
         .then(userCredential => {
-          // Armazena o usuário no Firestore
-          return db.collection("users").doc(userCredential.user.uid).set({
+          // Salva o usuário no Realtime Database
+          return database.ref("usuarios/" + userCredential.user.uid).set({
             username: usuario,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            criadoEm: new Date().toISOString()
           });
         })
         .then(() => {
@@ -759,7 +415,7 @@
         });
     }
     
-    // Login
+    // Login: Autentica usuário
     function login() {
       clearErrors();
       const usuario = document.getElementById("login-username").value.trim();
@@ -791,11 +447,9 @@
      *******************************/
     auth.onAuthStateChanged(user => {
       if (user) {
-        // Define um caminho exclusivo para cada usuário (ex.: "users/{uid}/")
+        // Define o caminho inicial no Storage para o usuário autenticado
         currentPath = 'users/' + user.uid + '/';
-        // Atualiza a referência do storage para utilizar o caminho do usuário
-        storageRef = storage.ref(currentPath);
-        // Se autenticado, esconde o modal de autenticação e mostra o app
+        // Esconde o modal de autenticação e mostra o app
         document.getElementById("auth-modal").style.display = "none";
         document.getElementById("app").style.display = "block";
         loadItems();
@@ -817,9 +471,8 @@
     }
     
     /*******************************
-     * Funções do App MusicPro (mantendo as funções originais)
+     * Funções do App MusicPro (para Storage, reprodução, etc.)
      *******************************/
-    
     const supportedAudio = ["mp3", "m4a", "wav", "flac", "aac", "oga", "opus"];
     const supportedVideo = ["mp4", "webm", "ogg", "ogv", "avi", "mov", "mkv"];
     
@@ -841,8 +494,13 @@
     function navigateTo(page) {
       currentView = page;
       if (page === "library" || page === "home" || page === "search") {
-        // Mantém o caminho exclusivo do usuário
         breadcrumbPaths = [];
+        // Reinicia o currentPath para o diretório raiz do usuário
+        auth.onAuthStateChanged(user => {
+          if(user){
+            currentPath = 'users/' + user.uid + '/';
+          }
+        });
       }
       loadItems();
     }
@@ -855,6 +513,8 @@
         span.textContent = folder;
         span.onclick = () => {
           breadcrumbPaths = breadcrumbPaths.slice(0, index + 1);
+          // Atualiza currentPath de acordo com o breadcrumb
+          currentPath = 'users/' + auth.currentUser.uid + '/' + breadcrumbPaths.join("/") + (breadcrumbPaths.length ? "/" : "");
           loadItems();
         };
         breadcrumbEl.appendChild(span);
@@ -879,8 +539,8 @@
         const files = input.files;
         if (files.length) {
           for (const file of files) {
-            const filePath = `${file.name}`;
-            const fileRef = storageRef.child(filePath);
+            // Usa a referência dinâmica baseada em currentPath
+            const fileRef = firebase.storage().ref(currentPath + file.name);
             try {
               await fileRef.put(file);
               showSnackbar(`Upload concluído: ${file.name}`);
@@ -904,8 +564,7 @@
         const files = input.files;
         if (files.length) {
           for (const file of files) {
-            const filePath = file.webkitRelativePath;
-            const fileRef = storageRef.child(filePath);
+            const fileRef = firebase.storage().ref(currentPath + file.webkitRelativePath);
             try {
               await fileRef.put(file);
               showSnackbar(`Upload concluído: ${file.webkitRelativePath}`);
@@ -925,8 +584,9 @@
       const folderName = prompt("Digite o nome da nova pasta:");
       if (!folderName) return;
       const folderPath = folderName + "/";
+      // Cria um arquivo de texto para simular a pasta
       const txtBlob = new Blob([folderName], { type: "text/plain" });
-      const txtRef = storageRef.child(folderPath + folderName + ".txt");
+      const txtRef = firebase.storage().ref(currentPath + folderPath + folderName + ".txt");
       txtRef.put(txtBlob)
         .then(() => {
           showSnackbar(`Pasta "${folderName}" criada com sucesso.`);
@@ -1032,7 +692,7 @@
           const files = input.files;
           if (files.length) {
             for (const file of files) {
-              const fileRef = storageRef.child(folderPath + file.name);
+              const fileRef = firebase.storage().ref(currentPath + folderPath + file.name);
               try {
                 await fileRef.put(file);
                 showSnackbar(`Arquivo ${file.name} enviado para ${folderName}`);
@@ -1271,7 +931,7 @@
       if (e.code === "Escape") { closeVideoModal(); document.getElementById("advanced-search-modal").style.display = "none"; }
     });
     
-    // Função atualizada do botão "Sair": realiza signOut e retorna à tela de login
+    // Função do botão "Sair": realiza signOut
     function exitApp() {
       if (confirm("Deseja sair do aplicativo?")) {
         firebase.auth().signOut()
@@ -1299,7 +959,8 @@
     
     async function loadItems() {
       try {
-        const result = await storageRef.child("").listAll();
+        // Usa a referência dinâmica com base em currentPath
+        const result = await firebase.storage().ref(currentPath).listAll();
         const grid = document.getElementById("item-grid");
         grid.innerHTML = "";
     
@@ -1307,6 +968,7 @@
           grid.innerHTML = "<p style='color: white;'>Nenhum arquivo ou pasta encontrado.</p>";
         }
     
+        // Listar "pastas"
         result.prefixes.forEach(prefix => {
           const div = document.createElement("div");
           div.className = "grid-item";
@@ -1324,6 +986,7 @@
           grid.appendChild(div);
         });
     
+        // Listar arquivos (mídia)
         itemList = result.items.filter(item => {
           const ext = getExtension(item.name);
           return supportedAudio.includes(ext) || supportedVideo.includes(ext);
