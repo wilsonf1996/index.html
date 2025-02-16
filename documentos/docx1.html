@@ -1,0 +1,409 @@
+<!DOCTYPE html> <html lang="pt"> <head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1"> <title>DocsStruct – Gerenciador de Documentos em Nuvem</title> <link rel="icon" href="data:,"> <!-- Google Fonts: Roboto --> <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet"> <!-- FontAwesome para ícones --> <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css"> <!-- GSAP Animation Library --> <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script> <!-- Firebase SDK (App, Auth, Storage, Realtime Database) --> <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script> <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script> <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script> <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script> <style> /* RESET & VARIÁVEIS */ * { margin: 0; padding: 0; box-sizing: border-box; } html, body { height: 100%; } :root { --background-dark: #121212; --background-light: #f5f5f5; --text-dark: #ffffff; --text-light: #000000; --primary-color: #1db954; --secondary-color: #282828; --accent-color: #17a14a; --transition-speed: 0.3s; --sidebar-width: 240px; --sidebar-collapsed-width: 60px; --nav-item-hover: rgba(29,185,84,0.2); } body.light-mode { background-color: var(--background-light); color: var(--text-light); } body { font-family: 'Roboto', sans-serif; background-color: var(--background-dark); color: var(--text-dark); overflow-x: hidden; transition: background var(--transition-speed), color var(--transition-speed); }
+  /* Modais de Autenticação, Política e Pré-visualização */
+#auth-modal, #policy-modal, #preview-modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+#auth-modal { background-color: var(--background-dark); }
+#auth-container {
+  width: 320px;
+  background: rgba(30, 30, 30, 0.95);
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+}
+#auth-tabs { display: flex; margin-bottom: 15px; border-bottom: 1px solid #444; }
+#auth-tabs button {
+  flex: 1;
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 1rem;
+  padding: 10px;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+#auth-tabs button.active {
+  color: var(--primary-color);
+  border-bottom: 2px solid var(--primary-color);
+}
+.auth-form { display: none; }
+.auth-form.active { display: block; }
+.auth-form h2 { text-align: center; margin-bottom: 15px; color: #fff; }
+.auth-form input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 10px;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  background: #1e1e1e;
+  color: #fff;
+}
+.auth-form label { font-size: 0.9rem; color: #ccc; margin-bottom: 10px; display: block; }
+.auth-form button {
+  width: 100%;
+  padding: 12px;
+  background-color: var(--primary-color);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: background var(--transition-speed);
+}
+.auth-form button:hover { background-color: var(--accent-color); }
+.auth-form p { text-align: center; font-size: 0.9rem; color: #ccc; }
+.auth-form p a { color: var(--primary-color); text-decoration: none; cursor: pointer; }
+.error-message { color: #ff6b6b; font-size: 0.9rem; margin-bottom: 10px; text-align: center; }
+
+#policy-modal { background-color: rgba(0,0,0,0.9); }
+#policy-modal .modal-content {
+  background-color: #181818;
+  padding: 20px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80%;
+  overflow-y: auto;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.8);
+}
+#policy-modal .modal-content h2 { margin-bottom: 15px; }
+#policy-modal .modal-content button {
+  padding: 10px 20px;
+  background-color: var(--primary-color);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  margin-top: 15px;
+  transition: background var(--transition-speed);
+}
+#policy-modal .modal-content button:hover { background-color: var(--accent-color); }
+
+/* Preview Modal */
+#preview-modal {
+  background: rgba(0,0,0,0.8);
+  display: none;
+  z-index: 4000;
+  align-items: center;
+  justify-content: center;
+}
+#preview-modal .modal-content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 90%;
+  max-height: 90%;
+  overflow: auto;
+}
+#preview-modal .close-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: #333;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+/* App Layout */
+#app { display: none; position: relative; min-height: 100vh; }
+
+/* Botão para menu mobile */
+#mobile-menu-toggle {
+  display: none;
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 1100;
+  background-color: var(--primary-color);
+  border: none;
+  border-radius: 6px;
+  padding: 10px;
+  color: #fff;
+}
+
+/* Sidebar e Conteúdo */
+#app-content {
+  display: flex;
+  height: calc(100vh - 90px);
+  transition: all var(--transition-speed);
+}
+#sidebar {
+  width: var(--sidebar-width);
+  background-color: var(--secondary-color);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  transition: width var(--transition-speed);
+}
+#sidebar.collapsed { width: var(--sidebar-collapsed-width); }
+#sidebar .logo {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 30px;
+  letter-spacing: 1px;
+  color: var(--primary-color);
+  transition: opacity var(--transition-speed);
+}
+#sidebar.collapsed .logo { opacity: 0; }
+#sidebar nav ul {
+  list-style: none;
+  flex-grow: 1;
+}
+#sidebar nav ul li {
+  padding: 12px 10px;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background var(--transition-speed);
+}
+#sidebar nav ul li:hover { background-color: var(--nav-item-hover); }
+#sidebar nav ul li i { width: 20px; text-align: center; }
+#sidebar .exit-btn {
+  padding-top: 10px;
+  border-top: 1px solid #444;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #ccc;
+  margin-top: 20px;
+}
+
+/* Conteúdo Principal */
+#main-content {
+  flex: 1;
+  background-color: #181818;
+  padding: 20px;
+  overflow-y: auto;
+  transition: background var(--transition-speed);
+}
+#header {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+#search-bar {
+  padding: 12px 20px;
+  border-radius: 25px;
+  border: none;
+  background-color: #282828;
+  color: #fff;
+  font-size: 1rem;
+  transition: background var(--transition-speed);
+}
+#theme-toggle {
+  align-self: flex-end;
+  background-color: var(--primary-color);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  color: #fff;
+  cursor: pointer;
+  transition: background var(--transition-speed);
+  font-size: 0.9rem;
+}
+#theme-toggle:hover { background-color: var(--accent-color); }
+#breadcrumb {
+  font-size: 0.9rem;
+  color: #bbb;
+  margin-top: 10px;
+}
+#breadcrumb span {
+  cursor: pointer;
+  color: var(--primary-color);
+  margin-right: 5px;
+}
+#breadcrumb span:not(:last-child)::after {
+  content: "›";
+  margin-left: 5px;
+}
+
+/* Grid de Itens */
+#item-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 20px;
+  transition: gap var(--transition-speed);
+}
+.grid-item {
+  background-color: #282828;
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  transition: transform var(--transition-speed), background var(--transition-speed), box-shadow var(--transition-speed);
+  overflow: hidden;
+}
+.grid-item:hover {
+  transform: scale(1.03);
+  background-color: #383838;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.7);
+}
+.grid-item img {
+  width: 100%;
+  max-width: 100px;
+  border-radius: 6px;
+  object-fit: cover;
+  transition: transform var(--transition-speed);
+}
+.grid-item:hover img {
+  transform: scale(1.05);
+}
+.grid-item .item-title {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Responsividade */
+@media (min-width: 1024px) {
+  #app-content { display: grid; grid-template-columns: var(--sidebar-width) 1fr; }
+  #sidebar { display: block; }
+  #main-content { padding: 20px; }
+}
+@media (max-width: 768px) {
+  #sidebar { display: none; }
+  #mobile-menu-toggle { display: block; }
+  #app-content { flex-direction: column; padding: 10px; }
+  .grid-item { padding: 15px; }
+}
+</style> </head> <body> <!-- Botão para menu mobile --> <button id="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Menu Mobile"> <i class="fas fa-bars"></i> </button> <!-- Modal de Autenticação (Login/Registro) --> <div id="auth-modal"> <div id="auth-container"> <div id="auth-tabs"> <button id="login-tab" class="active" onclick="showLogin()">Entrar</button> <button id="register-tab" onclick="showRegister()">Registrar</button> </div> <!-- Formulário de Login --> <div id="login-form" class="auth-form active"> <h2>Entrar</h2> <div id="login-error" class="error-message"></div> <input type="text" id="login-username" placeholder="Usuário (5 caracteres)" /> <input type="password" id="login-password" placeholder="Senha (mínimo 6 caracteres)" /> <button id="login-button" onclick="login()">Entrar</button> <p>Não tem uma conta? <a href="#" onclick="showRegister(); return false;">Registre-se</a></p> </div> <!-- Formulário de Registro --> <div id="register-form" class="auth-form"> <h2>Registrar</h2> <div id="register-error" class="error-message"></div> <input type="text" id="register-username" placeholder="Usuário (5 caracteres)" /> <input type="password" id="register-password" placeholder="Senha (mínimo 6 caracteres)" /> <input type="password" id="register-password-confirm" placeholder="Confirme a senha" /> <label> <input type="checkbox" id="register-terms" /> Aceito os <a href="#" onclick="openPolicyModal(); return false;">Termos de Uso e Política de Privacidade</a> </label> <button id="register-button" onclick="register()">Registrar</button> <p>Já tem uma conta? <a href="#" onclick="showLogin(); return false;">Entrar</a></p> </div> </div> </div> <!-- Modal de Política de Privacidade --> <div id="policy-modal" style="display:none;"> <div class="modal-content"> <h2>Termos de Uso e Política de Privacidade</h2> <p> Este é um exemplo dos Termos de Uso e Política de Privacidade do DocsStruct. Ao utilizar este aplicativo, você concorda com nossas práticas de tratamento de dados. </p> <p>[Conteúdo completo dos termos e políticas]</p> <button onclick="closePolicyModal()">Fechar</button> </div> </div> <!-- App DocsStruct – Conteúdo principal --> <div id="app"> <div id="app-content"> <!-- Sidebar --> <aside id="sidebar"> <div class="logo">DocsStruct</div> <nav> <ul> <li onclick="navigateTo('home')"> <i class="fas fa-home"></i> <span class="nav-text">Home</span> </li> <li onclick="navigateTo('search')"> <i class="fas fa-search"></i> <span class="nav-text">Buscar</span> </li> <li onclick="navigateTo('library')"> <i class="fas fa-book"></i> <span class="nav-text">Biblioteca</span> </li> <li onclick="openUploadModal()"> <i class="fas fa-cloud-upload-alt"></i> <span class="nav-text">Upload</span> </li> <li onclick="createFolder()"> <i class="fas fa-folder-plus"></i> <span class="nav-text">Nova Pasta</span> </li> </ul> </nav> <div class="exit-btn" onclick="exitApp()"> <i class="fas fa-sign-out-alt"></i> <span class="nav-text">Sair</span> </div> </aside> <!-- Conteúdo Principal --> <main id="main-content"> <header id="header"> <button id="theme-toggle" onclick="toggleTheme()" aria-label="Alternar Tema">Alternar Tema</button> <input type="text" id="search-bar" placeholder="Buscar documentos, arquivos..." onkeyup="searchItems(event)" aria-label="Buscar"> <div id="breadcrumb"></div> </header> <section id="item-grid"> <!-- Itens carregados dinamicamente --> </section> </main> </div> </div> <!-- Modal de Pré-visualização --> <div id="preview-modal"> <div class="modal-content" id="preview-content"></div> <button class="close-btn" onclick="closePreviewModal()">Fechar</button> </div> <script> /******************************* * Configuração do Firebase *******************************/ const firebaseConfig = { apiKey: "AIzaSyDxMWPu_CnXV-u4-vlDFd-IZ8fzlyKJHng", authDomain: "financeiro-5.firebaseapp.com", databaseURL: "https://financeiro-5-default-rtdb.firebaseio.com", projectId: "financeiro-5", storageBucket: "financeiro-5.appspot.com", messagingSenderId: "686639785223", appId: "1:686639785223:web:0314689c82c6dd1c2951a2", measurementId: "G-Q5REWML5DX" }; firebase.initializeApp(firebaseConfig); const auth = firebase.auth(); const database = firebase.database(); const storage = firebase.storage(); let currentPath = ""; let breadcrumbPaths = []; let itemList = []; /******************************* * Autenticação *******************************/ function showLogin() { document.getElementById("login-form").classList.add("active"); document.getElementById("register-form").classList.remove("active"); document.getElementById("login-tab").classList.add("active"); document.getElementById("register-tab").classList.remove("active"); clearErrors(); } function showRegister() { document.getElementById("register-form").classList.add("active"); document.getElementById("login-form").classList.remove("active"); document.getElementById("register-tab").classList.add("active"); document.getElementById("login-tab").classList.remove("active"); clearErrors(); } function clearErrors() { document.getElementById("login-error").textContent = ""; document.getElementById("register-error").textContent = ""; } function validarUsuario(usuario) { return usuario.length !== 5 ? "O usuário deve conter exatamente 5 caracteres." : ""; } function validarSenha(senha) { return senha.length < 6 ? "A senha deve conter pelo menos 6 caracteres." : ""; } function register() { clearErrors(); const usuario = document.getElementById("register-username").value.trim(); const senha = document.getElementById("register-password").value.trim(); const confirmSenha = document.getElementById("register-password-confirm").value.trim(); const termosAceitos = document.getElementById("register-terms").checked; let erro = validarUsuario(usuario) || validarSenha(senha); if (erro) { document.getElementById("register-error").textContent = erro; return; } if (senha !== confirmSenha) { document.getElementById("register-error").textContent = "As senhas não conferem."; return; } if (!termosAceitos) { document.getElementById("register-error").textContent = "Você deve aceitar os Termos de Uso e Política de Privacidade."; return; } const email = usuario + "@DocsStruct.com"; document.getElementById("register-button").disabled = true; auth.createUserWithEmailAndPassword(email, senha) .then(userCredential => { return database.ref("usuarios/" + userCredential.user.uid).set({ username: usuario, criadoEm: new Date().toISOString() }); }) .then(() => showSnackbar("Registro efetuado com sucesso!")) .catch(error => { document.getElementById("register-error").textContent = "Erro no registro: " + error.message; }) .finally(() => document.getElementById("register-button").disabled = false); } function login() { clearErrors(); const usuario = document.getElementById("login-username").value.trim(); const senha = document.getElementById("login-password").value.trim(); let erro = validarUsuario(usuario) || validarSenha(senha); if (erro) { document.getElementById("login-error").textContent = erro; return; } const email = usuario + "@DocsStruct.com"; document.getElementById("login-button").disabled = true; auth.signInWithEmailAndPassword(email, senha) .then(() => showSnackbar("Login efetuado com sucesso!")) .catch(error => { document.getElementById("login-error").textContent = "Erro no login: " + error.message; }) .finally(() => document.getElementById("login-button").disabled = false); } auth.onAuthStateChanged(user => { if (user) { currentPath = 'users/' + user.uid + '/'; document.getElementById("auth-modal").style.display = "none"; document.getElementById("app").style.display = "block"; loadItems(); showSnackbar("Login efetuado com sucesso!"); } else { document.getElementById("auth-modal").style.display = "flex"; document.getElementById("app").style.display = "none"; } }); /******************************* * Modal de Política *******************************/ function openPolicyModal() { document.getElementById("policy-modal").style.display = "flex"; } function closePolicyModal() { document.getElementById("policy-modal").style.display = "none"; } /******************************* * Funções do DocsStruct *******************************/ function toggleTheme() { document.body.classList.toggle("light-mode"); gsap.fromTo("#theme-toggle", { scale: 1 }, { scale: 1.2, duration: 0.2, yoyo: true, repeat: 1 }); showSnackbar("Tema alterado!"); } function navigateTo(page) { if (page === "home" || page === "search" || page === "library") { breadcrumbPaths = []; auth.onAuthStateChanged(user => { if(user){ currentPath = 'users/' + user.uid + '/'; } }); } loadItems(); } function updateBreadcrumb() { const breadcrumbEl = document.getElementById("breadcrumb"); breadcrumbEl.innerHTML = ""; breadcrumbPaths.forEach((folder, index) => { const span = document.createElement("span"); span.textContent = folder; span.onclick = () => { breadcrumbPaths = breadcrumbPaths.slice(0, index + 1); currentPath = 'users/' + auth.currentUser.uid + '/' + breadcrumbPaths.join("/") + (breadcrumbPaths.length ? "/" : ""); loadItems(); }; breadcrumbEl.appendChild(span); }); } function searchItems(event) { const query = event.target.value.toLowerCase(); const grid = document.getElementById("item-grid"); const items = grid.getElementsByClassName("grid-item"); Array.from(items).forEach(item => { const title = item.querySelector(".item-title").textContent.toLowerCase(); item.style.display = title.includes(query) ? "block" : "none"; }); } function openUploadModal() { const input = document.createElement("input"); input.type = "file"; input.multiple = true; input.onchange = async () => { const files = input.files; if (files.length) { for (const file of files) { const fileRef = storage.ref(currentPath + file.name); try { await fileRef.put(file); showSnackbar(`Upload concluído: ${file.name}`); } catch (err) { showSnackbar(`Erro ao enviar ${file.name}: ${err.message}`); } } loadItems(); } }; input.click(); } function createFolder() { const folderName = prompt("Digite o nome da nova pasta:"); if (!folderName) return; const folderPath = folderName + "/"; const txtBlob = new Blob([folderName], { type: "text/plain" }); const txtRef = storage.ref(currentPath + folderPath + folderName + ".txt"); txtRef.put(txtBlob) .then(() => { showSnackbar(`Pasta "${folderName}" criada com sucesso.`); loadItems(); }) .catch(err => showSnackbar("Erro ao criar pasta: " + err.message)); } /******************************* * Pré-visualização de Arquivos *******************************/ function getExtension(filename) { return filename.split('.').pop().toLowerCase(); } function getFileIcon(ext) { if (["pdf"].includes(ext)) return "https://img.icons8.com/fluency/96/000000/pdf.png"; if (["txt", "md", "csv"].includes(ext)) return "https://img.icons8.com/fluency/96/000000/document.png"; if (["mp3", "m4a", "wav", "flac", "aac", "oga", "opus"].includes(ext)) return "https://img.icons8.com/fluency/96/000000/musical-notes.png"; if (["mp4", "webm", "ogg", "ogv", "avi", "mov", "mkv"].includes(ext)) return "https://img.icons8.com/fluency/96/000000/video.png"; if (["jpg", "jpeg", "png", "gif", "bmp", "svg"].includes(ext)) return "https://img.icons8.com/fluency/96/000000/image.png"; return "https://img.icons8.com/fluency/96/000000/file.png"; } function previewDocument(index, ext) { const fileRef = itemList[index]; fileRef.getDownloadURL().then(url => { let contentHTML = ""; if (["txt", "md", "csv"].includes(ext)) { fetch(url).then(response => response.text()).then(text => { contentHTML = "<pre>" + text + "</pre>";
+           openPreviewModal(contentHTML);
+      }).catch(err => openPreviewModal("<p>Erro ao carregar o documento.</p>"));
+    }
+    else if (ext === "pdf") {
+      contentHTML = `<embed src="${url}" type="application/pdf" width="100%" height="600px" />`;
+      openPreviewModal(contentHTML);
+    }
+    else if (["mp3", "m4a", "wav", "flac", "aac", "oga", "opus"].includes(ext)) {
+      contentHTML = `<audio controls src="${url}" style="width:100%;"></audio>`;
+      openPreviewModal(contentHTML);
+    }
+    else if (["mp4", "webm", "ogg", "ogv", "avi", "mov", "mkv"].includes(ext)) {
+      contentHTML = `<video controls src="${url}" style="max-width:100%; max-height:600px;"></video>`;
+      openPreviewModal(contentHTML);
+    }
+    else if (["jpg", "jpeg", "png", "gif", "bmp", "svg"].includes(ext)) {
+      contentHTML = `<img src="${url}" alt="Imagem" style="max-width:100%; max-height:600px;" />`;
+      openPreviewModal(contentHTML);
+    }
+    else {
+      contentHTML = `<p>Pré-visualização não disponível para este formato.</p>
+                     <a href="${url}" download>Baixar arquivo</a>`;
+      openPreviewModal(contentHTML);
+    }
+  }).catch(err => {
+    openPreviewModal("<p>Erro ao abrir o arquivo: " + err.message + "</p>");
+  });
+}
+
+function openPreviewModal(content) {
+  document.getElementById("preview-content").innerHTML = content;
+  document.getElementById("preview-modal").style.display = "flex";
+}
+function closePreviewModal() {
+  document.getElementById("preview-modal").style.display = "none";
+}
+
+/*******************************
+ * Carregamento dos Itens do Storage
+ *******************************/
+async function loadItems() {
+  try {
+    const result = await storage.ref(currentPath).listAll();
+    const grid = document.getElementById("item-grid");
+    grid.innerHTML = "";
+
+    if (result.prefixes.length === 0 && result.items.length === 0) {
+      grid.innerHTML = "<p style='color: white;'>Nenhum arquivo ou pasta encontrado.</p>";
+    }
+
+    result.prefixes.forEach(prefix => {
+      const div = document.createElement("div");
+      div.className = "grid-item";
+      div.innerHTML = `
+        <img src="https://img.icons8.com/color/96/000000/folder-invoices.png" alt="Pasta" loading="lazy">
+        <div class="item-title">${prefix.name}</div>
+      `;
+      div.onclick = () => {
+        currentPath += prefix.name + "/";
+        breadcrumbPaths.push(prefix.name);
+        loadItems();
+      };
+      grid.appendChild(div);
+    });
+
+    itemList = result.items;
+    itemList.forEach((item, index) => {
+      const ext = getExtension(item.name);
+      let iconURL = getFileIcon(ext);
+      const div = document.createElement("div");
+      div.className = "grid-item";
+      div.innerHTML = `
+        <img src="${iconURL}" alt="Arquivo" loading="lazy">
+        <div class="item-title">${item.name}</div>
+      `;
+      div.onclick = () => previewDocument(index, ext);
+      grid.appendChild(div);
+    });
+    updateBreadcrumb();
+  } catch (error) {
+    showSnackbar("Erro ao carregar itens: " + error.message);
+  }
+}
+
+function showSnackbar(message) {
+  const snackbar = document.createElement("div");
+  snackbar.textContent = message;
+  snackbar.style.position = "fixed";
+  snackbar.style.bottom = "30px";
+  snackbar.style.left = "50%";
+  snackbar.style.transform = "translateX(-50%)";
+  snackbar.style.backgroundColor = "#333";
+  snackbar.style.color = "#fff";
+  snackbar.style.padding = "16px";
+  snackbar.style.borderRadius = "4px";
+  snackbar.style.zIndex = "5000";
+  document.body.appendChild(snackbar);
+  setTimeout(() => { snackbar.remove(); }, 3000);
+}
+
+function toggleMobileMenu() {
+  const menu = document.getElementById("mobile-menu-panel");
+  if(menu && menu.classList.contains("open")){
+    menu.classList.remove("open");
+  } else if(menu){
+    menu.classList.add("open");
+  }
+}
+
+function exitApp() {
+  if (confirm("Deseja sair do aplicativo?")) {
+    auth.signOut()
+      .then(() => showSnackbar("Sessão encerrada!"))
+      .catch(error => showSnackbar("Erro ao sair: " + error.message));
+  }
+}
+
+window.addEventListener("load", () => {
+  gsap.from("#main-content", { opacity: 0, duration: 0.5 });
+});
+
+loadItems();
+</script> </body> </html>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
