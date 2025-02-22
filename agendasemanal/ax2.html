@@ -89,7 +89,7 @@
     #current-week-display { font-size: 1.2em; font-weight: bold; }
     #user-info { font-size: 0.9em; }
     #view-selector { display: inline-block; }
-    /* Sidebar – Perfil e Logout */
+    /* Sidebar – mantém perfil e logout */
     #sidebar {
       width: 250px;
       background: var(--sidebar-bg);
@@ -125,9 +125,106 @@
       overflow: hidden;
       transition: all 0.3s ease;
     }
-    /* (Demais estilos do calendário mantidos) */
-    /* ... */
-    /* Modal – para eventos e autenticação */
+    /* Visualizações: Semana */
+    .calendar-header, .calendar-grid { display: grid; }
+    .calendar-header.week {
+      grid-template-columns: 60px repeat(7, 1fr);
+      border-bottom: 1px solid var(--cell-border);
+    }
+    .calendar-header.week div {
+      padding: 10px;
+      text-align: center;
+      font-weight: 500;
+    }
+    .calendar-header.week .time-slot { background: #f8f9fa; }
+    .theme-dark .calendar-header.week .time-slot { background: #000; }
+    .calendar-grid.week {
+      grid-template-columns: 60px repeat(7, 1fr);
+    }
+    .calendar-grid.week .time-label {
+      padding: 10px;
+      text-align: right;
+      border-top: 1px solid var(--cell-border);
+      border-right: 1px solid var(--cell-border);
+      background: #f8f9fa;
+    }
+    .theme-dark .calendar-grid.week .time-label {
+      background: #000;
+      color: #fff;
+    }
+    .calendar-grid.week .day-cell {
+      position: relative;
+      border-top: 1px solid var(--cell-border);
+      border-right: 1px solid var(--cell-border);
+      height: 60px;
+      cursor: pointer;
+      overflow: hidden;
+    }
+    .theme-dark .calendar-grid.week .day-cell { color: var(--text-color); }
+    /* Visualização: Mês */
+    .month-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 2px;
+    }
+    .month-grid .month-cell {
+      border: 1px solid var(--cell-border);
+      height: 100px;
+      padding: 4px;
+      position: relative;
+      cursor: pointer;
+    }
+    .month-grid .month-cell div.day-number { font-weight: bold; }
+    .month-grid .event-block {
+      background: var(--event-bg);
+      color: #fff;
+      padding: 2px 4px;
+      border-radius: 2px;
+      font-size: 0.8em;
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    /* Visualização: Ano */
+    .year-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .year-cell {
+      border: 1px solid var(--cell-border);
+      padding: 10px;
+      min-height: 150px;
+      cursor: pointer;
+      text-align: center;
+      position: relative;
+    }
+    .year-cell .month-name { font-weight: bold; margin-bottom: 5px; }
+    .year-cell .year-events {
+      font-size: 0.75em;
+      max-height: 70px;
+      overflow-y: auto;
+      text-align: left;
+      margin-top: 5px;
+    }
+    /* Bloco de Evento */
+    .event-block {
+      position: absolute;
+      left: 2px;
+      right: 2px;
+      top: 2px;
+      background: var(--event-bg);
+      color: #fff;
+      padding: 2px 4px;
+      border-radius: 2px;
+      font-size: 0.8em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      user-select: none;
+    }
+    /* Modal – para eventos, autenticação e termos */
     .modal {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -187,6 +284,7 @@
     @media (max-width: 768px) {
       #sidebar { display: none; }
       #calendar-container { margin-left: 0; padding: 10px; }
+      .calendar-header, .calendar-grid { font-size: 0.9em; }
       .modal-content { padding: 15px; }
     }
   </style>
@@ -230,24 +328,29 @@
     <div id="calendar-body"></div>
   </div>
 
-  <!-- Modal de Autenticação -->
+  <!-- Modal de Autenticação / Registro -->
   <div id="auth-modal" class="modal" role="dialog" aria-modal="true">
     <div class="modal-content">
       <h3>Entrar / Registrar</h3>
-      <!-- O campo abaixo deverá receber exatamente 5 caracteres (identificador do usuário) -->
+      <!-- Para login: o campo abaixo é o ID do usuário (5 caracteres) -->
       <input type="text" id="auth-email" placeholder="ID do Usuário (5 caracteres)">
-      <!-- Senha para login (6 dígitos) -->
+      <!-- Senha para login (6 números) -->
       <input type="password" id="auth-password" placeholder="Senha (6 números)">
       <button id="auth-login-btn">Entrar</button>
       <hr>
-      <!-- No registro, o ID do usuário deve ser o mesmo (5 caracteres) -->
+      <!-- Para registro -->
+      <!-- ID do usuário para registro -->
       <input type="text" id="auth-email-reg" placeholder="ID do Usuário (5 caracteres)">
       <!-- Nome de exibição: exatamente 5 caracteres, todos diferentes -->
       <input type="text" id="auth-username" placeholder="Nome (5 caracteres, todos diferentes)">
       <!-- Senha para registro: 6 dígitos -->
       <input type="password" id="auth-register-password" placeholder="Senha (6 números)">
       <input type="password" id="auth-register-password-confirm" placeholder="Confirme a senha">
-      <label><input type="checkbox" id="auth-terms"> Aceito os Termos e a Política de Uso</label>
+      <!-- Checkbox com link para visualizar os Termos de Uso e Política de Privacidade -->
+      <label>
+        <input type="checkbox" id="auth-terms">
+        Li e aceito os <a href="#" id="open-terms">Termos de Uso e a Política de Privacidade</a>
+      </label>
       <button id="auth-register-btn">Registrar</button>
       <p><a href="#" id="auth-forgot-password">Esqueceu a senha?</a></p>
     </div>
@@ -275,6 +378,27 @@
         <button id="delete-event" style="display: none;">Excluir</button>
         <button id="cancel-event">Cancelar</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal de Termos de Uso e Política de Privacidade -->
+  <div id="terms-modal" class="modal" role="dialog" aria-modal="true">
+    <div class="modal-content">
+      <h3>Termos de Uso e Política de Privacidade</h3>
+      <p>
+        Bem-vindo à Agenda Premium! Ao utilizar este serviço, você concorda com os seguintes termos:
+      </p>
+      <ul>
+        <li><strong>Cadastro e Identificação:</strong> Cada usuário deve utilizar um ID único de 5 caracteres. Este ID, juntamente com a senha (6 dígitos numéricos), é usado para autenticação. O nome de exibição deve conter exatamente 5 caracteres, todos diferentes.</li>
+        <li><strong>Uso do Serviço:</strong> O serviço é destinado exclusivamente para gerenciamento de agenda e eventos. Qualquer uso inadequado poderá resultar no bloqueio do acesso.</li>
+        <li><strong>Privacidade:</strong> Seus dados serão armazenados de forma segura no Firebase. Não compartilharemos suas informações pessoais com terceiros sem o seu consentimento.</li>
+        <li><strong>Responsabilidade:</strong> Você é responsável pela manutenção da confidencialidade de seu ID e senha. Em caso de perda, utilize a recuperação de senha disponível.</li>
+        <li><strong>Alterações:</strong> Estes termos podem ser atualizados periodicamente. É sua responsabilidade revisá-los sempre que utilizar o serviço.</li>
+      </ul>
+      <p>
+        Ao clicar em "Registrar", você confirma que leu, entendeu e concorda com estes termos.
+      </p>
+      <button id="close-terms">Fechar</button>
     </div>
   </div>
 
@@ -382,17 +506,16 @@
       }
       
       /***************************************
-       * FUNÇÃO AUXILIAR: Converte o ID (5 caracteres) em um e‑mail válido
+       * FUNÇÃO AUXILIAR: Converte o ID (5 caracteres) em um e‑mail válido para o Firebase
        ***************************************/
       function toFirebaseEmail(userID) {
-        // Ex: "abc12" -> "abc12@agenda.com"
         return userID + "@agenda.com";
       }
 
       /***************************************
        * AUTENTICAÇÃO – Login e Registro
        ***************************************/
-      // Login: usa o ID do usuário e a senha
+      // Login: utiliza o ID do usuário e a senha
       function login() {
         const userID = document.getElementById('auth-email').value.trim();
         const password = document.getElementById('auth-password').value.trim();
@@ -417,7 +540,7 @@
             }
           });
       }
-      // Registro: utiliza o ID para login, um nome de exibição e a senha (com confirmação)
+      // Registro: utiliza o ID, um nome de exibição e a senha (com confirmação)
       function register() {
         const userID = document.getElementById('auth-email-reg').value.trim();
         const displayName = document.getElementById('auth-username').value.trim();
@@ -429,7 +552,7 @@
           return; 
         }
         if (!validateUsername(displayName)) { 
-          showToast("O nome de exibição deve ter 5 caracteres diferentes."); 
+          showToast("O nome de exibição deve ter exatamente 5 caracteres diferentes."); 
           return; 
         }
         if (!validatePassword(password)) { 
@@ -441,14 +564,13 @@
           return; 
         }
         if (!termosAceitos) { 
-          showToast("Você deve aceitar os Termos e a Política de Uso."); 
+          showToast("Você deve aceitar os Termos de Uso e a Política de Privacidade."); 
           return; 
         }
         const firebaseEmail = toFirebaseEmail(userID);
         auth.createUserWithEmailAndPassword(firebaseEmail, password)
           .then(userCredential => {
             currentUser = userCredential.user;
-            // Salva os dados do usuário no banco
             return database.ref("usuarios/" + currentUser.uid).set({
               displayName: displayName,
               criadoEm: new Date().toLocaleString()
@@ -470,7 +592,6 @@
       document.getElementById('auth-login-btn').addEventListener('click', login);
       document.getElementById('auth-register-btn').addEventListener('click', register);
       document.getElementById('auth-forgot-password').addEventListener('click', () => {
-        // Para recuperação, usamos o ID convertido em e‑mail
         const userID = document.getElementById('auth-email').value.trim();
         if (!validateUserID(userID)) { 
           showToast("Informe um ID válido (5 caracteres)."); 
@@ -496,14 +617,15 @@
       });
 
       /***************************************
-       * EVENTOS – Manipulação do calendário
+       * EVENTOS – Manipulação do Calendário
        ***************************************/
       function getEventsForDate(date) {
         const dateKey = date.toISOString().slice(0,10);
         return (allEvents[dateKey] && allEvents[dateKey]["dia"]) || [];
       }
-      // (As funções de navegação e renderização do calendário permanecem inalteradas)
-      // ... [renderCalendar, renderWeekView, renderMonthView, renderYearView, etc.]
+      // As funções de navegação e renderização do calendário permanecem conforme o ref10.txt original
+      // (renderCalendar, renderWeekView, renderMonthView, renderYearView, etc.)
+      // ... [mantidas inalteradas]
 
       /***************************************
        * MODAL DE EVENTO – Criação / Edição
@@ -668,6 +790,17 @@
         console.log("Sistema de agenda premium iniciado.");
       }
       initApp();
+
+      /***************************************
+       * MODAL DE TERMOS – Abrir e Fechar
+       ***************************************/
+      document.getElementById('open-terms').addEventListener('click', function(e) {
+        e.preventDefault();
+        document.getElementById('terms-modal').style.display = 'flex';
+      });
+      document.getElementById('close-terms').addEventListener('click', function() {
+        document.getElementById('terms-modal').style.display = 'none';
+      });
     });
   </script>
 </body>
