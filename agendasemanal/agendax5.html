@@ -204,22 +204,31 @@
       white-space: nowrap;
       user-select: none;
     }
-    /* Modal (para eventos, autenticação e histórico) */
+    /* Modal – para eventos, autenticação e histórico */
     .modal {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0,0,0,0.6);
       display: none;
       align-items: center;
       justify-content: center;
       z-index: 1000;
+      padding: 20px;
     }
     .modal-content {
       background: #fff;
+      color: var(--text-color);
       padding: 20px;
       border-radius: 4px;
-      width: 90%;
+      width: 100%;
       max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    /* Ajuste para o tema escuro */
+    .theme-dark .modal-content {
+      background: #424242;
+      color: var(--text-color);
     }
     .modal-content input,
     .modal-content textarea,
@@ -229,6 +238,15 @@
       margin: 8px 0;
       border: 1px solid var(--cell-border);
       border-radius: 4px;
+      background: #fff;
+      color: var(--text-color);
+    }
+    .theme-dark .modal-content input,
+    .theme-dark .modal-content textarea,
+    .theme-dark .modal-content select {
+      background: #616161;
+      color: var(--text-color);
+      border: 1px solid #757575;
     }
     .modal-content button {
       padding: 8px 12px;
@@ -237,7 +255,7 @@
       cursor: pointer;
       margin-right: 5px;
     }
-    #event-info { font-size: 0.9em; margin-bottom: 10px; color: #555; }
+    #event-info { font-size: 0.9em; margin-bottom: 10px; }
     /* Toast */
     #toast-container {
       position: fixed;
@@ -253,10 +271,12 @@
       margin: 5px;
       border-radius: 4px;
     }
-    /* Responsividade */
+    /* Responsividade para celulares */
     @media (max-width: 768px) {
       #sidebar { display: none; }
-      #calendar-container { margin-left: 0; }
+      #calendar-container { margin-left: 0; padding: 10px; }
+      .calendar-header, .calendar-grid { font-size: 0.9em; }
+      .modal-content { padding: 15px; }
     }
   </style>
 </head>
@@ -294,7 +314,7 @@
     <div id="history-modal" class="modal" role="dialog" aria-modal="true">
       <div class="modal-content">
         <h3>Histórico de Alterações</h3>
-        <div id="history-log" style="max-height:300px; overflow:auto;"></div>
+        <div id="history-log" style="max-height:300px; overflow:auto; margin-bottom:10px;"></div>
         <button id="close-history">Fechar</button>
       </div>
     </div>
@@ -391,10 +411,13 @@
         setTimeout(() => { toast.remove(); }, 3000);
       }
       function logHistory(message) {
-        const timestamp = new Date().toISOString();
+        const timestamp = new Date().toLocaleString();
         historyLog.push({ message, timestamp });
         if(historyLog.length > 50) { historyLog.shift(); }
-        updateHistoryModal();
+        // Atualiza o histórico somente se o modal estiver aberto
+        if(document.getElementById('history-modal').style.display === 'flex'){
+          updateHistoryModal();
+        }
       }
       function updateHistoryModal() {
         const historyDiv = document.getElementById('history-log');
@@ -407,8 +430,13 @@
         });
         historyDiv.appendChild(frag);
       }
-      function showHistory() { document.getElementById('history-modal').style.display = 'flex'; }
-      function closeHistory() { document.getElementById('history-modal').style.display = 'none'; }
+      function showHistory() { 
+        updateHistoryModal();
+        document.getElementById('history-modal').style.display = 'flex'; 
+      }
+      function closeHistory() { 
+        document.getElementById('history-modal').style.display = 'none'; 
+      }
 
       /***************************************
        * TEMAS: Alternar entre claro e escuro
@@ -462,7 +490,7 @@
             currentUser = userCredential.user;
             return database.ref("usuarios/" + currentUser.uid).set({
               username: username,
-              criadoEm: new Date().toISOString()
+              criadoEm: new Date().toLocaleString()
             });
           })
           .then(() => { showToast("Registro efetuado."); })
@@ -752,7 +780,7 @@
       function openEventModal(eventIndex = null, eventData = null, dateObj, hour) {
         const modal = document.getElementById('event-modal');
         modal.style.display = 'flex';
-        // Define título conforme ação
+        // Define o título do modal conforme a ação
         document.getElementById('modal-title').textContent = eventData ? "Editar Evento" : "Novo Evento";
         document.getElementById('event-info').textContent =
           dateObj.toLocaleDateString() + " | Sugestão: " + hour + ":00";
@@ -887,11 +915,9 @@
         if (eventsListener) { eventsListener.off(); }
         if (checkForUpcomingEventsInterval) { clearInterval(checkForUpcomingEventsInterval); }
       }
-      // Botão de logout: fecha o modal de histórico se aberto e procede ao logout
+      // Botão de logout: fecha o modal de histórico (se aberto) e procede ao logout
       document.getElementById('btn-logout').addEventListener('click', function() {
-        if(document.getElementById('history-modal').style.display === 'flex'){
-          closeHistory();
-        }
+        closeHistory();
         cleanupApp();
         auth.signOut().then(() => {
           showToast("Logout efetuado.");
@@ -916,4 +942,3 @@
   </script>
 </body>
 </html>
-
