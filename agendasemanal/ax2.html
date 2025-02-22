@@ -343,11 +343,12 @@
       <input type="password" id="auth-password" placeholder="Senha">
       <button id="auth-login-btn">Entrar</button>
       <hr>
-      <!-- Alterado para aceitar nomes com 3+ caracteres -->
-      <input type="text" id="auth-username" placeholder="Usuário (mínimo 3 caracteres)">
-      <input type="password" id="auth-register-password" placeholder="Senha (mínimo 6 caracteres)">
+      <!-- Usuário DEVE ter exatamente 5 caracteres -->
+      <input type="text" id="auth-username" placeholder="Usuário (5 caracteres)">
+      <!-- Senha para registro: exatamente 6 números -->
+      <input type="password" id="auth-register-password" placeholder="Senha (6 números)">
       <input type="password" id="auth-register-password-confirm" placeholder="Confirme a senha">
-      <label><input type="checkbox" id="auth-terms"> Aceito os Termos e Política</label>
+      <label><input type="checkbox" id="auth-terms"> Aceito os Termos e a Política de Uso</label>
       <button id="auth-register-btn">Registrar</button>
       <p><a href="#" id="auth-forgot-password">Esqueceu a senha?</a></p>
     </div>
@@ -469,25 +470,30 @@
        * VALIDAÇÕES
        ***************************************/
       function validateEmail(email) {
-        const re = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return re.test(email);
       }
+      // A senha deve ter exatamente 6 números
       function validatePassword(password) {
-        return password.length >= 6;
+        return /^[0-9]{6}$/.test(password);
       }
-      // Aceita nomes com 3 ou mais caracteres
+      // O nome de usuário deve ter exatamente 5 caracteres e todos diferentes
       function validateUsername(username) {
-        return username.length >= 3;
+        if (username.length !== 5) {
+          return false;
+        }
+        return new Set(username).size === 5;
       }
 
       /***************************************
        * AUTENTICAÇÃO – Login e Registro
        ***************************************/
+      // No login, o usuário utiliza o email e a senha cadastrados
       function login() {
         const email = document.getElementById('auth-email').value.trim();
         const password = document.getElementById('auth-password').value.trim();
         if (!validateEmail(email)) { showToast("Informe um email válido."); return; }
-        if (!validatePassword(password)) { showToast("A senha deve ter pelo menos 6 caracteres."); return; }
+        if (!validatePassword(password)) { showToast("A senha deve conter exatamente 6 números."); return; }
         auth.signInWithEmailAndPassword(email, password)
           .then(() => { showToast("Login efetuado."); })
           .catch(error => {
@@ -500,6 +506,7 @@
             }
           });
       }
+      // No registro, o usuário deve fornecer email, senha, confirmação, nome (exato 5 caracteres diferentes) e aceitar os termos.
       function register() {
         const email = document.getElementById('auth-email').value.trim();
         const password = document.getElementById('auth-register-password').value.trim();
@@ -507,13 +514,14 @@
         const username = document.getElementById('auth-username').value.trim();
         const termosAceitos = document.getElementById('auth-terms').checked;
         if (!validateEmail(email)) { showToast("Informe um email válido."); return; }
-        if (!validatePassword(password)) { showToast("A senha deve ter no mínimo 6 caracteres."); return; }
+        if (!validatePassword(password)) { showToast("A senha deve conter exatamente 6 números."); return; }
         if (password !== confirmPassword) { showToast("Senhas não conferem."); return; }
-        if (!validateUsername(username)) { showToast("O nome de usuário deve ter pelo menos 3 caracteres."); return; }
-        if (!termosAceitos) { showToast("Aceite os Termos."); return; }
+        if (!validateUsername(username)) { showToast("O nome de usuário deve ter exatamente 5 caracteres diferentes."); return; }
+        if (!termosAceitos) { showToast("Você deve aceitar os Termos e a Política de Uso."); return; }
         auth.createUserWithEmailAndPassword(email, password)
           .then(userCredential => {
             currentUser = userCredential.user;
+            // Salva os dados do usuário no banco
             return database.ref("usuarios/" + currentUser.uid).set({
               username: username,
               criadoEm: new Date().toLocaleString()
@@ -693,7 +701,7 @@
             });
             body.appendChild(cell);
             let eventsForDay = getEventsForDate(cellDate);
-            // Verifica eventos recorrentes em datas anteriores
+            // Verifica eventos recorrentes
             let eventosRecorrentes = [];
             for (let key in allEvents) {
               let evArray = (allEvents[key] && allEvents[key]["dia"]) || [];
