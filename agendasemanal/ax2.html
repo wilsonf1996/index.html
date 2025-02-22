@@ -29,7 +29,7 @@
       --event-bg: #81c784;
       --accent-color: #fbbc04;
     }
-    /* Estilos básicos e reset */
+    /* Reset e estilos básicos */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; }
     body {
@@ -91,7 +91,7 @@
     #current-week-display { font-size: 1.2em; font-weight: bold; }
     #user-info { font-size: 0.9em; }
     #view-selector { display: inline-block; }
-    /* Sidebar – mantém nome, histórico e logout */
+    /* Sidebar – mantém apenas perfil e logout (sem histórico) */
     #sidebar {
       width: 250px;
       background: var(--sidebar-bg);
@@ -162,10 +162,7 @@
       cursor: pointer;
       overflow: hidden;
     }
-    /* Ajuste para modo escuro: cabeçalhos e células */
-    .theme-dark .calendar-header,
-    .theme-dark .calendar-grid,
-    .theme-dark .day-cell {
+    .theme-dark .calendar-grid.week .day-cell {
       color: var(--text-color);
     }
     /* Visualização: Mês */
@@ -231,7 +228,7 @@
       white-space: nowrap;
       user-select: none;
     }
-    /* Modal – para eventos, autenticação e histórico */
+    /* Modal – para eventos e autenticação */
     .modal {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -324,25 +321,16 @@
     <div id="user-info"></div>
   </header>
 
-  <!-- Sidebar (mantém Histórico e Sair) -->
+  <!-- Sidebar – mantém perfil e opção de logout (sem histórico) -->
   <aside id="sidebar" role="complementary">
     <div id="profile-section">
       <span id="profile-name">Usuário</span>
     </div>
     <nav>
       <ul>
-        <li id="btn-history">Histórico</li>
         <li id="btn-logout">Sair</li>
       </ul>
     </nav>
-    <!-- Modal de Histórico -->
-    <div id="history-modal" class="modal" role="dialog" aria-modal="true">
-      <div class="modal-content">
-        <h3>Histórico de Alterações</h3>
-        <div id="history-log" style="max-height:300px; overflow:auto; margin-bottom:10px;"></div>
-        <button id="close-history">Fechar</button>
-      </div>
-    </div>
   </aside>
 
   <!-- Calendário -->
@@ -377,7 +365,7 @@
       <textarea id="event-description" placeholder="Descrição"></textarea>
       <label>Início: <input type="time" id="event-start"></label>
       <label>Término: <input type="time" id="event-end"></label>
-      <!-- Novo campo de Recorrência -->
+      <!-- Campo de Recorrência -->
       <label>Recorrência: 
         <select id="event-recurrencia">
           <option value="none" selected>Nenhum</option>
@@ -429,7 +417,6 @@
       let currentDate = new Date();
       let currentView = "week"; // "week", "month" ou "year"
       let allEvents = {}; // Eventos indexados por data "YYYY-MM-DD"
-      let historyLog = [];
       let eventsListener = null;
       let checkForUpcomingEventsInterval = null;
       const diasSemana = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
@@ -465,27 +452,6 @@
         document.getElementById('toast-container').appendChild(toast);
         setTimeout(() => { toast.remove(); }, 3000);
       }
-      function logHistory(message) {
-        const timestamp = new Date().toLocaleString();
-        historyLog.push({ message, timestamp });
-        if(historyLog.length > 50) { historyLog.shift(); }
-      }
-      function updateHistoryModal() {
-        const historyDiv = document.getElementById('history-log');
-        historyDiv.innerHTML = "";
-        historyLog.forEach(entry => {
-          const p = document.createElement('p');
-          p.textContent = `[${entry.timestamp}] ${entry.message}`;
-          historyDiv.appendChild(p);
-        });
-      }
-      function showHistory() {
-        updateHistoryModal();
-        document.getElementById('history-modal').style.display = 'flex';
-      }
-      function closeHistory() {
-        document.getElementById('history-modal').style.display = 'none';
-      }
 
       /***************************************
        * TEMAS: Alternar entre claro e escuro
@@ -507,12 +473,14 @@
       /***************************************
        * AUTENTICAÇÃO
        ***************************************/
+      // Validação simples
       function validarUsuario(usuario) {
         return (usuario.length !== 5) ? "Usuário deve ter 5 caracteres." : "";
       }
       function validarSenha(senha) {
         return (senha.length < 6) ? "Senha deve ter pelo menos 6 caracteres." : "";
       }
+      // No login e cadastro, usamos o email informado diretamente
       function login() {
         const email = document.getElementById('auth-email').value.trim();
         const password = document.getElementById('auth-password').value.trim();
@@ -533,8 +501,8 @@
         if (password !== confirmPassword) { showToast("Senhas não conferem."); return; }
         if (!termosAceitos) { showToast("Aceite os Termos."); return; }
         if (erro) { showToast(erro); return; }
-        const emailPadrao = username + "@SoundStruct.com";
-        auth.createUserWithEmailAndPassword(emailPadrao, password)
+        // Usa o email informado diretamente
+        auth.createUserWithEmailAndPassword(email, password)
           .then(userCredential => {
             currentUser = userCredential.user;
             return database.ref("usuarios/" + currentUser.uid).set({
@@ -623,7 +591,6 @@
       function loadEvents() {
         const eventsRef = database.ref("agendas/" + currentUser.uid);
         eventsListener = eventsRef;
-        // Mostra o spinner enquanto carrega
         document.getElementById("spinner").style.display = "block";
         eventsRef.on("value", snapshot => {
           allEvents = snapshot.val() || {};
@@ -707,10 +674,10 @@
             });
             body.appendChild(cell);
             let eventsForDay = getEventsForDate(cellDate);
-            // Verifica eventos recorrentes de dias anteriores
+            // Verifica eventos recorrentes em datas anteriores que devam aparecer nesta célula
             let eventosRecorrentes = [];
             for (let key in allEvents) {
-              let evArray = allEvents[key]["dia"] || [];
+              let evArray = (allEvents[key] && allEvents[key]["dia"]) || [];
               evArray.forEach(ev => {
                 if(ev.recorrencia && ev.recorrencia !== "none") {
                   let dataOriginal = new Date(ev.dataOriginal || key);
@@ -734,7 +701,8 @@
                 eventBlock.textContent = event.titulo;
                 eventBlock.addEventListener('click', function(e) {
                   e.stopPropagation();
-                  openEventModal(index, event, cellDate, hour);
+                  // Converte o índice para número para evitar problemas na exclusão
+                  openEventModal(parseInt(index), event, cellDate, hour);
                 });
                 cell.appendChild(eventBlock);
               });
@@ -791,7 +759,7 @@
                 eventBlock.addEventListener('click', function(e) {
                   e.stopPropagation();
                   let eventHour = parseInt(event.inicio.split(":")[0]);
-                  openEventModal(index, event, cellDate, eventHour);
+                  openEventModal(parseInt(index), event, cellDate, eventHour);
                 });
                 cell.appendChild(eventBlock);
               });
@@ -856,7 +824,6 @@
         document.getElementById('event-description').value = eventData ? eventData.descricao : "";
         document.getElementById('event-start').value = (eventData && eventData.inicio) ? eventData.inicio : String(hour).padStart(2, '0') + ":00";
         document.getElementById('event-end').value = (eventData && eventData.termino) ? eventData.termino : String((hour + 1) % 24).padStart(2, '0') + ":00";
-        // Define o valor da recorrência (se houver)
         document.getElementById('event-recurrencia').value = eventData && eventData.recorrencia ? eventData.recorrencia : "none";
         modal.dataset.date = dateObj.toISOString();
         modal.dataset.eventIndex = eventIndex;
@@ -890,7 +857,6 @@
         const dateKey = new Date(modal.dataset.date).toISOString().slice(0,10);
         const refPath = "agendas/" + currentUser.uid + "/" + dateKey + "/dia";
         const cellRef = database.ref(refPath);
-        // Se estiver offline, salva localmente
         if (!navigator.onLine) {
           offlineEvents.push({ date: dateKey, event: newEvent });
           localStorage.setItem("offlineEvents", JSON.stringify(offlineEvents));
@@ -904,11 +870,9 @@
           if (!Array.isArray(events)) { events = []; }
           const evIndex = modal.dataset.eventIndex;
           if (evIndex !== null && evIndex !== "" && evIndex !== "null") {
-            events[evIndex] = newEvent;
-            logHistory("Evento editado: " + newEvent.titulo);
+            events[parseInt(evIndex)] = newEvent;
           } else {
             events.push(newEvent);
-            logHistory("Evento adicionado: " + newEvent.titulo);
           }
           return cellRef.set(events);
         }).then(() => {
@@ -925,8 +889,8 @@
        ***************************************/
       function deleteEvent() {
         const modal = document.getElementById('event-modal');
-        const evIndex = modal.dataset.eventIndex;
-        if (evIndex === null || evIndex === "" || evIndex === "null") {
+        const evIndex = parseInt(modal.dataset.eventIndex);
+        if (isNaN(evIndex)) {
           showToast("Nenhum evento para excluir.");
           return;
         }
@@ -940,8 +904,7 @@
             showToast("Evento não encontrado.");
             return;
           }
-          let removed = events.splice(evIndex, 1);
-          logHistory("Evento excluído: " + removed[0].titulo);
+          events.splice(evIndex, 1);
           return cellRef.set(events);
         }).then(() => {
           showToast("Evento excluído.");
@@ -996,18 +959,14 @@
         if (eventsListener) { eventsListener.off(); }
         if (checkForUpcomingEventsInterval) { clearInterval(checkForUpcomingEventsInterval); }
       }
-      // Logout: fecha o modal de histórico (se aberto) e procede ao logout
+      // Logout: remove listeners e faz signOut
       document.getElementById('btn-logout').addEventListener('click', function() {
-        closeHistory();
         cleanupApp();
         auth.signOut().then(() => {
           showToast("Logout efetuado.");
           location.reload();
         }).catch(error => { showToast("Erro no logout: " + error.message); });
       });
-      // Botão de histórico: abre o modal; botão de fechar: fecha o modal
-      document.getElementById('btn-history').addEventListener('click', showHistory);
-      document.getElementById('close-history').addEventListener('click', closeHistory);
 
       /***************************************
        * INICIALIZAÇÃO DO SISTEMA
@@ -1020,3 +979,4 @@
   </script>
 </body>
 </html>
+
