@@ -27,7 +27,6 @@
       --sidebar-bg: #303134;
       --event-bg: #81c784;
     }
-    
     /* Reset e estilos básicos */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; }
@@ -36,7 +35,6 @@
       background: var(--bg-color);
       color: var(--text-color);
     }
-    
     /* Header – inspirado no Google Calendar */
     #header {
       display: flex;
@@ -47,7 +45,9 @@
       color: var(--header-text);
       height: 60px;
     }
-    #header .nav-buttons button {
+    #header .nav-buttons button,
+    #header #toggle-theme,
+    #header #view-selector button {
       background: rgba(255,255,255,0.2);
       border: none;
       color: var(--header-text);
@@ -56,18 +56,12 @@
       border-radius: 4px;
       cursor: pointer;
     }
-    #header .nav-buttons button:hover { background: rgba(255,255,255,0.3); }
-    #toggle-theme {
-      background: rgba(255,255,255,0.2);
-      border: none;
-      color: var(--header-text);
-      padding: 8px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
+    #header .nav-buttons button:hover,
+    #header #toggle-theme:hover,
+    #header #view-selector button:hover { background: rgba(255,255,255,0.3); }
     #current-week-display { font-size: 1.2em; font-weight: bold; }
     #user-info { font-size: 0.9em; }
-    
+    #view-selector { display: inline-block; }
     /* Sidebar – perfil e navegação */
     #sidebar {
       width: 250px;
@@ -102,12 +96,12 @@
       transition: background 0.3s;
     }
     #sidebar nav ul li:hover { background: rgba(0,0,0,0.1); }
-    
-    /* Calendário – Grid semanal */
+    /* Calendário – área de visualização */
     #calendar-container {
       margin-left: 250px;
       padding: 20px;
     }
+    /* Modo Semana */
     .calendar-header {
       display: grid;
       grid-template-columns: 60px repeat(7, 1fr);
@@ -138,7 +132,36 @@
       cursor: pointer;
       overflow: hidden;
     }
-    /* Evento na célula */
+    /* Modo Mês */
+    .month-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 2px;
+    }
+    .month-grid .month-cell {
+      border: 1px solid var(--cell-border);
+      height: 100px;
+      padding: 4px;
+      position: relative;
+      cursor: pointer;
+    }
+    .month-grid .month-cell div.day-number {
+      font-weight: bold;
+    }
+    /* Modo Ano */
+    .year-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .year-grid .year-cell {
+      border: 1px solid var(--cell-border);
+      padding: 10px;
+      height: 150px;
+      cursor: pointer;
+      text-align: center;
+    }
+    /* Evento exibido em qualquer modo */
     .event-block {
       position: absolute;
       left: 2px;
@@ -154,7 +177,6 @@
       white-space: nowrap;
       user-select: none;
     }
-    
     /* Modal (Evento e Autenticação) */
     .modal {
       position: fixed;
@@ -187,9 +209,7 @@
       cursor: pointer;
       margin-right: 5px;
     }
-    /* Informação do evento no modal */
     #event-info { font-size: 0.9em; margin-bottom: 10px; color: #555; }
-    
     /* Toast */
     #toast-container {
       position: fixed;
@@ -205,7 +225,6 @@
       margin: 5px;
       border-radius: 4px;
     }
-    
     /* Responsividade */
     @media (max-width: 768px) {
       #sidebar { display: none; }
@@ -217,16 +236,19 @@
   <!-- Header -->
   <header id="header">
     <div class="nav-buttons">
-      <button id="prev-week">Anterior</button>
-      <button id="next-week">Próxima</button>
+      <button id="prev-btn">Anterior</button>
+      <button id="next-btn">Próxima</button>
     </div>
-    <div id="current-week-display">Semana: ...</div>
-    <div>
+    <div id="current-week-display">Data: ...</div>
+    <div id="view-selector">
+      <button id="view-week">Semana</button>
+      <button id="view-month">Mês</button>
+      <button id="view-year">Ano</button>
       <button id="toggle-theme">Alternar Tema</button>
-      <span id="user-info"></span>
     </div>
+    <div id="user-info"></div>
   </header>
-  
+
   <!-- Sidebar -->
   <aside id="sidebar">
     <div id="profile-section">
@@ -250,17 +272,14 @@
       </div>
     </div>
   </aside>
-  
-  <!-- Calendário -->
+
+  <!-- Área do Calendário -->
   <div id="calendar-container">
-    <div class="calendar-header" id="calendar-header">
-      <!-- Gerado dinamicamente -->
-    </div>
-    <div class="calendar-grid" id="calendar-grid">
-      <!-- Gerado dinamicamente -->
-    </div>
+    <!-- Cabeçalho e grade serão gerados dinamicamente conforme o modo (week, month ou year) -->
+    <div id="calendar-header"></div>
+    <div id="calendar-body"></div>
   </div>
-  
+
   <!-- Modal de Autenticação -->
   <div id="auth-modal" class="modal">
     <div class="modal-content">
@@ -277,7 +296,7 @@
       <p><a href="#" id="auth-forgot-password">Esqueceu a senha?</a></p>
     </div>
   </div>
-  
+
   <!-- Modal de Evento -->
   <div id="event-modal" class="modal">
     <div class="modal-content">
@@ -291,21 +310,20 @@
       <button id="cancel-event">Cancelar</button>
     </div>
   </div>
-  
+
   <!-- Toast Container -->
   <div id="toast-container"></div>
-  
+
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
-  
+
   <script>
-    // Aguarda o carregamento completo do DOM
     document.addEventListener("DOMContentLoaded", function() {
       "use strict";
       /***************************************
-       * CONFIGURAÇÃO DO FIREBASE – AJUSTE AS CONFIGURAÇÕES!
+       * CONFIGURAÇÃO DO FIREBASE – ajuste suas configurações
        ***************************************/
       const firebaseConfig = {
         apiKey: "AIzaSyDxMWPu_CnXV-u4-vlDFd-IZ8fzlyKJHng",
@@ -320,16 +338,17 @@
       firebase.initializeApp(firebaseConfig);
       const auth = firebase.auth();
       const database = firebase.database();
-      
+
       /***************************************
        * VARIÁVEIS GLOBAIS
        ***************************************/
       let currentUser = null;
-      let currentWeekStart = null; // Data da segunda-feira atual
-      let calendarEvents = {};     // Eventos carregados (chave "hora-dia", onde dia é 0-indexado)
+      let currentDate = new Date();
+      let currentView = "week"; // "week", "month" ou "year"
+      let calendarEvents = {};  // Eventos armazenados (chave varia conforme modo)
       let historyLog = [];
       const diasSemana = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
-      
+
       /***************************************
        * FUNÇÕES UTILITÁRIAS
        ***************************************/
@@ -369,7 +388,6 @@
           localStorage.setItem("themeDark", "true");
         }
       }
-      // Aplica o tema salvo ao carregar
       if(localStorage.getItem("themeDark") === "true"){
         document.documentElement.classList.add("theme-dark");
       }
@@ -432,7 +450,7 @@
           document.getElementById('user-info').textContent = user.email;
           document.getElementById('auth-modal').style.display = 'none';
           updateProfileInfo();
-          initializeCalendar();
+          renderCalendar();
         } else {
           currentUser = null;
           document.getElementById('auth-modal').style.display = 'flex';
@@ -463,94 +481,135 @@
       setInterval(updateProfileInfo, 15000);
       
       /***************************************
-       * CALENDÁRIO – LÓGICA E VISUAL
+       * NAVEGAÇÃO – Atualiza currentDate conforme modo
        ***************************************/
-      function initializeCalendar() {
-        // Calcula a data da segunda-feira da semana atual
-        const today = new Date();
-        const day = today.getDay(); // 0 (Dom) a 6 (Sáb)
-        const diff = today.getDate() - (day === 0 ? 6 : day - 1);
-        currentWeekStart = new Date(today.setDate(diff));
-        updateCurrentWeekDisplay();
-        generateCalendarHeader();
-        generateCalendarGrid();
-        loadCalendarEvents();
+      document.getElementById('prev-btn').addEventListener('click', function() {
+        if (currentView === "week") {
+          currentDate.setDate(currentDate.getDate() - 7);
+        } else if (currentView === "month") {
+          currentDate.setMonth(currentDate.getMonth() - 1);
+        } else if (currentView === "year") {
+          currentDate.setFullYear(currentDate.getFullYear() - 1);
+        }
+        renderCalendar();
+      });
+      document.getElementById('next-btn').addEventListener('click', function() {
+        if (currentView === "week") {
+          currentDate.setDate(currentDate.getDate() + 7);
+        } else if (currentView === "month") {
+          currentDate.setMonth(currentDate.getMonth() + 1);
+        } else if (currentView === "year") {
+          currentDate.setFullYear(currentDate.getFullYear() + 1);
+        }
+        renderCalendar();
+      });
+      document.getElementById('view-week').addEventListener('click', function(){
+        currentView = "week";
+        renderCalendar();
+      });
+      document.getElementById('view-month').addEventListener('click', function(){
+        currentView = "month";
+        renderCalendar();
+      });
+      document.getElementById('view-year').addEventListener('click', function(){
+        currentView = "year";
+        renderCalendar();
+      });
+      
+      /***************************************
+       * RENDERIZAÇÃO DO CALENDÁRIO – DESPACHO POR MODO
+       ***************************************/
+      function renderCalendar() {
+        updateHeaderDisplay();
+        if (currentView === "week") {
+          renderWeekView();
+        } else if (currentView === "month") {
+          renderMonthView();
+        } else if (currentView === "year") {
+          renderYearView();
+        }
       }
-      function updateCurrentWeekDisplay() {
-        const start = new Date(currentWeekStart);
-        const end = new Date(start);
-        end.setDate(end.getDate() + 6);
-        document.getElementById('current-week-display').textContent =
-          start.toLocaleDateString() + " - " + end.toLocaleDateString();
+      function updateHeaderDisplay() {
+        if (currentView === "week") {
+          let temp = new Date(currentDate);
+          let day = temp.getDay();
+          let diff = temp.getDate() - (day === 0 ? 6 : day - 1);
+          let monday = new Date(temp.setDate(diff));
+          let sunday = new Date(monday);
+          sunday.setDate(monday.getDate() + 6);
+          document.getElementById('current-week-display').textContent =
+            monday.toLocaleDateString() + " - " + sunday.toLocaleDateString();
+        } else if (currentView === "month") {
+          let monthName = currentDate.toLocaleString("pt-BR", { month: "long" });
+          document.getElementById('current-week-display').textContent =
+            monthName.charAt(0).toUpperCase() + monthName.slice(1) + " " + currentDate.getFullYear();
+        } else if (currentView === "year") {
+          document.getElementById('current-week-display').textContent = currentDate.getFullYear();
+        }
       }
-      // Gera cabeçalho do calendário
-      function generateCalendarHeader() {
+      
+      /***************************************
+       * MODO SEMANA – Gera cabeçalho e grade de 24h x 7 dias
+       ***************************************/
+      function renderWeekView() {
+        // Calcula a segunda-feira da semana atual
+        let temp = new Date(currentDate);
+        let day = temp.getDay();
+        let diff = temp.getDate() - (day === 0 ? 6 : day - 1);
+        let monday = new Date(temp.setDate(diff));
+        
         const header = document.getElementById('calendar-header');
+        header.style.display = "grid";
+        header.style.gridTemplateColumns = "60px repeat(7, 1fr)";
         header.innerHTML = "";
-        const emptyCell = document.createElement('div');
+        let emptyCell = document.createElement('div');
         emptyCell.className = "time-slot";
         header.appendChild(emptyCell);
         for (let i = 0; i < 7; i++) {
-          const dayCell = document.createElement('div');
-          const dataDia = new Date(currentWeekStart);
-          dataDia.setDate(dataDia.getDate() + i);
+          let dayCell = document.createElement('div');
+          let dataDia = new Date(monday);
+          dataDia.setDate(monday.getDate() + i);
           dayCell.innerHTML = `<strong>${diasSemana[i]}</strong><br>${dataDia.toLocaleDateString()}`;
           header.appendChild(dayCell);
         }
-      }
-      // Gera grade do calendário (coluna de horários + células para cada dia)
-      function generateCalendarGrid() {
-        const grid = document.getElementById('calendar-grid');
-        grid.innerHTML = "";
+        const body = document.getElementById('calendar-body');
+        body.style.display = "grid";
+        body.style.gridTemplateColumns = "60px repeat(7, 1fr)";
+        body.innerHTML = "";
         for (let hour = 0; hour < 24; hour++) {
-          const timeLabel = document.createElement('div');
+          let timeLabel = document.createElement('div');
           timeLabel.className = "time-label";
           timeLabel.textContent = hour + ":00";
-          grid.appendChild(timeLabel);
-          for (let day = 0; day < 7; day++) {
-            const cell = document.createElement('div');
+          body.appendChild(timeLabel);
+          for (let i = 0; i < 7; i++) {
+            let cell = document.createElement('div');
             cell.className = "day-cell";
             cell.dataset.hour = hour;
-            cell.dataset.day = day; // 0 = segunda, 6 = domingo
-            cell.addEventListener('dblclick', function() { openEventModal(cell); });
-            grid.appendChild(cell);
+            cell.dataset.day = i;
+            cell.addEventListener('dblclick', function() {
+              openEventModal(cell, null, null, new Date(monday.getFullYear(), monday.getMonth(), monday.getDate()+i), i, hour);
+            });
+            body.appendChild(cell);
           }
         }
-      }
-      // Carrega eventos do Firebase para a semana atual
-      function loadCalendarEvents() {
-        if (!currentUser) return;
-        const dateKey = currentWeekStart.toISOString().slice(0,10);
-        const eventsRef = database.ref("agendas/" + currentUser.uid + "/" + dateKey);
-        eventsRef.on("value", snapshot => {
-          calendarEvents = snapshot.val() || {};
-          renderCalendarEvents();
-        });
-      }
-      // Renderiza eventos nas células correspondentes
-      function renderCalendarEvents() {
-        document.querySelectorAll('.day-cell').forEach(cell => { cell.innerHTML = ""; });
+        // Renderiza eventos para o modo semana – assume que os eventos estão armazenados com chave "hour-day" (day de 0 a 6)
         Object.keys(calendarEvents).forEach(key => {
-          // key: "hour-day" (aqui day é 0-indexado: 0 a 6)
-          const [hour, day] = key.split('-').map(Number);
-          let events = calendarEvents[key];
-          if (events && typeof events === 'object' && !Array.isArray(events)) {
-            events = Object.values(events);
-          }
-          if (!Array.isArray(events)) { events = []; }
-          const cell = document.querySelector(`.day-cell[data-hour='${hour}'][data-day='${day}']`);
+          let [hour, dayIndex] = key.split('-').map(Number);
+          let cell = document.querySelector(`.day-cell[data-hour='${hour}'][data-day='${dayIndex}']`);
           if (cell) {
+            let events = calendarEvents[key];
+            if (events && typeof events === 'object' && !Array.isArray(events)) {
+              events = Object.values(events);
+            }
+            if (!Array.isArray(events)) { events = []; }
             events.forEach((event, index) => {
-              const eventBlock = document.createElement('div');
+              let eventBlock = document.createElement('div');
               eventBlock.className = "event-block";
               eventBlock.textContent = event.titulo;
-              // Clique para abrir modal de edição
               eventBlock.addEventListener('click', function(e) {
                 e.stopPropagation();
-                openEventModal(cell, index, event);
+                openEventModal(cell, index, event, new Date(monday.getFullYear(), monday.getMonth(), monday.getDate()+Number(cell.dataset.day)), cell.dataset.day, hour);
               });
-              // Inicia funcionalidade de drag & drop
-              addDragAndDrop(eventBlock, hour, day, index);
               cell.appendChild(eventBlock);
             });
           }
@@ -558,45 +617,125 @@
       }
       
       /***************************************
-       * MODAL DE EVENTO – CRIAÇÃO/EDIÇÃO
+       * MODO MÊS – Gera grade mensal (7 colunas) com células para cada dia
        ***************************************/
-      function openEventModal(cell, eventIndex = null, eventData = null) {
+      function renderMonthView() {
+        let year = currentDate.getFullYear();
+        let month = currentDate.getMonth();
+        let firstDay = new Date(year, month, 1);
+        let startDay = firstDay.getDay(); // 0 (Dom) a 6 (Sáb)
+        let offset = (startDay === 0 ? 6 : startDay - 1);
+        let totalDays = new Date(year, month + 1, 0).getDate();
+        const header = document.getElementById('calendar-header');
+        header.style.display = "grid";
+        header.style.gridTemplateColumns = "repeat(7, 1fr)";
+        header.innerHTML = "";
+        for (let i = 0; i < 7; i++) {
+          let dayName = document.createElement('div');
+          dayName.style.textAlign = "center";
+          dayName.style.fontWeight = "500";
+          dayName.textContent = diasSemana[i].slice(0,3);
+          header.appendChild(dayName);
+        }
+        const body = document.getElementById('calendar-body');
+        body.style.display = "grid";
+        body.className = "month-grid";
+        body.innerHTML = "";
+        let cells = Math.ceil((offset + totalDays) / 7) * 7;
+        for (let i = 0; i < cells; i++) {
+          let cell = document.createElement('div');
+          cell.className = "month-cell";
+          if (i >= offset && i < offset + totalDays) {
+            let dayNum = i - offset + 1;
+            cell.innerHTML = `<div class="day-number">${dayNum}</div>`;
+            cell.addEventListener('dblclick', function() {
+              openEventModal(cell, null, null, new Date(year, month, dayNum), 0, 9);
+            });
+            // Renderiza eventos para o dia (chave = diaNum)
+            let events = calendarEvents[dayNum];
+            if (events && typeof events === 'object' && !Array.isArray(events)) {
+              events = Object.values(events);
+            }
+            if (Array.isArray(events)) {
+              events.forEach((event, index) => {
+                let eventBlock = document.createElement('div');
+                eventBlock.className = "event-block";
+                eventBlock.style.position = "relative";
+                eventBlock.style.marginTop = "4px";
+                eventBlock.textContent = event.titulo;
+                eventBlock.addEventListener('click', function(e) {
+                  e.stopPropagation();
+                  openEventModal(cell, index, event, new Date(year, month, dayNum), 0, 9);
+                });
+                cell.appendChild(eventBlock);
+              });
+            }
+          }
+          body.appendChild(cell);
+        }
+      }
+      
+      /***************************************
+       * MODO ANO – Gera uma grade de 12 meses (3 colunas x 4 linhas)
+       ***************************************/
+      function renderYearView() {
+        const year = currentDate.getFullYear();
+        const header = document.getElementById('calendar-header');
+        header.style.display = "none";
+        const body = document.getElementById('calendar-body');
+        body.style.display = "grid";
+        body.className = "year-grid";
+        body.innerHTML = "";
+        for (let m = 0; m < 12; m++) {
+          let cell = document.createElement('div');
+          cell.className = "year-cell";
+          let monthName = new Date(year, m).toLocaleString("pt-BR", { month: "long" });
+          cell.innerHTML = `<strong>${monthName.charAt(0).toUpperCase() + monthName.slice(1)}</strong>`;
+          cell.addEventListener('dblclick', function() {
+            currentDate = new Date(year, m, 1);
+            currentView = "month";
+            renderCalendar();
+            document.getElementById('calendar-header').style.display = "grid";
+          });
+          body.appendChild(cell);
+        }
+      }
+      
+      /***************************************
+       * MODAL DE EVENTO – Criação/Edição
+       ***************************************/
+      function openEventModal(cell, eventIndex = null, eventData = null, dateObj, dayIndex, hour) {
         const modal = document.getElementById('event-modal');
         modal.style.display = 'flex';
-        const clickedHour = cell.dataset.hour;
-        const dayIndex = cell.dataset.day;
-        const dataDia = new Date(currentWeekStart);
-        dataDia.setDate(dataDia.getDate() + Number(dayIndex));
         document.getElementById('event-info').textContent =
-          "Dia: " + dataDia.toLocaleDateString() + " | Sugestão: " + clickedHour + ":00";
+          "Dia: " + dateObj.toLocaleDateString() + " | Sugestão: " + hour + ":00";
         document.getElementById('event-title').value = eventData ? eventData.titulo : "";
         document.getElementById('event-description').value = eventData ? eventData.descricao : "";
         if (eventData && eventData.inicio) {
           document.getElementById('event-start').value = eventData.inicio;
         } else {
-          document.getElementById('event-start').value = String(clickedHour).padStart(2, '0') + ":00";
+          document.getElementById('event-start').value = String(hour).padStart(2, '0') + ":00";
         }
         if (eventData && eventData.termino) {
           document.getElementById('event-end').value = eventData.termino;
         } else {
-          document.getElementById('event-end').value = String((Number(clickedHour)+1)%24).padStart(2, '0') + ":00";
+          document.getElementById('event-end').value = String((Number(hour)+1)%24).padStart(2, '0') + ":00";
         }
-        modal.dataset.dayIndex = dayIndex;
+        modal.dataset.mode = currentView;
+        modal.dataset.date = dateObj.toISOString();
+        modal.dataset.cellKey = (currentView === "week") ? (hour + '-' + dayIndex) : ((currentView === "month") ? dateObj.getDate() : "");
         modal.dataset.eventIndex = eventIndex;
       }
       function closeEventModal() {
         const modal = document.getElementById('event-modal');
         modal.style.display = 'none';
-        delete modal.dataset.dayIndex;
+        delete modal.dataset.cellKey;
         delete modal.dataset.eventIndex;
+        delete modal.dataset.date;
       }
       document.getElementById('cancel-event').addEventListener('click', closeEventModal);
       function saveEvent() {
         const modal = document.getElementById('event-modal');
-        const startTime = document.getElementById('event-start').value;
-        const hour = parseInt(startTime.split(':')[0], 10);
-        const dayIndex = modal.dataset.dayIndex; // 0 a 6
-        const cellKey = hour + '-' + dayIndex;
         const newEvent = {
           titulo: document.getElementById('event-title').value,
           descricao: document.getElementById('event-description').value,
@@ -607,17 +746,20 @@
           showToast("Preencha os campos obrigatórios.");
           return;
         }
-        const dateKey = currentWeekStart.toISOString().slice(0,10);
-        const cellRef = database.ref("agendas/" + currentUser.uid + "/" + dateKey + "/" + cellKey);
-        let events = calendarEvents[cellKey];
+        const mode = modal.dataset.mode;
+        let key = modal.dataset.cellKey;
+        const dateKey = new Date(modal.dataset.date).toISOString().slice(0,10);
+        let refPath = "agendas/" + currentUser.uid + "/" + dateKey + "/" + key;
+        const cellRef = database.ref(refPath);
+        let events = calendarEvents[key];
         if (!Array.isArray(events)) { events = []; }
-        const eventIndex = modal.dataset.eventIndex;
-        if (eventIndex !== null && eventIndex !== "" && eventIndex !== "null") {
-          events[eventIndex] = newEvent;
-          logHistory("Evento editado em " + cellKey + ": " + newEvent.titulo);
+        const evIndex = modal.dataset.eventIndex;
+        if (evIndex !== null && evIndex !== "" && evIndex !== "null") {
+          events[evIndex] = newEvent;
+          logHistory("Evento editado em " + key + ": " + newEvent.titulo);
         } else {
           events.push(newEvent);
-          logHistory("Evento adicionado em " + cellKey + ": " + newEvent.titulo);
+          logHistory("Evento adicionado em " + key + ": " + newEvent.titulo);
         }
         cellRef.set(events)
           .then(() => { showToast("Evento salvo."); closeEventModal(); })
@@ -626,7 +768,7 @@
       document.getElementById('save-event').addEventListener('click', saveEvent);
       
       /***************************************
-       * DRAG & DROP SIMPLIFICADO PARA EVENTOS
+       * DRAG & DROP (Básico – apenas para semana)
        ***************************************/
       function addDragAndDrop(eventBlock, origHour, origDay, eventIndex) {
         let offsetX, offsetY;
@@ -650,7 +792,6 @@
           if (!dragging) return;
           dragging = false;
           eventBlock.style.opacity = "1";
-          // Identifica a célula onde o usuário soltou o evento
           const dropTarget = document.elementFromPoint(e.clientX, e.clientY);
           let cell = dropTarget;
           while(cell && !cell.classList.contains('day-cell')) {
@@ -660,22 +801,19 @@
             const newHour = cell.dataset.hour;
             const newDay = cell.dataset.day;
             const newKey = newHour + '-' + newDay;
-            // Atualiza o evento (mantendo título, descrição, mas substituindo horário de início/termino conforme sugestão)
             const eventData = {
               titulo: eventBlock.textContent,
-              descricao: "", // em drag & drop, pode-se manter a mesma descrição
+              descricao: "",
               inicio: String(newHour).padStart(2, '0') + ":00",
               termino: String((Number(newHour)+1)%24).padStart(2, '0') + ":00"
             };
-            // Atualiza no Firebase
-            const dateKey = currentWeekStart.toISOString().slice(0,10);
+            const dateKey = new Date(currentDate).toISOString().slice(0,10);
             const cellRef = database.ref("agendas/" + currentUser.uid + "/" + dateKey + "/" + newKey);
             let events = calendarEvents[newKey];
             if (!Array.isArray(events)) { events = []; }
-            // Adiciona o evento no novo local
             events.push(eventData);
             cellRef.set(events)
-              .then(() => { showToast("Evento movido."); loadCalendarEvents(); })
+              .then(() => { showToast("Evento movido."); renderCalendar(); })
               .catch(error => { showToast("Erro ao mover: " + error.message); });
           }
           eventBlock.style.position = "";
@@ -686,18 +824,11 @@
           document.removeEventListener('mouseup', onMouseUp);
         }
       }
+      // (Caso deseje adicionar drag & drop, pode chamar addDragAndDrop nos blocos de evento.)
       
       /***************************************
-       * NAVEGAÇÃO ENTRE SEMANAS, LOGOUT E HISTÓRICO
+       * NAVEGAÇÃO – Logout e Histórico
        ***************************************/
-      document.getElementById('prev-week').addEventListener('click', function() {
-        currentWeekStart.setDate(currentWeekStart.getDate() - 7);
-        initializeCalendar();
-      });
-      document.getElementById('next-week').addEventListener('click', function() {
-        currentWeekStart.setDate(currentWeekStart.getDate() + 7);
-        initializeCalendar();
-      });
       document.getElementById('btn-logout').addEventListener('click', function() {
         auth.signOut().then(() => {
           showToast("Logout efetuado.");
@@ -714,7 +845,7 @@
         console.log("Sistema de agenda iniciado.");
       }
       initApp();
-    }); // Fim do DOMContentLoaded
+    });
   </script>
 </body>
 </html>
