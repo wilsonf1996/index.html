@@ -70,7 +70,7 @@
     #current-week-display { font-size: 1.2em; font-weight: bold; }
     #user-info { font-size: 0.9em; }
     #view-selector { display: inline-block; }
-    /* Sidebar – perfil, histórico e logout (sem imagem de perfil) */
+    /* Sidebar – informações do usuário, histórico e logout */
     #sidebar {
       width: 250px;
       background: var(--sidebar-bg);
@@ -204,7 +204,7 @@
       white-space: nowrap;
       user-select: none;
     }
-    /* Modal (para evento, autenticação e histórico) */
+    /* Modal (para eventos, autenticação e histórico) */
     .modal {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -281,7 +281,7 @@
   <!-- Sidebar com informações do usuário, histórico e logout -->
   <aside id="sidebar" role="complementary">
     <div id="profile-section">
-      <!-- Sem imagem, apenas o nome do usuário -->
+      <!-- Apenas o nome do usuário -->
       <span id="profile-name">Usuário</span>
     </div>
     <nav>
@@ -481,7 +481,6 @@
       auth.onAuthStateChanged(user => {
         if (user) {
           currentUser = user;
-          // Exibe apenas o nome de usuário (antes do @)
           document.getElementById('profile-name').textContent = user.email.split('@')[0];
           document.getElementById('user-info').textContent = user.email;
           document.getElementById('auth-modal').style.display = 'none';
@@ -626,7 +625,6 @@
               openEventModal(null, null, cellDate, hour);
             });
             body.appendChild(cell);
-            // Filtra os eventos deste dia que iniciam na hora atual
             let eventsForDay = getEventsForDate(cellDate);
             let eventsForHour = eventsForDay.filter(ev => {
               let [evHour] = ev.inicio.split(":");
@@ -754,7 +752,7 @@
       function openEventModal(eventIndex = null, eventData = null, dateObj, hour) {
         const modal = document.getElementById('event-modal');
         modal.style.display = 'flex';
-        // Altera o título do modal conforme ação
+        // Define título conforme ação
         document.getElementById('modal-title').textContent = eventData ? "Editar Evento" : "Novo Evento";
         document.getElementById('event-info').textContent =
           dateObj.toLocaleDateString() + " | Sugestão: " + hour + ":00";
@@ -889,15 +887,23 @@
         if (eventsListener) { eventsListener.off(); }
         if (checkForUpcomingEventsInterval) { clearInterval(checkForUpcomingEventsInterval); }
       }
+      // Botão de logout: fecha o modal de histórico se aberto e procede ao logout
       document.getElementById('btn-logout').addEventListener('click', function() {
+        if(document.getElementById('history-modal').style.display === 'flex'){
+          closeHistory();
+        }
         cleanupApp();
         auth.signOut().then(() => {
           showToast("Logout efetuado.");
           location.reload();
         }).catch(error => { showToast("Erro no logout: " + error.message); });
       });
+      // Botão de histórico e de fechar o modal de histórico
       document.getElementById('btn-history').addEventListener('click', showHistory);
-      document.getElementById('close-history').addEventListener('click', closeHistory);
+      document.getElementById('close-history').addEventListener('click', function(e){
+        e.stopPropagation();
+        closeHistory();
+      });
 
       /***************************************
        * INICIALIZAÇÃO DO SISTEMA
@@ -910,3 +916,4 @@
   </script>
 </body>
 </html>
+
