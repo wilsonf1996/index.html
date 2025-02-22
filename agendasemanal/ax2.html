@@ -2,10 +2,8 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agenda Premium – Calendário Moderno Avançado</title>
-  <!-- Materialize CSS para interface moderna -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agenda Premium – Calendário Moderno</title>
   <!-- Fontes e Ícones -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
@@ -20,7 +18,6 @@
       --sidebar-bg: #fff;
       --event-bg: #34a853;
       --accent-color: #fbbc04;
-      --time-label-bg-light: #f8f9fa;
     }
     .theme-dark {
       --bg-color: #202124;
@@ -31,10 +28,8 @@
       --sidebar-bg: #303134;
       --event-bg: #81c784;
       --accent-color: #fbbc04;
-      /* No modo escuro, a coluna de horários terá fundo preto */
-      --time-label-bg-dark: #000;
     }
-    /* Reset e estilos básicos */
+    /* Estilos básicos e reset */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; }
     body {
@@ -43,77 +38,184 @@
       color: var(--text-color);
       transition: background 0.3s, color 0.3s;
     }
-    /* Loading Spinner */
-    #loading-spinner {
+    /* Spinner de carregamento */
+    #spinner {
+      display: none;
       position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      display: none;
-      z-index: 2000;
+      z-index: 3000;
     }
-    #loading-spinner .spinner {
-      border: 8px solid #f3f3f3;
-      border-top: 8px solid var(--header-bg);
+    #spinner:after {
+      content: "";
+      width: 40px;
+      height: 40px;
+      border: 4px solid #ccc;
+      border-top-color: var(--header-bg);
       border-radius: 50%;
-      width: 60px;
-      height: 60px;
       animation: spin 1s linear infinite;
     }
     @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+      to { transform: rotate(360deg); }
     }
-    /* Transições suaves */
-    .theme-transition {
-      transition: background 0.5s, color 0.5s;
+    /* Cabeçalho */
+    #header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      background: var(--header-bg);
+      color: var(--header-text);
+      height: 60px;
     }
-    /* Estilos específicos para o calendário */
+    #header .nav-buttons button,
+    #header #toggle-theme,
+    #header #view-selector button,
+    #header #sync-btn {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: var(--header-text);
+      padding: 8px 12px;
+      margin-right: 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #header .nav-buttons button:hover,
+    #header #toggle-theme:hover,
+    #header #view-selector button:hover,
+    #header #sync-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    #current-week-display { font-size: 1.2em; font-weight: bold; }
+    #user-info { font-size: 0.9em; }
+    #view-selector { display: inline-block; }
+    /* Sidebar – mantém nome, histórico e logout */
+    #sidebar {
+      width: 250px;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--cell-border);
+      padding: 20px;
+      height: calc(100vh - 60px);
+      overflow-y: auto;
+      position: fixed;
+      top: 60px;
+      left: 0;
+    }
+    #profile-section { text-align: center; margin-bottom: 20px; }
+    #profile-section span {
+      display: block;
+      margin-top: 10px;
+      font-weight: 500;
+      font-size: 1.1em;
+    }
+    #sidebar nav ul { list-style: none; padding: 0; }
+    #sidebar nav ul li {
+      padding: 10px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.3s;
+    }
+    #sidebar nav ul li:hover { background: rgba(0,0,0,0.1); }
+    /* Calendário */
+    #calendar-container {
+      margin-left: 250px;
+      padding: 20px;
+      min-height: calc(100vh - 60px);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+    /* Visualizações: Semana */
     .calendar-header, .calendar-grid { display: grid; }
     .calendar-header.week {
       grid-template-columns: 60px repeat(7, 1fr);
       border-bottom: 1px solid var(--cell-border);
-      background: var(--bg-color);
     }
     .calendar-header.week div {
       padding: 10px;
       text-align: center;
       font-weight: 500;
     }
-    .calendar-header.week .time-slot {
-      background: var(--time-label-bg-light);
-    }
-    .theme-dark .calendar-header.week .time-slot {
-      background: var(--time-label-bg-dark);
-    }
+    .calendar-header.week .time-slot { background: #f8f9fa; }
+    .theme-dark .calendar-header.week .time-slot { background: #000; }
     .calendar-grid.week {
       grid-template-columns: 60px repeat(7, 1fr);
-      gap: 1px;
-      background: var(--cell-border);
     }
     .calendar-grid.week .time-label {
       padding: 10px;
       text-align: right;
-      background: var(--time-label-bg-light);
-      color: var(--text-color);
+      border-top: 1px solid var(--cell-border);
+      border-right: 1px solid var(--cell-border);
+      background: #f8f9fa;
     }
     .theme-dark .calendar-grid.week .time-label {
-      background: var(--time-label-bg-dark);
+      background: #000;
       color: #fff;
     }
     .calendar-grid.week .day-cell {
       position: relative;
-      background: var(--bg-color);
-      padding: 2px;
+      border-top: 1px solid var(--cell-border);
+      border-right: 1px solid var(--cell-border);
+      height: 60px;
       cursor: pointer;
       overflow: hidden;
+    }
+    /* Ajuste para modo escuro: cabeçalhos e células */
+    .theme-dark .calendar-header,
+    .theme-dark .calendar-grid,
+    .theme-dark .day-cell {
+      color: var(--text-color);
+    }
+    /* Visualização: Mês */
+    .month-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 2px;
+    }
+    .month-grid .month-cell {
       border: 1px solid var(--cell-border);
-      border-left: none;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      height: 100px;
+      padding: 4px;
+      position: relative;
+      cursor: pointer;
     }
-    .theme-dark .calendar-grid.week .day-cell {
-      background: var(--bg-color);
+    .month-grid .month-cell div.day-number { font-weight: bold; }
+    .month-grid .event-block {
+      background: var(--event-bg);
+      color: #fff;
+      padding: 2px 4px;
+      border-radius: 2px;
+      font-size: 0.8em;
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
+    /* Visualização: Ano */
+    .year-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .year-cell {
+      border: 1px solid var(--cell-border);
+      padding: 10px;
+      min-height: 150px;
+      cursor: pointer;
+      text-align: center;
+      position: relative;
+    }
+    .year-cell .month-name { font-weight: bold; margin-bottom: 5px; }
+    .year-cell .year-events {
+      font-size: 0.75em;
+      max-height: 70px;
+      overflow-y: auto;
+      text-align: left;
+      margin-top: 5px;
+    }
+    /* Bloco de Evento */
     .event-block {
       position: absolute;
       left: 2px;
@@ -128,679 +230,792 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       user-select: none;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.2);
     }
-    /* Visualizações Mês e Ano */
-    .month-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 2px;
+    /* Modal – para eventos, autenticação e histórico */
+    .modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
     }
-    .month-grid .month-cell {
-      border: 1px solid var(--cell-border);
-      height: 100px;
-      padding: 4px;
-      position: relative;
-      cursor: pointer;
-      background: var(--bg-color);
-    }
-    .month-grid .month-cell div.day-number { font-weight: bold; }
-    .month-grid .event-block {
-      background: var(--event-bg);
-      color: #fff;
-      padding: 2px 4px;
-      border-radius: 2px;
-      font-size: 0.8em;
-      margin-top: 2px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .year-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-    }
-    .year-cell {
-      border: 1px solid var(--cell-border);
-      padding: 10px;
-      min-height: 150px;
-      cursor: pointer;
-      text-align: center;
-      position: relative;
-      background: var(--bg-color);
-    }
-    .year-cell .month-name { font-weight: bold; margin-bottom: 5px; }
-    .year-cell .year-events {
-      font-size: 0.75em;
-      max-height: 70px;
+    .modal-content {
+      background: #fff;
+      color: var(--text-color);
+      padding: 20px;
+      border-radius: 4px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 90vh;
       overflow-y: auto;
-      text-align: left;
-      margin-top: 5px;
+    }
+    /* Inputs */
+    .modal-content input,
+    .modal-content textarea,
+    .modal-content select {
+      width: 100%;
+      padding: 8px;
+      margin: 8px 0;
+      border: 1px solid var(--cell-border);
+      border-radius: 4px;
+      background: #fff;
+      color: var(--text-color);
+    }
+    .theme-dark .modal-content input,
+    .theme-dark .modal-content textarea,
+    .theme-dark .modal-content select {
+      background: #616161;
+      color: var(--text-color);
+      border: 1px solid #757575;
+    }
+    .modal-content button {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 5px;
+    }
+    #event-info { font-size: 0.9em; margin-bottom: 10px; }
+    /* Toast */
+    #toast-container {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2000;
+    }
+    .toast {
+      background: #202124;
+      color: #fff;
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 4px;
+    }
+    /* Responsividade */
+    @media (max-width: 768px) {
+      #sidebar { display: none; }
+      #calendar-container { margin-left: 0; padding: 10px; }
+      .calendar-header, .calendar-grid { font-size: 0.9em; }
+      .modal-content { padding: 15px; }
     }
   </style>
 </head>
-<body class="theme-transition">
-  <!-- Loading Spinner -->
-  <div id="loading-spinner"><div class="spinner"></div></div>
+<body>
+  <!-- Spinner -->
+  <div id="spinner"></div>
 
-  <!-- Cabeçalho usando Materialize -->
-  <nav class="blue">
-    <div class="nav-wrapper container">
-      <a href="#" class="brand-logo">Agenda Premium</a>
-      <ul id="nav-mobile" class="right hide-on-med-and-down">
-        <li><a href="#" id="prev-btn"><i class="fa fa-chevron-left"></i></a></li>
-        <li><a href="#" id="next-btn"><i class="fa fa-chevron-right"></i></a></li>
-        <li><a href="#" id="toggle-theme">Tema</a></li>
-        <li>
-          <label style="color:#fff; margin-top:15px;">Cor:
-            <input type="color" id="color-picker" value="#4285f4" style="border: none; background: none;">
-          </label>
-        </li>
-        <li><a href="#" id="sync-btn">Sync</a></li>
-        <li><a href="#" id="btn-logout">Sair</a></li>
-      </ul>
+  <!-- Cabeçalho -->
+  <header id="header" role="banner">
+    <div class="nav-buttons">
+      <button id="prev-btn" aria-label="Anterior"><i class="fa fa-chevron-left"></i></button>
+      <button id="next-btn" aria-label="Próxima"><i class="fa fa-chevron-right"></i></button>
     </div>
-  </nav>
+    <div id="current-week-display" aria-live="polite">Data: ...</div>
+    <div id="view-selector">
+      <button id="view-week" aria-label="Visualizar Semana">Semana</button>
+      <button id="view-month" aria-label="Visualizar Mês">Mês</button>
+      <button id="view-year" aria-label="Visualizar Ano">Ano</button>
+      <button id="toggle-theme" aria-label="Alternar Tema">Tema</button>
+      <button id="sync-btn" aria-label="Sincronizar Calendário">Sync</button>
+    </div>
+    <div id="user-info"></div>
+  </header>
 
-  <!-- Área do Calendário -->
-  <div id="calendar-container" class="container">
-    <div id="current-week-display" class="center-align"></div>
-    <div id="calendar-header" class="row"></div>
-    <div id="calendar-body" class="row"></div>
+  <!-- Sidebar (mantém Histórico e Sair) -->
+  <aside id="sidebar" role="complementary">
+    <div id="profile-section">
+      <span id="profile-name">Usuário</span>
+    </div>
+    <nav>
+      <ul>
+        <li id="btn-history">Histórico</li>
+        <li id="btn-logout">Sair</li>
+      </ul>
+    </nav>
+    <!-- Modal de Histórico -->
+    <div id="history-modal" class="modal" role="dialog" aria-modal="true">
+      <div class="modal-content">
+        <h3>Histórico de Alterações</h3>
+        <div id="history-log" style="max-height:300px; overflow:auto; margin-bottom:10px;"></div>
+        <button id="close-history">Fechar</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Calendário -->
+  <div id="calendar-container">
+    <div id="calendar-header"></div>
+    <div id="calendar-body"></div>
   </div>
 
   <!-- Modal de Autenticação -->
-  <div id="auth-modal" class="modal">
+  <div id="auth-modal" class="modal" role="dialog" aria-modal="true">
     <div class="modal-content">
-      <h4>Entrar / Registrar</h4>
-      <div class="row">
-        <div class="input-field col s12">
-          <input id="auth-email" type="email">
-          <label for="auth-email">Email</label>
-        </div>
-        <div class="input-field col s12">
-          <input id="auth-password" type="password">
-          <label for="auth-password">Senha</label>
-        </div>
-      </div>
-      <a href="#" id="auth-login-btn" class="waves-effect waves-light btn">Entrar</a>
-      <div class="divider"></div>
-      <div class="row">
-        <div class="input-field col s12">
-          <input id="auth-username" type="text">
-          <label for="auth-username">Nome de Usuário (opcional)</label>
-        </div>
-        <div class="input-field col s12">
-          <input id="auth-register-password" type="password">
-          <label for="auth-register-password">Senha (mínimo 6 caracteres)</label>
-        </div>
-        <div class="input-field col s12">
-          <input id="auth-register-password-confirm" type="password">
-          <label for="auth-register-password-confirm">Confirme a senha</label>
-        </div>
-        <p>
-          <label>
-            <input type="checkbox" id="auth-terms" />
-            <span>Aceito os Termos e Política</span>
-          </label>
-        </p>
-      </div>
-      <a href="#" id="auth-register-btn" class="waves-effect waves-light btn">Registrar</a>
+      <h3>Entrar / Registrar</h3>
+      <input type="email" id="auth-email" placeholder="Email">
+      <input type="password" id="auth-password" placeholder="Senha">
+      <button id="auth-login-btn">Entrar</button>
+      <hr>
+      <input type="text" id="auth-username" placeholder="Usuário (5 caracteres)">
+      <input type="password" id="auth-register-password" placeholder="Senha (mínimo 6 caracteres)">
+      <input type="password" id="auth-register-password-confirm" placeholder="Confirme a senha">
+      <label><input type="checkbox" id="auth-terms"> Aceito os Termos e Política</label>
+      <button id="auth-register-btn">Registrar</button>
       <p><a href="#" id="auth-forgot-password">Esqueceu a senha?</a></p>
     </div>
   </div>
 
   <!-- Modal de Evento (Criação / Edição) -->
-  <div id="event-modal" class="modal">
+  <div id="event-modal" class="modal" role="dialog" aria-modal="true">
     <div class="modal-content">
-      <h4 id="modal-title">Novo Evento</h4>
+      <h3 id="modal-title">Novo Evento</h3>
       <p id="event-info"></p>
-      <div class="row">
-        <div class="input-field col s12">
-          <input id="event-title" type="text">
-          <label for="event-title">Título do Evento</label>
-        </div>
-        <div class="input-field col s12">
-          <textarea id="event-description" class="materialize-textarea"></textarea>
-          <label for="event-description">Descrição</label>
-        </div>
-        <div class="input-field col s6">
-          <input id="event-start" type="time">
-          <label for="event-start">Início</label>
-        </div>
-        <div class="input-field col s6">
-          <input id="event-end" type="time">
-          <label for="event-end">Término</label>
-        </div>
-        <div class="input-field col s12">
-          <select id="event-recurrence">
-            <option value="none" selected>Nenhum</option>
-            <option value="daily">Diário</option>
-            <option value="weekly">Semanal</option>
-            <option value="monthly">Mensal</option>
-          </select>
-          <label>Recorrência</label>
-        </div>
+      <input type="text" id="event-title" placeholder="Título do Evento">
+      <textarea id="event-description" placeholder="Descrição"></textarea>
+      <label>Início: <input type="time" id="event-start"></label>
+      <label>Término: <input type="time" id="event-end"></label>
+      <!-- Novo campo de Recorrência -->
+      <label>Recorrência: 
+        <select id="event-recurrencia">
+          <option value="none" selected>Nenhum</option>
+          <option value="diario">Diário</option>
+          <option value="semanal">Semanal</option>
+          <option value="mensal">Mensal</option>
+        </select>
+      </label>
+      <div style="margin-top:10px;">
+        <button id="save-event">Salvar</button>
+        <button id="delete-event" style="display: none;">Excluir</button>
+        <button id="cancel-event">Cancelar</button>
       </div>
-      <a href="#" id="save-event" class="waves-effect waves-light btn">Salvar</a>
-      <a href="#" id="delete-event" class="waves-effect waves-light btn red" style="display:none;">Excluir</a>
-      <a href="#" id="cancel-event" class="waves-effect waves-light btn grey">Cancelar</a>
     </div>
   </div>
 
-  <!-- Scripts do Firebase, Materialize e Lógica do App -->
+  <!-- Toast Container -->
+  <div id="toast-container" aria-live="assertive"></div>
+
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+
   <script>
-    // Inicializa o Materialize
-    document.addEventListener('DOMContentLoaded', function() {
-      var elemsModal = document.querySelectorAll('.modal');
-      M.Modal.init(elemsModal, {opacity: 0.7});
-      var elemsSelect = document.querySelectorAll('select');
-      M.FormSelect.init(elemsSelect);
-    });
+    document.addEventListener("DOMContentLoaded", function() {
+      "use strict";
+      /***************************************
+       * CONFIGURAÇÃO DO FIREBASE – ajuste conforme necessário
+       ***************************************/
+      const firebaseConfig = {
+        apiKey: "AIzaSyDxMWPu_CnXV-u4-vlDFd-IZ8fzlyKJHng",
+        authDomain: "financeiro-5.firebaseapp.com",
+        databaseURL: "https://financeiro-5-default-rtdb.firebaseio.com",
+        projectId: "financeiro-5",
+        storageBucket: "financeiro-5",
+        messagingSenderId: "686639785223",
+        appId: "1:686639785223:web:0314689c82c6dd1c2951a2",
+        measurementId: "G-Q5REWML5DX"
+      };
+      firebase.initializeApp(firebaseConfig);
+      const auth = firebase.auth();
+      const database = firebase.database();
 
-    // Configuração do Firebase
-    const firebaseConfig = {
-      apiKey: "AIzaSyDxMWPu_CnXV-u4-vlDFd-IZ8fzlyKJHng",
-      authDomain: "financeiro-5.firebaseapp.com",
-      databaseURL: "https://financeiro-5-default-rtdb.firebaseio.com",
-      projectId: "financeiro-5",
-      storageBucket: "financeiro-5",
-      messagingSenderId: "686639785223",
-      appId: "1:686639785223:web:0314689c82c6dd1c2951a2",
-      measurementId: "G-Q5REWML5DX"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const database = firebase.database();
+      /***************************************
+       * VARIÁVEIS GLOBAIS E DE ESTADO
+       ***************************************/
+      let currentUser = null;
+      let currentDate = new Date();
+      let currentView = "week"; // "week", "month" ou "year"
+      let allEvents = {}; // Eventos indexados por data "YYYY-MM-DD"
+      let historyLog = [];
+      let eventsListener = null;
+      let checkForUpcomingEventsInterval = null;
+      const diasSemana = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
 
-    // Variáveis globais
-    let currentUser = null;
-    let currentDate = new Date();
-    let currentView = "week"; // "week", "month", "year"
-    let allEvents = {};
-    const diasSemana = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
-
-    // Armazenamento offline
-    let offlineEvents = JSON.parse(localStorage.getItem("offlineEvents") || "[]");
-    function syncOfflineEvents() {
-      if (navigator.onLine && offlineEvents.length > 0 && currentUser) {
-        offlineEvents.forEach(ev => {
-          let refPath = "agendas/" + currentUser.uid + "/" + ev.date + "/dia";
-          let cellRef = database.ref(refPath);
-          cellRef.once('value').then(snapshot => {
-            let events = snapshot.val() || [];
-            events.push(ev.event);
-            return cellRef.set(events);
+      // Offline: array para eventos salvos offline
+      let offlineEvents = JSON.parse(localStorage.getItem("offlineEvents") || "[]");
+      function syncOfflineEvents() {
+        if (navigator.onLine && offlineEvents.length > 0 && currentUser) {
+          offlineEvents.forEach(offlineEv => {
+            const refPath = "agendas/" + currentUser.uid + "/" + offlineEv.date + "/dia";
+            const cellRef = database.ref(refPath);
+            cellRef.once('value').then(snapshot => {
+              let events = snapshot.val();
+              if (!Array.isArray(events)) { events = []; }
+              events.push(offlineEv.event);
+              return cellRef.set(events);
+            });
           });
-        });
-        offlineEvents = [];
-        localStorage.setItem("offlineEvents", JSON.stringify(offlineEvents));
-        M.toast({html: 'Eventos offline sincronizados!'});
+          offlineEvents = [];
+          localStorage.setItem("offlineEvents", JSON.stringify(offlineEvents));
+          showToast("Eventos offline sincronizados.");
+        }
       }
-    }
-    window.addEventListener('online', syncOfflineEvents);
+      window.addEventListener('online', syncOfflineEvents);
 
-    // Spinner de carregamento
-    function showSpinner() {
-      document.getElementById("loading-spinner").style.display = "block";
-    }
-    function hideSpinner() {
-      document.getElementById("loading-spinner").style.display = "none";
-    }
+      /***************************************
+       * FUNÇÕES UTILITÁRIAS
+       ***************************************/
+      function showToast(message) {
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.textContent = message;
+        document.getElementById('toast-container').appendChild(toast);
+        setTimeout(() => { toast.remove(); }, 3000);
+      }
+      function logHistory(message) {
+        const timestamp = new Date().toLocaleString();
+        historyLog.push({ message, timestamp });
+        if(historyLog.length > 50) { historyLog.shift(); }
+      }
+      function updateHistoryModal() {
+        const historyDiv = document.getElementById('history-log');
+        historyDiv.innerHTML = "";
+        historyLog.forEach(entry => {
+          const p = document.createElement('p');
+          p.textContent = `[${entry.timestamp}] ${entry.message}`;
+          historyDiv.appendChild(p);
+        });
+      }
+      function showHistory() {
+        updateHistoryModal();
+        document.getElementById('history-modal').style.display = 'flex';
+      }
+      function closeHistory() {
+        document.getElementById('history-modal').style.display = 'none';
+      }
 
-    // Toast com Materialize
-    function showToast(message) {
-      M.toast({html: message});
-    }
-
-    // Permite ao usuário escolher a cor do cabeçalho
-    document.getElementById("color-picker").addEventListener("input", function(){
-      let color = this.value;
-      document.documentElement.style.setProperty("--header-bg", color);
-    });
-
-    // Toggle de tema
-    function toggleTheme() {
-      if(document.documentElement.classList.contains("theme-dark")){
-        document.documentElement.classList.remove("theme-dark");
-        localStorage.setItem("themeDark", "false");
-      } else {
+      /***************************************
+       * TEMAS: Alternar entre claro e escuro
+       ***************************************/
+      function toggleTheme() {
+        if(document.documentElement.classList.contains("theme-dark")){
+          document.documentElement.classList.remove("theme-dark");
+          localStorage.setItem("themeDark", "false");
+        } else {
+          document.documentElement.classList.add("theme-dark");
+          localStorage.setItem("themeDark", "true");
+        }
+      }
+      if(localStorage.getItem("themeDark") === "true"){
         document.documentElement.classList.add("theme-dark");
-        localStorage.setItem("themeDark", "true");
       }
-    }
-    if(localStorage.getItem("themeDark") === "true"){
-      document.documentElement.classList.add("theme-dark");
-    }
-    document.getElementById("toggle-theme").addEventListener("click", toggleTheme);
+      document.getElementById("toggle-theme").addEventListener("click", toggleTheme);
 
-    // Funções de autenticação com feedback
-    function login() {
-      const email = document.getElementById('auth-email').value.trim();
-      const password = document.getElementById('auth-password').value.trim();
-      if (!email) { showToast("Informe um email válido."); return; }
-      auth.signInWithEmailAndPassword(email, password)
-        .then(() => { 
-          showToast("Login efetuado.");
-          M.Modal.getInstance(document.getElementById('auth-modal')).close();
-        })
-        .catch(error => { showToast("Erro no login: " + error.message); });
-    }
-    function register() {
-      const email = document.getElementById('auth-email').value.trim();
-      const password = document.getElementById('auth-register-password').value.trim();
-      const confirmPassword = document.getElementById('auth-register-password-confirm').value.trim();
-      const username = document.getElementById('auth-username').value.trim();
-      const termosAceitos = document.getElementById('auth-terms').checked;
-      if (password !== confirmPassword) { showToast("Senhas não conferem."); return; }
-      if (!termosAceitos) { showToast("Aceite os Termos."); return; }
-      auth.createUserWithEmailAndPassword(email, password)
-        .then(userCredential => {
-          currentUser = userCredential.user;
-          return database.ref("usuarios/" + currentUser.uid).set({
-            email: email,
-            username: username,
-            criadoEm: new Date().toLocaleString()
-          });
-        })
-        .then(() => { 
-          showToast("Registro efetuado.");
-          M.Modal.getInstance(document.getElementById('auth-modal')).close();
-        })
-        .catch(error => {
-          if(error.code === "auth/email-already-in-use") {
-            showToast("Email já está em uso.");
-          } else if(error.code === "auth/weak-password") {
-            showToast("Senha fraca, escolha uma senha mais forte.");
-          } else {
-            showToast("Erro no registro: " + error.message);
-          }
-        });
-    }
-    document.getElementById('auth-login-btn').addEventListener('click', login);
-    document.getElementById('auth-register-btn').addEventListener('click', register);
-    document.getElementById('auth-forgot-password').addEventListener('click', () => {
-      const email = document.getElementById('auth-email').value.trim();
-      if (email) {
-        auth.sendPasswordResetEmail(email)
-          .then(() => { showToast("Email de recuperação enviado."); })
-          .catch(error => { showToast("Erro: " + error.message); });
-      } else { showToast("Informe o email para recuperação."); }
-    });
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        currentUser = user;
-        document.getElementById('btn-logout').textContent = user.email.split('@')[0];
-        document.getElementById('auth-modal').style.display = 'none';
-        loadEvents();
-        renderCalendar();
-      } else {
-        currentUser = null;
-        M.Modal.getInstance(document.getElementById('auth-modal')).open();
+      /***************************************
+       * AUTENTICAÇÃO
+       ***************************************/
+      function validarUsuario(usuario) {
+        return (usuario.length !== 5) ? "Usuário deve ter 5 caracteres." : "";
       }
-    });
-
-    // Carregamento dos eventos do Firebase
-    function loadEvents() {
-      let eventsRef = database.ref("agendas/" + currentUser.uid);
-      eventsRef.on("value", snapshot => {
-        allEvents = snapshot.val() || {};
-        renderCalendar();
-      }, error => {
-        console.error("Erro ao carregar eventos:", error);
+      function validarSenha(senha) {
+        return (senha.length < 6) ? "Senha deve ter pelo menos 6 caracteres." : "";
+      }
+      function login() {
+        const email = document.getElementById('auth-email').value.trim();
+        const password = document.getElementById('auth-password').value.trim();
+        if (!email) { showToast("Informe um email válido."); return; }
+        let erro = validarSenha(password);
+        if (erro) { showToast(erro); return; }
+        auth.signInWithEmailAndPassword(email, password)
+          .then(() => { showToast("Login efetuado."); })
+          .catch(error => { showToast("Erro no login: " + error.message); });
+      }
+      function register() {
+        const email = document.getElementById('auth-email').value.trim();
+        const password = document.getElementById('auth-register-password').value.trim();
+        const confirmPassword = document.getElementById('auth-register-password-confirm').value.trim();
+        const username = document.getElementById('auth-username').value.trim();
+        const termosAceitos = document.getElementById('auth-terms').checked;
+        let erro = validarUsuario(username) || validarSenha(password);
+        if (password !== confirmPassword) { showToast("Senhas não conferem."); return; }
+        if (!termosAceitos) { showToast("Aceite os Termos."); return; }
+        if (erro) { showToast(erro); return; }
+        const emailPadrao = username + "@SoundStruct.com";
+        auth.createUserWithEmailAndPassword(emailPadrao, password)
+          .then(userCredential => {
+            currentUser = userCredential.user;
+            return database.ref("usuarios/" + currentUser.uid).set({
+              username: username,
+              criadoEm: new Date().toLocaleString()
+            });
+          })
+          .then(() => { showToast("Registro efetuado."); })
+          .catch(error => { showToast("Erro no registro: " + error.message); });
+      }
+      document.getElementById('auth-login-btn').addEventListener('click', login);
+      document.getElementById('auth-register-btn').addEventListener('click', register);
+      document.getElementById('auth-forgot-password').addEventListener('click', () => {
+        const email = document.getElementById('auth-email').value.trim();
+        if (email) {
+          auth.sendPasswordResetEmail(email)
+            .then(() => { showToast("Email de recuperação enviado."); })
+            .catch(error => { showToast("Erro: " + error.message); });
+        } else { showToast("Informe o email para recuperação."); }
       });
-    }
+      auth.onAuthStateChanged(user => {
+        if (user) {
+          currentUser = user;
+          document.getElementById('profile-name').textContent = user.email.split('@')[0];
+          document.getElementById('user-info').textContent = user.email;
+          document.getElementById('auth-modal').style.display = 'none';
+          loadEvents();
+          renderCalendar();
+        } else {
+          currentUser = null;
+          document.getElementById('auth-modal').style.display = 'flex';
+        }
+      });
 
-    // Função que retorna os eventos para uma data (suporte a recorrência)
-    function getEventsForDate(date) {
-      const dateKey = date.toISOString().slice(0,10);
-      return (allEvents[dateKey] && allEvents[dateKey]["dia"]) || [];
-    }
-
-    // Renderização do Calendário
-    function renderCalendar() {
-      showSpinner();
-      updateHeaderDisplay();
-      if (currentView === "week") {
-        renderWeekView();
-      } else if (currentView === "month") {
-        renderMonthView();
-      } else if (currentView === "year") {
-        renderYearView();
+      /***************************************
+       * EVENTOS – Armazenamento unificado (chave "dia")
+       ***************************************/
+      function getEventsForDate(date) {
+        const dateKey = date.toISOString().slice(0,10);
+        return (allEvents[dateKey] && allEvents[dateKey]["dia"]) || [];
       }
-      hideSpinner();
-    }
-    function updateHeaderDisplay() {
-      if (currentView === "week") {
+
+      /***************************************
+       * NAVEGAÇÃO – Atualiza currentDate conforme visualização
+       ***************************************/
+      document.getElementById('prev-btn').addEventListener('click', function() {
+        if (currentView === "week") {
+          currentDate.setDate(currentDate.getDate() - 7);
+        } else if (currentView === "month") {
+          currentDate.setMonth(currentDate.getMonth() - 1);
+        } else if (currentView === "year") {
+          currentDate.setFullYear(currentDate.getFullYear() - 1);
+        }
+        renderCalendar();
+      });
+      document.getElementById('next-btn').addEventListener('click', function() {
+        if (currentView === "week") {
+          currentDate.setDate(currentDate.getDate() + 7);
+        } else if (currentView === "month") {
+          currentDate.setMonth(currentDate.getMonth() + 1);
+        } else if (currentView === "year") {
+          currentDate.setFullYear(currentDate.getFullYear() + 1);
+        }
+        renderCalendar();
+      });
+      document.getElementById('view-week').addEventListener('click', function(){
+        currentView = "week";
+        renderCalendar();
+      });
+      document.getElementById('view-month').addEventListener('click', function(){
+        currentView = "month";
+        renderCalendar();
+      });
+      document.getElementById('view-year').addEventListener('click', function(){
+        currentView = "year";
+        renderCalendar();
+      });
+      document.getElementById('sync-btn').addEventListener('click', function(){
+        syncOfflineEvents();
+        showToast("Calendário sincronizado.");
+      });
+
+      /***************************************
+       * CARREGAMENTO DE EVENTOS DO FIREBASE
+       ***************************************/
+      function loadEvents() {
+        const eventsRef = database.ref("agendas/" + currentUser.uid);
+        eventsListener = eventsRef;
+        // Mostra o spinner enquanto carrega
+        document.getElementById("spinner").style.display = "block";
+        eventsRef.on("value", snapshot => {
+          allEvents = snapshot.val() || {};
+          renderCalendar();
+          document.getElementById("spinner").style.display = "none";
+        }, error => {
+          console.error("Erro ao carregar eventos:", error);
+          document.getElementById("spinner").style.display = "none";
+        });
+      }
+
+      /***************************************
+       * RENDERIZAÇÃO DO CALENDÁRIO – Por modo (Semana, Mês, Ano)
+       ***************************************/
+      function renderCalendar() {
+        updateHeaderDisplay();
+        if (currentView === "week") {
+          renderWeekView();
+        } else if (currentView === "month") {
+          renderMonthView();
+        } else if (currentView === "year") {
+          renderYearView();
+        }
+      }
+      function updateHeaderDisplay() {
+        if (currentView === "week") {
+          let temp = new Date(currentDate);
+          let day = temp.getDay();
+          let diff = temp.getDate() - (day === 0 ? 6 : day - 1);
+          let monday = new Date(temp.setDate(diff));
+          let sunday = new Date(monday);
+          sunday.setDate(monday.getDate() + 6);
+          document.getElementById('current-week-display').textContent =
+            monday.toLocaleDateString() + " - " + sunday.toLocaleDateString();
+        } else if (currentView === "month") {
+          let monthName = currentDate.toLocaleString("pt-BR", { month: "long" });
+          document.getElementById('current-week-display').textContent =
+            monthName.charAt(0).toUpperCase() + monthName.slice(1) + " " + currentDate.getFullYear();
+        } else if (currentView === "year") {
+          document.getElementById('current-week-display').textContent = currentDate.getFullYear();
+        }
+      }
+
+      /***************************************
+       * MODO SEMANA – Renderiza tabela 24h x 7 dias
+       ***************************************/
+      function renderWeekView() {
         let temp = new Date(currentDate);
         let day = temp.getDay();
         let diff = temp.getDate() - (day === 0 ? 6 : day - 1);
         let monday = new Date(temp.setDate(diff));
-        let sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-        document.getElementById('current-week-display').textContent =
-          monday.toLocaleDateString() + " - " + sunday.toLocaleDateString();
-      } else if (currentView === "month") {
-        let monthName = currentDate.toLocaleString("pt-BR", { month: "long" });
-        document.getElementById('current-week-display').textContent =
-          monthName.charAt(0).toUpperCase() + monthName.slice(1) + " " + currentDate.getFullYear();
-      } else if (currentView === "year") {
-        document.getElementById('current-week-display').textContent = currentDate.getFullYear();
-      }
-    }
-
-    // Renderização da visualização semanal com suporte a recorrência
-    function renderWeekView() {
-      let temp = new Date(currentDate);
-      let day = temp.getDay();
-      let diff = temp.getDate() - (day === 0 ? 6 : day - 1);
-      let monday = new Date(temp.setDate(diff));
-      const header = document.getElementById('calendar-header');
-      header.innerHTML = "";
-      let emptyCell = document.createElement('div');
-      emptyCell.className = "time-slot";
-      header.appendChild(emptyCell);
-      for (let i = 0; i < 7; i++) {
-        let dayCell = document.createElement('div');
-        let dataDia = new Date(monday);
-        dataDia.setDate(monday.getDate() + i);
-        dayCell.innerHTML = `<strong>${diasSemana[i]}</strong><br>${dataDia.toLocaleDateString()}`;
-        header.appendChild(dayCell);
-      }
-      const body = document.getElementById('calendar-body');
-      body.innerHTML = "";
-      for (let hour = 0; hour < 24; hour++) {
-        let timeLabel = document.createElement('div');
-        timeLabel.className = "time-label";
-        timeLabel.textContent = hour + ":00";
-        body.appendChild(timeLabel);
+        const header = document.getElementById('calendar-header');
+        header.className = "calendar-header week";
+        header.innerHTML = "";
+        let emptyCell = document.createElement('div');
+        emptyCell.className = "time-slot";
+        header.appendChild(emptyCell);
         for (let i = 0; i < 7; i++) {
+          let dayCell = document.createElement('div');
+          let dataDia = new Date(monday);
+          dataDia.setDate(monday.getDate() + i);
+          dayCell.innerHTML = `<strong>${diasSemana[i]}</strong><br>${dataDia.toLocaleDateString()}`;
+          header.appendChild(dayCell);
+        }
+        const body = document.getElementById('calendar-body');
+        body.className = "calendar-grid week";
+        body.innerHTML = "";
+        for (let hour = 0; hour < 24; hour++) {
+          let timeLabel = document.createElement('div');
+          timeLabel.className = "time-label";
+          timeLabel.textContent = hour + ":00";
+          body.appendChild(timeLabel);
+          for (let i = 0; i < 7; i++) {
+            let cell = document.createElement('div');
+            cell.className = "day-cell";
+            let cellDate = new Date(monday);
+            cellDate.setDate(monday.getDate() + i);
+            cell.dataset.date = cellDate.toISOString().slice(0,10);
+            cell.addEventListener('dblclick', function() {
+              openEventModal(null, null, cellDate, hour);
+            });
+            body.appendChild(cell);
+            let eventsForDay = getEventsForDate(cellDate);
+            // Verifica eventos recorrentes de dias anteriores
+            let eventosRecorrentes = [];
+            for (let key in allEvents) {
+              let evArray = allEvents[key]["dia"] || [];
+              evArray.forEach(ev => {
+                if(ev.recorrencia && ev.recorrencia !== "none") {
+                  let dataOriginal = new Date(ev.dataOriginal || key);
+                  if(dataOriginal <= cellDate) {
+                    if(ev.recorrencia === "diario") {
+                      eventosRecorrentes.push(ev);
+                    } else if(ev.recorrencia === "semanal" && dataOriginal.getDay() === cellDate.getDay()){
+                      eventosRecorrentes.push(ev);
+                    } else if(ev.recorrencia === "mensal" && dataOriginal.getDate() === cellDate.getDate()){
+                      eventosRecorrentes.push(ev);
+                    }
+                  }
+                }
+              });
+            }
+            let eventosExibir = eventsForDay.concat(eventosRecorrentes);
+            if (eventosExibir.length > 0) {
+              eventosExibir.forEach((event, index) => {
+                let eventBlock = document.createElement('div');
+                eventBlock.className = "event-block";
+                eventBlock.textContent = event.titulo;
+                eventBlock.addEventListener('click', function(e) {
+                  e.stopPropagation();
+                  openEventModal(index, event, cellDate, hour);
+                });
+                cell.appendChild(eventBlock);
+              });
+            }
+          }
+        }
+      }
+
+      /***************************************
+       * MODO MÊS – Renderiza grade mensal
+       ***************************************/
+      function renderMonthView() {
+        let year = currentDate.getFullYear();
+        let month = currentDate.getMonth();
+        let firstDay = new Date(year, month, 1);
+        let startDay = firstDay.getDay();
+        let offset = (startDay === 0 ? 6 : startDay - 1);
+        let totalDays = new Date(year, month + 1, 0).getDate();
+        const header = document.getElementById('calendar-header');
+        header.className = "calendar-header month";
+        header.style.display = "grid";
+        header.style.gridTemplateColumns = "repeat(7, 1fr)";
+        header.innerHTML = "";
+        for (let i = 0; i < 7; i++) {
+          let dayName = document.createElement('div');
+          dayName.style.textAlign = "center";
+          dayName.style.fontWeight = "500";
+          dayName.textContent = diasSemana[i].slice(0,3);
+          header.appendChild(dayName);
+        }
+        const body = document.getElementById('calendar-body');
+        body.className = "month-grid";
+        body.innerHTML = "";
+        let cells = Math.ceil((offset + totalDays) / 7) * 7;
+        for (let i = 0; i < cells; i++) {
           let cell = document.createElement('div');
-          cell.className = "day-cell";
-          let cellDate = new Date(monday);
-          cellDate.setDate(monday.getDate() + i);
-          cell.dataset.date = cellDate.toISOString().slice(0,10);
+          cell.className = "month-cell";
+          if (i >= offset && i < offset + totalDays) {
+            let dayNum = i - offset + 1;
+            cell.innerHTML = `<div class="day-number">${dayNum}</div>`;
+            let cellDate = new Date(year, month, dayNum);
+            cell.dataset.date = cellDate.toISOString().slice(0,10);
+            cell.addEventListener('dblclick', function() {
+              openEventModal(null, null, cellDate, 9);
+            });
+            let eventsForDay = getEventsForDate(cellDate);
+            if (eventsForDay.length > 0) {
+              eventsForDay.forEach((event, index) => {
+                let eventBlock = document.createElement('div');
+                eventBlock.className = "event-block";
+                eventBlock.style.position = "relative";
+                eventBlock.style.marginTop = "4px";
+                eventBlock.textContent = event.titulo;
+                eventBlock.addEventListener('click', function(e) {
+                  e.stopPropagation();
+                  let eventHour = parseInt(event.inicio.split(":")[0]);
+                  openEventModal(index, event, cellDate, eventHour);
+                });
+                cell.appendChild(eventBlock);
+              });
+            }
+          }
+          body.appendChild(cell);
+        }
+      }
+
+      /***************************************
+       * MODO ANO – Renderiza grade multi-ano
+       ***************************************/
+      function renderYearView() {
+        const year = currentDate.getFullYear();
+        const header = document.getElementById('calendar-header');
+        header.style.display = "none";
+        const body = document.getElementById('calendar-body');
+        body.className = "year-grid";
+        body.innerHTML = "";
+        for (let y = year - 1; y <= year + 2; y++) {
+          let cell = document.createElement('div');
+          cell.className = "year-cell";
+          cell.innerHTML = `<div class="month-name">${y}</div>`;
+          let aggregatedEvents = [];
+          for (let m = 0; m < 12; m++) {
+            let daysInMonth = new Date(y, m + 1, 0).getDate();
+            for (let d = 1; d <= daysInMonth; d++) {
+              let dateObj = new Date(y, m, d);
+              aggregatedEvents = aggregatedEvents.concat(getEventsForDate(dateObj));
+            }
+          }
+          if (aggregatedEvents.length > 0) {
+            let eventsDiv = document.createElement('div');
+            eventsDiv.className = "year-events";
+            aggregatedEvents.forEach(ev => {
+              let span = document.createElement('span');
+              span.textContent = ev.titulo;
+              eventsDiv.appendChild(span);
+            });
+            cell.appendChild(eventsDiv);
+          }
           cell.addEventListener('dblclick', function() {
-            openEventModal(null, null, cellDate, hour);
+            currentDate = new Date(y, 0, 1);
+            currentView = "month";
+            renderCalendar();
+            header.style.display = "grid";
           });
           body.appendChild(cell);
-          let eventsForDay = getEventsForDate(cellDate);
-          let eventsForHour = eventsForDay.filter(ev => {
-            let [evHour] = ev.inicio.split(":");
-            return parseInt(evHour) === hour;
-          });
-          // Processa também eventos recorrentes (lógica simplificada)
-          let recurringEvents = [];
-          eventsForDay.forEach(ev => {
-            if(ev.recurrence && ev.recurrence !== "none") {
-              let originalDate = new Date(ev.originalDate || cell.dataset.date);
-              if(ev.recurrence === "daily" ||
-                 (ev.recurrence === "weekly" && cellDate.getDay() === originalDate.getDay()) ||
-                 (ev.recurrence === "monthly" && cellDate.getDate() === originalDate.getDate())) {
-                recurringEvents.push(ev);
-              }
-            }
-          });
-          eventsForHour = eventsForHour.concat(recurringEvents);
-          if (eventsForHour.length > 0) {
-            eventsForHour.forEach((event, index) => {
-              let eventBlock = document.createElement('div');
-              eventBlock.className = "event-block";
-              eventBlock.textContent = event.titulo;
-              eventBlock.addEventListener('click', function(e) {
-                e.stopPropagation();
-                openEventModal(index, event, cellDate, hour);
-              });
-              cell.appendChild(eventBlock);
-            });
-          }
         }
       }
-    }
 
-    // Renderização da visualização mensal
-    function renderMonthView() {
-      let year = currentDate.getFullYear();
-      let month = currentDate.getMonth();
-      let firstDay = new Date(year, month, 1);
-      let startDay = firstDay.getDay();
-      let offset = (startDay === 0 ? 6 : startDay - 1);
-      let totalDays = new Date(year, month + 1, 0).getDate();
-      const header = document.getElementById('calendar-header');
-      header.className = "calendar-header month";
-      header.style.display = "grid";
-      header.style.gridTemplateColumns = "repeat(7, 1fr)";
-      header.innerHTML = "";
-      for (let i = 0; i < 7; i++) {
-        let dayName = document.createElement('div');
-        dayName.style.textAlign = "center";
-        dayName.style.fontWeight = "500";
-        dayName.textContent = diasSemana[i].slice(0,3);
-        header.appendChild(dayName);
+      /***************************************
+       * MODAL DE EVENTO – Criação / Edição
+       ***************************************/
+      function openEventModal(eventIndex = null, eventData = null, dateObj, hour) {
+        const modal = document.getElementById('event-modal');
+        modal.style.display = 'flex';
+        document.getElementById('modal-title').textContent = eventData ? "Editar Evento" : "Novo Evento";
+        document.getElementById('event-info').textContent =
+          dateObj.toLocaleDateString() + " | Sugestão: " + hour + ":00";
+        document.getElementById('event-title').value = eventData ? eventData.titulo : "";
+        document.getElementById('event-description').value = eventData ? eventData.descricao : "";
+        document.getElementById('event-start').value = (eventData && eventData.inicio) ? eventData.inicio : String(hour).padStart(2, '0') + ":00";
+        document.getElementById('event-end').value = (eventData && eventData.termino) ? eventData.termino : String((hour + 1) % 24).padStart(2, '0') + ":00";
+        // Define o valor da recorrência (se houver)
+        document.getElementById('event-recurrencia').value = eventData && eventData.recorrencia ? eventData.recorrencia : "none";
+        modal.dataset.date = dateObj.toISOString();
+        modal.dataset.eventIndex = eventIndex;
+        document.getElementById('delete-event').style.display = eventData ? 'inline-block' : 'none';
       }
-      const body = document.getElementById('calendar-body');
-      body.className = "month-grid";
-      body.innerHTML = "";
-      let cells = Math.ceil((offset + totalDays) / 7) * 7;
-      for (let i = 0; i < cells; i++) {
-        let cell = document.createElement('div');
-        cell.className = "month-cell";
-        if (i >= offset && i < offset + totalDays) {
-          let dayNum = i - offset + 1;
-          cell.innerHTML = `<div class="day-number">${dayNum}</div>`;
-          let cellDate = new Date(year, month, dayNum);
-          cell.dataset.date = cellDate.toISOString().slice(0,10);
-          cell.addEventListener('dblclick', function() {
-            openEventModal(null, null, cellDate, 9);
-          });
-          let eventsForDay = getEventsForDate(cellDate);
-          if (eventsForDay.length > 0) {
-            eventsForDay.forEach((event, index) => {
-              let eventBlock = document.createElement('div');
-              eventBlock.className = "event-block";
-              eventBlock.style.position = "relative";
-              eventBlock.style.marginTop = "4px";
-              eventBlock.textContent = event.titulo;
-              eventBlock.addEventListener('click', function(e) {
-                e.stopPropagation();
-                let eventHour = parseInt(event.inicio.split(":")[0]);
-                openEventModal(index, event, cellDate, eventHour);
-              });
-              cell.appendChild(eventBlock);
-            });
-          }
-        }
-        body.appendChild(cell);
+      function closeEventModal() {
+        const modal = document.getElementById('event-modal');
+        modal.style.display = 'none';
+        delete modal.dataset.eventIndex;
+        delete modal.dataset.date;
       }
-    }
+      document.getElementById('cancel-event').addEventListener('click', closeEventModal);
 
-    // Renderização da visualização anual
-    function renderYearView() {
-      const year = currentDate.getFullYear();
-      const header = document.getElementById('calendar-header');
-      header.style.display = "none";
-      const body = document.getElementById('calendar-body');
-      body.className = "year-grid";
-      body.innerHTML = "";
-      for (let y = year - 1; y <= year + 2; y++) {
-        let cell = document.createElement('div');
-        cell.className = "year-cell";
-        cell.innerHTML = `<div class="month-name">${y}</div>`;
-        let aggregatedEvents = [];
-        for (let m = 0; m < 12; m++) {
-          let daysInMonth = new Date(y, m + 1, 0).getDate();
-          for (let d = 1; d <= daysInMonth; d++) {
-            let dateObj = new Date(y, m, d);
-            aggregatedEvents = aggregatedEvents.concat(getEventsForDate(dateObj));
-          }
-        }
-        if (aggregatedEvents.length > 0) {
-          let eventsDiv = document.createElement('div');
-          eventsDiv.className = "year-events";
-          aggregatedEvents.forEach(ev => {
-            let span = document.createElement('span');
-            span.textContent = ev.titulo;
-            eventsDiv.appendChild(span);
-          });
-          cell.appendChild(eventsDiv);
-        }
-        cell.addEventListener('dblclick', function() {
-          currentDate = new Date(y, 0, 1);
-          currentView = "month";
-          renderCalendar();
-          header.style.display = "grid";
-        });
-        body.appendChild(cell);
-      }
-    }
-
-    // Modal de Evento – criação/edição com recorrência
-    function openEventModal(eventIndex = null, eventData = null, dateObj, hour) {
-      let modalElem = document.getElementById('event-modal');
-      let instance = M.Modal.getInstance(modalElem);
-      instance.open();
-      document.getElementById('modal-title').textContent = eventData ? "Editar Evento" : "Novo Evento";
-      document.getElementById('event-info').textContent =
-        dateObj.toLocaleDateString() + " | Sugestão: " + hour + ":00";
-      document.getElementById('event-title').value = eventData ? eventData.titulo : "";
-      document.getElementById('event-description').value = eventData ? eventData.descricao : "";
-      document.getElementById('event-start').value = (eventData && eventData.inicio) ? eventData.inicio : String(hour).padStart(2, '0') + ":00";
-      document.getElementById('event-end').value = (eventData && eventData.termino) ? eventData.termino : String((hour + 1) % 24).padStart(2, '0') + ":00";
-      document.getElementById('event-recurrence').value = eventData ? eventData.recurrence : "none";
-      M.FormSelect.init(document.querySelectorAll('select')); // Atualiza o select
-      modalElem.dataset.date = dateObj.toISOString();
-      modalElem.dataset.eventIndex = eventIndex;
-      document.getElementById('delete-event').style.display = eventData ? 'inline-block' : 'none';
-    }
-    function closeEventModal() {
-      let modalElem = document.getElementById('event-modal');
-      let instance = M.Modal.getInstance(modalElem);
-      instance.close();
-      delete modalElem.dataset.eventIndex;
-      delete modalElem.dataset.date;
-    }
-    document.getElementById('cancel-event').addEventListener('click', closeEventModal);
-
-    // Salvar evento (suporte a recorrência e modo offline)
-    function saveEvent() {
-      let modalElem = document.getElementById('event-modal');
-      let newEvent = {
-        titulo: document.getElementById('event-title').value,
-        descricao: document.getElementById('event-description').value,
-        inicio: document.getElementById('event-start').value,
-        termino: document.getElementById('event-end').value,
-        recurrence: document.getElementById('event-recurrence').value,
-        originalDate: modalElem.dataset.date
-      };
-      if (!newEvent.titulo || !newEvent.inicio || !newEvent.termino) {
-        showToast("Preencha os campos obrigatórios.");
-        return;
-      }
-      let dateKey = new Date(modalElem.dataset.date).toISOString().slice(0,10);
-      if (!navigator.onLine) {
-        // Salva offline
-        offlineEvents.push({ date: dateKey, event: newEvent });
-        localStorage.setItem("offlineEvents", JSON.stringify(offlineEvents));
-        showToast("Evento salvo offline.");
-        closeEventModal();
-        renderCalendar();
-        return;
-      }
-      let refPath = "agendas/" + currentUser.uid + "/" + dateKey + "/dia";
-      let cellRef = database.ref(refPath);
-      cellRef.once('value').then(snapshot => {
-        let events = snapshot.val();
-        if (!Array.isArray(events)) { events = []; }
-        let evIndex = modalElem.dataset.eventIndex;
-        if (evIndex !== null && evIndex !== "" && evIndex !== "null") {
-          events[evIndex] = newEvent;
-        } else {
-          events.push(newEvent);
-        }
-        return cellRef.set(events);
-      }).then(() => {
-        showToast("Evento salvo.");
-        closeEventModal();
-      }).catch(error => {
-        showToast("Erro ao salvar: " + error.message);
-      });
-    }
-    document.getElementById('save-event').addEventListener('click', saveEvent);
-
-    // Excluir evento
-    function deleteEvent() {
-      let modalElem = document.getElementById('event-modal');
-      let evIndex = modalElem.dataset.eventIndex;
-      if (evIndex === null || evIndex === "" || evIndex === "null") {
-        showToast("Nenhum evento para excluir.");
-        return;
-      }
-      let dateKey = new Date(modalElem.dataset.date).toISOString().slice(0,10);
-      let refPath = "agendas/" + currentUser.uid + "/" + dateKey + "/dia";
-      let cellRef = database.ref(refPath);
-      cellRef.once('value').then(snapshot => {
-        let events = snapshot.val();
-        if (!Array.isArray(events)) { events = []; }
-        if (evIndex >= events.length) {
-          showToast("Evento não encontrado.");
+      /***************************************
+       * SALVAR EVENTO – Cria ou atualiza um evento
+       ***************************************/
+      function saveEvent() {
+        const modal = document.getElementById('event-modal');
+        const newEvent = {
+          titulo: document.getElementById('event-title').value,
+          descricao: document.getElementById('event-description').value,
+          inicio: document.getElementById('event-start').value,
+          termino: document.getElementById('event-end').value,
+          recorrencia: document.getElementById('event-recurrencia').value,
+          dataOriginal: modal.dataset.date
+        };
+        if (!newEvent.titulo || !newEvent.inicio || !newEvent.termino) {
+          showToast("Preencha os campos obrigatórios.");
           return;
         }
-        events.splice(evIndex, 1);
-        return cellRef.set(events);
-      }).then(() => {
-        showToast("Evento excluído.");
-        closeEventModal();
-      }).catch(error => {
-        showToast("Erro ao excluir: " + error.message);
+        const dateKey = new Date(modal.dataset.date).toISOString().slice(0,10);
+        const refPath = "agendas/" + currentUser.uid + "/" + dateKey + "/dia";
+        const cellRef = database.ref(refPath);
+        // Se estiver offline, salva localmente
+        if (!navigator.onLine) {
+          offlineEvents.push({ date: dateKey, event: newEvent });
+          localStorage.setItem("offlineEvents", JSON.stringify(offlineEvents));
+          showToast("Evento salvo offline.");
+          closeEventModal();
+          renderCalendar();
+          return;
+        }
+        cellRef.once('value').then(snapshot => {
+          let events = snapshot.val();
+          if (!Array.isArray(events)) { events = []; }
+          const evIndex = modal.dataset.eventIndex;
+          if (evIndex !== null && evIndex !== "" && evIndex !== "null") {
+            events[evIndex] = newEvent;
+            logHistory("Evento editado: " + newEvent.titulo);
+          } else {
+            events.push(newEvent);
+            logHistory("Evento adicionado: " + newEvent.titulo);
+          }
+          return cellRef.set(events);
+        }).then(() => {
+          showToast("Evento salvo.");
+          closeEventModal();
+        }).catch(error => {
+          showToast("Erro ao salvar: " + error.message);
+        });
+      }
+      document.getElementById('save-event').addEventListener('click', saveEvent);
+
+      /***************************************
+       * EXCLUIR EVENTO – Remove o evento
+       ***************************************/
+      function deleteEvent() {
+        const modal = document.getElementById('event-modal');
+        const evIndex = modal.dataset.eventIndex;
+        if (evIndex === null || evIndex === "" || evIndex === "null") {
+          showToast("Nenhum evento para excluir.");
+          return;
+        }
+        const dateKey = new Date(modal.dataset.date).toISOString().slice(0,10);
+        const refPath = "agendas/" + currentUser.uid + "/" + dateKey + "/dia";
+        const cellRef = database.ref(refPath);
+        cellRef.once('value').then(snapshot => {
+          let events = snapshot.val();
+          if (!Array.isArray(events)) { events = []; }
+          if (evIndex >= events.length) {
+            showToast("Evento não encontrado.");
+            return;
+          }
+          let removed = events.splice(evIndex, 1);
+          logHistory("Evento excluído: " + removed[0].titulo);
+          return cellRef.set(events);
+        }).then(() => {
+          showToast("Evento excluído.");
+          closeEventModal();
+        }).catch(error => {
+          showToast("Erro ao excluir: " + error.message);
+        });
+      }
+      document.getElementById('delete-event').addEventListener('click', deleteEvent);
+
+      /***************************************
+       * GESTOS – Navegação por toques (móveis)
+       ***************************************/
+      let touchStartX = 0;
+      let touchEndX = 0;
+      const calendarContainer = document.getElementById('calendar-container');
+      calendarContainer.addEventListener('touchstart', e => {
+        touchStartX = e.changedTouches[0].screenX;
       });
-    }
-    document.getElementById('delete-event').addEventListener('click', deleteEvent);
+      calendarContainer.addEventListener('touchend', e => {
+        touchEndX = e.changedTouches[0].screenX;
+        if (touchEndX < touchStartX - 50) {
+          document.getElementById('next-btn').click();
+        } else if (touchEndX > touchStartX + 50) {
+          document.getElementById('prev-btn').click();
+        }
+      });
 
-    // Suporte a gestos em dispositivos móveis
-    let touchStartX = 0;
-    let touchEndX = 0;
-    const calendarContainer = document.getElementById('calendar-container');
-    calendarContainer.addEventListener('touchstart', e => {
-      touchStartX = e.changedTouches[0].screenX;
-    });
-    calendarContainer.addEventListener('touchend', e => {
-      touchEndX = e.changedTouches[0].screenX;
-      if (touchEndX < touchStartX - 50) {
-        document.getElementById('next-btn').click();
-      } else if (touchEndX > touchStartX + 50) {
-        document.getElementById('prev-btn').click();
+      /***************************************
+       * NOTIFICAÇÕES – Verifica eventos próximos
+       ***************************************/
+      function checkForUpcomingEvents() {
+        const now = new Date();
+        for (let dateKey in allEvents) {
+          let events = (allEvents[dateKey] && allEvents[dateKey]["dia"]) || [];
+          events.forEach(ev => {
+            let [h, m] = ev.inicio.split(":").map(Number);
+            let eventTime = new Date(dateKey);
+            eventTime.setHours(h, m, 0);
+            if (eventTime - now > 0 && eventTime - now < 10 * 60 * 1000) {
+              new Notification("Próximo Evento", { body: ev.titulo });
+            }
+          });
+        }
       }
-    });
+      checkForUpcomingEventsInterval = setInterval(checkForUpcomingEvents, 60000);
 
-    // Navegação – botões prev, next e sync
-    document.getElementById('prev-btn').addEventListener('click', function() {
-      if (currentView === "week") {
-        currentDate.setDate(currentDate.getDate() - 7);
-      } else if (currentView === "month") {
-        currentDate.setMonth(currentDate.getMonth() - 1);
-      } else if (currentView === "year") {
-        currentDate.setFullYear(currentDate.getFullYear() - 1);
+      /***************************************
+       * CLEANUP – Remove listeners no logout
+       ***************************************/
+      function cleanupApp() {
+        if (eventsListener) { eventsListener.off(); }
+        if (checkForUpcomingEventsInterval) { clearInterval(checkForUpcomingEventsInterval); }
       }
-      renderCalendar();
-    });
-    document.getElementById('next-btn').addEventListener('click', function() {
-      if (currentView === "week") {
-        currentDate.setDate(currentDate.getDate() + 7);
-      } else if (currentView === "month") {
-        currentDate.setMonth(currentDate.getMonth() + 1);
-      } else if (currentView === "year") {
-        currentDate.setFullYear(currentDate.getFullYear() + 1);
+      // Logout: fecha o modal de histórico (se aberto) e procede ao logout
+      document.getElementById('btn-logout').addEventListener('click', function() {
+        closeHistory();
+        cleanupApp();
+        auth.signOut().then(() => {
+          showToast("Logout efetuado.");
+          location.reload();
+        }).catch(error => { showToast("Erro no logout: " + error.message); });
+      });
+      // Botão de histórico: abre o modal; botão de fechar: fecha o modal
+      document.getElementById('btn-history').addEventListener('click', showHistory);
+      document.getElementById('close-history').addEventListener('click', closeHistory);
+
+      /***************************************
+       * INICIALIZAÇÃO DO SISTEMA
+       ***************************************/
+      function initApp() {
+        console.log("Sistema de agenda premium iniciado.");
       }
-      renderCalendar();
-    });
-    document.getElementById('sync-btn').addEventListener('click', function(){
-      syncOfflineEvents();
-      showToast("Calendário sincronizado.");
+      initApp();
     });
   </script>
 </body>
