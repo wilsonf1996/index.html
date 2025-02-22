@@ -352,7 +352,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
 
   <script>
     document.addEventListener("DOMContentLoaded", function() {
@@ -373,7 +372,6 @@
       firebase.initializeApp(firebaseConfig);
       const auth = firebase.auth();
       const database = firebase.database();
-      const storage = firebase.storage();
 
       /***************************************
        * VARIÁVEIS GLOBAIS E DE ESTADO
@@ -400,7 +398,6 @@
       function logHistory(message) {
         const timestamp = new Date().toISOString();
         historyLog.push({ message, timestamp });
-        // Limita o histórico aos 50 registros mais recentes
         if(historyLog.length > 50) { historyLog.shift(); }
         updateHistoryModal();
       }
@@ -494,7 +491,6 @@
           updateProfileInfo();
           loadEvents();
           renderCalendar();
-          requestNotificationPermission();
         } else {
           currentUser = null;
           document.getElementById('auth-modal').style.display = 'flex';
@@ -502,7 +498,7 @@
       });
 
       /***************************************
-       * UPLOAD E PERSISTÊNCIA DA IMAGEM DE PERFIL
+       * UPLOAD DE IMAGEM – Utilizando Base64 para evitar CORS
        ***************************************/
       document.getElementById('upload-profile-pic-btn').addEventListener('click', () => {
         document.getElementById('profile-pic-upload').click();
@@ -511,20 +507,20 @@
       function uploadProfilePic(e) {
         const file = e.target.files[0];
         if (!file || !currentUser) return;
-        const storageRef = storage.ref();
-        const profilePicRef = storageRef.child(`profilePics/${currentUser.uid}/${file.name}`);
-        profilePicRef.put(file)
-          .then(snapshot => snapshot.ref.getDownloadURL())
-          .then(url => {
-            return database.ref("usuarios/" + currentUser.uid).update({ profilePicUrl: url })
-              .then(() => {
-                showToast("Imagem de perfil atualizada.");
-                document.getElementById('profile-pic').src = url;
-              });
-          })
-          .catch(error => {
-            showToast("Erro ao salvar imagem: " + error.message);
-          });
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          const base64data = event.target.result;
+          // Salva a imagem como Base64 no Database
+          database.ref("usuarios/" + currentUser.uid).update({ profilePicUrl: base64data })
+            .then(() => {
+              showToast("Imagem de perfil atualizada.");
+              document.getElementById('profile-pic').src = base64data;
+            })
+            .catch(error => {
+              showToast("Erro ao salvar imagem: " + error.message);
+            });
+        };
+        reader.readAsDataURL(file);
       }
       function updateProfileInfo() {
         if (currentUser && currentUser.email) {
@@ -539,6 +535,15 @@
         }
       }
       setInterval(updateProfileInfo, 15000);
+
+      /***************************************
+       * EVENTOS – Armazenamento unificado
+       * Todos os eventos de um dia são salvos na chave "dia"
+       ***************************************/
+      function getEventsForDate(date) {
+        const dateKey = date.toISOString().slice(0,10);
+        return (allEvents[dateKey] && allEvents[dateKey]["dia"]) || [];
+      }
 
       /***************************************
        * NAVEGAÇÃO – Atualiza currentDate conforme visualização
@@ -576,7 +581,6 @@
         renderCalendar();
       });
       document.getElementById('sync-btn').addEventListener('click', function(){
-        // Simulação de sincronização – aqui você pode integrar APIs externas
         showToast("Calendário sincronizado.");
       });
 
@@ -592,14 +596,6 @@
         }, error => {
           console.error("Erro ao carregar eventos:", error);
         });
-      }
-
-      /***************************************
-       * FUNÇÃO AUXILIAR – Retorna eventos para uma data específica
-       ***************************************/
-      function getEventsForDate(date) {
-        const dateKey = date.toISOString().slice(0,10);
-        return allEvents[dateKey] || {};
       }
 
       /***************************************
@@ -666,29 +662,27 @@
           for (let i = 0; i < 7; i++) {
             let cell = document.createElement('div');
             cell.className = "day-cell";
-            cell.dataset.hour = hour;
-            cell.dataset.day = i;
             let cellDate = new Date(monday);
             cellDate.setDate(monday.getDate() + i);
             cell.dataset.date = cellDate.toISOString().slice(0,10);
             cell.addEventListener('dblclick', function() {
-              openEventModal(cell, null, null, cellDate, i, hour);
+              openEventModal(null, null, cellDate, hour);
             });
             body.appendChild(cell);
-            let eventsObj = getEventsForDate(cellDate);
-            let cellKey = hour + '-' + i;
-            if (eventsObj[cellKey]) {
-              let events = eventsObj[cellKey];
-              if (typeof events === 'object' && !Array.isArray(events)) {
-                events = Object.values(events);
-              }
-              events.forEach((event, index) => {
+            // Filtra os eventos deste dia que iniciam na hora atual
+            let eventsForDay = getEventsForDate(cellDate);
+            let eventsForHour = eventsForDay.filter(ev => {
+              let [evHour] = ev.inicio.split(":");
+              return parseInt(evHour) === hour;
+            });
+            if (eventsForHour.length > 0) {
+              eventsForHour.forEach((event, index) => {
                 let eventBlock = document.createElement('div');
                 eventBlock.className = "event-block";
                 eventBlock.textContent = event.titulo;
                 eventBlock.addEventListener('click', function(e) {
                   e.stopPropagation();
-                  openEventModal(cell, index, event, cellDate, i, hour);
+                  openEventModal(index, event, cellDate, hour);
                 });
                 cell.appendChild(eventBlock);
               });
@@ -732,15 +726,11 @@
             let cellDate = new Date(year, month, dayNum);
             cell.dataset.date = cellDate.toISOString().slice(0,10);
             cell.addEventListener('dblclick', function() {
-              openEventModal(cell, null, null, cellDate, 0, 9);
+              openEventModal(null, null, cellDate, 9);
             });
-            let eventsObj = getEventsForDate(cellDate);
-            if (eventsObj["dia"]) {
-              let events = eventsObj["dia"];
-              if (typeof events === 'object' && !Array.isArray(events)) {
-                events = Object.values(events);
-              }
-              events.forEach((event, index) => {
+            let eventsForDay = getEventsForDate(cellDate);
+            if (eventsForDay.length > 0) {
+              eventsForDay.forEach((event, index) => {
                 let eventBlock = document.createElement('div');
                 eventBlock.className = "event-block";
                 eventBlock.style.position = "relative";
@@ -748,7 +738,8 @@
                 eventBlock.textContent = event.titulo;
                 eventBlock.addEventListener('click', function(e) {
                   e.stopPropagation();
-                  openEventModal(cell, index, event, cellDate, 0, 9);
+                  let eventHour = parseInt(event.inicio.split(":")[0]);
+                  openEventModal(index, event, cellDate, eventHour);
                 });
                 cell.appendChild(eventBlock);
               });
@@ -777,14 +768,7 @@
             let daysInMonth = new Date(y, m + 1, 0).getDate();
             for (let d = 1; d <= daysInMonth; d++) {
               let dateObj = new Date(y, m, d);
-              let eventsObj = getEventsForDate(dateObj);
-              for (let key in eventsObj) {
-                let evs = eventsObj[key];
-                if (typeof evs === 'object' && !Array.isArray(evs)) {
-                  evs = Object.values(evs);
-                }
-                aggregatedEvents = aggregatedEvents.concat(evs);
-              }
+              aggregatedEvents = aggregatedEvents.concat(getEventsForDate(dateObj));
             }
           }
           if (aggregatedEvents.length > 0) {
@@ -810,7 +794,7 @@
       /***************************************
        * MODAL DE EVENTO – Criação/Edição (com suporte à exclusão)
        ***************************************/
-      function openEventModal(cell, eventIndex = null, eventData = null, dateObj, dayIndex, hour) {
+      function openEventModal(eventIndex = null, eventData = null, dateObj, hour) {
         const modal = document.getElementById('event-modal');
         modal.style.display = 'flex';
         document.getElementById('event-info').textContent =
@@ -827,11 +811,8 @@
         } else {
           document.getElementById('event-end').value = String((Number(hour)+1)%24).padStart(2, '0') + ":00";
         }
-        modal.dataset.mode = currentView;
         modal.dataset.date = dateObj.toISOString();
-        modal.dataset.cellKey = (currentView === "week") ? (hour + '-' + dayIndex) : "dia";
         modal.dataset.eventIndex = eventIndex;
-        // Se estamos editando um evento, mostra o botão de exclusão
         if (eventData !== null) {
           document.getElementById('delete-event').style.display = 'inline-block';
         } else {
@@ -841,7 +822,6 @@
       function closeEventModal() {
         const modal = document.getElementById('event-modal');
         modal.style.display = 'none';
-        delete modal.dataset.cellKey;
         delete modal.dataset.eventIndex;
         delete modal.dataset.date;
       }
@@ -862,10 +842,8 @@
           showToast("Preencha os campos obrigatórios.");
           return;
         }
-        const mode = modal.dataset.mode;
-        let cellKey = modal.dataset.cellKey;
         const dateKey = new Date(modal.dataset.date).toISOString().slice(0,10);
-        let refPath = "agendas/" + currentUser.uid + "/" + dateKey + "/" + cellKey;
+        const refPath = "agendas/" + currentUser.uid + "/" + dateKey + "/dia";
         const cellRef = database.ref(refPath);
         cellRef.once('value').then(snapshot => {
           let events = snapshot.val();
@@ -873,10 +851,10 @@
           const evIndex = modal.dataset.eventIndex;
           if (evIndex !== null && evIndex !== "" && evIndex !== "null") {
             events[evIndex] = newEvent;
-            logHistory("Evento editado em " + cellKey + ": " + newEvent.titulo);
+            logHistory("Evento editado: " + newEvent.titulo);
           } else {
             events.push(newEvent);
-            logHistory("Evento adicionado em " + cellKey + ": " + newEvent.titulo);
+            logHistory("Evento adicionado: " + newEvent.titulo);
           }
           return cellRef.set(events);
         }).then(() => {
@@ -899,8 +877,7 @@
           return;
         }
         const dateKey = new Date(modal.dataset.date).toISOString().slice(0,10);
-        const cellKey = modal.dataset.cellKey;
-        const refPath = "agendas/" + currentUser.uid + "/" + dateKey + "/" + cellKey;
+        const refPath = "agendas/" + currentUser.uid + "/" + dateKey + "/dia";
         const cellRef = database.ref(refPath);
         cellRef.once('value').then(snapshot => {
           let events = snapshot.val();
@@ -909,9 +886,8 @@
             showToast("Evento não encontrado.");
             return;
           }
-          // Remove o evento usando splice
           let removed = events.splice(evIndex, 1);
-          logHistory("Evento excluído em " + cellKey + ": " + removed[0].titulo);
+          logHistory("Evento excluído: " + removed[0].titulo);
           return cellRef.set(events);
         }).then(() => {
           showToast("Evento excluído.");
@@ -955,19 +931,15 @@
       function checkForUpcomingEvents() {
         const now = new Date();
         for (let dateKey in allEvents) {
-          let eventsObj = allEvents[dateKey];
-          for (let key in eventsObj) {
-            let evs = eventsObj[key];
-            if (typeof evs === 'object' && !Array.isArray(evs)) { evs = Object.values(evs); }
-            evs.forEach(ev => {
-              let [h, m] = ev.inicio.split(":").map(Number);
-              let eventTime = new Date(dateKey);
-              eventTime.setHours(h, m, 0);
-              if (eventTime - now > 0 && eventTime - now < 10 * 60 * 1000) {
-                new Notification("Próximo Evento", { body: ev.titulo });
-              }
-            });
-          }
+          let events = (allEvents[dateKey] && allEvents[dateKey]["dia"]) || [];
+          events.forEach(ev => {
+            let [h, m] = ev.inicio.split(":").map(Number);
+            let eventTime = new Date(dateKey);
+            eventTime.setHours(h, m, 0);
+            if (eventTime - now > 0 && eventTime - now < 10 * 60 * 1000) {
+              new Notification("Próximo Evento", { body: ev.titulo });
+            }
+          });
         }
       }
       checkForUpcomingEventsInterval = setInterval(checkForUpcomingEvents, 60000);
