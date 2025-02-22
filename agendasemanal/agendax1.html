@@ -1,10 +1,10 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Agenda Semanal – Padrão Ref5</title>
-  <!-- Fontes e Ícones (padrão ref5) -->
+  <!-- Fontes e Ícones -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
   <style>
@@ -13,7 +13,7 @@
     html, body { height: 100%; }
     body { font-family: 'Roboto', sans-serif; background: #121212; color: #fff; }
     
-    /* Navbar – similar ao ref5 */
+    /* Navbar */
     #navbar {
       background: #1976d2;
       color: #fff;
@@ -29,7 +29,7 @@
     #navbar button:hover { background: #0d47a1; }
     #current-week { font-weight: bold; }
     
-    /* Sidebar (perfil e histórico) */
+    /* Sidebar */
     #sidebar {
       width: 250px;
       background: #1e1e1e;
@@ -48,7 +48,7 @@
     #sidebar-nav li { padding: 10px; cursor: pointer; border-radius: 4px; transition: background 0.3s; }
     #sidebar-nav li:hover { background: #333; }
     
-    /* Main – Área da agenda */
+    /* Main: Agenda */
     main { margin-left: 270px; padding: 20px; }
     table { width: 100%; border-collapse: collapse; background: #1e1e1e; border: 1px solid #444; border-radius: 4px; }
     th, td { border: 1px solid #444; padding: 8px; text-align: center; min-width: 80px; }
@@ -59,7 +59,7 @@
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     
-    /* Modais para Autenticação e Edição de Evento */
+    /* Modais */
     .modal {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8);
       display: none; align-items: center; justify-content: center; z-index: 2000;
@@ -188,7 +188,7 @@
   <!-- Toast Container -->
   <div id="toast-container"></div>
   
-  <!-- Firebase SDKs – Usando as mesmas versões e configuração do ref5 -->
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
@@ -196,7 +196,7 @@
   <script>
     "use strict";
     /***************************************
-     * CONFIGURAÇÃO DO FIREBASE (Padrão ref5)
+     * CONFIGURAÇÃO DO FIREBASE
      ***************************************/
     const firebaseConfig = {
       apiKey: "AIzaSyDxMWPu_CnXV-u4-vlDFd-IZ8fzlyKJHng",
@@ -216,8 +216,8 @@
      * VARIÁVEIS GLOBAIS
      ***************************************/
     let currentUser = null;
-    let currentWeekStart = null; // Data de início da semana atual
-    let agendaData = {}; // Dados da agenda do usuário
+    let currentWeekStart = null; // Início da semana atual
+    let agendaData = {}; // Dados da agenda
     let historyLog = [];  // Histórico de alterações
     
     /***************************************
@@ -251,7 +251,7 @@
     function closeHistory() { document.getElementById('history-modal').style.display = 'none'; }
     
     /***************************************
-     * AUTENTICAÇÃO – FUNÇÕES DE LOGIN/REGISTRO
+     * AUTENTICAÇÃO – LOGIN/REGISTRO
      ***************************************/
     function validarUsuario(usuario) {
       if (usuario.length !== 5) return "O usuário deve conter exatamente 5 caracteres.";
@@ -283,7 +283,7 @@
       if (password !== confirmPassword) { alert("As senhas não conferem."); return; }
       if (!termosAceitos) { alert("Você deve aceitar os Termos de Uso e Política de Privacidade."); return; }
       if (erro) { alert(erro); return; }
-      // Aqui, para manter o padrão do ref5, usamos o email construído a partir do username
+      // Usando o email construído a partir do username para manter o padrão
       const emailPadrao = username + "@SoundStruct.com";
       auth.createUserWithEmailAndPassword(emailPadrao, password)
         .then(userCredential => {
@@ -315,6 +315,7 @@
         currentUser = user;
         document.getElementById('user-info').textContent = user.email;
         document.getElementById('auth-modal').style.display = 'none';
+        updateProfileInfo();
         initializeWeek();
       } else {
         currentUser = null;
@@ -335,7 +336,7 @@
     }
     
     function updateWeekDisplay() {
-      const start = currentWeekStart;
+      const start = new Date(currentWeekStart);
       const end = new Date(start);
       end.setDate(end.getDate() + 6);
       document.getElementById('current-week').textContent = start.toLocaleDateString() + " - " + end.toLocaleDateString();
@@ -353,7 +354,7 @@
     });
     
     /***************************************
-     * CARREGAMENTO DA AGENDA (Banco de Dados – Padrão ref5)
+     * CARREGAMENTO DA AGENDA
      ***************************************/
     function loadAgenda() {
       if (!currentUser) return;
@@ -378,7 +379,11 @@
           const cell = document.createElement('td');
           cell.className = 'agenda-cell';
           cell.dataset.key = cellKey;
-          const events = agendaData[cellKey] || [];
+          let events = agendaData[cellKey];
+          // Garante que events seja um array
+          if (!Array.isArray(events)) {
+            events = [];
+          }
           events.forEach((event, index) => {
             const eventDiv = document.createElement('div');
             eventDiv.className = 'event-item';
@@ -431,7 +436,10 @@
       const newEvent = { titulo, descricao, inicio, termino };
       const dateKey = currentWeekStart.toISOString().slice(0,10);
       const cellRef = database.ref("agendas/" + currentUser.uid + "/" + dateKey + "/" + cellKey);
-      let events = agendaData[cellKey] || [];
+      let events = agendaData[cellKey];
+      if (!Array.isArray(events)) {
+        events = [];
+      }
       if (eventIndex !== null && eventIndex !== "") {
         events[eventIndex] = newEvent;
         logHistory("Evento editado em " + cellKey + ": " + titulo);
@@ -456,7 +464,7 @@
         let row = hour + ":00";
         for (let day = 1; day <= 7; day++) {
           const cellKey = hour + '-' + day;
-          const events = agendaData[cellKey] || [];
+          const events = Array.isArray(agendaData[cellKey]) ? agendaData[cellKey] : [];
           let cellText = events.map(ev => ev.titulo).join(" | ");
           row += "," + cellText;
         }
@@ -476,7 +484,7 @@
       const reader = new FileReader();
       reader.onload = function(e) {
         const csvData = e.target.result;
-        // Aqui você implementa o processamento do CSV conforme sua necessidade
+        // Implemente o processamento do CSV conforme necessário
         showToast("Agenda importada com sucesso.");
       };
       reader.readAsText(file);
@@ -492,70 +500,35 @@
     });
     
     /***************************************
-     * FUNÇÕES ADICIONAIS (UTILITÁRIAS E FILLER FUNCIONAL)
+     * ATUALIZAÇÃO DO PERFIL DO USUÁRIO
      ***************************************/
-    function utilFunc1() { console.log("UtilFunc1: " + new Date().toISOString()); return new Date().toISOString(); }
-    function utilFunc2() { return Math.random(); }
-    console.log(utilFunc1(), utilFunc2());
-    for (let i = 0; i < 50; i++) {
-      (function(idx) {
-        window["fillerFunc" + idx] = function() {
-          console.log("Filler função " + idx + " executada em " + new Date().toLocaleTimeString());
-          return idx * Math.random();
-        };
-        console.log(window["fillerFunc" + idx]());
-      })(i);
-    }
-    function detailedLog(message) {
-      const now = new Date().toISOString();
-      console.log("LOG[" + now + "]: " + message);
-      return now + " - " + message;
-    }
-    detailedLog("Sistema de agenda profissional iniciado.");
-    function syncLocalData() {
-      console.log("Sincronizando dados locais com Firebase em " + new Date().toLocaleTimeString());
-      loadAgenda();
-    }
-    setInterval(syncLocalData, 10000);
-    for (let j = 0; j < 300; j++) {
-      (function(jj) {
-        function loopFunc() {
-          let result = 0;
-          for (let k = 0; k < 10; k++) {
-            result += jj * k;
-          }
-          console.log("LoopFunc[" + jj + "]: " + result);
-          return result;
-        }
-        window["loopFunc" + jj] = loopFunc;
-        window["loopFunc" + jj]();
-      })(j);
-    }
-    function validateEmail(email) {
-      const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      return re.test(email);
-    }
-    console.log("Teste de email: ", validateEmail("teste@exemplo.com"));
     function updateProfileInfo() {
-      if (currentUser) {
+      if (currentUser && currentUser.email) {
         document.getElementById('profile-name').textContent = currentUser.email.split('@')[0];
         document.getElementById('profile-pic').src = "https://via.placeholder.com/80?text=" + currentUser.email.charAt(0).toUpperCase();
       }
     }
     setInterval(updateProfileInfo, 15000);
-    function extraFuncA() { return "ExtraA " + new Date().getSeconds(); }
-    function extraFuncB() { return "ExtraB " + new Date().getMinutes(); }
-    console.log(extraFuncA(), extraFuncB());
-    for (let m = 0; m < 200; m++) {
-      (function(mVal) {
-        window["extraFunc" + mVal] = function() {
-          return "ExtraFunc" + mVal + ": " + (mVal * Math.random()).toFixed(2);
-        };
-        console.log(window["extraFunc" + mVal]());
-      })(m);
+    
+    /***************************************
+     * FUNÇÃO DE LOGOUT
+     ***************************************/
+    function logout() {
+      auth.signOut().then(() => {
+        showToast("Logout efetuado com sucesso.");
+        location.reload();
+      }).catch(error => {
+        showToast("Erro ao efetuar logout: " + error.message);
+      });
     }
-    detailedLog("Sistema de agenda profissional inicializado com sucesso.");
-    // Fim das funções extras
+    
+    /***************************************
+     * INICIALIZAÇÃO DO SISTEMA
+     ***************************************/
+    function initApp() {
+      console.log("Sistema de agenda profissional iniciado.");
+    }
+    initApp();
   </script>
 </body>
 </html>
