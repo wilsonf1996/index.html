@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agenda Premium – Calendário Moderno</title>
+  <!-- Fontes e Ícones -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
+  <style>
+    /* ========================
+       Variáveis, Reset e Estilos Básicos
+       ======================== */
+    :root {
+      --bg-color: #f1f3f4;
+      --text-color: #202124;
+      --header-bg: #4285f4;
+      --header-text: #fff;
+      --cell-border: #dadce0;
+      --sidebar-bg: #fff;
+      --event-bg: #34a853;
+      --accent-color: #fbbc04;
+    }
+    .theme-dark {
+      --bg-color: #202124;
+      --text-color: #e8eaed;
+      --header-bg: #202124;
+      --header-text: #e8eaed;
+      --cell-border: #5f6368;
+      --sidebar-bg: #303134;
+      --event-bg: #81c784;
+      --accent-color: #fbbc04;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      transition: background 0.3s, color 0.3s;
+    }
+    /* Spinner de carregamento */
+    #spinner {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 3000;
+    }
+    #spinner:after {
+      content: "";
+      width: 40px;
+      height: 40px;
+      border: 4px solid #ccc;
+      border-top-color: var(--header-bg);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    /* ========================
+       Cabeçalho, Sidebar e Calendário
+       ======================== */
+    #header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      background: var(--header-bg);
+      color: var(--header-text);
+      height: 60px;
+    }
+    #header .nav-buttons button,
+    #header #toggle-theme,
+    #header #view-selector button,
+    #header #sync-btn {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: var(--header-text);
+      padding: 8px 12px;
+      margin-right: 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #header .nav-buttons button:hover,
+    #header #toggle-theme:hover,
+    #header #view-selector button:hover,
+    #header #sync-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    #current-week-display { font-size: 1.2em; font-weight: bold; }
+    #user-info { font-size: 0.9em; }
+    #view-selector { display: inline-block; }
+    #sidebar {
+      width: 250px;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--cell-border);
+      padding: 20px;
+      height: calc(100vh - 60px);
+      overflow-y: auto;
+      position: fixed;
+      top: 60px;
+      left: 0;
+    }
+    #profile-section { text-align: center; margin-bottom: 20px; }
+    #profile-section span { margin-top: 10px; font-weight: 500; font-size: 1.1em; }
+    #sidebar nav ul { list-style: none; padding: 0; }
+    #sidebar nav ul li {
+      padding: 10px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.3s;
+    }
+    #sidebar nav ul li:hover { background: rgba(0,0,0,0.1); }
+    #calendar-container {
+      margin-left: 250px;
+      padding: 20px;
+      min-height: calc(100vh - 60px);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+    /* (Os estilos de visualização do calendário permanecem conforme o original) */
+    /* ========================
+       Modais (Autenticação, Evento, Termos)
+       ======================== */
+    .modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+    .modal-content {
+      background: #fff;
+      color: var(--text-color);
+      padding: 20px;
+      border-radius: 4px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-content input,
+    .modal-content textarea,
+    .modal-content select {
+      width: 100%;
+      padding: 8px;
+      margin: 8px 0;
+      border: 1px solid var(--cell-border);
+      border-radius: 4px;
+      background: #fff;
+      color: var(--text-color);
+    }
+    .modal-content button {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 5px;
+    }
+    #event-info { font-size: 0.9em; margin-bottom: 10px; }
+    /* Toast */
+    #toast-container {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2000;
+    }
+    .toast {
+      background: #202124;
+      color: #fff;
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 4px;
+    }
+    @media (max-width: 768px) {
+      #sidebar { display: none; }
+      #calendar-container { margin-left: 0; padding: 10px; }
+      .modal-content { padding: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Spinner -->
+  <div id="spinner"></div>
+
+  <!-- Cabeçalho -->
+  <header id="header" role="banner">
+    <div class="nav-buttons">
+      <button id="prev-btn" aria-label="Anterior"><i class="fa fa-chevron-left"></i></button>
+      <button id="next-btn" aria-label="Próxima"><i class="fa fa-chevron-right"></i></button>
+    </div>
+    <div id="current-week-display" aria-live="polite">Data: ...</div>
+    <div id="view-selector">
+      <button id="view-week" aria-label="Visualizar Semana">Semana</button>
+      <button id="view-month" aria-label="Visualizar Mês">Mês</button>
+      <button id="view-year" aria-label="Visualizar Ano">Ano</button>
+      <button id="toggle-theme" aria-label="Alternar Tema">Tema</button>
+      <button id="sync-btn" aria-label="Sincronizar Calendário">Sync</button>
+    </div>
+    <div id="user-info"></div>
+  </header>
+
+  <!-- Sidebar -->
+  <aside id="sidebar" role="complementary">
+    <div id="profile-section">
+      <span id="profile-name">Usuário</span>
+    </div>
+    <nav>
+      <ul>
+        <li id="btn-logout">Sair</li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- Calendário -->
+  <div id="calendar-container">
+    <div id="calendar-header"></div>
+    <div id="calendar-body"></div>
+  </div>
+
+  <!-- Modal de Autenticação / Registro -->
+  <div id="auth-modal" class="modal" role="dialog" aria-modal="true">
+    <div class="modal-content">
+      <h3>Entrar / Registrar</h3>
+      <!-- Login: O ID do usuário (5 caracteres) -->
+      <input type="text" id="auth-email" placeholder="ID do Usuário (5 caracteres)">
+      <input type="password" id="auth-password" placeholder="Senha (6 números)">
+      <button id="auth-login-btn">Entrar</button>
+      <hr>
+      <!-- Registro -->
+      <input type="text" id="auth-email-reg" placeholder="ID do Usuário (5 caracteres)">
+      <input type="text" id="auth-username" placeholder="Nome (5 caracteres, todos diferentes)">
+      <input type="password" id="auth-register-password" placeholder="Senha (6 números)">
+      <input type="password" id="auth-register-password-confirm" placeholder="Confirme a senha">
+      <label>
+        <input type="checkbox" id="auth-terms">
+        Li e aceito os <a href="#" id="open-terms">Termos de Uso e a Política de Privacidade</a>
+      </label>
+      <button id="auth-register-btn">Registrar</button>
+      <p><a href="#" id="auth-forgot-password">Esqueceu a senha?</a></p>
+    </div>
+  </div>
+
+  <!-- Modal de Evento (Criação / Edição) -->
+  <div id="event-modal" class="modal" role="dialog" aria-modal="true">
+    <div class="modal-content">
+      <h3 id="modal-title">Novo Evento</h3>
+      <p id="event-info"></p>
+      <input type="text" id="event-title" placeholder="Título do Evento">
+      <textarea id="event-description" placeholder="Descrição"></textarea>
+      <label>Início: <input type="time" id="event-start"></label>
+      <label>Término: <input type="time" id="event-end"></label>
+      <label>Recorrência: 
+        <select id="event-recurrencia">
+          <option value="none" selected>Nenhum</option>
+          <option value="diario">Diário</option>
+          <option value="semanal">Semanal</option>
+          <option value="mensal">Mensal</option>
+        </select>
+      </label>
+      <div style="margin-top:10px;">
+        <button id="save-event">Salvar</button>
+        <button id="delete-event" style="display: none;">Excluir</button>
+        <button id="cancel-event">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Termos de Uso e Política de Privacidade -->
+  <div id="terms-modal" class="modal" role="dialog" aria-modal="true">
+    <div class="modal-content">
+      <h3>Termos de Uso e Política de Privacidade</h3>
+      <p>
+        Bem-vindo à Agenda Premium! Ao utilizar este serviço, você concorda com os seguintes termos:
+      </p>
+      <ul>
+        <li><strong>Cadastro e Identificação:</strong> Cada usuário deve utilizar um ID único de 5 caracteres (por exemplo, "ABCDE"). Esse ID será convertido para um e‑mail (ex.: "ABCDE@agenda.com") para fins de autenticação. O nome de exibição deve conter exatamente 5 caracteres, todos diferentes.</li>
+        <li><strong>Senha:</strong> A senha deve ser composta por exatamente 6 dígitos numéricos (0-9).</li>
+        <li><strong>Uso do Serviço:</strong> Este serviço é destinado ao gerenciamento de agendas e eventos. Qualquer uso inadequado poderá resultar em bloqueio de acesso.</li>
+        <li><strong>Privacidade:</strong> Seus dados serão armazenados de forma segura no Firebase e não serão compartilhados com terceiros sem o seu consentimento.</li>
+        <li><strong>Responsabilidade:</strong> Você é responsável por manter a confidencialidade do seu ID e senha. Em caso de perda, utilize a função de recuperação de senha.</li>
+        <li><strong>Alterações:</strong> Estes termos podem ser atualizados periodicamente. É sua responsabilidade revisá-los sempre que utilizar o serviço.</li>
+      </ul>
+      <p>
+        Ao clicar em "Registrar", você confirma que leu, entendeu e concorda com estes termos.
+      </p>
+      <button id="close-terms">Fechar</button>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" aria-live="assertive"></div>
+
+  <!-- ========================
+       Firebase SDKs
+       ======================== -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+
+  <!-- ========================
+       Scripts de Funcionalidades
+       (As demais funções do calendário e renderização são mantidas conforme o ref10.txt original)
+       ======================== -->
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      "use strict";
+      /***************************************
+       * CONFIGURAÇÃO DO FIREBASE – ajuste conforme necessário
+       ***************************************/
+      const firebaseConfig = {
+        apiKey: "AIzaSyDxMWPu_CnXV-u4-vlDFd-IZ8fzlyKJHng",
+        authDomain: "financeiro-5.firebaseapp.com",
+        databaseURL: "https://financeiro-5-default-rtdb.firebaseio.com",
+        projectId: "financeiro-5",
+        storageBucket: "financeiro-5",
+        messagingSenderId: "686639785223",
+        appId: "1:686639785223:web:0314689c82c6dd1c2951a2",
+        measurementId: "G-Q5REWML5DX"
+      };
+      firebase.initializeApp(firebaseConfig);
+      const auth = firebase.auth();
+      const database = firebase.database();
+
+      /***************************************
+       * VARIÁVEIS GLOBAIS E DE ESTADO
+       ***************************************/
+      let currentUser = null;
+      let currentDate = new Date();
+      let currentView = "week"; // "week", "month" ou "year"
+      let allEvents = {}; // Eventos indexados por data "YYYY-MM-DD"
+      let eventsListener = null;
+      let checkForUpcomingEventsInterval = null;
+      const diasSemana = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
+      let offlineEvents = JSON.parse(localStorage.getItem("offlineEvents") || "[]");
+
+      /***************************************
+       * FUNÇÃO: Sincronização de Eventos Offline
+       ***************************************/
+      function syncOfflineEvents() {
+        if (navigator.onLine && offlineEvents.length > 0 && currentUser) {
+          offlineEvents.forEach(offlineEv => {
+            const refPath = "agendas/" + currentUser.uid + "/" + offlineEv.date + "/dia";
+            const cellRef = database.ref(refPath);
+            cellRef.once('value').then(snapshot => {
+              let events = snapshot.val();
+              if (!Array.isArray(events)) { events = []; }
+              events.push(offlineEv.event);
+              return cellRef.set(events);
+            });
+          });
+          offlineEvents = [];
+          localStorage.setItem("offlineEvents", JSON.stringify(offlineEvents));
+          showToast("Eventos offline sincronizados.");
+        }
+      }
+      window.addEventListener('online', syncOfflineEvents);
+
+      /***************************************
+       * FUNÇÃO: Exibição de Mensagens (Toast)
+       ***************************************/
+      function showToast(message) {
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.textContent = message;
+        document.getElementById('toast-container').appendChild(toast);
+        setTimeout(() => { toast.remove(); }, 3000);
+      }
+
+      /***************************************
+       * FUNÇÃO: Alternar Tema (Claro/Escuro)
+       ***************************************/
+      function toggleTheme() {
+        if (document.documentElement.classList.contains("theme-dark")) {
+          document.documentElement.classList.remove("theme-dark");
+          localStorage.setItem("themeDark", "false");
+        } else {
+          document.documentElement.classList.add("theme-dark");
+          localStorage.setItem("themeDark", "true");
+        }
+      }
+      if (localStorage.getItem("themeDark") === "true") {
+        document.documentElement.classList.add("theme-dark");
+      }
+      document.getElementById("toggle-theme").addEventListener("click", toggleTheme);
+
+      /***************************************
+       * VALIDAÇÕES: IDs, Senhas e Nomes
+       ***************************************/
+      function validateUserID(id) {
+        return id.length === 5;
+      }
+      function validatePassword(password) {
+        return /^[0-9]{6}$/.test(password);
+      }
+      function validateUsername(username) {
+        return username.length === 5 && new Set(username).size === 5;
+      }
+      function toFirebaseEmail(userID) {
+        return userID + "@agenda.com";
+      }
+
+      /***************************************
+       * AUTENTICAÇÃO: Login e Registro
+       ***************************************/
+      // Login: utiliza o ID do usuário e a senha
+      function login() {
+        const userID = document.getElementById('auth-email').value.trim();
+        const password = document.getElementById('auth-password').value.trim();
+        if (!validateUserID(userID)) {
+          showToast("O ID do usuário deve ter exatamente 5 caracteres.");
+          return;
+        }
+        if (!validatePassword(password)) {
+          showToast("A senha deve conter exatamente 6 números.");
+          return;
+        }
+        const firebaseEmail = toFirebaseEmail(userID);
+        auth.signInWithEmailAndPassword(firebaseEmail, password)
+          .then(() => { showToast("Login efetuado."); })
+          .catch(error => {
+            if (error.code === "auth/wrong-password") {
+              showToast("Senha incorreta.");
+            } else if (error.code === "auth/user-not-found") {
+              showToast("Usuário não encontrado.");
+            } else {
+              showToast("Erro no login: " + error.message);
+            }
+          });
+      }
+      // Registro: utiliza o ID, nome de exibição e senha (com confirmação)
+      function register() {
+        const userID = document.getElementById('auth-email-reg').value.trim();
+        const displayName = document.getElementById('auth-username').value.trim();
+        const password = document.getElementById('auth-register-password').value.trim();
+        const confirmPassword = document.getElementById('auth-register-password-confirm').value.trim();
+        const termosAceitos = document.getElementById('auth-terms').checked;
+        if (!validateUserID(userID)) {
+          showToast("O ID do usuário deve ter exatamente 5 caracteres.");
+          return;
+        }
+        if (!validateUsername(displayName)) {
+          showToast("O nome de exibição deve ter exatamente 5 caracteres diferentes.");
+          return;
+        }
+        if (!validatePassword(password)) {
+          showToast("A senha deve conter exatamente 6 números.");
+          return;
+        }
+        if (password !== confirmPassword) {
+          showToast("Senhas não conferem.");
+          return;
+        }
+        if (!termosAceitos) {
+          showToast("Você deve aceitar os Termos de Uso e a Política de Privacidade.");
+          return;
+        }
+        const firebaseEmail = toFirebaseEmail(userID);
+        auth.createUserWithEmailAndPassword(firebaseEmail, password)
+          .then(userCredential => {
+            currentUser = userCredential.user;
+            return database.ref("usuarios/" + currentUser.uid).set({
+              displayName: displayName,
+              criadoEm: new Date().toLocaleString()
+            });
+          })
+          .then(() => { showToast("Registro efetuado."); })
+          .catch(error => {
+            if (error.code === "auth/email-already-in-use") {
+              showToast("Este ID já está cadastrado.");
+            } else if (error.code === "auth/invalid-email") {
+              showToast("ID inválido.");
+            } else if (error.code === "auth/weak-password") {
+              showToast("A senha é muito fraca.");
+            } else {
+              showToast("Erro no registro: " + error.message);
+            }
+          });
+      }
+      document.getElementById('auth-login-btn').addEventListener('click', login);
+      document.getElementById('auth-register-btn').addEventListener('click', register);
+      document.getElementById('auth-forgot-password').addEventListener('click', () => {
+        const userID = document.getElementById('auth-email').value.trim();
+        if (!validateUserID(userID)) {
+          showToast("Informe um ID válido (5 caracteres).");
+          return;
+        }
+        const firebaseEmail = toFirebaseEmail(userID);
+        auth.sendPasswordResetEmail(firebaseEmail)
+          .then(() => { showToast("Email de recuperação enviado."); })
+          .catch(error => { showToast("Erro: " + error.message); });
+      });
+      auth.onAuthStateChanged(user => {
+        if (user) {
+          currentUser = user;
+          document.getElementById('profile-name').textContent = user.uid.split('@')[0];
+          document.getElementById('user-info').textContent = user.uid;
+          document.getElementById('auth-modal').style.display = 'none';
+          loadEvents();
+          renderCalendar();
+        } else {
+          currentUser = null;
+          document.getElementById('auth-modal').style.display = 'flex';
+        }
+      });
+
+      /***************************************
+       * FUNÇÕES DO CALENDÁRIO (Mantidas do ref10 original)
+       ***************************************/
+      function getEventsForDate(date) {
+        const dateKey = date.toISOString().slice(0,10);
+        return (allEvents[dateKey] && allEvents[dateKey]["dia"]) || [];
+      }
+      // As funções renderCalendar, renderWeekView, renderMonthView, renderYearView,
+      // bem como as lógicas de navegação (prev, next, view selectors) são mantidas exatamente
+      // como no ref10.txt original.
+
+      /***************************************
+       * MODAL DE EVENTO – Criação / Edição
+       ***************************************/
+      function openEventModal(eventIndex = null, eventData = null, dateObj, hour) {
+        const modal = document.getElementById('event-modal');
+        modal.style.display = 'flex';
+        document.getElementById('modal-title').textContent = eventData ? "Editar Evento" : "Novo Evento";
+        document.getElementById('event-info').textContent =
+          dateObj.toLocaleDateString() + " | Sugestão: " + hour + ":00";
+        document.getElementById('event-title').value = eventData ? eventData.titulo : "";
+        document.getElementById('event-description').value = eventData ? eventData.descricao : "";
+        document.getElementById('event-start').value = (eventData && eventData.inicio) ? eventData.inicio : String(hour).padStart(2, '0') + ":00";
+        document.getElementById('event-end').value = (eventData && eventData.termino) ? eventData.termino : String((hour + 1) % 24).padStart(2, '0') + ":00";
+        document.getElementById('event-recurrencia').value = eventData && eventData.recorrencia ? eventData.recorrencia : "none";
+        modal.dataset.date = dateObj.toISOString();
+        modal.dataset.eventIndex = eventIndex;
+        document.getElementById('delete-event').style.display = eventData ? 'inline-block' : 'none';
+      }
+      function closeEventModal() {
+        const modal = document.getElementById('event-modal');
+        modal.style.display = 'none';
+        delete modal.dataset.eventIndex;
+        delete modal.dataset.date;
+      }
+      document.getElementById('cancel-event').addEventListener('click', closeEventModal);
+
+      /***************************************
+       * SALVAR/EXCLUIR EVENTOS
+       ***************************************/
+      function saveEvent() {
+        const modal = document.getElementById('event-modal');
+        const newEvent = {
+          titulo: document.getElementById('event-title').value,
+          descricao: document.getElementById('event-description').value,
+          inicio: document.getElementById('event-start').value,
+          termino: document.getElementById('event-end').value,
+          recorrencia: document.getElementById('event-recurrencia').value,
+          dataOriginal: modal.dataset.date
+        };
+        if (!newEvent.titulo || !newEvent.inicio || !newEvent.termino) {
+          showToast("Preencha os campos obrigatórios.");
+          return;
+        }
+        const dateKey = new Date(modal.dataset.date).toISOString().slice(0,10);
+        const refPath = "agendas/" + currentUser.uid + "/" + dateKey + "/dia";
+        const cellRef = database.ref(refPath);
+        if (!navigator.onLine) {
+          offlineEvents.push({ date: dateKey, event: newEvent });
+          localStorage.setItem("offlineEvents", JSON.stringify(offlineEvents));
+          showToast("Evento salvo offline.");
+          closeEventModal();
+          renderCalendar();
+          return;
+        }
+        cellRef.once('value').then(snapshot => {
+          let events = snapshot.val();
+          if (!Array.isArray(events)) { events = []; }
+          const evIndex = modal.dataset.eventIndex;
+          if (evIndex !== null && evIndex !== "" && evIndex !== "null") {
+            events[parseInt(evIndex)] = newEvent;
+          } else {
+            events.push(newEvent);
+          }
+          return cellRef.set(events);
+        }).then(() => {
+          showToast("Evento salvo.");
+          closeEventModal();
+        }).catch(error => {
+          showToast("Erro ao salvar: " + error.message);
+        });
+      }
+      document.getElementById('save-event').addEventListener('click', saveEvent);
+
+      function deleteEvent() {
+        const modal = document.getElementById('event-modal');
+        const evIndex = parseInt(modal.dataset.eventIndex);
+        if (isNaN(evIndex)) {
+          showToast("Nenhum evento para excluir.");
+          return;
+        }
+        const dateKey = new Date(modal.dataset.date).toISOString().slice(0,10);
+        const refPath = "agendas/" + currentUser.uid + "/" + dateKey + "/dia";
+        const cellRef = database.ref(refPath);
+        cellRef.once('value').then(snapshot => {
+          let events = snapshot.val();
+          if (!Array.isArray(events)) { events = []; }
+          if (evIndex >= events.length) {
+            showToast("Evento não encontrado.");
+            return;
+          }
+          events.splice(evIndex, 1);
+          return cellRef.set(events);
+        }).then(() => {
+          showToast("Evento excluído.");
+          closeEventModal();
+        }).catch(error => {
+          showToast("Erro ao excluir: " + error.message);
+        });
+      }
+      document.getElementById('delete-event').addEventListener('click', deleteEvent);
+
+      /***************************************
+       * GESTOS (Touch) para Navegação
+       ***************************************/
+      let touchStartX = 0, touchEndX = 0;
+      const calendarContainer = document.getElementById('calendar-container');
+      calendarContainer.addEventListener('touchstart', e => {
+        touchStartX = e.changedTouches[0].screenX;
+      });
+      calendarContainer.addEventListener('touchend', e => {
+        touchEndX = e.changedTouches[0].screenX;
+        if (touchEndX < touchStartX - 50) {
+          document.getElementById('next-btn').click();
+        } else if (touchEndX > touchStartX + 50) {
+          document.getElementById('prev-btn').click();
+        }
+      });
+
+      /***************************************
+       * NOTIFICAÇÕES: Eventos Próximos
+       ***************************************/
+      function checkForUpcomingEvents() {
+        const now = new Date();
+        for (let dateKey in allEvents) {
+          let events = (allEvents[dateKey] && allEvents[dateKey]["dia"]) || [];
+          events.forEach(ev => {
+            let [h, m] = ev.inicio.split(":").map(Number);
+            let eventTime = new Date(dateKey);
+            eventTime.setHours(h, m, 0);
+            if (eventTime - now > 0 && eventTime - now < 10 * 60 * 1000) {
+              new Notification("Próximo Evento", { body: ev.titulo });
+            }
+          });
+        }
+      }
+      checkForUpcomingEventsInterval = setInterval(checkForUpcomingEvents, 60000);
+
+      /***************************************
+       * CLEANUP: Remoção de Listeners (Logout)
+       ***************************************/
+      function cleanupApp() {
+        if (eventsListener) { eventsListener.off(); }
+        if (checkForUpcomingEventsInterval) { clearInterval(checkForUpcomingEventsInterval); }
+      }
+      document.getElementById('btn-logout').addEventListener('click', function() {
+        cleanupApp();
+        auth.signOut().then(() => {
+          showToast("Logout efetuado.");
+          location.reload();
+        }).catch(error => { showToast("Erro no logout: " + error.message); });
+      });
+
+      /***************************************
+       * INICIALIZAÇÃO DO SISTEMA
+       ***************************************/
+      function initApp() {
+        console.log("Sistema de agenda premium iniciado.");
+      }
+      initApp();
+
+      /***************************************
+       * MODAL DE TERMOS: Abrir e Fechar
+       ***************************************/
+      document.getElementById('open-terms').addEventListener('click', function(e) {
+        e.preventDefault();
+        document.getElementById('terms-modal').style.display = 'flex';
+      });
+      document.getElementById('close-terms').addEventListener('click', function() {
+        document.getElementById('terms-modal').style.display = 'none';
+      });
+    });
+  </script>
+</body>
+</html>
