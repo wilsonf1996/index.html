@@ -42,8 +42,10 @@
       overflow-y: auto;
     }
     #profile-section { text-align: center; margin-bottom: 20px; }
+    /* A imagem de perfil agora não usa URL externa */
     #profile-section img { width: 80px; height: 80px; border-radius: 50%; border: 2px solid #1976d2; }
     #profile-section span { display: block; margin-top: 10px; font-weight: bold; }
+    #profile-section button { margin-top: 8px; padding: 5px 10px; font-size: 0.9em; cursor: pointer; }
     #sidebar-nav ul { list-style: none; padding: 0; }
     #sidebar-nav li { padding: 10px; cursor: pointer; border-radius: 4px; transition: background 0.3s; }
     #sidebar-nav li:hover { background: #333; }
@@ -109,8 +111,11 @@
   <!-- Sidebar -->
   <aside id="sidebar">
     <div id="profile-section">
-      <img src="https://via.placeholder.com/80" alt="Foto do Usuário" id="profile-pic">
+      <!-- Imagem sem URL externa; será definida pelo usuário -->
+      <img src="" alt="Foto do Usuário" id="profile-pic">
       <span id="profile-name">Usuário</span>
+      <button id="upload-profile-pic-btn">Alterar Imagem</button>
+      <input type="file" id="profile-pic-upload" accept="image/*" style="display:none;">
     </div>
     <nav id="sidebar-nav">
       <ul>
@@ -324,6 +329,36 @@
     });
     
     /***************************************
+     * UPLOAD DA IMAGEM DE PERFIL
+     ***************************************/
+    document.getElementById('upload-profile-pic-btn').addEventListener('click', () => {
+      document.getElementById('profile-pic-upload').click();
+    });
+    
+    document.getElementById('profile-pic-upload').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if(file) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          document.getElementById('profile-pic').src = evt.target.result;
+          // Opcional: salvar a imagem no localStorage ou atualizar o perfil no Firebase
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+    
+    /***************************************
+     * ATUALIZAÇÃO DO PERFIL DO USUÁRIO
+     ***************************************/
+    function updateProfileInfo() {
+      if (currentUser && currentUser.email) {
+        document.getElementById('profile-name').textContent = currentUser.email.split('@')[0];
+        // A imagem não é alterada aqui automaticamente; ela fica conforme escolhida pelo usuário.
+      }
+    }
+    setInterval(updateProfileInfo, 15000);
+    
+    /***************************************
      * NAVEGAÇÃO ENTRE SEMANAS
      ***************************************/
     function initializeWeek() {
@@ -380,10 +415,11 @@
           cell.className = 'agenda-cell';
           cell.dataset.key = cellKey;
           let events = agendaData[cellKey];
-          // Garante que events seja um array
-          if (!Array.isArray(events)) {
-            events = [];
+          // Se os dados forem um objeto (e não um array), converte para array
+          if (events && typeof events === 'object' && !Array.isArray(events)) {
+            events = Object.values(events);
           }
+          if (!Array.isArray(events)) { events = []; }
           events.forEach((event, index) => {
             const eventDiv = document.createElement('div');
             eventDiv.className = 'event-item';
@@ -437,9 +473,7 @@
       const dateKey = currentWeekStart.toISOString().slice(0,10);
       const cellRef = database.ref("agendas/" + currentUser.uid + "/" + dateKey + "/" + cellKey);
       let events = agendaData[cellKey];
-      if (!Array.isArray(events)) {
-        events = [];
-      }
+      if (!Array.isArray(events)) { events = []; }
       if (eventIndex !== null && eventIndex !== "") {
         events[eventIndex] = newEvent;
         logHistory("Evento editado em " + cellKey + ": " + titulo);
@@ -498,17 +532,6 @@
       const file = e.target.files[0];
       if (file) importAgendaFromCSV(file);
     });
-    
-    /***************************************
-     * ATUALIZAÇÃO DO PERFIL DO USUÁRIO
-     ***************************************/
-    function updateProfileInfo() {
-      if (currentUser && currentUser.email) {
-        document.getElementById('profile-name').textContent = currentUser.email.split('@')[0];
-        document.getElementById('profile-pic').src = "https://via.placeholder.com/80?text=" + currentUser.email.charAt(0).toUpperCase();
-      }
-    }
-    setInterval(updateProfileInfo, 15000);
     
     /***************************************
      * FUNÇÃO DE LOGOUT
