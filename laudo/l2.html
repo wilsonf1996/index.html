@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Laudo Técnico de Vistoria – Infiltração em Laje</title>
+  <style>
+    /* Reset básico e estilos globais */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: #eef2f5;
+      padding: 20px;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #004080;
+    }
+    form {
+      background: #fff;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    fieldset {
+      border: 1px solid #ddd;
+      margin-bottom: 20px;
+      padding: 20px;
+      border-radius: 8px;
+      background: #f9f9f9;
+    }
+    legend {
+      font-size: 1.2em;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #004080;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    input[type="text"],
+    input[type="date"],
+    input[type="email"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 1em;
+    }
+    textarea { resize: vertical; }
+    /* Índice */
+    .indice {
+      background: #fff;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      margin-top: 10px;
+      font-style: italic;
+      line-height: 1.4;
+    }
+    /* Custom paragraphs – em cada seção */
+    .custom-paragraph {
+      margin-top: 10px;
+      padding: 5px;
+      border: 1px dashed #aaa;
+      border-radius: 4px;
+      background: #fdfdfd;
+      position: relative;
+    }
+    .custom-paragraph textarea {
+      width: 100%;
+      padding: 5px;
+      font-size: 0.95em;
+    }
+    .custom-paragraph button {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: #dc3545;
+      color: #fff;
+      border: none;
+      padding: 3px 7px;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    /* Imagens */
+    #imagePreview {
+      margin-top: 10px;
+    }
+    #imagePreview div {
+      display: inline-block;
+      position: relative;
+      margin: 10px;
+    }
+    #imagePreview img {
+      max-width: 200px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    #imagePreview button {
+      position: absolute;
+      top: 0;
+      right: 0;
+      background: #dc3545;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 0 5px 0 5px;
+    }
+    /* Assinatura */
+    #signaturePad {
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      cursor: crosshair;
+    }
+    /* Botões */
+    button {
+      padding: 10px 20px;
+      margin-top: 20px;
+      border: none;
+      background: #007BFF;
+      color: #fff;
+      border-radius: 5px;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    button:hover { background: #0056b3; }
+    button#clearSignature {
+      background: #dc3545;
+    }
+    button#clearSignature:hover { background: #c82333; }
+    .export-buttons {
+      text-align: center;
+      margin-top: 20px;
+    }
+    /* Elementos com a classe no-export não serão incluídos no laudo final */
+    .no-export { }
+  </style>
+  <!-- Bibliotecas jsPDF e html2canvas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+  <h1>Laudo Técnico de Vistoria – Infiltração em Laje</h1>
+  <form id="laudoForm">
+    <!-- 1. CAPA -->
+    <fieldset>
+      <legend>Capa</legend>
+      <label for="emissionDate">Data da Emissão:</label>
+      <input type="date" id="emissionDate">
+      
+      <label for="engineerName">Engenheiro Responsável:</label>
+      <input type="text" id="engineerName" placeholder="Nome Completo" value="Wildon Fernandes Junior">
+      
+      <label for="crea">CREA:</label>
+      <input type="text" id="crea" placeholder="Número do CREA" value="CREA/SP">
+      
+      <label for="engineerPhone">Telefone do Engenheiro:</label>
+      <input type="text" id="engineerPhone" placeholder="(00) 0000-0000">
+      
+      <label for="engineerEmail">E-mail do Engenheiro:</label>
+      <input type="email" id="engineerEmail" placeholder="email@exemplo.com">
+      
+      <label for="engineerAddress">Endereço do Escritório:</label>
+      <input type="text" id="engineerAddress" placeholder="Endereço completo">
+      
+      <label for="clientName">Cliente (Proprietário ou Solicitante):</label>
+      <input type="text" id="clientName" placeholder="Nome do Cliente">
+      
+      <label for="clientDocument">CPF/CNPJ do Cliente:</label>
+      <input type="text" id="clientDocument" placeholder="CPF ou CNPJ">
+      
+      <label for="clientPhone">Telefone do Cliente:</label>
+      <input type="text" id="clientPhone" placeholder="(00) 0000-0000">
+      
+      <label for="clientEmail">E-mail do Cliente:</label>
+      <input type="email" id="clientEmail" placeholder="email@exemplo.com">
+      
+      <label for="inspectionAddress">Endereço da Vistoria:</label>
+      <input type="text" id="inspectionAddress" placeholder="Endereço Completo da Vistoria">
+    </fieldset>
+    
+    <!-- 2. ÍNDICE -->
+    <fieldset>
+      <legend>Índice</legend>
+      <div class="indice">
+        Capa<br>
+        Índice<br>
+        Objetivo<br>
+        Normas e Referências<br>
+        Caracterização da Estrutura<br>
+        Metodologia da Vistoria<br>
+        Diagnóstico e Causas Prováveis<br>
+        Consequências da Infiltração<br>
+        Recomendações e Soluções<br>
+        Conclusão<br>
+        Anexos<br>
+        Referências
+      </div>
+    </fieldset>
+    
+    <!-- 3. OBJETIVO -->
+    <fieldset>
+      <legend>Objetivo</legend>
+      <textarea id="objective" rows="4" placeholder="Descreva o objetivo do laudo">
+Este laudo tem como finalidade avaliar as infiltrações detectadas na laje do imóvel, identificando suas causas, danos ocasionados e propondo soluções para correção.
+      </textarea>
+      <div id="customObjectiveContainer"></div>
+      <button type="button" class="addCustomParagraph no-export" data-target="customObjectiveContainer">Adicionar parágrafo</button>
+    </fieldset>
+    
+    <!-- 4. NORMAS E REFERÊNCIAS -->
+    <fieldset>
+      <legend>Normas e Referências</legend>
+      <textarea id="norms" rows="6" placeholder="Liste as normas e referências utilizadas">
+ABNT NBR 9575 – Impermeabilização – Seleção e Projeto
+ABNT NBR 15575 – Desempenho de Edificações
+ABNT NBR 5674 – Manutenção de Edificações
+ABNT NBR 6118 – Projeto de Estruturas de Concreto
+      </textarea>
+      <div id="customNormsContainer"></div>
+      <button type="button" class="addCustomParagraph no-export" data-target="customNormsContainer">Adicionar parágrafo</button>
+    </fieldset>
+    
+    <!-- 5. CARACTERIZAÇÃO DA ESTRUTURA -->
+    <fieldset>
+      <legend>Caracterização da Estrutura</legend>
+      <label for="slabType">Tipo de Laje:</label>
+      <select id="slabType">
+        <option value="Maciça">Maciça</option>
+        <option value="Nervurada">Nervurada</option>
+        <option value="Pré-moldada">Pré-moldada</option>
+      </select>
+      <label for="dimensions">Dimensões:</label>
+      <input type="text" id="dimensions" placeholder="Medidas aproximadas">
+      <label for="material">Material:</label>
+      <input type="text" id="material" placeholder="Ex: Concreto armado">
+      <label for="constructionHistory">Histórico da Construção:</label>
+      <textarea id="constructionHistory" rows="3" placeholder="Ano de construção, reformas realizadas"></textarea>
+      <label for="maintenanceHistory">Histórico de Manutenção:</label>
+      <textarea id="maintenanceHistory" rows="3" placeholder="Registros de manutenções anteriores"></textarea>
+      <div id="customStructureContainer"></div>
+      <button type="button" class="addCustomParagraph no-export" data-target="customStructureContainer">Adicionar campo adicional</button>
+    </fieldset>
+    
+    <!-- 6. METODOLOGIA DA VISTORIA -->
+    <fieldset>
+      <legend>Metodologia da Vistoria</legend>
+      <textarea id="methodology" rows="4" placeholder="Descreva a metodologia utilizada">
+A vistoria foi realizada por meio de inspeção visual, termografia, medição de umidade e testes de percussão.
+      </textarea>
+      <div id="customMethodologyContainer"></div>
+      <button type="button" class="addCustomParagraph no-export" data-target="customMethodologyContainer">Adicionar parágrafo</button>
+    </fieldset>
+    
+    <!-- 7. DIAGNÓSTICO E CAUSAS PROVÁVEIS -->
+    <fieldset>
+      <legend>Diagnóstico e Causas Prováveis</legend>
+      <textarea id="diagnosis" rows="5" placeholder="Descreva o diagnóstico e as causas">
+Manchas de umidade, desprendimento de revestimentos e fissuras que podem estar relacionadas à falha na impermeabilização e drenagem.
+      </textarea>
+      <div id="customDiagnosisContainer"></div>
+      <button type="button" class="addCustomParagraph no-export" data-target="customDiagnosisContainer">Adicionar parágrafo</button>
+    </fieldset>
+    
+    <!-- 8. CONSEQUÊNCIAS DA INFILTRAÇÃO -->
+    <fieldset>
+      <legend>Consequências da Infiltração</legend>
+      <textarea id="consequences" rows="4" placeholder="Descreva as consequências">
+Estéticas: manchas e bolhas na pintura.
+Estruturais: corrosão, fissuras e desplacamentos.
+Saúde: formação de mofo e umidade excessiva.
+      </textarea>
+      <div id="customConsequencesContainer"></div>
+      <button type="button" class="addCustomParagraph no-export" data-target="customConsequencesContainer">Adicionar parágrafo</button>
+    </fieldset>
+    
+    <!-- 9. RECOMENDAÇÕES E SOLUÇÕES -->
+    <fieldset>
+      <legend>Recomendações e Soluções</legend>
+      <textarea id="recommendations" rows="5" placeholder="Liste as recomendações">
+- Remoção do revestimento comprometido e limpeza da superfície.
+- Reparo das fissuras com argamassa polimérica ou resina epóxi.
+- Nova aplicação de impermeabilização.
+- Melhoria do sistema de drenagem.
+      </textarea>
+      <div id="customRecommendationsContainer"></div>
+      <button type="button" class="addCustomParagraph no-export" data-target="customRecommendationsContainer">Adicionar parágrafo</button>
+    </fieldset>
+    
+    <!-- 10. CONCLUSÃO -->
+    <fieldset>
+      <legend>Conclusão</legend>
+      <textarea id="conclusion" rows="4" placeholder="Escreva a conclusão">
+Conclui-se que a infiltração na laje decorre de falha na impermeabilização e drenagem, comprometendo a estrutura e a habitabilidade do imóvel. Medidas corretivas são indispensáveis.
+      </textarea>
+      <div id="customConclusionContainer"></div>
+      <button type="button" class="addCustomParagraph no-export" data-target="customConclusionContainer">Adicionar parágrafo</button>
+    </fieldset>
+    
+    <!-- 11. ANEXOS -->
+    <fieldset>
+      <legend>Anexos</legend>
+      <label for="laudoImages">Selecione as imagens da vistoria:</label>
+      <input type="file" id="laudoImages" accept="image/*" multiple>
+      <div id="imagePreview"></div>
+      <label for="annexes">Observações sobre os Anexos:</label>
+      <textarea id="annexes" rows="3" placeholder="Observações ou descrição dos anexos"></textarea>
+    </fieldset>
+    
+    <!-- 12. REFERÊNCIAS -->
+    <fieldset>
+      <legend>Referências</legend>
+      <textarea id="references" rows="4" placeholder="Liste as referências">
+ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS. ABNT NBR 9575 – Impermeabilização.
+ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS. ABNT NBR 15575 – Desempenho de Edificações.
+OUTRAS REFERÊNCIAS RELEVANTES.
+      </textarea>
+      <div id="customReferencesContainer"></div>
+      <button type="button" class="addCustomParagraph no-export" data-target="customReferencesContainer">Adicionar parágrafo</button>
+    </fieldset>
+    
+    <!-- ASSINATURA -->
+    <fieldset>
+      <legend>Assinatura do Laudo</legend>
+      <canvas id="signaturePad" width="400" height="200"></canvas><br>
+      <button type="button" id="clearSignature" class="no-export">Limpar Assinatura</button>
+    </fieldset>
+    
+    <!-- Botões de Exportação (não serão exibidos no laudo final) -->
+    <div class="export-buttons no-export">
+      <button type="button" id="generatePdf">Gerar PDF</button>
+      <button type="button" id="generateWord">Gerar Word</button>
+    </div>
+  </form>
+  
+  <script>
+    // Função para criar um bloco de parágrafo customizado
+    function createCustomParagraph() {
+      const div = document.createElement('div');
+      div.className = 'custom-paragraph';
+      const textarea = document.createElement('textarea');
+      textarea.rows = 3;
+      textarea.placeholder = "Digite o parágrafo adicional";
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.innerText = 'Remover';
+      removeBtn.onclick = () => div.remove();
+      div.appendChild(textarea);
+      div.appendChild(removeBtn);
+      return div;
+    }
+    
+    // Adiciona eventos para botões de "Adicionar parágrafo"
+    document.querySelectorAll('.addCustomParagraph').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const targetId = btn.getAttribute('data-target');
+        document.getElementById(targetId).appendChild(createCustomParagraph());
+      });
+    });
+    
+    // Imagens: Preview e Exclusão
+    let selectedImages = [];
+    document.getElementById('laudoImages').addEventListener('change', function(event) {
+      const files = event.target.files;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          selectedImages.push(e.target.result);
+          updateImagePreview();
+        };
+        reader.readAsDataURL(file);
+      }
+      event.target.value = "";
+    });
+    function updateImagePreview() {
+      const preview = document.getElementById('imagePreview');
+      preview.innerHTML = "";
+      selectedImages.forEach((imgData, index) => {
+        const imgContainer = document.createElement('div');
+        const img = document.createElement('img');
+        img.src = imgData;
+        const removeImgBtn = document.createElement('button');
+        removeImgBtn.type = "button";
+        removeImgBtn.innerText = "X";
+        removeImgBtn.addEventListener('click', () => {
+          selectedImages.splice(index, 1);
+          updateImagePreview();
+        });
+        imgContainer.appendChild(img);
+        imgContainer.appendChild(removeImgBtn);
+        preview.appendChild(imgContainer);
+      });
+    }
+    
+    // Assinatura via Canvas
+    (function() {
+      const canvas = document.getElementById('signaturePad');
+      const ctx = canvas.getContext('2d');
+      let drawing = false, currentX, currentY;
+      canvas.addEventListener('mousedown', function(e) {
+        drawing = true;
+        currentX = e.offsetX;
+        currentY = e.offsetY;
+      });
+      canvas.addEventListener('mousemove', function(e) {
+        if (!drawing) return;
+        ctx.beginPath();
+        ctx.moveTo(currentX, currentY);
+        ctx.lineTo(e.offsetX, e.offsetY);
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        currentX = e.offsetX;
+        currentY = e.offsetY;
+      });
+      canvas.addEventListener('mouseup', () => { drawing = false; });
+      document.getElementById('clearSignature').addEventListener('click', function() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      });
+    })();
+    
+    // Geração do PDF
+    document.getElementById('generatePdf').addEventListener('click', function() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      let y = 10, lineHeight = 7;
+      
+      // Função auxiliar para adicionar seção com custom paragraphs
+      function addSection(title, content, customContainerId) {
+        doc.setFontSize(14);
+        doc.text(title.toUpperCase(), 10, y);
+        y += lineHeight;
+        doc.setFontSize(12);
+        const lines = doc.splitTextToSize(content, 180);
+        doc.text(lines, 10, y);
+        y += (lines.length * lineHeight) + 5;
+        const customContainer = document.getElementById(customContainerId);
+        if(customContainer) {
+          customContainer.querySelectorAll('textarea').forEach(textarea => {
+            const extraLines = doc.splitTextToSize(textarea.value, 180);
+            doc.text(extraLines, 10, y);
+            y += (extraLines.length * lineHeight) + 5;
+          });
+        }
+      }
+      
+      // CAPA
+      doc.setFontSize(16);
+      doc.text("LAUDO TÉCNICO DE VISTORIA – Infiltração em Laje", 10, y);
+      y += 10;
+      doc.setFontSize(12);
+      doc.text("Data da Emissão: " + document.getElementById('emissionDate').value, 10, y);
+      y += lineHeight;
+      doc.text("Engenheiro Responsável: " + document.getElementById('engineerName').value, 10, y);
+      y += lineHeight;
+      doc.text("CREA: " + document.getElementById('crea').value, 10, y);
+      y += lineHeight;
+      doc.text("Cliente: " + document.getElementById('clientName').value, 10, y);
+      y += lineHeight;
+      doc.text("Endereço da Vistoria: " + document.getElementById('inspectionAddress').value, 10, y);
+      y += 10;
+      
+      // ÍNDICE (estático)
+      doc.setFontSize(14);
+      doc.text("ÍNDICE", 10, y);
+      y += lineHeight;
+      doc.setFontSize(12);
+      const indexText = "Capa\nÍndice\nObjetivo\nNormas e Referências\nCaracterização da Estrutura\nMetodologia da Vistoria\nDiagnóstico e Causas Prováveis\nConsequências da Infiltração\nRecomendações e Soluções\nConclusão\nAnexos\nReferências";
+      const indexLines = doc.splitTextToSize(indexText, 180);
+      doc.text(indexLines, 10, y);
+      y += (indexLines.length * lineHeight) + 5;
+      
+      // Objetivo
+      addSection("Objetivo", document.getElementById('objective').value, "customObjectiveContainer");
+      
+      // Normas e Referências
+      addSection("Normas e Referências", document.getElementById('norms').value, "customNormsContainer");
+      
+      // Caracterização da Estrutura
+      doc.setFontSize(14);
+      doc.text("CARACTERIZAÇÃO DA ESTRUTURA", 10, y);
+      y += lineHeight;
+      doc.setFontSize(12);
+      doc.text("Tipo de Laje: " + document.getElementById('slabType').value, 10, y);
+      y += lineHeight;
+      doc.text("Dimensões: " + document.getElementById('dimensions').value, 10, y);
+      y += lineHeight;
+      doc.text("Material: " + document.getElementById('material').value, 10, y);
+      y += lineHeight;
+      let historyLines = doc.splitTextToSize("Histórico da Construção: " + document.getElementById('constructionHistory').value, 180);
+      doc.text(historyLines, 10, y);
+      y += (historyLines.length * lineHeight);
+      let maintenanceLines = doc.splitTextToSize("Histórico de Manutenção: " + document.getElementById('maintenanceHistory').value, 180);
+      doc.text(maintenanceLines, 10, y);
+      y += (maintenanceLines.length * lineHeight) + 5;
+      const customStructure = document.getElementById('customStructureContainer');
+      if(customStructure) {
+        customStructure.querySelectorAll('textarea').forEach(textarea => {
+          const extraLines = doc.splitTextToSize(textarea.value, 180);
+          doc.text(extraLines, 10, y);
+          y += (extraLines.length * lineHeight) + 5;
+        });
+      }
+      
+      // Metodologia
+      addSection("Metodologia da Vistoria", document.getElementById('methodology').value, "customMethodologyContainer");
+      
+      // Diagnóstico e Causas Prováveis
+      addSection("Diagnóstico e Causas Prováveis", document.getElementById('diagnosis').value, "customDiagnosisContainer");
+      
+      // Consequências da Infiltração
+      addSection("Consequências da Infiltração", document.getElementById('consequences').value, "customConsequencesContainer");
+      
+      // Recomendações e Soluções
+      addSection("Recomendações e Soluções", document.getElementById('recommendations').value, "customRecommendationsContainer");
+      
+      // Conclusão
+      addSection("Conclusão", document.getElementById('conclusion').value, "customConclusionContainer");
+      
+      // Anexos
+      doc.setFontSize(14);
+      doc.text("ANEXOS", 10, y);
+      y += lineHeight;
+      doc.setFontSize(12);
+      const annexes = doc.splitTextToSize(document.getElementById('annexes').value, 180);
+      doc.text(annexes, 10, y);
+      y += (annexes.length * lineHeight) + 5;
+      
+      // Imagens (se houver)
+      if(selectedImages.length > 0) {
+        doc.addPage();
+        y = 10;
+        doc.setFontSize(14);
+        doc.text("IMAGENS", 10, y);
+        y += lineHeight;
+        let x = 10;
+        const pageHeight = doc.internal.pageSize.height;
+        selectedImages.forEach(imgData => {
+          if(x > 150) { x = 10; y += 60; }
+          if(y > pageHeight - 60) { doc.addPage(); y = 10; }
+          doc.addImage(imgData, 'JPEG', x, y, 50, 50);
+          x += 60;
+        });
+      }
+      
+      // Referências
+      addSection("REFERÊNCIAS", document.getElementById('references').value, "customReferencesContainer");
+      
+      // Assinatura
+      doc.setFontSize(14);
+      if(y > doc.internal.pageSize.height - 40) { doc.addPage(); y = 10; }
+      doc.text("Assinatura do Laudo", 10, y);
+      y += lineHeight;
+      const canvas = document.getElementById('signaturePad');
+      const signatureData = canvas.toDataURL("image/png");
+      doc.addImage(signatureData, 'PNG', 10, y, 60, 30);
+      y += 35;
+      
+      // Dados Finais do Engenheiro
+      doc.setFontSize(12);
+      doc.text("Eng. " + document.getElementById('engineerName').value + " - CREA: " + document.getElementById('crea').value, 10, y);
+      y += lineHeight;
+      
+      doc.save("laudo.pdf");
+    });
+    
+    // Geração do Word (formatação semelhante)
+    document.getElementById('generateWord').addEventListener('click', function() {
+      let wordContent = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office'
+              xmlns:w='urn:schemas-microsoft-com:office:word'
+              xmlns='http://www.w3.org/TR/REC-html40'>
+        <head>
+          <meta charset="utf-8">
+          <title>Laudo Técnico de Vistoria – Infiltração em Laje</title>
+          <style>
+            body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; padding: 20px; }
+            h1, h2 { color: #004080; }
+            .section { margin-bottom: 20px; }
+            .indice { font-style: italic; line-height: 1.4; }
+            img { max-width: 200px; margin: 10px; border: 1px solid #ccc; border-radius: 5px; }
+          </style>
+        </head>
+        <body>
+          <h1>Laudo Técnico de Vistoria – Infiltração em Laje</h1>
+          <div class="section">
+            <h2>Capa</h2>
+            <p>Data da Emissão: ${document.getElementById('emissionDate').value}</p>
+            <p>Engenheiro Responsável: ${document.getElementById('engineerName').value}</p>
+            <p>CREA: ${document.getElementById('crea').value}</p>
+            <p>Cliente: ${document.getElementById('clientName').value}</p>
+            <p>Endereço da Vistoria: ${document.getElementById('inspectionAddress').value}</p>
+          </div>
+          <div class="section">
+            <h2>Índice</h2>
+            <p class="indice">
+              Capa<br>
+              Índice<br>
+              Objetivo<br>
+              Normas e Referências<br>
+              Caracterização da Estrutura<br>
+              Metodologia da Vistoria<br>
+              Diagnóstico e Causas Prováveis<br>
+              Consequências da Infiltração<br>
+              Recomendações e Soluções<br>
+              Conclusão<br>
+              Anexos<br>
+              Referências
+            </p>
+          </div>
+          <div class="section">
+            <h2>Objetivo</h2>
+            <p>${document.getElementById('objective').value.replace(/\n/g, '<br>')}</p>`;
+      const customObjective = document.getElementById('customObjectiveContainer');
+      if(customObjective) {
+        customObjective.querySelectorAll('textarea').forEach(textarea => {
+          wordContent += `<p>${textarea.value.replace(/\n/g, '<br>')}</p>`;
+        });
+      }
+      wordContent += `</div>
+          <div class="section">
+            <h2>Normas e Referências</h2>
+            <p>${document.getElementById('norms').value.replace(/\n/g, '<br>')}</p>`;
+      const customNorms = document.getElementById('customNormsContainer');
+      if(customNorms) {
+        customNorms.querySelectorAll('textarea').forEach(textarea => {
+          wordContent += `<p>${textarea.value.replace(/\n/g, '<br>')}</p>`;
+        });
+      }
+      wordContent += `</div>
+          <div class="section">
+            <h2>Caracterização da Estrutura</h2>
+            <p>Tipo de Laje: ${document.getElementById('slabType').value}</p>
+            <p>Dimensões: ${document.getElementById('dimensions').value}</p>
+            <p>Material: ${document.getElementById('material').value}</p>
+            <p>Histórico da Construção: ${document.getElementById('constructionHistory').value.replace(/\n/g, '<br>')}</p>
+            <p>Histórico de Manutenção: ${document.getElementById('maintenanceHistory').value.replace(/\n/g, '<br>')}</p>`;
+      const customStructure = document.getElementById('customStructureContainer');
+      if(customStructure) {
+        customStructure.querySelectorAll('textarea').forEach(textarea => {
+          wordContent += `<p>${textarea.value.replace(/\n/g, '<br>')}</p>`;
+        });
+      }
+      wordContent += `</div>
+          <div class="section">
+            <h2>Metodologia da Vistoria</h2>
+            <p>${document.getElementById('methodology').value.replace(/\n/g, '<br>')}</p>`;
+      const customMethodology = document.getElementById('customMethodologyContainer');
+      if(customMethodology) {
+        customMethodology.querySelectorAll('textarea').forEach(textarea => {
+          wordContent += `<p>${textarea.value.replace(/\n/g, '<br>')}</p>`;
+        });
+      }
+      wordContent += `</div>
+          <div class="section">
+            <h2>Diagnóstico e Causas Prováveis</h2>
+            <p>${document.getElementById('diagnosis').value.replace(/\n/g, '<br>')}</p>`;
+      const customDiagnosis = document.getElementById('customDiagnosisContainer');
+      if(customDiagnosis) {
+        customDiagnosis.querySelectorAll('textarea').forEach(textarea => {
+          wordContent += `<p>${textarea.value.replace(/\n/g, '<br>')}</p>`;
+        });
+      }
+      wordContent += `</div>
+          <div class="section">
+            <h2>Consequências da Infiltração</h2>
+            <p>${document.getElementById('consequences').value.replace(/\n/g, '<br>')}</p>`;
+      const customConsequences = document.getElementById('customConsequencesContainer');
+      if(customConsequences) {
+        customConsequences.querySelectorAll('textarea').forEach(textarea => {
+          wordContent += `<p>${textarea.value.replace(/\n/g, '<br>')}</p>`;
+        });
+      }
+      wordContent += `</div>
+          <div class="section">
+            <h2>Recomendações e Soluções</h2>
+            <p>${document.getElementById('recommendations').value.replace(/\n/g, '<br>')}</p>`;
+      const customRecommendations = document.getElementById('customRecommendationsContainer');
+      if(customRecommendations) {
+        customRecommendations.querySelectorAll('textarea').forEach(textarea => {
+          wordContent += `<p>${textarea.value.replace(/\n/g, '<br>')}</p>`;
+        });
+      }
+      wordContent += `</div>
+          <div class="section">
+            <h2>Conclusão</h2>
+            <p>${document.getElementById('conclusion').value.replace(/\n/g, '<br>')}</p>`;
+      const customConclusion = document.getElementById('customConclusionContainer');
+      if(customConclusion) {
+        customConclusion.querySelectorAll('textarea').forEach(textarea => {
+          wordContent += `<p>${textarea.value.replace(/\n/g, '<br>')}</p>`;
+        });
+      }
+      wordContent += `</div>
+          <div class="section">
+            <h2>Anexos</h2>
+            <p>${document.getElementById('annexes').value.replace(/\n/g, '<br>')}</p>`;
+      if(selectedImages.length > 0) {
+        wordContent += `<div>`;
+        selectedImages.forEach(imgData => {
+          wordContent += `<img src="${imgData}" alt="Imagem do Laudo">`;
+        });
+        wordContent += `</div>`;
+      }
+      wordContent += `</div>
+          <div class="section">
+            <h2>Referências</h2>
+            <p>${document.getElementById('references').value.replace(/\n/g, '<br>')}</p>`;
+      const customReferences = document.getElementById('customReferencesContainer');
+      if(customReferences) {
+        customReferences.querySelectorAll('textarea').forEach(textarea => {
+          wordContent += `<p>${textarea.value.replace(/\n/g, '<br>')}</p>`;
+        });
+      }
+      wordContent += `</div>
+          <div class="section">
+            <h2>Assinatura do Laudo</h2>
+            <p><img src="${document.getElementById('signaturePad').toDataURL("image/png")}" alt="Assinatura"></p>
+          </div>
+          <div class="section">
+            <p>Eng. ${document.getElementById('engineerName').value} - CREA: ${document.getElementById('crea').value}</p>
+          </div>
+        </body>
+        </html>
+      `;
+      
+      const blob = new Blob(['\ufeff', wordContent], { type: 'application/msword' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'laudo.doc';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+  </script>
+</body>
+</html>
