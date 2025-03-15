@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Laudo de Avaliação de Laje com Infiltração - Wildon Fernandes Junior</title>
+  <style>
+    /* Estilos Gerais */
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      margin: 20px;
+      background: #f0f2f5;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      color: #004080;
+    }
+    form {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 900px;
+      margin: auto;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    fieldset {
+      border: 1px solid #ccc;
+      margin-bottom: 20px;
+      padding: 15px;
+      border-radius: 5px;
+    }
+    legend {
+      font-size: 1.1em;
+      font-weight: bold;
+      padding: 0 10px;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    input[type="text"],
+    textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1em;
+    }
+    textarea {
+      resize: vertical;
+    }
+    /* Área de imagens */
+    #imagePreview img {
+      max-width: 200px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    /* Assinatura */
+    #signaturePad {
+      background: #fff;
+      cursor: crosshair;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    /* Botões */
+    button {
+      padding: 10px 20px;
+      margin-top: 20px;
+      border: none;
+      background: #007BFF;
+      color: #fff;
+      border-radius: 4px;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    button#clearSignature {
+      background: #dc3545;
+    }
+    button#clearSignature:hover {
+      background: #c82333;
+    }
+    /* Botões de exportação – não serão incluídos no laudo final */
+    .export-buttons {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .no-export { }
+    /* Questionário Personalizável */
+    .question-block {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 10px;
+      position: relative;
+      border-radius: 4px;
+      background: #fafafa;
+    }
+    .question-block label {
+      margin-top: 5px;
+    }
+    .question-block button {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #dc3545;
+      padding: 5px 10px;
+    }
+    /* Campos Adicionais Personalizáveis */
+    .custom-field {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 10px;
+      position: relative;
+      border-radius: 4px;
+      background: #fdfdfd;
+    }
+    .custom-field button {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #dc3545;
+      padding: 5px 10px;
+    }
+    /* Container de imagens para remoção */
+    #imagePreview div {
+      display: inline-block;
+      position: relative;
+      margin: 10px;
+    }
+    #imagePreview button {
+      position: absolute;
+      top: 0;
+      right: 0;
+      background: #dc3545;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+    }
+  </style>
+  <!-- Bibliotecas jsPDF e html2canvas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+  <h1>Laudo de Avaliação de Laje com Infiltração</h1>
+  <form id="laudoForm">
+    <!-- Dados do Engenheiro -->
+    <fieldset>
+      <legend>Dados do Engenheiro</legend>
+      <label for="engineerName">Nome:</label>
+      <input type="text" id="engineerName" value="Wildon Fernandes Junior" readonly>
+      <label for="crea">CREA/SP:</label>
+      <input type="text" id="crea" value="CREA/SP" readonly>
+    </fieldset>
+
+    <!-- Dados do Contratante -->
+    <fieldset>
+      <legend>Dados do Contratante</legend>
+      <label for="contractorName">Nome:</label>
+      <input type="text" id="contractorName" placeholder="Informe o nome do contratante" required>
+      <label for="contractorDocument">CNPJ/CPF:</label>
+      <input type="text" id="contractorDocument" placeholder="Informe o CNPJ ou CPF" required>
+      <label for="contractorAddress">Endereço do Local do Laudo:</label>
+      <input type="text" id="contractorAddress" placeholder="Informe o endereço do imóvel" required>
+    </fieldset>
+
+    <!-- Detalhes do Laudo -->
+    <fieldset>
+      <legend>Detalhes do Laudo</legend>
+      <label for="propertyDescription">Descrição do Imóvel:</label>
+      <textarea id="propertyDescription" rows="3" placeholder="Descreva o imóvel" required></textarea>
+      <label for="otherInfo">Outras Informações:</label>
+      <textarea id="otherInfo" rows="3" placeholder="Informações adicionais"></textarea>
+    </fieldset>
+
+    <!-- Campos Adicionais Personalizáveis -->
+    <fieldset>
+      <legend>Campos Adicionais</legend>
+      <div id="customFieldsContainer"></div>
+      <button type="button" id="addCustomField">Adicionar Campo Personalizado</button>
+    </fieldset>
+
+    <!-- Imagens do Laudo -->
+    <fieldset>
+      <legend>Imagens do Laudo</legend>
+      <input type="file" id="laudoImages" accept="image/*" multiple>
+      <div id="imagePreview"></div>
+    </fieldset>
+
+    <!-- Assinatura do Laudo -->
+    <fieldset>
+      <legend>Assinatura do Laudo</legend>
+      <canvas id="signaturePad" width="300" height="150"></canvas><br>
+      <button type="button" id="clearSignature">Limpar Assinatura</button>
+    </fieldset>
+
+    <!-- Questionário Personalizável -->
+    <fieldset>
+      <legend>Questionário Personalizável</legend>
+      <div id="questionsContainer"></div>
+      <button type="button" id="addQuestion">Adicionar Pergunta</button>
+    </fieldset>
+
+    <!-- Botões de Exportação (não serão incluídos no laudo final) -->
+    <div class="export-buttons no-export">
+      <button type="button" id="generatePdf">Gerar PDF</button>
+      <button type="button" id="generateWord">Gerar Word</button>
+    </div>
+  </form>
+
+  <script>
+    /*********** Variáveis Globais ***********/
+    let selectedImages = []; // Armazena as imagens adicionadas
+
+    /*********** Campos Adicionais Personalizáveis ***********/
+    function createCustomField(labelText = "", valueText = "") {
+      const div = document.createElement('div');
+      div.className = 'custom-field';
+      
+      const labelField = document.createElement('input');
+      labelField.type = 'text';
+      labelField.className = 'custom-label';
+      labelField.placeholder = 'Título do Campo';
+      labelField.value = labelText;
+      
+      const valueField = document.createElement('textarea');
+      valueField.className = 'custom-value';
+      valueField.rows = 2;
+      valueField.placeholder = 'Conteúdo do Campo';
+      valueField.value = valueText;
+      
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.innerText = 'Excluir';
+      removeBtn.addEventListener('click', () => { div.remove(); });
+      
+      div.appendChild(labelField);
+      div.appendChild(valueField);
+      div.appendChild(removeBtn);
+      return div;
+    }
+    
+    document.getElementById('addCustomField').addEventListener('click', () => {
+      document.getElementById('customFieldsContainer').appendChild(createCustomField());
+    });
+
+    /*********** Questionário Personalizável ***********/
+    const defaultQuestions = [
+      "O que causou a infiltração/inundação no imóvel?",
+      "Há sinais de falhas estruturais no telhado, laje, fundações ou sistema de drenagem do imóvel?",
+      "O problema pode ser decorrente de falta de manutenção regular ou está relacionado a falhas construtivas e estruturais?",
+      "Há evidências de que o problema já ocorreu anteriormente? Caso positivo, há sinais de reparos anteriores mal executados ou paliativos?",
+      "Os danos identificados são compatíveis com relatos de inquilinos anteriores sobre problemas semelhantes?",
+      "As imagens recebidas pelos antigos inquilinos referem-se ao mesmo imóvel?",
+      "Houve comprometimento de estruturas essenciais, como lajes, paredes, pisos ou instalações elétricas?",
+      "O problema pode comprometer a segurança do imóvel e dos ocupantes?",
+      "Há falhas no projeto ou na execução que possam ter contribuído para os danos?",
+      "Quais medidas corretivas seriam necessárias para sanar o problema definitivamente?",
+      "O reparo exige intervenções estruturais ou apenas ações de manutenção preventiva?",
+      "O problema poderia ter sido evitado por medidas simples de manutenção por parte da inquilina, ou ele é inerente à estrutura do imóvel?"
+    ];
+
+    function createQuestionBlock(questionText = "", answerText = "") {
+      const div = document.createElement('div');
+      div.className = 'question-block';
+      
+      const qLabel = document.createElement('label');
+      qLabel.innerText = "Pergunta:";
+      const questionInput = document.createElement('textarea');
+      questionInput.className = 'question-text';
+      questionInput.rows = 2;
+      questionInput.placeholder = "Digite a pergunta";
+      questionInput.value = questionText;
+      
+      const aLabel = document.createElement('label');
+      aLabel.innerText = "Resposta:";
+      const answerInput = document.createElement('textarea');
+      answerInput.className = 'question-answer';
+      answerInput.rows = 2;
+      answerInput.placeholder = "Digite a resposta";
+      answerInput.value = answerText;
+      
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.innerText = 'Excluir';
+      removeBtn.addEventListener('click', () => { div.remove(); });
+      
+      div.appendChild(qLabel);
+      div.appendChild(questionInput);
+      div.appendChild(aLabel);
+      div.appendChild(answerInput);
+      div.appendChild(removeBtn);
+      return div;
+    }
+
+    function loadDefaultQuestions() {
+      const container = document.getElementById('questionsContainer');
+      defaultQuestions.forEach(q => {
+        container.appendChild(createQuestionBlock(q, ""));
+      });
+    }
+
+    document.getElementById('addQuestion').addEventListener('click', () => {
+      const container = document.getElementById('questionsContainer');
+      container.appendChild(createQuestionBlock("", ""));
+    });
+
+    /*********** Imagens com Preview e Exclusão ***********/
+    document.getElementById('laudoImages').addEventListener('change', function(event) {
+      const files = event.target.files;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          selectedImages.push(e.target.result);
+          updateImagePreview();
+        };
+        reader.readAsDataURL(file);
+      }
+      event.target.value = "";
+    });
+
+    function updateImagePreview() {
+      const preview = document.getElementById('imagePreview');
+      preview.innerHTML = "";
+      selectedImages.forEach((imgData, index) => {
+        const imgContainer = document.createElement('div');
+        const img = document.createElement('img');
+        img.src = imgData;
+        const removeImgBtn = document.createElement('button');
+        removeImgBtn.type = "button";
+        removeImgBtn.innerText = "X";
+        removeImgBtn.addEventListener('click', () => {
+          selectedImages.splice(index, 1);
+          updateImagePreview();
+        });
+        imgContainer.appendChild(img);
+        imgContainer.appendChild(removeImgBtn);
+        preview.appendChild(imgContainer);
+      });
+    }
+
+    /*********** Assinatura via Canvas ***********/
+    (function() {
+      const canvas = document.getElementById('signaturePad');
+      const ctx = canvas.getContext('2d');
+      let drawing = false, currentX, currentY;
+      
+      canvas.addEventListener('mousedown', function(e) {
+        drawing = true;
+        currentX = e.offsetX;
+        currentY = e.offsetY;
+      });
+      
+      canvas.addEventListener('mousemove', function(e) {
+        if (!drawing) return;
+        ctx.beginPath();
+        ctx.moveTo(currentX, currentY);
+        ctx.lineTo(e.offsetX, e.offsetY);
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        currentX = e.offsetX;
+        currentY = e.offsetY;
+      });
+      
+      canvas.addEventListener('mouseup', () => { drawing = false; });
+      
+      document.getElementById('clearSignature').addEventListener('click', function() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      });
+    })();
+
+    /*********** Geração do PDF ***********/
+    document.getElementById('generatePdf').addEventListener('click', function() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      let y = 10;
+      
+      // Cabeçalho
+      doc.setFontSize(16);
+      doc.text("Laudo de Avaliação de Laje com Infiltração", 10, y);
+      y += 10;
+      
+      // Dados do Engenheiro
+      doc.setFontSize(12);
+      doc.text("Dados do Engenheiro:", 10, y);
+      y += 7;
+      doc.text("Nome: " + document.getElementById('engineerName').value, 10, y);
+      y += 7;
+      doc.text("CREA/SP: " + document.getElementById('crea').value, 10, y);
+      y += 10;
+      
+      // Dados do Contratante
+      doc.text("Dados do Contratante:", 10, y);
+      y += 7;
+      doc.text("Nome: " + document.getElementById('contractorName').value, 10, y);
+      y += 7;
+      doc.text("CNPJ/CPF: " + document.getElementById('contractorDocument').value, 10, y);
+      y += 7;
+      doc.text("Endereço: " + document.getElementById('contractorAddress').value, 10, y);
+      y += 10;
+      
+      // Detalhes do Laudo
+      doc.text("Detalhes do Laudo:", 10, y);
+      y += 7;
+      doc.text("Descrição do Imóvel: " + document.getElementById('propertyDescription').value, 10, y);
+      y += 10;
+      doc.text("Outras Informações: " + document.getElementById('otherInfo').value, 10, y);
+      y += 10;
+      
+      // Campos Adicionais
+      const customFields = document.querySelectorAll('.custom-field');
+      if(customFields.length > 0) {
+        doc.text("Campos Adicionais:", 10, y);
+        y += 7;
+        customFields.forEach(field => {
+          const label = field.querySelector('.custom-label').value;
+          const value = field.querySelector('.custom-value').value;
+          if(label.trim() !== "" || value.trim() !== "") {
+            doc.text(label + ": " + value, 10, y);
+            y += 7;
+          }
+        });
+        y += 5;
+      }
+      
+      // Questionário Personalizável
+      const questionBlocks = document.querySelectorAll('.question-block');
+      questionBlocks.forEach(block => {
+        const question = block.querySelector('.question-text').value;
+        const answer = block.querySelector('.question-answer').value;
+        if(question.trim() !== "" || answer.trim() !== ""){
+          doc.text("Pergunta: " + question, 10, y);
+          y += 7;
+          const splitAnswer = doc.splitTextToSize("Resposta: " + answer, 180);
+          doc.text(splitAnswer, 10, y);
+          y += (splitAnswer.length * 7) + 5;
+        }
+      });
+      
+      // Assinatura
+      const canvas = document.getElementById('signaturePad');
+      const signatureData = canvas.toDataURL("image/png");
+      doc.text("Assinatura:", 10, y);
+      y += 5;
+      doc.addImage(signatureData, 'PNG', 10, y, 50, 25);
+      y += 30;
+      
+      // Imagens do Laudo
+      if(selectedImages.length > 0) {
+        doc.addPage();
+        y = 10;
+        doc.text("Imagens do Laudo:", 10, y);
+        y += 10;
+        let x = 10;
+        const pageHeight = doc.internal.pageSize.height;
+        selectedImages.forEach(imgData => {
+          if(x > 150) { x = 10; y += 60; }
+          if(y > pageHeight - 60) {
+            doc.addPage();
+            y = 10;
+          }
+          doc.addImage(imgData, 'JPEG', x, y, 50, 50);
+          x += 60;
+        });
+      }
+      
+      doc.save("laudo.pdf");
+    });
+
+    /*********** Geração do Word ***********/
+    document.getElementById('generateWord').addEventListener('click', function() {
+      let wordContent = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+              xmlns:w='urn:schemas-microsoft-com:office:word' 
+              xmlns='http://www.w3.org/TR/REC-html40'>
+        <head>
+          <meta charset="utf-8">
+          <title>Laudo de Avaliação de Laje com Infiltração</title>
+          <style>
+            body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; padding: 20px; }
+            h1 { text-align: center; color: #004080; }
+            h2 { color: #004080; }
+            .section { margin-bottom: 20px; }
+            .field { margin-bottom: 10px; }
+            .question { margin-bottom: 10px; }
+            .question strong { display: block; }
+            img { max-width: 200px; margin: 10px; border: 1px solid #ccc; border-radius: 4px; }
+          </style>
+        </head>
+        <body>
+          <h1>Laudo de Avaliação de Laje com Infiltração</h1>
+          <div class="section">
+            <h2>Dados do Engenheiro</h2>
+            <div class="field">Nome: ${document.getElementById('engineerName').value}</div>
+            <div class="field">CREA/SP: ${document.getElementById('crea').value}</div>
+          </div>
+          <div class="section">
+            <h2>Dados do Contratante</h2>
+            <div class="field">Nome: ${document.getElementById('contractorName').value}</div>
+            <div class="field">CNPJ/CPF: ${document.getElementById('contractorDocument').value}</div>
+            <div class="field">Endereço: ${document.getElementById('contractorAddress').value}</div>
+          </div>
+          <div class="section">
+            <h2>Detalhes do Laudo</h2>
+            <div class="field"><strong>Descrição do Imóvel:</strong> ${document.getElementById('propertyDescription').value}</div>
+            <div class="field"><strong>Outras Informações:</strong> ${document.getElementById('otherInfo').value}</div>
+          </div>
+          <div class="section">
+            <h2>Campos Adicionais</h2>`;
+      
+      const customFields = document.querySelectorAll('.custom-field');
+      customFields.forEach(field => {
+        const label = field.querySelector('.custom-label').value;
+        const value = field.querySelector('.custom-value').value;
+        if(label.trim() !== "" || value.trim() !== ""){
+          wordContent += `<div class="field">${label}: ${value}</div>`;
+        }
+      });
+      
+      wordContent += `
+          </div>
+          <div class="section">
+            <h2>Questionário Personalizável</h2>`;
+      
+      const questionBlocks = document.querySelectorAll('.question-block');
+      questionBlocks.forEach(block => {
+        const question = block.querySelector('.question-text').value;
+        const answer = block.querySelector('.question-answer').value;
+        if(question.trim() !== "" || answer.trim() !== ""){
+          wordContent += `
+            <div class="question">
+              <strong>Pergunta: ${question}</strong>
+              <div>Resposta: ${answer}</div>
+            </div>`;
+        }
+      });
+      
+      // Assinatura
+      const canvas = document.getElementById('signaturePad');
+      const signatureData = canvas.toDataURL("image/png");
+      wordContent += `
+          </div>
+          <div class="section">
+            <h2>Assinatura do Laudo</h2>
+            <div><img src="${signatureData}" alt="Assinatura"></div>
+          </div>
+          <div class="section">
+            <h2>Imagens do Laudo</h2>`;
+      selectedImages.forEach(imgData => {
+        wordContent += `<img src="${imgData}" alt="Imagem do Laudo">`;
+      });
+      
+      wordContent += `
+          </div>
+        </body>
+        </html>
+      `;
+      
+      const blob = new Blob(['\ufeff', wordContent], { type: 'application/msword' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'laudo.doc';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+
+    /*********** Inicialização ***********/
+    window.addEventListener('DOMContentLoaded', loadDefaultQuestions);
+  </script>
+</body>
+</html>
