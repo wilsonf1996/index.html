@@ -1,604 +1,444 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, BarChart, Bar, Legend, PieChart, Pie, Cell } from "recharts";
-import { v4 as uuid } from "uuid";
-
-// UI (shadcn/ui)
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-
-// ---------------- CONFIG ----------------
-const STORAGE_KEY = "vehicle-app-v1";
-
-const DEFAULT_VEHICLE = {
-  nome: "Ford Ka 2010 Flex",
-  placa: "",
-  odometroInicial: 0,
-  preferenciaCombustivel: "auto", // auto | gasolina | etanol
-  metas: {
-    consumoCidadeKmL: 10, // editável
-    consumoEstradaKmL: 14,
-  },
-  alertas: {
-    trocaOleoKm: 10000,
-    trocaOleoMeses: 6,
-    filtroArKm: 10000,
-    filtroCombustivelKm: 20000,
-    velasIgniçãoKm: 20000,
-    fluidoArrefecimentoMeses: 12,
-    pastilhaFreioKm: 30000,
-    correiaDentadaKm: 50000,
-    calibragemSemanas: 2,
-  },
-};
-
-const MANUT_TIPOS = [
-  { key: "troca_oleo", label: "Troca de Óleo" },
-  { key: "filtro_ar", label: "Filtro de Ar" },
-  { key: "filtro_combustivel", label: "Filtro de Combustível" },
-  { key: "velas", label: "Velas de Ignição" },
-  { key: "arrefecimento", label: "Fluido do Radiador" },
-  { key: "pastilha_freio", label: "Pastilha de Freio" },
-  { key: "pneu", label: "Pneus/Alinhamento/Balanceamento" },
-  { key: "bateria", label: "Bateria" },
-  { key: "correia_dentada", label: "Correia Dentada" },
-  { key: "inspecao_geral", label: "Inspeção Geral" },
-];
-
-const FUEL_TYPES = [
-  { key: "gasolina", label: "Gasolina" },
-  { key: "etanol", label: "Etanol" },
-  { key: "diesel", label: "Diesel" },
-  { key: "gnv", label: "GNV" },
-];
-
-function brl(v) {
-  try { return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(v||0)); } catch { return `R$ ${Number(v||0).toFixed(2)}`; }
-}
-
-function formatDateISO(d) {
-  return new Date(d).toISOString().slice(0,10);
-}
-
-function monthsDiff(a, b) {
-  const d1 = new Date(a); const d2 = new Date(b);
-  return (d2.getFullYear()-d1.getFullYear())*12 + (d2.getMonth()-d1.getMonth());
-}
-
-function daysDiff(a, b) {
-  const one = new Date(a); const two = new Date(b);
-  return Math.round((two - one) / (1000*60*60*24));
-}
-
-function loadState() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || null; } catch { return null; }
-}
-function saveState(state) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
-
-// ---------------- APP ----------------
-export default function App() {
-  const [vehicle, setVehicle] = useState(() => loadState()?.vehicle || DEFAULT_VEHICLE);
-  const [odometroAtual, setOdometroAtual] = useState(() => loadState()?.odometroAtual || 0);
-  const [abastecimentos, setAbastecimentos] = useState(() => loadState()?.abastecimentos || []);
-  const [manutencoes, setManutencoes] = useState(() => loadState()?.manutencoes || []);
-  const [prefs, setPrefs] = useState(() => loadState()?.prefs || { modoEscuro: true, idioma: "pt-BR" });
-
-  useEffect(() => {
-    saveState({ vehicle, odometroAtual, abastecimentos, manutencoes, prefs });
-  }, [vehicle, odometroAtual, abastecimentos, manutencoes, prefs]);
-
-  const hoje = formatDateISO(new Date());
-
-  // ---------- Forms Drafts ----------
-  const [draftFuel, setDraftFuel] = useState({ date: hoje, odometro: "", litros: "", valorTotal: "", tipo: "gasolina", posto: "", observacao: "" });
-  const [draftMaint, setDraftMaint] = useState({ date: hoje, odometro: "", tipo: "troca_oleo", custo: "", notas: "" });
-
-  // ---------- Helpers/Derived ----------
-  const sortedAbast = useMemo(() => [...abastecimentos].sort((a,b)=>a.odometro-b.odometro), [abastecimentos]);
-
-  const consumoSerie = useMemo(() => {
-    const arr = [];
-    for (let i=1; i<sortedAbast.length; i++) {
-      const prev = sortedAbast[i-1];
-      const cur = sortedAbast[i];
-      const km = cur.odometro - prev.odometro;
-      const litros = cur.litros; // método "tanque cheio" (ideal)
-      if (km>0 && litros>0) arr.push({ data: cur.date, km, litros, kmL: km/litros, tipo: cur.tipo });
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GaragePro — Controle Veicular (Ford Ka 2010 Flex)</title>
+  <meta name="description" content="App profissional de controle de veículo: abastecimentos, manutenção, gastos e alertas. 100% local, pronto para GitHub Pages." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0b0b0c; --card:#141416; --text:#f2f2f3; --muted:#a1a1aa; --brand:#4f46e5; --ok:#10b981; --warn:#f59e0b; --danger:#ef4444; --stroke:#222227;
     }
-    return arr;
-  }, [sortedAbast]);
-
-  const consumoMedioG = useMemo(() => {
-    const g = consumoSerie.filter(x=>x.tipo==="gasolina");
-    const km = g.reduce((s,x)=>s+x.km,0); const l = g.reduce((s,x)=>s+x.litros,0);
-    return km>0 && l>0 ? km/l : 0;
-  }, [consumoSerie]);
-  const consumoMedioE = useMemo(() => {
-    const e = consumoSerie.filter(x=>x.tipo==="etanol");
-    const km = e.reduce((s,x)=>s+x.km,0); const l = e.reduce((s,x)=>s+x.litros,0);
-    return km>0 && l>0 ? km/l : 0;
-  }, [consumoSerie]);
-
-  const gastoMensal = useMemo(() => {
-    const map = new Map();
-    abastecimentos.forEach(a=>{
-      const ym = a.date.slice(0,7);
-      const prev = map.get(ym) || { mes: ym, litros:0, gasto:0 };
-      prev.litros += Number(a.litros||0);
-      prev.gasto += Number(a.valorTotal||0);
-      map.set(ym, prev);
-    });
-    manutencoes.forEach(m=>{
-      const ym = m.date.slice(0,7);
-      const prev = map.get(ym) || { mes: ym, litros:0, gasto:0 };
-      prev.gasto += Number(m.custo||0);
-      map.set(ym, prev);
-    });
-    return Array.from(map.values()).sort((a,b)=>a.mes.localeCompare(b.mes));
-  }, [abastecimentos, manutencoes]);
-
-  const ultimoPreco = useMemo(() => {
-    const lastG = [...abastecimentos].reverse().find(a=>a.tipo==="gasolina");
-    const lastE = [...abastecimentos].reverse().find(a=>a.tipo==="etanol");
-    return {
-      gasolina: lastG ? (lastG.valorTotal/lastG.litros) : null,
-      etanol: lastE ? (lastE.valorTotal/lastE.litros) : null,
-    };
-  }, [abastecimentos]);
-
-  const dicaFlex = useMemo(() => {
-    // Regra simples: Etanol compensa se preçoE <= 0.7 * preçoG
-    const pg = ultimoPreco.gasolina; const pe = ultimoPreco.etanol;
-    if (!pg || !pe) return "Cadastre um abastecimento de gasolina e etanol para sugerirmos.";
-    const limite = 0.7 * pg;
-    if (pe <= limite) return "No momento, ETANOL é mais vantajoso (<= 70% do preço da gasolina).";
-    return "No momento, GASOLINA é mais vantajosa (> 70% do preço do etanol).";
-  }, [ultimoPreco]);
-
-  const alertas = useMemo(() => {
-    const alerts = [];
-    const byTipo = (tipo) => manutencoes.filter(m=>m.tipo===tipo).sort((a,b)=>b.odometro-a.odometro || b.date.localeCompare(a.date))[0];
-
-    const hojeISO = formatDateISO(new Date());
-
-    // Troca de óleo (km ou meses)
-    const lastOleo = byTipo("troca_oleo");
-    if (lastOleo) {
-      const kmPerc = odometroAtual - lastOleo.odometro;
-      const mesesPerc = monthsDiff(lastOleo.date, hojeISO);
-      const faltaKm = vehicle.alertas.trocaOleoKm - kmPerc;
-      const faltaMes = vehicle.alertas.trocaOleoMeses - mesesPerc;
-      if (faltaKm <= 1000 || faltaMes <= 1) {
-        alerts.push({ tipo: "Troca de Óleo", msg: `Faltam ${Math.max(0, faltaKm)} km ou ${Math.max(0, faltaMes)} mês(es).` });
-      }
-    } else {
-      alerts.push({ tipo: "Troca de Óleo", msg: "Nunca registrada — faça uma troca e registre." });
+    [data-theme="light"] { --bg:#f6f7fb; --card:#ffffff; --text:#0f172a; --muted:#475569; --stroke:#e5e7eb; }
+    *{ box-sizing: border-box }
+    html,body{ height:100% }
+    body{
+      margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      background: var(--bg); color: var(--text);
     }
-
-    // Fluido do radiador (meses)
-    const lastRad = byTipo("arrefecimento");
-    if (lastRad) {
-      const mesesPerc = monthsDiff(lastRad.date, hojeISO);
-      const faltaMes = vehicle.alertas.fluidoArrefecimentoMeses - mesesPerc;
-      if (faltaMes <= 1) alerts.push({ tipo: "Fluido do Radiador", msg: `Faltam ${Math.max(0,faltaMes)} mês(es).` });
-    } else {
-      alerts.push({ tipo: "Fluido do Radiador", msg: "Nunca registrado — verifique o manual e registre." });
-    }
-
-    // Correia dentada (km)
-    const lastCorr = byTipo("correia_dentada");
-    if (lastCorr) {
-      const kmPerc = odometroAtual - lastCorr.odometro;
-      const faltaKm = vehicle.alertas.correiaDentadaKm - kmPerc;
-      if (faltaKm <= 5000) alerts.push({ tipo: "Correia Dentada", msg: `Faltam ${Math.max(0,faltaKm)} km.` });
-    }
-
-    return alerts;
-  }, [manutencoes, odometroAtual, vehicle.alertas]);
-
-  // ---------- Actions ----------
-  function addFuel(){
-    const f = { ...draftFuel, id: uuid(),
-      date: draftFuel.date || formatDateISO(new Date()),
-      odometro: Number(draftFuel.odometro||0),
-      litros: Number(draftFuel.litros||0),
-      valorTotal: Number(draftFuel.valorTotal||0),
-    };
-    setAbastecimentos(prev=>[...prev, f]);
-    if (f.odometro>odometroAtual) setOdometroAtual(f.odometro);
-    setDraftFuel(d=>({ ...d, litros:"", valorTotal:"", posto:"", observacao:"" }));
-  }
-
-  function addMaint(){
-    const m = { ...draftMaint, id: uuid(),
-      date: draftMaint.date || formatDateISO(new Date()),
-      odometro: Number(draftMaint.odometro||0),
-      custo: Number(draftMaint.custo||0),
-    };
-    setManutencoes(prev=>[...prev, m]);
-    if (m.odometro>odometroAtual) setOdometroAtual(m.odometro);
-    setDraftMaint(d=>({ ...d, custo:"", notas:"" }));
-  }
-
-  function removeFuel(id){ setAbastecimentos(prev=>prev.filter(x=>x.id!==id)); }
-  function removeMaint(id){ setManutencoes(prev=>prev.filter(x=>x.id!==id)); }
-
-  function resetAll(){ if (confirm("Apagar todos os dados locais?")) { localStorage.removeItem(STORAGE_KEY); location.reload(); } }
-
-  function exportJSON(){
-    const blob = new Blob([JSON.stringify({ vehicle, odometroAtual, abastecimentos, manutencoes, prefs }, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href=url; a.download = `veiculo_${vehicle.nome.replace(/\s+/g,'_')}.json`; a.click(); URL.revokeObjectURL(url);
-  }
-
-  function exportCSV(){
-    const headersF = ["date","odometro","litros","valorTotal","tipo","posto","observacao","precoLitro","km","kmL"]; 
-    const rowsF = [];
-    for (let i=0;i<sortedAbast.length;i++){
-      const a = sortedAbast[i];
-      const prev = sortedAbast[i-1];
-      const km = i>0 ? (a.odometro - prev.odometro) : 0;
-      const kmL = i>0 && a.litros>0 ? km/a.litros : 0;
-      const preco = a.litros>0 ? a.valorTotal/a.litros : 0;
-      rowsF.push(headersF.map(h=>{
-        const map = { date:a.date, odometro:a.odometro, litros:a.litros, valorTotal:a.valorTotal, tipo:a.tipo, posto:a.posto||"", observacao:a.observacao||"", precoLitro:preco, km, kmL };
-        return JSON.stringify(map[h] ?? "");
-      }).join(","));
-    }
-    const headersM = ["date","odometro","tipo","custo","notas"]; 
-    const rowsM = manutencoes.map(m=> headersM.map(h=>JSON.stringify(m[h] ?? "")).join(","));
-    const csv = ["# ABASTECIMENTOS", headersF.join(","), ...rowsF, "", "# MANUTENCOES", headersM.join(","), ...rowsM].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href=url; a.download = `veiculo_${vehicle.nome.replace(/\s+/g,'_')}.csv`; a.click(); URL.revokeObjectURL(url);
-  }
-
-  // ---------- UI ----------
-  return (
-    <div className={`min-h-screen ${prefs.modoEscuro?"bg-neutral-950 text-neutral-100":"bg-neutral-50 text-neutral-900"}`}>
-      <div className="max-w-6xl mx-auto p-4 md:p-6">
-        <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold">Controle de Veículo — {vehicle.nome}</h1>
-            <p className="text-sm opacity-70">Sem banco de dados · dados salvos no seu navegador (localStorage)</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Switch checked={prefs.modoEscuro} onCheckedChange={(v)=>setPrefs(p=>({...p, modoEscuro:v}))} />
-            <span className="text-sm">Modo escuro</span>
-            <Button variant="outline" onClick={exportJSON}>Exportar JSON</Button>
-            <Button variant="outline" onClick={exportCSV}>Exportar CSV</Button>
-            <Button variant="destructive" onClick={resetAll}>Resetar</Button>
-          </div>
-        </header>
-
-        {/* Painel superior */}
-        <div className="grid md:grid-cols-4 gap-4 mb-6">
-          <Card className="rounded-2xl">
-            <CardHeader><CardTitle>Odômetro Atual</CardTitle></CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <Input type="number" value={odometroAtual} onChange={e=>setOdometroAtual(Number(e.target.value||0))} />
-                <span className="text-sm opacity-70">km</span>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="rounded-2xl">
-            <CardHeader><CardTitle>Consumo Médio (Gasolina)</CardTitle></CardHeader>
-            <CardContent>
-              <div className="text-2xl font-semibold">{consumoMedioG?consumoMedioG.toFixed(2):"—"} km/L</div>
-              <p className="text-xs opacity-70">Calculado pelo método tanque-cheio</p>
-            </CardContent>
-          </Card>
-          <Card className="rounded-2xl">
-            <CardHeader><CardTitle>Consumo Médio (Etanol)</CardTitle></CardHeader>
-            <CardContent>
-              <div className="text-2xl font-semibold">{consumoMedioE?consumoMedioE.toFixed(2):"—"} km/L</div>
-              <p className="text-xs opacity-70">Calculado pelo método tanque-cheio</p>
-            </CardContent>
-          </Card>
-          <Card className="rounded-2xl">
-            <CardHeader><CardTitle>Sugestão Flex</CardTitle></CardHeader>
-            <CardContent>
-              <p className="text-sm">{dicaFlex}</p>
-              <p className="text-xs opacity-60">(Regra simples dos 70%)</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Gráficos */}
-        <div className="grid md:grid-cols-2 gap-4 mb-8">
-          <Card className="rounded-2xl p-4">
-            <CardHeader className="p-0 mb-2"><CardTitle>Evolução do Consumo (km/L)</CardTitle></CardHeader>
-            <CardContent className="p-0 h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={consumoSerie}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="data" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="kmL" name="km/L" dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-2xl p-4">
-            <CardHeader className="p-0 mb-2"><CardTitle>Gastos por Mês (combustível + manutenção)</CardTitle></CardHeader>
-            <CardContent className="p-0 h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={gastoMensal}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="mes" />
-                  <YAxis />
-                  <Tooltip formatter={(v)=>brl(v)} />
-                  <Bar dataKey="gasto" name="Gasto" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Alertas */}
-        <Card className="rounded-2xl mb-8">
-          <CardHeader><CardTitle>Alertas de Manutenção</CardTitle></CardHeader>
-          <CardContent>
-            {alertas.length===0 ? (
-              <p className="text-sm opacity-70">Sem alertas no momento.</p>
-            ) : (
-              <ul className="space-y-2">
-                {alertas.map((a,i)=> (
-                  <li key={i} className="text-sm flex items-start gap-2"><span className="mt-1 inline-block h-2 w-2 rounded-full bg-yellow-500"/> <span><strong>{a.tipo}:</strong> {a.msg}</span></li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        <Tabs defaultValue="abastecer" className="mb-10">
-          <TabsList className="grid grid-cols-3 w-full">
-            <TabsTrigger value="abastecer">Registrar Abastecimento</TabsTrigger>
-            <TabsTrigger value="manutencao">Registrar Manutenção</TabsTrigger>
-            <TabsTrigger value="config">Configurações do Veículo</TabsTrigger>
-          </TabsList>
-
-          {/* ABASTECIMENTO */}
-          <TabsContent value="abastecer">
-            <Card className="rounded-2xl">
-              <CardHeader><CardTitle>Novo Abastecimento</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid md:grid-cols-6 gap-3">
-                  <div className="col-span-2">
-                    <Label>Data</Label>
-                    <Input type="date" value={draftFuel.date} onChange={e=>setDraftFuel(d=>({...d, date:e.target.value}))} />
-                  </div>
-                  <div>
-                    <Label>Odômetro (km)</Label>
-                    <Input type="number" value={draftFuel.odometro} onChange={e=>setDraftFuel(d=>({...d, odometro:e.target.value}))} />
-                  </div>
-                  <div>
-                    <Label>Litros</Label>
-                    <Input type="number" step="0.01" value={draftFuel.litros} onChange={e=>setDraftFuel(d=>({...d, litros:e.target.value}))} />
-                  </div>
-                  <div>
-                    <Label>Valor Total</Label>
-                    <Input type="number" step="0.01" value={draftFuel.valorTotal} onChange={e=>setDraftFuel(d=>({...d, valorTotal:e.target.value}))} />
-                  </div>
-                  <div>
-                    <Label>Tipo</Label>
-                    <Select value={draftFuel.tipo} onValueChange={(v)=>setDraftFuel(d=>({...d, tipo:v}))}>
-                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                      <SelectContent>
-                        {FUEL_TYPES.filter(f=>f.key!=="diesel" && f.key!=="gnv").map(f=> (
-                          <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid md:grid-cols-3 gap-3">
-                  <div>
-                    <Label>Posto</Label>
-                    <Input value={draftFuel.posto} onChange={e=>setDraftFuel(d=>({...d, posto:e.target.value}))} />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label>Observação</Label>
-                    <Textarea value={draftFuel.observacao} onChange={e=>setDraftFuel(d=>({...d, observacao:e.target.value}))} />
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Button onClick={addFuel}>Adicionar</Button>
-                  {draftFuel.litros>0 && draftFuel.valorTotal>0 && (
-                    <span className="text-sm opacity-80">Preço/litro: <strong>{brl(draftFuel.valorTotal/draftFuel.litros)}</strong></span>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Tabela abastecimentos */}
-            <Card className="rounded-2xl mt-4">
-              <CardHeader><CardTitle>Histórico de Abastecimentos</CardTitle></CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Odômetro</TableHead>
-                        <TableHead>Litros</TableHead>
-                        <TableHead>Valor</TableHead>
-                        <TableHead>Preço/L</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Posto</TableHead>
-                        <TableHead>km desde último</TableHead>
-                        <TableHead>km/L (estim.)</TableHead>
-                        <TableHead></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {sortedAbast.map((a, i)=>{
-                        const prev = sortedAbast[i-1];
-                        const km = i>0 ? a.odometro - prev.odometro : 0;
-                        const kmL = i>0 && a.litros>0 ? km/a.litros : 0;
-                        const preco = a.litros>0 ? a.valorTotal/a.litros : 0;
-                        return (
-                          <TableRow key={a.id}>
-                            <TableCell>{a.date}</TableCell>
-                            <TableCell>{a.odometro.toLocaleString()}</TableCell>
-                            <TableCell>{a.litros.toFixed(2)}</TableCell>
-                            <TableCell>{brl(a.valorTotal)}</TableCell>
-                            <TableCell>{brl(preco)}</TableCell>
-                            <TableCell className="capitalize">{a.tipo}</TableCell>
-                            <TableCell>{a.posto}</TableCell>
-                            <TableCell>{km>0?km.toLocaleString():"—"}</TableCell>
-                            <TableCell>{kmL?kmL.toFixed(2):"—"}</TableCell>
-                            <TableCell>
-                              <Button variant="destructive" size="sm" onClick={()=>removeFuel(a.id)}>Excluir</Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* MANUTENÇÃO */}
-          <TabsContent value="manutencao">
-            <Card className="rounded-2xl">
-              <CardHeader><CardTitle>Nova Manutenção</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid md:grid-cols-5 gap-3">
-                  <div>
-                    <Label>Data</Label>
-                    <Input type="date" value={draftMaint.date} onChange={e=>setDraftMaint(d=>({...d, date:e.target.value}))} />
-                  </div>
-                  <div>
-                    <Label>Odômetro (km)</Label>
-                    <Input type="number" value={draftMaint.odometro} onChange={e=>setDraftMaint(d=>({...d, odometro:e.target.value}))} />
-                  </div>
-                  <div>
-                    <Label>Tipo</Label>
-                    <Select value={draftMaint.tipo} onValueChange={(v)=>setDraftMaint(d=>({...d, tipo:v}))}>
-                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                      <SelectContent>
-                        {MANUT_TIPOS.map(t=> (
-                          <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Custo</Label>
-                    <Input type="number" step="0.01" value={draftMaint.custo} onChange={e=>setDraftMaint(d=>({...d, custo:e.target.value}))} />
-                  </div>
-                  <div className="md:col-span-5">
-                    <Label>Notas</Label>
-                    <Textarea value={draftMaint.notas} onChange={e=>setDraftMaint(d=>({...d, notas:e.target.value}))} />
-                  </div>
-                </div>
-                <Button onClick={addMaint}>Adicionar</Button>
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-2xl mt-4">
-              <CardHeader><CardTitle>Histórico de Manutenções</CardTitle></CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Odômetro</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Custo</TableHead>
-                        <TableHead>Notas</TableHead>
-                        <TableHead></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {[...manutencoes].sort((a,b)=>b.date.localeCompare(a.date)).map(m=> (
-                        <TableRow key={m.id}>
-                          <TableCell>{m.date}</TableCell>
-                          <TableCell>{m.odometro.toLocaleString()}</TableCell>
-                          <TableCell>{MANUT_TIPOS.find(t=>t.key===m.tipo)?.label||m.tipo}</TableCell>
-                          <TableCell>{brl(m.custo)}</TableCell>
-                          <TableCell className="max-w-[300px] truncate" title={m.notas}>{m.notas}</TableCell>
-                          <TableCell><Button variant="destructive" size="sm" onClick={()=>removeMaint(m.id)}>Excluir</Button></TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* CONFIGURAÇÕES */}
-          <TabsContent value="config">
-            <Card className="rounded-2xl">
-              <CardHeader><CardTitle>Veículo e Alertas</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid md:grid-cols-3 gap-3">
-                  <div>
-                    <Label>Nome do veículo</Label>
-                    <Input value={vehicle.nome} onChange={e=>setVehicle(v=>({...v, nome:e.target.value}))} />
-                  </div>
-                  <div>
-                    <Label>Placa (opcional)</Label>
-                    <Input value={vehicle.placa} onChange={e=>setVehicle(v=>({...v, placa:e.target.value}))} />
-                  </div>
-                  <div>
-                    <Label>Odômetro inicial</Label>
-                    <Input type="number" value={vehicle.odometroInicial} onChange={e=>setVehicle(v=>({...v, odometroInicial:Number(e.target.value||0)}))} />
-                  </div>
-                </div>
-                <div>
-                  <h3 className="font-semibold mt-2 mb-1">Alertas (intervalos)</h3>
-                  <div className="grid md:grid-cols-4 gap-3">
-                    <div>
-                      <Label>Troca de óleo (km)</Label>
-                      <Input type="number" value={vehicle.alertas.trocaOleoKm} onChange={e=>setVehicle(v=>({...v, alertas:{...v.alertas, trocaOleoKm:Number(e.target.value||0)}}))} />
-                    </div>
-                    <div>
-                      <Label>Troca de óleo (meses)</Label>
-                      <Input type="number" value={vehicle.alertas.trocaOleoMeses} onChange={e=>setVehicle(v=>({...v, alertas:{...v.alertas, trocaOleoMeses:Number(e.target.value||0)}}))} />
-                    </div>
-                    <div>
-                      <Label>Fluido radiador (meses)</Label>
-                      <Input type="number" value={vehicle.alertas.fluidoArrefecimentoMeses} onChange={e=>setVehicle(v=>({...v, alertas:{...v.alertas, fluidoArrefecimentoMeses:Number(e.target.value||0)}}))} />
-                    </div>
-                    <div>
-                      <Label>Correia dentada (km)</Label>
-                      <Input type="number" value={vehicle.alertas.correiaDentadaKm} onChange={e=>setVehicle(v=>({...v, alertas:{...v.alertas, correiaDentadaKm:Number(e.target.value||0)}}))} />
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <h3 className="font-semibold mt-2 mb-1">Preferências</h3>
-                  <div className="flex items-center gap-3">
-                    <Switch checked={prefs.modoEscuro} onCheckedChange={(v)=>setPrefs(p=>({...p, modoEscuro:v}))} />
-                    <span className="text-sm">Modo escuro</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        <footer className="text-xs opacity-60 text-center py-8">App veicular local • Você pode instalar como PWA se seu build permitir • Nenhum dado sai do seu navegador</footer>
+    .container{ max-width:1200px; margin:0 auto; padding:24px }
+    header{ display:flex; gap:16px; align-items:center; justify-content:space-between; margin-bottom:16px }
+    .title{ font-weight:700; font-size:20px }
+    .muted{ color:var(--muted); font-size:12px }
+    .row{ display:grid; gap:16px }
+    @media (min-width: 900px){ .row.cols-4{ grid-template-columns: repeat(4, 1fr) } .row.cols-3{ grid-template-columns: repeat(3, 1fr) } .row.cols-2{ grid-template-columns: repeat(2, 1fr) } }
+    .card{ background:var(--card); border:1px solid var(--stroke); border-radius:16px; padding:16px }
+    .card h3{ margin:0 0 8px 0; font-size:14px; font-weight:600 }
+    .value{ font-size:24px; font-weight:700 }
+    .controls{ display:flex; gap:8px; align-items:center }
+    button, input, select, textarea{ background:#0d0d10; color:var(--text); border:1px solid var(--stroke); border-radius:10px; padding:10px 12px; font: inherit }
+    [data-theme="light"] button, [data-theme="light"] input, [data-theme="light"] select, [data-theme="light"] textarea{ background:#fff }
+    button{ background:linear-gradient(180deg, #5b54ff, #4338ca); border:none; cursor:pointer; font-weight:600 }
+    button.ghost{ background:transparent; border:1px solid var(--stroke) }
+    button.warn{ background:linear-gradient(180deg, #f59e0b, #b45309) }
+    button.danger{ background:linear-gradient(180deg, #ef4444, #b91c1c) }
+    .tabs{ display:flex; gap:8px; flex-wrap:wrap; margin:16px 0 }
+    .tab{ padding:10px 12px; border:1px solid var(--stroke); border-radius:12px; cursor:pointer; background:transparent }
+    .tab.active{ background:var(--brand); border-color:transparent }
+    table{ width:100%; border-collapse: collapse }
+    th, td{ padding:10px; border-bottom:1px solid var(--stroke); font-size:13px; text-align:left }
+    th{ color:var(--muted); font-weight:600 }
+    .right{ text-align:right }
+    .badge{ display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px; font-size:12px; border:1px solid var(--stroke) }
+    .badge.ok{ color:var(--ok); border-color:rgba(16,185,129,.35) }
+    .badge.warn{ color:var(--warn); border-color:rgba(245,158,11,.35) }
+    .badge.danger{ color:var(--danger); border-color:rgba(239,68,68,.35) }
+    .grid-2{ display:grid; gap:12px }
+    @media(min-width:800px){ .grid-2{ grid-template-columns: 1fr 1fr } }
+    .section-title{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:8px }
+    .pill{ padding:6px 10px; border:1px solid var(--stroke); border-radius:999px; font-size:12px }
+    .help{ font-size:12px; color:var(--muted) }
+    .footer{ text-align:center; color:var(--muted); font-size:12px; padding:32px 0 }
+    .split{ display:flex; gap:8px }
+    .split > *{ flex:1 }
+    .hidden{ display:none }
+  </style>
+</head>
+<body>
+  <div class="container" id="app">
+    <header>
+      <div>
+        <div class="title">GaragePro — Controle Veicular</div>
+        <div class="muted">Stand-alone • 100% local (localStorage) • Pronto para GitHub Pages</div>
       </div>
-    </div>
-  );
-}
+      <div class="controls">
+        <select id="vehicleSelect"></select>
+        <button id="addVehicle">+ Veículo</button>
+        <button class="ghost" id="themeToggle">Tema</button>
+        <button class="ghost" id="exportBtn">Exportar</button>
+        <label class="pill" for="importFile" style="cursor:pointer">Importar <input id="importFile" class="hidden" type="file" accept="application/json" /></label>
+      </div>
+    </header>
+
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-tab="dashboard">Dashboard</button>
+      <button class="tab" data-tab="abastecimentos">Abastecimentos</button>
+      <button class="tab" data-tab="manutencao">Manutenção</button>
+      <button class="tab" data-tab="gastos">Gastos</button>
+      <button class="tab" data-tab="veiculo">Veículo</button>
+      <button class="tab" data-tab="config">Config</button>
+    </nav>
+
+    <!-- DASHBOARD -->
+    <section id="dashboard" class="tabpane">
+      <div class="row cols-4">
+        <div class="card"><h3>Odômetro Atual</h3><div class="value" id="odoAtual">—</div><div class="help">Atualize na aba Veículo</div></div>
+        <div class="card"><h3>Consumo Médio (Gasolina)</h3><div class="value" id="avgGas">—</div><div class="help">Método tanque cheio</div></div>
+        <div class="card"><h3>Consumo Médio (Etanol)</h3><div class="value" id="avgEta">—</div><div class="help">Método tanque cheio</div></div>
+        <div class="card"><h3>Sugestão Flex</h3><div class="value" id="flexTip">—</div><div class="help">Regra dos 70%</div></div>
+      </div>
+      <div class="row cols-2" style="margin-top:16px">
+        <div class="card">
+          <h3>Evolução do Consumo (km/L)</h3>
+          <canvas id="chartConsumo" height="140"></canvas>
+        </div>
+        <div class="card">
+          <h3>Gastos Mensais (Combustível + Manutenção)</h3>
+          <canvas id="chartGastos" height="140"></canvas>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="section-title"><h3>Alertas Próximos</h3><span class="help">Baseados em km e/ou tempo</span></div>
+        <div id="alertList" class="grid-2" style="margin-top:8px"></div>
+      </div>
+    </section>
+
+    <!-- ABASTECIMENTOS -->
+    <section id="abastecimentos" class="tabpane hidden">
+      <div class="card">
+        <h3>Novo Abastecimento</h3>
+        <div class="grid-2">
+          <div class="split"><input id="fuelDate" type="date"><input id="fuelOdo" type="number" placeholder="Odômetro (km)"></div>
+          <div class="split"><input id="fuelLitros" type="number" step="0.01" placeholder="Litros"><input id="fuelValor" type="number" step="0.01" placeholder="Valor total (R$)"></div>
+          <div class="split"><select id="fuelTipo"><option value="gasolina">Gasolina</option><option value="etanol">Etanol</option></select><input id="fuelPosto" placeholder="Posto (opcional)"></div>
+          <div class="split"><label><input type="checkbox" id="fuelCheio"> Tanque cheio</label><input id="fuelObs" placeholder="Observação (opcional)"></div>
+        </div>
+        <div class="controls" style="margin-top:8px"><button id="addFuelBtn">Adicionar</button></div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <h3>Histórico</h3>
+        <div style="overflow:auto">
+          <table id="fuelTable"><thead><tr>
+            <th>Data</th><th>Odo</th><th>Litros</th><th>Valor</th><th>R$/L</th><th>Tipo</th><th>Cheio</th><th>km desde o último</th><th>km/L</th><th></th>
+          </tr></thead><tbody></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- MANUTENÇÃO -->
+    <section id="manutencao" class="tabpane hidden">
+      <div class="card">
+        <div class="section-title"><h3>Plano — Ford Ka 2010 Flex</h3><span class="pill">Editar itens e intervalos</span></div>
+        <div class="help">Valores iniciais predefinidos. Ajuste conforme uso/condições.</div>
+        <div class="controls" style="margin-top:8px"><button id="addMaintPreset">+ Item</button></div>
+        <div style="overflow:auto; margin-top:8px">
+          <table id="maintTable"><thead><tr>
+            <th>Item</th><th>Intervalo km</th><th>Intervalo meses</th><th>Última data</th><th>Último km</th><th>Próx. data</th><th>Próx. km</th><th>Status</th><th></th>
+          </tr></thead><tbody></tbody></table>
+        </div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <h3>Registrar Manutenção Executada</h3>
+        <div class="grid-2">
+          <div class="split"><input id="doneDate" type="date"><input id="doneKm" type="number" placeholder="Odômetro"></div>
+          <div class="split"><select id="doneItem"></select><input id="doneCusto" type="number" step="0.01" placeholder="Custo (R$)"></div>
+          <div class="split"><input id="doneOficina" placeholder="Oficina (opcional)"><input id="doneNotas" placeholder="Notas (opcional)"></div>
+        </div>
+        <div class="controls" style="margin-top:8px"><button id="addDoneBtn">Registrar</button></div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <h3>Histórico de Manutenções</h3>
+        <div style="overflow:auto">
+          <table id="doneTable"><thead><tr>
+            <th>Data</th><th>Odômetro</th><th>Item</th><th>Custo</th><th>Oficina</th><th>Notas</th><th></th>
+          </tr></thead><tbody></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- GASTOS -->
+    <section id="gastos" class="tabpane hidden">
+      <div class="card">
+        <h3>Novo Gasto (IPVA/Seguro/Multa/Outros)</h3>
+        <div class="grid-2">
+          <div class="split"><input id="costDate" type="date"><input id="costTipo" placeholder="Tipo (ex.: IPVA)"></div>
+          <div class="split"><input id="costValor" type="number" step="0.01" placeholder="Valor (R$)"><input id="costObs" placeholder="Observação"></div>
+        </div>
+        <div class="controls" style="margin-top:8px"><button id="addCostBtn">Adicionar</button></div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <h3>Histórico de Gastos</h3>
+        <div style="overflow:auto">
+          <table id="costTable"><thead><tr>
+            <th>Data</th><th>Tipo</th><th>Valor</th><th>Obs.</th><th></th>
+          </tr></thead><tbody></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- VEÍCULO -->
+    <section id="veiculo" class="tabpane hidden">
+      <div class="card">
+        <h3>Dados do Veículo</h3>
+        <div class="grid-2">
+          <div class="split"><input id="vNome" placeholder="Nome (ex.: Ford Ka 2010 Flex)"><input id="vPlaca" placeholder="Placa"></div>
+          <div class="split"><input id="vOdo" type="number" placeholder="Odômetro atual (km)"><select id="vCombPref"><option value="auto">Flex (auto)</option><option value="gasolina">Gasolina</option><option value="etanol">Etanol</option></select></div>
+        </div>
+        <div class="controls" style="margin-top:8px">
+          <button id="saveVehicle">Salvar</button>
+          <button class="danger" id="delVehicle">Excluir veículo</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONFIG -->
+    <section id="config" class="tabpane hidden">
+      <div class="card">
+        <h3>Preferências</h3>
+        <div class="grid-2">
+          <div class="split"><label class="pill">Moeda: BRL</label><label class="pill">Unidades: km/L</label></div>
+          <div class="split"><label class="pill">Tema: <span id="themeLbl">Escuro</span></label><label class="pill">Backup: Export/Import JSON</label></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <h3>Ferramentas</h3>
+        <div class="controls">
+          <button class="warn" id="resetBtn">Limpar todos os dados locais</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="footer">GaragePro • Nenhum dado sai do seu navegador • Coloque este arquivo como <strong>index.html</strong> no GitHub Pages</div>
+  </div>
+
+  <script>
+  // ===== Util =====
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+  const fmtBRL = v => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(v||0));
+  const todayISO = () => new Date().toISOString().slice(0,10);
+  const ym = d => (d||'').slice(0,7);
+
+  // ===== Storage Schema =====
+  const LS_KEY = 'garagepro.v1';
+  const DEFAULT_PRESET = [
+    { id: cid(), item:'Troca de óleo do motor', ivKm:10000, ivMes:6, lastDate:'', lastKm:null },
+    { id: cid(), item:'Filtro de óleo',        ivKm:10000, ivMes:6, lastDate:'', lastKm:null },
+    { id: cid(), item:'Filtro de ar',          ivKm:20000, ivMes:12, lastDate:'', lastKm:null },
+    { id: cid(), item:'Filtro de combustível', ivKm:30000, ivMes:24, lastDate:'', lastKm:null },
+    { id: cid(), item:'Velas de ignição',      ivKm:40000, ivMes:24, lastDate:'', lastKm:null },
+    { id: cid(), item:'Correia dentada',       ivKm:60000, ivMes:48, lastDate:'', lastKm:null },
+    { id: cid(), item:'Fluido de freio',       ivKm:40000, ivMes:24, lastDate:'', lastKm:null },
+    { id: cid(), item:'Líquido de arrefecimento',ivKm:40000, ivMes:24, lastDate:'', lastKm:null },
+    { id: cid(), item:'Alinhamento/Balanceamento',ivKm:10000, ivMes:12, lastDate:'', lastKm:null },
+  ];
+  const DEFAULT_DATA = {
+    theme:'dark',
+    vehicles:[{
+      id: cid(), name:'Ford Ka 2010 Flex', plate:'', odo:0, prefFuel:'auto',
+      fuels:[],
+      maintPlan: JSON.parse(JSON.stringify(DEFAULT_PRESET)),
+      maintHistory:[],
+      costs:[]
+    }],
+    activeVehicle: 0
+  };
+
+  function load(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)) || DEFAULT_DATA }catch{ return DEFAULT_DATA } }
+  function save(){ localStorage.setItem(LS_KEY, JSON.stringify(DB)); }
+  function cid(){ return Math.random().toString(36).slice(2)+Date.now().toString(36) }
+
+  let DB = load();
+
+  // ===== Tabs & Theme =====
+  const panes = $$('.tabpane');
+  $$('#tabs .tab').forEach(btn=> btn.addEventListener('click', ()=>{
+    $$('#tabs .tab').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
+    panes.forEach(p=>p.classList.add('hidden')); $('#'+btn.dataset.tab).classList.remove('hidden');
+    if(btn.dataset.tab==='dashboard'){ drawCharts(); renderAlerts(); }
+  }));
+  function applyTheme(){ document.documentElement.setAttribute('data-theme', DB.theme==='light'?'light':'dark'); $('#themeLbl').textContent = DB.theme==='light'?'Claro':'Escuro' }
+  $('#themeToggle').onclick = ()=>{ DB.theme = DB.theme==='light'?'dark':'light'; applyTheme(); save(); };
+  applyTheme();
+
+  // ===== Vehicles =====
+  function active(){ return DB.vehicles[DB.activeVehicle] }
+  function refreshVehicleSelect(){ const s=$('#vehicleSelect'); s.innerHTML=''; DB.vehicles.forEach((v,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=v.name || ('Veículo '+(i+1)); s.appendChild(o); }); s.value=DB.activeVehicle; }
+  $('#vehicleSelect').onchange = e=>{ DB.activeVehicle = Number(e.target.value); save(); renderAll(); };
+  $('#addVehicle').onclick = ()=>{ DB.vehicles.push({ id:cid(), name:'Novo Veículo', plate:'', odo:0, prefFuel:'auto', fuels:[], maintPlan: JSON.parse(JSON.stringify(DEFAULT_PRESET)), maintHistory:[], costs:[] }); DB.activeVehicle = DB.vehicles.length-1; save(); renderAll(); };
+  $('#saveVehicle').onclick = ()=>{ const v=active(); v.name=$('#vNome').value.trim(); v.plate=$('#vPlaca').value.trim(); v.odo=Number($('#vOdo').value||0); v.prefFuel=$('#vCombPref').value; save(); renderAll(); };
+  $('#delVehicle').onclick = ()=>{ if(DB.vehicles.length<=1) return alert('Mantenha pelo menos 1 veículo.'); if(confirm('Excluir veículo atual?')){ DB.vehicles.splice(DB.activeVehicle,1); DB.activeVehicle=0; save(); renderAll(); } };
+
+  // ===== Abastecimentos =====
+  $('#addFuelBtn').onclick = ()=>{
+    const v=active();
+    const rec = { id:cid(), date: $('#fuelDate').value||todayISO(), odo: Number($('#fuelOdo').value||0), litros:Number($('#fuelLitros').value||0), valor:Number($('#fuelValor').value||0), tipo:$('#fuelTipo').value, posto:$('#fuelPosto').value.trim(), cheio: $('#fuelCheio').checked, obs:$('#fuelObs').value.trim() };
+    if(!rec.odo || !rec.litros || !rec.valor) return alert('Preencha odômetro, litros e valor.');
+    v.fuels.push(rec); if(rec.odo>v.odo) v.odo=rec.odo; save(); renderAll();
+    // clear
+    $('#fuelLitros').value=''; $('#fuelValor').value=''; $('#fuelPosto').value=''; $('#fuelObs').value='';
+  };
+  function removeFuel(id){ const v=active(); v.fuels = v.fuels.filter(x=>x.id!==id); save(); renderAll(); }
+
+  // Consumo (tanque cheio) e dicas flex
+  function computeFuelStats(){
+    const v=active();
+    const sorted = [...v.fuels].sort((a,b)=> a.odo-b.odo || a.date.localeCompare(b.date));
+    const series = [];
+    for(let i=1;i<sorted.length;i++){
+      const cur=sorted[i], prev=sorted[i-1];
+      const km = cur.odo - prev.odo; const liters = cur.litros; if(km>0 && liters>0){ series.push({ date:cur.date, kmL: km/liters, tipo:cur.tipo }) }
+    }
+    const avg = t=>{ const arr=series.filter(s=>s.tipo===t); const km=arr.reduce((a,b)=>a+b.km,0); const l=arr.reduce((a,b)=>a+b.liters||0,0); /*not available*/ return (arr.length? (arr.reduce((a,b)=>a+b.kmL,0)/arr.length):0) };
+    const lastG = [...sorted].reverse().find(a=>a.tipo==='gasolina');
+    const lastE = [...sorted].reverse().find(a=>a.tipo==='etanol');
+    const priceG = lastG ? lastG.valor/lastG.litros : null;
+    const priceE = lastE ? lastE.valor/lastE.litros : null;
+    let tip='Cadastre gasolina e etanol para sugerirmos.';
+    if(priceG && priceE){ tip = (priceE <= 0.7*priceG) ? 'No momento, ETANOL é mais vantajoso (≤ 70% do preço da gasolina).' : 'No momento, GASOLINA é mais vantajosa (> 70%).'; }
+    return { series, priceG, priceE, tip };
+  }
+
+  // ===== Manutenção =====
+  $('#addMaintPreset').onclick = ()=>{ const v=active(); v.maintPlan.push({ id:cid(), item:'Novo item', ivKm:10000, ivMes:12, lastDate:'', lastKm:null }); save(); renderMaint(); };
+  function removeMaintItem(id){ const v=active(); v.maintPlan = v.maintPlan.filter(x=>x.id!==id); save(); renderMaint(); }
+
+  $('#addDoneBtn').onclick = ()=>{
+    const v=active(); const itemId = $('#doneItem').value; const plan = v.maintPlan.find(x=>x.id===itemId); if(!plan) return;
+    const rec = { id:cid(), date: $('#doneDate').value||todayISO(), odo: Number($('#doneKm').value||0), item: plan.item, itemId, custo:Number($('#doneCusto').value||0), oficina:$('#doneOficina').value.trim(), notas:$('#doneNotas').value.trim() };
+    if(!rec.odo) return alert('Informe o odômetro.');
+    v.maintHistory.push(rec);
+    // atualizar plano
+    plan.lastDate = rec.date; plan.lastKm = rec.odo;
+    if(rec.odo>v.odo) v.odo = rec.odo;
+    save(); renderAll();
+    $('#doneCusto').value=''; $('#doneOficina').value=''; $('#doneNotas').value='';
+  };
+  function removeDone(id){ const v=active(); v.maintHistory = v.maintHistory.filter(x=>x.id!==id); save(); renderMaint(); }
+
+  // ===== Gastos =====
+  $('#addCostBtn').onclick = ()=>{ const v=active(); const rec = { id:cid(), date: $('#costDate').value||todayISO(), tipo: $('#costTipo').value.trim()||'Outro', valor:Number($('#costValor').value||0), obs:$('#costObs').value.trim() }; if(!rec.valor) return alert('Informe o valor.'); v.costs.push(rec); save(); renderCosts(); };
+  function removeCost(id){ const v=active(); v.costs = v.costs.filter(x=>x.id!==id); save(); renderCosts(); }
+
+  // ===== Export/Import/Reset =====
+  $('#exportBtn').onclick = ()=>{
+    const blob = new Blob([JSON.stringify(DB,null,2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='garagepro_backup.json'; a.click(); URL.revokeObjectURL(url);
+  };
+  $('#importFile').addEventListener('change', e=>{
+    const file = e.target.files[0]; if(!file) return;
+    const fr = new FileReader(); fr.onload = (ev)=>{ try{ const data = JSON.parse(ev.target.result); if(confirm('Substituir todos os dados atuais?')){ DB=data; save(); renderAll(); } }catch(err){ alert('Arquivo inválido.'); } }; fr.readAsText(file);
+  });
+  $('#resetBtn').onclick = ()=>{ if(confirm('Apagar todos os dados locais?')){ localStorage.removeItem(LS_KEY); DB = load(); renderAll(); } };
+
+  // ===== Rendering =====
+  let chConsumo, chGastos;
+  function drawCharts(){ const v=active();
+    const sorted = [...v.fuels].sort((a,b)=> a.date.localeCompare(b.date));
+    const labels = []; const dataKmL = [];
+    for(let i=1;i<sorted.length;i++){ const cur=sorted[i], prev=sorted[i-1]; const km = cur.odo - prev.odo; const liters=cur.litros; if(km>0 && liters>0){ labels.push(cur.date); dataKmL.push((km/liters).toFixed(2)); } }
+    const byMonth = new Map();
+    v.fuels.forEach(a=>{ const key=ym(a.date); const o=byMonth.get(key)||{gasto:0}; o.gasto += Number(a.valor||0); byMonth.set(key,o); });
+    v.maintHistory.forEach(m=>{ const key=ym(m.date); const o=byMonth.get(key)||{gasto:0}; o.gasto += Number(m.custo||0); byMonth.set(key,o); });
+    const labels2 = [...byMonth.keys()].sort(); const dataGasto = labels2.map(k=> byMonth.get(k).gasto.toFixed(2));
+    // consumo
+    const ctx1 = $('#chartConsumo').getContext('2d'); if(chConsumo) chConsumo.destroy(); chConsumo = new Chart(ctx1,{ type:'line', data:{ labels, datasets:[{ label:'km/L', data:dataKmL }] }, options:{ responsive:true, plugins:{ legend:{display:true} } } });
+    // gastos
+    const ctx2 = $('#chartGastos').getContext('2d'); if(chGastos) chGastos.destroy(); chGastos = new Chart(ctx2,{ type:'bar', data:{ labels:labels2, datasets:[{ label:'Gasto (R$)', data:dataGasto }] }, options:{ responsive:true, plugins:{ legend:{display:true} } } });
+  }
+
+  function renderDashboard(){ const v=active(); $('#odoAtual').textContent = (v.odo||0).toLocaleString('pt-BR')+' km';
+    // médias
+    const stats = computeFuelStats();
+    // simples: média aritmética por tipo
+    const sorted = [...v.fuels].sort((a,b)=> a.odo-b.odo || a.date.localeCompare(b.date));
+    const arrG=[], arrE=[]; for(let i=1;i<sorted.length;i++){ const cur=sorted[i], prev=sorted[i-1]; const km=cur.odo-prev.odo; if(km>0 && cur.litros>0){ const v=km/cur.litros; (cur.tipo==='gasolina'?arrG:arrE).push(v); } }
+    const avg = a=> a.length? (a.reduce((x,y)=>x+y,0)/a.length).toFixed(2):'—';
+    $('#avgGas').textContent = avg(arrG);
+    $('#avgEta').textContent = avg(arrE);
+    $('#flexTip').textContent = stats.tip;
+    drawCharts();
+  }
+
+  function renderAlerts(){ const v=active(); const now = new Date(); const list = $('#alertList'); list.innerHTML='';
+    v.maintPlan.forEach(it=>{
+      const nextDate = it.lastDate ? addMonths(it.lastDate, it.ivMes) : null;
+      const nextKm = it.lastKm!=null ? (it.lastKm + (it.ivKm||0)) : null;
+      const dueDate = nextDate && (new Date(nextDate) <= addMonths(todayISO(), 1));
+      const dueKm = nextKm!=null && (v.odo >= (nextKm - 1000));
+      const status = (dueDate||dueKm)? (v.odo>=nextKm || (nextDate && new Date(nextDate)<=now) ? 'danger' : 'warn') : 'ok';
+      const card = document.createElement('div'); card.className='card';
+      card.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div><div style="font-weight:600">${it.item}</div>
+        <div class="help">Próx. km: ${nextKm?nextKm.toLocaleString('pt-BR'): '—'} • Próx. data: ${nextDate?fmtDate(nextDate):'—'}</div></div>
+        <span class="badge ${status}">${status==='ok'?'OK':status==='warn'?'Em breve':'Vencido'}</span>
+      </div>`;
+      list.appendChild(card);
+    });
+  }
+
+  function renderFuel(){ const v=active(); const tbody = $('#fuelTable tbody'); tbody.innerHTML='';
+    const arr=[...v.fuels].sort((a,b)=> a.odo-b.odo || a.date.localeCompare(b.date));
+    arr.forEach((a,i)=>{
+      const prev = arr[i-1]; const km = prev? (a.odo - prev.odo):0; const kmL = prev && a.litros? (km/a.litros):0; const pL = a.litros? (a.valor/a.litros):0;
+      const tr=document.createElement('tr');
+      tr.innerHTML = `<td>${a.date}</td><td>${a.odo.toLocaleString('pt-BR')}</td><td>${a.litros.toFixed(2)}</td><td class='right'>${fmtBRL(a.valor)}</td><td class='right'>${fmtBRL(pL)}</td><td>${a.tipo}</td><td>${a.cheio?'Sim':'Não'}</td><td>${km?km.toLocaleString('pt-BR'):'—'}</td><td>${kmL?kmL.toFixed(2):'—'}</td><td><button class='danger' data-id='${a.id}'>Excluir</button></td>`;
+      tbody.appendChild(tr);
+    });
+    $$('#fuelTable button.danger').forEach(b=> b.onclick = ()=> removeFuel(b.dataset.id));
+  }
+
+  function renderMaint(){ const v=active(); const tbody=$('#maintTable tbody'); tbody.innerHTML=''; const sel=$('#doneItem'); sel.innerHTML='';
+    v.maintPlan.forEach(it=>{
+      const nextDate = it.lastDate ? addMonths(it.lastDate, it.ivMes) : '';
+      const nextKm = it.lastKm!=null ? (it.lastKm + (it.ivKm||0)) : '';
+      const tr=document.createElement('tr'); tr.innerHTML = `
+        <td><input value="${it.item}" data-k="item" data-id="${it.id}"></td>
+        <td><input type="number" value="${it.ivKm}" data-k="ivKm" data-id="${it.id}"></td>
+        <td><input type="number" value="${it.ivMes}" data-k="ivMes" data-id="${it.id}"></td>
+        <td><input type="date" value="${it.lastDate||''}" data-k="lastDate" data-id="${it.id}"></td>
+        <td><input type="number" value="${it.lastKm??''}" data-k="lastKm" data-id="${it.id}"></td>
+        <td>${nextDate?fmtDate(nextDate):'—'}</td>
+        <td>${nextKm?Number(nextKm).toLocaleString('pt-BR'):'—'}</td>
+        <td></td>
+        <td><button class='danger' data-id='${it.id}'>Excluir</button></td>`;
+      tbody.appendChild(tr);
+      const opt=document.createElement('option'); opt.value=it.id; opt.textContent=it.item; sel.appendChild(opt);
+    });
+    // bind inputs
+    $$('#maintTable [data-id]').forEach(inp=> inp.addEventListener('input', (e)=>{
+      const id=e.target.dataset.id; const k=e.target.dataset.k; const v=active(); const it=v.maintPlan.find(x=>x.id===id); if(!it) return; let val=e.target.value; if(k==='ivKm'||k==='ivMes'||k==='lastKm') val = Number(val||0); it[k]= val; save(); renderMaint(); }));
+    $$('#maintTable button.danger').forEach(b=> b.onclick = ()=> removeMaintItem(b.dataset.id));
+
+    // histórico
+    const tbody2 = $('#doneTable tbody'); tbody2.innerHTML='';
+    [...active().maintHistory].sort((a,b)=> b.date.localeCompare(a.date)).forEach(m=>{
+      const tr=document.createElement('tr'); tr.innerHTML = `<td>${m.date}</td><td>${m.odo.toLocaleString('pt-BR')}</td><td>${m.item}</td><td class='right'>${fmtBRL(m.custo)}</td><td>${m.oficina||''}</td><td>${m.notas||''}</td><td><button class='danger' data-id='${m.id}'>Excluir</button></td>`; tbody2.appendChild(tr);
+    });
+    $$('#doneTable button.danger').forEach(b=> b.onclick = ()=> removeDone(b.dataset.id));
+  }
+
+  function renderCosts(){ const v=active(); const tbody=$('#costTable tbody'); tbody.innerHTML='';
+    [...v.costs].sort((a,b)=> b.date.localeCompare(a.date)).forEach(c=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${c.date}</td><td>${c.tipo}</td><td class='right'>${fmtBRL(c.valor)}</td><td>${c.obs||''}</td><td><button class='danger' data-id='${c.id}'>Excluir</button></td>`; tbody.appendChild(tr); });
+    $$('#costTable button.danger').forEach(b=> b.onclick = ()=> removeCost(b.dataset.id));
+  }
+
+  function renderVehicle(){ const v=active(); $('#vNome').value=v.name||''; $('#vPlaca').value=v.plate||''; $('#vOdo').value=v.odo||0; $('#vCombPref').value=v.prefFuel||'auto'; }
+
+  function renderAll(){ refreshVehicleSelect(); renderDashboard(); renderFuel(); renderMaint(); renderCosts(); renderVehicle(); renderAlerts(); save(); }
+
+  // ===== Helpers =====
+  function addMonths(dateISO, m){ if(!dateISO || !m) return ''; const d=new Date(dateISO); d.setMonth(d.getMonth()+Number(m||0)); return d.toISOString().slice(0,10); }
+  function fmtDate(dateISO){ const d=new Date(dateISO); return d.toLocaleDateString('pt-BR'); }
+
+  // ===== Init =====
+  // default set a data de hoje nos forms
+  $('#fuelDate').value = todayISO(); $('#doneDate').value = todayISO(); $('#costDate').value = todayISO();
+  renderAll();
+  </script>
+</body>
+</html>
