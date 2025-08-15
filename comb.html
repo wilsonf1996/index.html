@@ -10,6 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
+/* ===== Geral ===== */
 body, html{margin:0;padding:0;font-family:'Roboto',sans-serif;background:#f4f6f8;color:#333;}
 header{background:#1976d2;color:#fff;padding:15px;text-align:center;font-size:1.5em;position:sticky;top:0;z-index:10;}
 main{padding:15px;max-width:1200px;margin:auto;}
@@ -25,6 +26,8 @@ th{background:#eee;}
 .card-small{flex:1 1 150px;margin:5px;padding:10px;text-align:center;background:#fff;border-radius:10px;box-shadow:0 2px 5px rgba(0,0,0,0.1);transition:0.3s;}
 .card-small:hover{transform: translateY(-3px); box-shadow:0 4px 12px rgba(0,0,0,0.2);}
 canvas{background:#fff;border-radius:10px;margin-top:10px;}
+.dark-mode{background:#121212;color:#fff;}
+.dark-mode .card{background:#1e1e1e;color:#fff;}
 @media(max-width:600px){.dashboard-cards{flex-direction:column;}table{font-size:12px;}input,select,button{max-width:100%;}}
 </style>
 </head>
@@ -55,6 +58,7 @@ canvas{background:#fff;border-radius:10px;margin-top:10px;}
 <div id="app-section" class="hidden">
 
 <button onclick="logout()" style="margin-bottom:10px;">Sair</button>
+<button onclick="toggleDarkMode()">Dark Mode</button>
 
 <h2>Veículos</h2>
 <select id="vehicle-selector" onchange="loadVehicleData()"></select>
@@ -74,6 +78,7 @@ canvas{background:#fff;border-radius:10px;margin-top:10px;}
   <div class="card-small"><h4>Próxima Manutenção</h4><p id="dash-maintenance">---</p></div>
 </div>
 
+<!-- Abastecimentos -->
 <div class="card">
 <h3>Abastecimentos</h3>
 <input type="date" id="fuel-date">
@@ -87,6 +92,7 @@ canvas{background:#fff;border-radius:10px;margin-top:10px;}
 </table>
 </div>
 
+<!-- Manutenções -->
 <div class="card">
 <h3>Manutenções</h3>
 <select id="maint-type-selector">
@@ -108,12 +114,14 @@ canvas{background:#fff;border-radius:10px;margin-top:10px;}
 </table>
 </div>
 
+<!-- Gráficos -->
 <div class="card">
 <h3>Dashboards de Consumo e Manutenção</h3>
 <canvas id="consumption-chart" width="800" height="300"></canvas>
 <canvas id="maintenance-chart" width="800" height="300"></canvas>
 </div>
 
+<!-- Export/Import -->
 <button onclick="exportData()">Exportar Dados (JSON)</button>
 <button onclick="importData()">Importar Dados (JSON)</button>
 
@@ -139,6 +147,7 @@ let currentUser=null;
 let currentVehicleId=null;
 let consumptionChart=null;
 let maintenanceChart=null;
+let darkMode=false;
 
 // AUTH
 function showRegister(){ document.getElementById('register-card').classList.remove('hidden'); }
@@ -150,13 +159,15 @@ function register(){
   if(!email||!pass||!name) return alert("Preencha todos os campos");
   auth.createUserWithEmailAndPassword(email,pass).then(cred=>{
     db.ref('users/'+cred.user.uid).set({name,email});
-    showLogin(); alert("Usuário registrado!");
+    cred.user.sendEmailVerification();
+    showLogin(); alert("Usuário registrado! Verifique seu email para ativação.");
   }).catch(err=>alert(err.message));
 }
 function login(){
   const email=document.getElementById('login-email').value;
   const pass=document.getElementById('login-password').value;
   auth.signInWithEmailAndPassword(email,pass).then(cred=>{
+    if(!cred.user.emailVerified){ alert("Confirme seu email antes de entrar."); auth.signOut(); return; }
     currentUser=cred.user; showApp(); loadVehicles();
   }).catch(err=>alert(err.message));
 }
@@ -165,20 +176,21 @@ function recoverPassword(){
   if(email) auth.sendPasswordResetEmail(email).then(()=>alert("Email enviado!")).catch(err=>alert(err.message));
 }
 function logout(){ auth.signOut().then(()=>location.reload()); }
-
-// APP
 function showApp(){ document.getElementById('auth-section').classList.add('hidden'); document.getElementById('app-section').classList.remove('hidden'); }
+
+// DARK MODE
+function toggleDarkMode(){
+  darkMode=!darkMode;
+  if(darkMode) document.body.classList.add('dark-mode'); else document.body.classList.remove('dark-mode');
+}
 
 // VEHICLES
 function loadVehicles(){
   db.ref('vehicles/'+currentUser.uid).once('value',snap=>{
     const data=snap.val()||{};
-    const selector=document.getElementById('vehicle-selector');
-    selector.innerHTML="";
+    const selector=document.getElementById('vehicle-selector'); selector.innerHTML="";
     Object.entries(data).forEach(([id,v])=>{
-      const option=document.createElement('option');
-      option.value=id; option.textContent=v.name;
-      selector.appendChild(option);
+      const option=document.createElement('option'); option.value=id; option.textContent=v.name; selector.appendChild(option);
     });
     if(Object.keys(data).length>0){currentVehicleId=Object.keys(data)[0]; loadVehicleData();}
   });
@@ -224,12 +236,12 @@ function addMaintenance(){
 // LOAD DATA & DASHBOARD
 function loadVehicleData(){
   if(!currentVehicleId) return;
-  // Veículo info
   db.ref('vehicles/'+currentUser.uid+'/'+currentVehicleId).once('value',snap=>{
     const v=snap.val(); if(!v) return;
     document.getElementById('dash-odometer').textContent=v.odometer+" km";
   });
-  // Fuel table & chart
+
+  // Fuel
   db.ref('fuels/'+currentUser.uid+'/'+currentVehicleId).once('value',snap=>{
     const data=snap.val()||{}; const tbody=document.querySelector('#fuel-table tbody'); tbody.innerHTML="";
     const labels=[]; const consumption=[]; let lastKm=null;
@@ -242,7 +254,8 @@ function loadVehicleData(){
     const ctx=document.getElementById('consumption-chart').getContext('2d');
     consumptionChart=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Consumo (km/l)',data:consumption,borderColor:'#1976d2',fill:false}]},options:{responsive:true}});
   });
-  // Maintenance table & chart
+
+  // Maintenance
   db.ref('maintenance/'+currentUser.uid+'/'+currentVehicleId).once('value',snap=>{
     const data=snap.val()||{}; const tbody=document.querySelector('#maint-table tbody'); tbody.innerHTML="";
     const costData={}; Object.values(data).sort((a,b)=>a.date.localeCompare(b.date)).forEach(m=>{
@@ -250,10 +263,9 @@ function loadVehicleData(){
       if(!costData[m.type]) costData[m.type]=0; costData[m.type]+=m.cost;
     });
     document.getElementById('dash-expense').textContent="R$ "+Object.values(costData).reduce((a,b)=>a+b,0).toFixed(2);
-    // Próxima manutenção
     let next='---';
     Object.values(data).sort((a,b)=>a.date.localeCompare(b.date)).forEach(m=>{
-      if(new Date(m.date)>new Date()) { next=m.date; return; }
+      if(new Date(m.date)>new Date() && next==='---') next=m.date;
     });
     document.getElementById('dash-maintenance').textContent=next;
     if(maintenanceChart) maintenanceChart.destroy();
@@ -292,7 +304,6 @@ function importData(){
 auth.onAuthStateChanged(user=>{
   if(user){currentUser=user; showApp(); loadVehicles();}
 });
-
 </script>
 </body>
 </html>
