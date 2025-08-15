@@ -1,1 +1,605 @@
 
+import React, { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, BarChart, Bar, Legend, PieChart, Pie, Cell } from "recharts";
+import { v4 as uuid } from "uuid";
+
+// UI (shadcn/ui)
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+
+// ---------------- CONFIG ----------------
+const STORAGE_KEY = "vehicle-app-v1";
+
+const DEFAULT_VEHICLE = {
+  nome: "Ford Ka 2010 Flex",
+  placa: "",
+  odometroInicial: 0,
+  preferenciaCombustivel: "auto", // auto | gasolina | etanol
+  metas: {
+    consumoCidadeKmL: 10, // editável
+    consumoEstradaKmL: 14,
+  },
+  alertas: {
+    trocaOleoKm: 10000,
+    trocaOleoMeses: 6,
+    filtroArKm: 10000,
+    filtroCombustivelKm: 20000,
+    velasIgniçãoKm: 20000,
+    fluidoArrefecimentoMeses: 12,
+    pastilhaFreioKm: 30000,
+    correiaDentadaKm: 50000,
+    calibragemSemanas: 2,
+  },
+};
+
+const MANUT_TIPOS = [
+  { key: "troca_oleo", label: "Troca de Óleo" },
+  { key: "filtro_ar", label: "Filtro de Ar" },
+  { key: "filtro_combustivel", label: "Filtro de Combustível" },
+  { key: "velas", label: "Velas de Ignição" },
+  { key: "arrefecimento", label: "Fluido do Radiador" },
+  { key: "pastilha_freio", label: "Pastilha de Freio" },
+  { key: "pneu", label: "Pneus/Alinhamento/Balanceamento" },
+  { key: "bateria", label: "Bateria" },
+  { key: "correia_dentada", label: "Correia Dentada" },
+  { key: "inspecao_geral", label: "Inspeção Geral" },
+];
+
+const FUEL_TYPES = [
+  { key: "gasolina", label: "Gasolina" },
+  { key: "etanol", label: "Etanol" },
+  { key: "diesel", label: "Diesel" },
+  { key: "gnv", label: "GNV" },
+];
+
+function brl(v) {
+  try { return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(v||0)); } catch { return `R$ ${Number(v||0).toFixed(2)}`; }
+}
+
+function formatDateISO(d) {
+  return new Date(d).toISOString().slice(0,10);
+}
+
+function monthsDiff(a, b) {
+  const d1 = new Date(a); const d2 = new Date(b);
+  return (d2.getFullYear()-d1.getFullYear())*12 + (d2.getMonth()-d1.getMonth());
+}
+
+function daysDiff(a, b) {
+  const one = new Date(a); const two = new Date(b);
+  return Math.round((two - one) / (1000*60*60*24));
+}
+
+function loadState() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || null; } catch { return null; }
+}
+function saveState(state) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+// ---------------- APP ----------------
+export default function App() {
+  const [vehicle, setVehicle] = useState(() => loadState()?.vehicle || DEFAULT_VEHICLE);
+  const [odometroAtual, setOdometroAtual] = useState(() => loadState()?.odometroAtual || 0);
+  const [abastecimentos, setAbastecimentos] = useState(() => loadState()?.abastecimentos || []);
+  const [manutencoes, setManutencoes] = useState(() => loadState()?.manutencoes || []);
+  const [prefs, setPrefs] = useState(() => loadState()?.prefs || { modoEscuro: true, idioma: "pt-BR" });
+
+  useEffect(() => {
+    saveState({ vehicle, odometroAtual, abastecimentos, manutencoes, prefs });
+  }, [vehicle, odometroAtual, abastecimentos, manutencoes, prefs]);
+
+  const hoje = formatDateISO(new Date());
+
+  // ---------- Forms Drafts ----------
+  const [draftFuel, setDraftFuel] = useState({ date: hoje, odometro: "", litros: "", valorTotal: "", tipo: "gasolina", posto: "", observacao: "" });
+  const [draftMaint, setDraftMaint] = useState({ date: hoje, odometro: "", tipo: "troca_oleo", custo: "", notas: "" });
+
+  // ---------- Helpers/Derived ----------
+  const sortedAbast = useMemo(() => [...abastecimentos].sort((a,b)=>a.odometro-b.odometro), [abastecimentos]);
+
+  const consumoSerie = useMemo(() => {
+    const arr = [];
+    for (let i=1; i<sortedAbast.length; i++) {
+      const prev = sortedAbast[i-1];
+      const cur = sortedAbast[i];
+      const km = cur.odometro - prev.odometro;
+      const litros = cur.litros; // método "tanque cheio" (ideal)
+      if (km>0 && litros>0) arr.push({ data: cur.date, km, litros, kmL: km/litros, tipo: cur.tipo });
+    }
+    return arr;
+  }, [sortedAbast]);
+
+  const consumoMedioG = useMemo(() => {
+    const g = consumoSerie.filter(x=>x.tipo==="gasolina");
+    const km = g.reduce((s,x)=>s+x.km,0); const l = g.reduce((s,x)=>s+x.litros,0);
+    return km>0 && l>0 ? km/l : 0;
+  }, [consumoSerie]);
+  const consumoMedioE = useMemo(() => {
+    const e = consumoSerie.filter(x=>x.tipo==="etanol");
+    const km = e.reduce((s,x)=>s+x.km,0); const l = e.reduce((s,x)=>s+x.litros,0);
+    return km>0 && l>0 ? km/l : 0;
+  }, [consumoSerie]);
+
+  const gastoMensal = useMemo(() => {
+    const map = new Map();
+    abastecimentos.forEach(a=>{
+      const ym = a.date.slice(0,7);
+      const prev = map.get(ym) || { mes: ym, litros:0, gasto:0 };
+      prev.litros += Number(a.litros||0);
+      prev.gasto += Number(a.valorTotal||0);
+      map.set(ym, prev);
+    });
+    manutencoes.forEach(m=>{
+      const ym = m.date.slice(0,7);
+      const prev = map.get(ym) || { mes: ym, litros:0, gasto:0 };
+      prev.gasto += Number(m.custo||0);
+      map.set(ym, prev);
+    });
+    return Array.from(map.values()).sort((a,b)=>a.mes.localeCompare(b.mes));
+  }, [abastecimentos, manutencoes]);
+
+  const ultimoPreco = useMemo(() => {
+    const lastG = [...abastecimentos].reverse().find(a=>a.tipo==="gasolina");
+    const lastE = [...abastecimentos].reverse().find(a=>a.tipo==="etanol");
+    return {
+      gasolina: lastG ? (lastG.valorTotal/lastG.litros) : null,
+      etanol: lastE ? (lastE.valorTotal/lastE.litros) : null,
+    };
+  }, [abastecimentos]);
+
+  const dicaFlex = useMemo(() => {
+    // Regra simples: Etanol compensa se preçoE <= 0.7 * preçoG
+    const pg = ultimoPreco.gasolina; const pe = ultimoPreco.etanol;
+    if (!pg || !pe) return "Cadastre um abastecimento de gasolina e etanol para sugerirmos.";
+    const limite = 0.7 * pg;
+    if (pe <= limite) return "No momento, ETANOL é mais vantajoso (<= 70% do preço da gasolina).";
+    return "No momento, GASOLINA é mais vantajosa (> 70% do preço do etanol).";
+  }, [ultimoPreco]);
+
+  const alertas = useMemo(() => {
+    const alerts = [];
+    const byTipo = (tipo) => manutencoes.filter(m=>m.tipo===tipo).sort((a,b)=>b.odometro-a.odometro || b.date.localeCompare(a.date))[0];
+
+    const hojeISO = formatDateISO(new Date());
+
+    // Troca de óleo (km ou meses)
+    const lastOleo = byTipo("troca_oleo");
+    if (lastOleo) {
+      const kmPerc = odometroAtual - lastOleo.odometro;
+      const mesesPerc = monthsDiff(lastOleo.date, hojeISO);
+      const faltaKm = vehicle.alertas.trocaOleoKm - kmPerc;
+      const faltaMes = vehicle.alertas.trocaOleoMeses - mesesPerc;
+      if (faltaKm <= 1000 || faltaMes <= 1) {
+        alerts.push({ tipo: "Troca de Óleo", msg: `Faltam ${Math.max(0, faltaKm)} km ou ${Math.max(0, faltaMes)} mês(es).` });
+      }
+    } else {
+      alerts.push({ tipo: "Troca de Óleo", msg: "Nunca registrada — faça uma troca e registre." });
+    }
+
+    // Fluido do radiador (meses)
+    const lastRad = byTipo("arrefecimento");
+    if (lastRad) {
+      const mesesPerc = monthsDiff(lastRad.date, hojeISO);
+      const faltaMes = vehicle.alertas.fluidoArrefecimentoMeses - mesesPerc;
+      if (faltaMes <= 1) alerts.push({ tipo: "Fluido do Radiador", msg: `Faltam ${Math.max(0,faltaMes)} mês(es).` });
+    } else {
+      alerts.push({ tipo: "Fluido do Radiador", msg: "Nunca registrado — verifique o manual e registre." });
+    }
+
+    // Correia dentada (km)
+    const lastCorr = byTipo("correia_dentada");
+    if (lastCorr) {
+      const kmPerc = odometroAtual - lastCorr.odometro;
+      const faltaKm = vehicle.alertas.correiaDentadaKm - kmPerc;
+      if (faltaKm <= 5000) alerts.push({ tipo: "Correia Dentada", msg: `Faltam ${Math.max(0,faltaKm)} km.` });
+    }
+
+    return alerts;
+  }, [manutencoes, odometroAtual, vehicle.alertas]);
+
+  // ---------- Actions ----------
+  function addFuel(){
+    const f = { ...draftFuel, id: uuid(),
+      date: draftFuel.date || formatDateISO(new Date()),
+      odometro: Number(draftFuel.odometro||0),
+      litros: Number(draftFuel.litros||0),
+      valorTotal: Number(draftFuel.valorTotal||0),
+    };
+    setAbastecimentos(prev=>[...prev, f]);
+    if (f.odometro>odometroAtual) setOdometroAtual(f.odometro);
+    setDraftFuel(d=>({ ...d, litros:"", valorTotal:"", posto:"", observacao:"" }));
+  }
+
+  function addMaint(){
+    const m = { ...draftMaint, id: uuid(),
+      date: draftMaint.date || formatDateISO(new Date()),
+      odometro: Number(draftMaint.odometro||0),
+      custo: Number(draftMaint.custo||0),
+    };
+    setManutencoes(prev=>[...prev, m]);
+    if (m.odometro>odometroAtual) setOdometroAtual(m.odometro);
+    setDraftMaint(d=>({ ...d, custo:"", notas:"" }));
+  }
+
+  function removeFuel(id){ setAbastecimentos(prev=>prev.filter(x=>x.id!==id)); }
+  function removeMaint(id){ setManutencoes(prev=>prev.filter(x=>x.id!==id)); }
+
+  function resetAll(){ if (confirm("Apagar todos os dados locais?")) { localStorage.removeItem(STORAGE_KEY); location.reload(); } }
+
+  function exportJSON(){
+    const blob = new Blob([JSON.stringify({ vehicle, odometroAtual, abastecimentos, manutencoes, prefs }, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href=url; a.download = `veiculo_${vehicle.nome.replace(/\s+/g,'_')}.json`; a.click(); URL.revokeObjectURL(url);
+  }
+
+  function exportCSV(){
+    const headersF = ["date","odometro","litros","valorTotal","tipo","posto","observacao","precoLitro","km","kmL"]; 
+    const rowsF = [];
+    for (let i=0;i<sortedAbast.length;i++){
+      const a = sortedAbast[i];
+      const prev = sortedAbast[i-1];
+      const km = i>0 ? (a.odometro - prev.odometro) : 0;
+      const kmL = i>0 && a.litros>0 ? km/a.litros : 0;
+      const preco = a.litros>0 ? a.valorTotal/a.litros : 0;
+      rowsF.push(headersF.map(h=>{
+        const map = { date:a.date, odometro:a.odometro, litros:a.litros, valorTotal:a.valorTotal, tipo:a.tipo, posto:a.posto||"", observacao:a.observacao||"", precoLitro:preco, km, kmL };
+        return JSON.stringify(map[h] ?? "");
+      }).join(","));
+    }
+    const headersM = ["date","odometro","tipo","custo","notas"]; 
+    const rowsM = manutencoes.map(m=> headersM.map(h=>JSON.stringify(m[h] ?? "")).join(","));
+    const csv = ["# ABASTECIMENTOS", headersF.join(","), ...rowsF, "", "# MANUTENCOES", headersM.join(","), ...rowsM].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href=url; a.download = `veiculo_${vehicle.nome.replace(/\s+/g,'_')}.csv`; a.click(); URL.revokeObjectURL(url);
+  }
+
+  // ---------- UI ----------
+  return (
+    <div className={`min-h-screen ${prefs.modoEscuro?"bg-neutral-950 text-neutral-100":"bg-neutral-50 text-neutral-900"}`}>
+      <div className="max-w-6xl mx-auto p-4 md:p-6">
+        <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold">Controle de Veículo — {vehicle.nome}</h1>
+            <p className="text-sm opacity-70">Sem banco de dados · dados salvos no seu navegador (localStorage)</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Switch checked={prefs.modoEscuro} onCheckedChange={(v)=>setPrefs(p=>({...p, modoEscuro:v}))} />
+            <span className="text-sm">Modo escuro</span>
+            <Button variant="outline" onClick={exportJSON}>Exportar JSON</Button>
+            <Button variant="outline" onClick={exportCSV}>Exportar CSV</Button>
+            <Button variant="destructive" onClick={resetAll}>Resetar</Button>
+          </div>
+        </header>
+
+        {/* Painel superior */}
+        <div className="grid md:grid-cols-4 gap-4 mb-6">
+          <Card className="rounded-2xl">
+            <CardHeader><CardTitle>Odômetro Atual</CardTitle></CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                <Input type="number" value={odometroAtual} onChange={e=>setOdometroAtual(Number(e.target.value||0))} />
+                <span className="text-sm opacity-70">km</span>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="rounded-2xl">
+            <CardHeader><CardTitle>Consumo Médio (Gasolina)</CardTitle></CardHeader>
+            <CardContent>
+              <div className="text-2xl font-semibold">{consumoMedioG?consumoMedioG.toFixed(2):"—"} km/L</div>
+              <p className="text-xs opacity-70">Calculado pelo método tanque-cheio</p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-2xl">
+            <CardHeader><CardTitle>Consumo Médio (Etanol)</CardTitle></CardHeader>
+            <CardContent>
+              <div className="text-2xl font-semibold">{consumoMedioE?consumoMedioE.toFixed(2):"—"} km/L</div>
+              <p className="text-xs opacity-70">Calculado pelo método tanque-cheio</p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-2xl">
+            <CardHeader><CardTitle>Sugestão Flex</CardTitle></CardHeader>
+            <CardContent>
+              <p className="text-sm">{dicaFlex}</p>
+              <p className="text-xs opacity-60">(Regra simples dos 70%)</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Gráficos */}
+        <div className="grid md:grid-cols-2 gap-4 mb-8">
+          <Card className="rounded-2xl p-4">
+            <CardHeader className="p-0 mb-2"><CardTitle>Evolução do Consumo (km/L)</CardTitle></CardHeader>
+            <CardContent className="p-0 h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={consumoSerie}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="data" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="kmL" name="km/L" dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl p-4">
+            <CardHeader className="p-0 mb-2"><CardTitle>Gastos por Mês (combustível + manutenção)</CardTitle></CardHeader>
+            <CardContent className="p-0 h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={gastoMensal}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="mes" />
+                  <YAxis />
+                  <Tooltip formatter={(v)=>brl(v)} />
+                  <Bar dataKey="gasto" name="Gasto" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Alertas */}
+        <Card className="rounded-2xl mb-8">
+          <CardHeader><CardTitle>Alertas de Manutenção</CardTitle></CardHeader>
+          <CardContent>
+            {alertas.length===0 ? (
+              <p className="text-sm opacity-70">Sem alertas no momento.</p>
+            ) : (
+              <ul className="space-y-2">
+                {alertas.map((a,i)=> (
+                  <li key={i} className="text-sm flex items-start gap-2"><span className="mt-1 inline-block h-2 w-2 rounded-full bg-yellow-500"/> <span><strong>{a.tipo}:</strong> {a.msg}</span></li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Tabs defaultValue="abastecer" className="mb-10">
+          <TabsList className="grid grid-cols-3 w-full">
+            <TabsTrigger value="abastecer">Registrar Abastecimento</TabsTrigger>
+            <TabsTrigger value="manutencao">Registrar Manutenção</TabsTrigger>
+            <TabsTrigger value="config">Configurações do Veículo</TabsTrigger>
+          </TabsList>
+
+          {/* ABASTECIMENTO */}
+          <TabsContent value="abastecer">
+            <Card className="rounded-2xl">
+              <CardHeader><CardTitle>Novo Abastecimento</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid md:grid-cols-6 gap-3">
+                  <div className="col-span-2">
+                    <Label>Data</Label>
+                    <Input type="date" value={draftFuel.date} onChange={e=>setDraftFuel(d=>({...d, date:e.target.value}))} />
+                  </div>
+                  <div>
+                    <Label>Odômetro (km)</Label>
+                    <Input type="number" value={draftFuel.odometro} onChange={e=>setDraftFuel(d=>({...d, odometro:e.target.value}))} />
+                  </div>
+                  <div>
+                    <Label>Litros</Label>
+                    <Input type="number" step="0.01" value={draftFuel.litros} onChange={e=>setDraftFuel(d=>({...d, litros:e.target.value}))} />
+                  </div>
+                  <div>
+                    <Label>Valor Total</Label>
+                    <Input type="number" step="0.01" value={draftFuel.valorTotal} onChange={e=>setDraftFuel(d=>({...d, valorTotal:e.target.value}))} />
+                  </div>
+                  <div>
+                    <Label>Tipo</Label>
+                    <Select value={draftFuel.tipo} onValueChange={(v)=>setDraftFuel(d=>({...d, tipo:v}))}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        {FUEL_TYPES.filter(f=>f.key!=="diesel" && f.key!=="gnv").map(f=> (
+                          <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid md:grid-cols-3 gap-3">
+                  <div>
+                    <Label>Posto</Label>
+                    <Input value={draftFuel.posto} onChange={e=>setDraftFuel(d=>({...d, posto:e.target.value}))} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label>Observação</Label>
+                    <Textarea value={draftFuel.observacao} onChange={e=>setDraftFuel(d=>({...d, observacao:e.target.value}))} />
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button onClick={addFuel}>Adicionar</Button>
+                  {draftFuel.litros>0 && draftFuel.valorTotal>0 && (
+                    <span className="text-sm opacity-80">Preço/litro: <strong>{brl(draftFuel.valorTotal/draftFuel.litros)}</strong></span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Tabela abastecimentos */}
+            <Card className="rounded-2xl mt-4">
+              <CardHeader><CardTitle>Histórico de Abastecimentos</CardTitle></CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Odômetro</TableHead>
+                        <TableHead>Litros</TableHead>
+                        <TableHead>Valor</TableHead>
+                        <TableHead>Preço/L</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Posto</TableHead>
+                        <TableHead>km desde último</TableHead>
+                        <TableHead>km/L (estim.)</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortedAbast.map((a, i)=>{
+                        const prev = sortedAbast[i-1];
+                        const km = i>0 ? a.odometro - prev.odometro : 0;
+                        const kmL = i>0 && a.litros>0 ? km/a.litros : 0;
+                        const preco = a.litros>0 ? a.valorTotal/a.litros : 0;
+                        return (
+                          <TableRow key={a.id}>
+                            <TableCell>{a.date}</TableCell>
+                            <TableCell>{a.odometro.toLocaleString()}</TableCell>
+                            <TableCell>{a.litros.toFixed(2)}</TableCell>
+                            <TableCell>{brl(a.valorTotal)}</TableCell>
+                            <TableCell>{brl(preco)}</TableCell>
+                            <TableCell className="capitalize">{a.tipo}</TableCell>
+                            <TableCell>{a.posto}</TableCell>
+                            <TableCell>{km>0?km.toLocaleString():"—"}</TableCell>
+                            <TableCell>{kmL?kmL.toFixed(2):"—"}</TableCell>
+                            <TableCell>
+                              <Button variant="destructive" size="sm" onClick={()=>removeFuel(a.id)}>Excluir</Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* MANUTENÇÃO */}
+          <TabsContent value="manutencao">
+            <Card className="rounded-2xl">
+              <CardHeader><CardTitle>Nova Manutenção</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid md:grid-cols-5 gap-3">
+                  <div>
+                    <Label>Data</Label>
+                    <Input type="date" value={draftMaint.date} onChange={e=>setDraftMaint(d=>({...d, date:e.target.value}))} />
+                  </div>
+                  <div>
+                    <Label>Odômetro (km)</Label>
+                    <Input type="number" value={draftMaint.odometro} onChange={e=>setDraftMaint(d=>({...d, odometro:e.target.value}))} />
+                  </div>
+                  <div>
+                    <Label>Tipo</Label>
+                    <Select value={draftMaint.tipo} onValueChange={(v)=>setDraftMaint(d=>({...d, tipo:v}))}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        {MANUT_TIPOS.map(t=> (
+                          <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Custo</Label>
+                    <Input type="number" step="0.01" value={draftMaint.custo} onChange={e=>setDraftMaint(d=>({...d, custo:e.target.value}))} />
+                  </div>
+                  <div className="md:col-span-5">
+                    <Label>Notas</Label>
+                    <Textarea value={draftMaint.notas} onChange={e=>setDraftMaint(d=>({...d, notas:e.target.value}))} />
+                  </div>
+                </div>
+                <Button onClick={addMaint}>Adicionar</Button>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-2xl mt-4">
+              <CardHeader><CardTitle>Histórico de Manutenções</CardTitle></CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Odômetro</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Custo</TableHead>
+                        <TableHead>Notas</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {[...manutencoes].sort((a,b)=>b.date.localeCompare(a.date)).map(m=> (
+                        <TableRow key={m.id}>
+                          <TableCell>{m.date}</TableCell>
+                          <TableCell>{m.odometro.toLocaleString()}</TableCell>
+                          <TableCell>{MANUT_TIPOS.find(t=>t.key===m.tipo)?.label||m.tipo}</TableCell>
+                          <TableCell>{brl(m.custo)}</TableCell>
+                          <TableCell className="max-w-[300px] truncate" title={m.notas}>{m.notas}</TableCell>
+                          <TableCell><Button variant="destructive" size="sm" onClick={()=>removeMaint(m.id)}>Excluir</Button></TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* CONFIGURAÇÕES */}
+          <TabsContent value="config">
+            <Card className="rounded-2xl">
+              <CardHeader><CardTitle>Veículo e Alertas</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid md:grid-cols-3 gap-3">
+                  <div>
+                    <Label>Nome do veículo</Label>
+                    <Input value={vehicle.nome} onChange={e=>setVehicle(v=>({...v, nome:e.target.value}))} />
+                  </div>
+                  <div>
+                    <Label>Placa (opcional)</Label>
+                    <Input value={vehicle.placa} onChange={e=>setVehicle(v=>({...v, placa:e.target.value}))} />
+                  </div>
+                  <div>
+                    <Label>Odômetro inicial</Label>
+                    <Input type="number" value={vehicle.odometroInicial} onChange={e=>setVehicle(v=>({...v, odometroInicial:Number(e.target.value||0)}))} />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-semibold mt-2 mb-1">Alertas (intervalos)</h3>
+                  <div className="grid md:grid-cols-4 gap-3">
+                    <div>
+                      <Label>Troca de óleo (km)</Label>
+                      <Input type="number" value={vehicle.alertas.trocaOleoKm} onChange={e=>setVehicle(v=>({...v, alertas:{...v.alertas, trocaOleoKm:Number(e.target.value||0)}}))} />
+                    </div>
+                    <div>
+                      <Label>Troca de óleo (meses)</Label>
+                      <Input type="number" value={vehicle.alertas.trocaOleoMeses} onChange={e=>setVehicle(v=>({...v, alertas:{...v.alertas, trocaOleoMeses:Number(e.target.value||0)}}))} />
+                    </div>
+                    <div>
+                      <Label>Fluido radiador (meses)</Label>
+                      <Input type="number" value={vehicle.alertas.fluidoArrefecimentoMeses} onChange={e=>setVehicle(v=>({...v, alertas:{...v.alertas, fluidoArrefecimentoMeses:Number(e.target.value||0)}}))} />
+                    </div>
+                    <div>
+                      <Label>Correia dentada (km)</Label>
+                      <Input type="number" value={vehicle.alertas.correiaDentadaKm} onChange={e=>setVehicle(v=>({...v, alertas:{...v.alertas, correiaDentadaKm:Number(e.target.value||0)}}))} />
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-semibold mt-2 mb-1">Preferências</h3>
+                  <div className="flex items-center gap-3">
+                    <Switch checked={prefs.modoEscuro} onCheckedChange={(v)=>setPrefs(p=>({...p, modoEscuro:v}))} />
+                    <span className="text-sm">Modo escuro</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        <footer className="text-xs opacity-60 text-center py-8">App veicular local • Você pode instalar como PWA se seu build permitir • Nenhum dado sai do seu navegador</footer>
+      </div>
+    </div>
+  );
+}
