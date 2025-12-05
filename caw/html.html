@@ -37,7 +37,7 @@
     }
     .grid {
       display: grid;
-      grid-template-columns: 1.1fr 0.9fr;
+      grid-template-columns: 1.2fr 0.8fr;
       gap: 16px;
     }
     .card {
@@ -162,6 +162,11 @@
       grid-template-columns: 1fr 1fr;
       gap: 8px;
     }
+    .three-cols {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
     .small { font-size: 11px; }
     .section-title {
       margin-top: 10px;
@@ -175,6 +180,7 @@
     }
     @media (max-width: 900px) {
       .grid { grid-template-columns: 1fr; }
+      .three-cols { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
@@ -182,8 +188,8 @@
   <div class="container">
     <h1>Viga de Concreto Armado – NBR 6118</h1>
     <div class="subtitle">
-      Flexão (armadura simples/dupla) + cisalhamento – modelo I (VRd2, Vc, Asw/s).<br>
-      <b>Uso didático / pré-dimensionamento. Válido para seção retangular, concreto grupo I (C20–C50).</b>
+      ULS flexão (armadura simples/dupla) + cisalhamento – Modelo I (VRd2, Vc, Asw/s).<br>
+      <b>Seção retangular, concreto normal (grupo I típico), aço passivo. Parâmetros normativos ajustáveis.</b>
     </div>
 
     <div class="grid">
@@ -199,7 +205,7 @@
             <input type="number" id="fck" value="30" step="1">
           </div>
           <div class="field">
-            <label>fyk (MPa) (CA-50 ≈ 500)</label>
+            <label>fyk barras (MPa) – CA-50 ≈ 500</label>
             <input type="number" id="fyk" value="500" step="10">
           </div>
           <div class="field">
@@ -218,10 +224,46 @@
             <label>Ø barras tração/compressão (mm)</label>
             <input type="number" id="phi_long" value="16" step="2">
           </div>
+          <div class="field">
+            <label>fyk estribos (MPa)</label>
+            <input type="number" id="fyk_st" value="500" step="10">
+          </div>
         </div>
+
+        <h3 style="font-size:13px;margin-top:10px;">Parâmetros normativos / materiais</h3>
+        <div class="three-cols">
+          <div class="field">
+            <label>γc</label>
+            <input type="number" id="gamma_c" value="1.4" step="0.05">
+          </div>
+          <div class="field">
+            <label>γs</label>
+            <input type="number" id="gamma_s" value="1.15" step="0.05">
+          </div>
+          <div class="field">
+            <label>αcc</label>
+            <input type="number" id="alpha_cc" value="0.85" step="0.01">
+          </div>
+          <div class="field">
+            <label>Limite x/d</label>
+            <input type="number" id="x_lim" value="0.45" step="0.01">
+            <span class="units">Grupo I, CA-50 → 0,45</span>
+          </div>
+          <div class="field">
+            <label>Es (MPa)</label>
+            <input type="number" id="Es" value="210000" step="1000">
+            <span class="units">Aço CA: ~210000</span>
+          </div>
+          <div class="field">
+            <label>Limite fydw (MPa)</label>
+            <input type="number" id="fydw_lim" value="435" step="5">
+            <span class="units">Norma costuma limitar ~435</span>
+          </div>
+        </div>
+
         <div class="note">
-          Profundidade útil d = h − cobrimento − Ø/2.  
-          d' (armadura comprimida) = cobrimento + Ø/2 (usado se precisar armadura dupla).
+          d = h − cob − Ø/2. &nbsp; d' = cob + Ø/2.  
+          Parâmetros (γ, αcc, x/d) podem ser ajustados se você quiser calibrar p/ outro regime.
         </div>
       </div>
 
@@ -264,8 +306,8 @@
     <div class="results" id="resultados">
       <h3>Resultados aparecerão aqui…</h3>
       <div class="note">
-        Implementa equações de flexão (0,68·fcd, d−0,4x) e cisalhamento (VRd2, Vc, Asw/s) conforme NBR 6118 / notas de Bastos.  
-        Válido para viga retangular, concreto normal grupo I (C20–C50), aço CA-50/CA-60.
+        ULS flexão (0,68·fcd, d−0,4x, armadura simples/dupla) + cisalhamento (VRd2, Vc, Asw/s) conforme Modelo I da NBR 6118, para vigas retangulares de concreto normal.  
+        Parâmetros γ, αcc, x/d e limite de fydw são ajustáveis. Não inclui ELS (flecha, fissuração) nem flexo-compressão Nsd ≠ 0.
       </div>
     </div>
   </div>
@@ -283,32 +325,18 @@
       document.getElementById("resultados").innerHTML = `
         <h3>Resultados aparecerão aqui…</h3>
         <div class="note">
-          Preencha dados de materiais, geometria e esforços, depois clique em <b>Calcular</b>.
+          Preencha dados de materiais, geometria, esforços e parâmetros, depois clique em <b>Calcular</b>.
         </div>
       `;
     }
 
-    // ρmin tabela NBR (Bastos, Tabela 2) - CA-50, viga retangular
-    // fck: 20  25   30   35   40   45   50   55   60   65   70   75   80   85   90
-    // ρ%: 0.150 0.150 0.150 0.164 0.179 0.194 0.208 0.211 0.219 0.226 0.233 0.239 0.245 0.251 0.256
-    function rhoMinFlexao(fck) {
-      const fcks = [20,25,30,35,40,45,50,55,60,65,70,75,80,85,90];
-      const rhosPct = [0.150,0.150,0.150,0.164,0.179,0.194,0.208,0.211,0.219,0.226,0.233,0.239,0.245,0.251,0.256];
-
-      if (fck <= fcks[0]) return rhosPct[0] / 100.0;
-      if (fck >= fcks[fcks.length-1]) return rhosPct[rhosPct.length-1] / 100.0;
-
-      for (let i = 0; i < fcks.length-1; i++) {
-        if (fck >= fcks[i] && fck <= fcks[i+1]) {
-          const t = (fck - fcks[i]) / (fcks[i+1] - fcks[i]);
-          const rhoPct = rhosPct[i] + t * (rhosPct[i+1] - rhosPct[i]);
-          return rhoPct / 100.0; // retorna fracionário (ex: 0,0015)
-        }
-      }
-      return 0.0015; // fallback 0,15 %
+    // ρmin geral (NBR-style) – em função de fck e fyk
+    // ρmin ≈ 0,15·fctm/fyk  (fctm em MPa, fyk em MPa)
+    function rhoMinFlexao(fck, fyk) {
+      const fctm = 0.3 * Math.pow(fck, 2.0/3.0);
+      return 0.15 * fctm / fyk; // adimensional
     }
 
-    // Combinações comerciais para flexão
     function sugerirBarras(As_alvo_mm2) {
       const diametros = [10, 12.5, 16, 20, 22, 25, 32];
       const minBarras = 2;
@@ -316,7 +344,7 @@
       const opcoes = [];
 
       for (let phi of diametros) {
-        const areaBarra = Math.PI * phi * phi / 4.0; // mm²
+        const areaBarra = Math.PI * phi * phi / 4.0;
         for (let n = minBarras; n <= maxBarras; n++) {
           const As_real = n * areaBarra;
           if (As_real >= As_alvo_mm2) {
@@ -325,50 +353,41 @@
           }
         }
       }
-
       opcoes.sort((a, b) => a.sobra - b.sobra);
       return opcoes.slice(0, 4);
     }
 
-    // Sugestão de estribos comerciais (tema NBR usada só p/ s_max)
     function sugerirEstribos(Asw_s_req, b_mm, phi_base, legs, s_max_mm) {
       const phis = [phi_base, 8, 10];
       const s_lista_cm = [10, 12, 15, 20, 25, 30];
       const opcoes = [];
 
       for (let phi of phis) {
-        const Asw = legs * Math.PI * phi * phi / 4.0; // mm²
+        const Asw = legs * Math.PI * phi * phi / 4.0;
         for (let s_cm of s_lista_cm) {
           const s_mm = s_cm * 10;
           if (s_mm > s_max_mm) continue;
-          const Asw_s_real = Asw / s_mm; // mm²/mm
+          const Asw_s_real = Asw / s_mm;
           if (Asw_s_real >= Asw_s_req) {
             const sobra = Asw_s_real - Asw_s_req;
             opcoes.push({ phi, s_cm, Asw_s_real, sobra });
           }
         }
       }
-
       opcoes.sort((a, b) => a.sobra - b.sobra);
       return opcoes.slice(0, 4);
     }
 
-    // Resolve x da equação Md = 0,68 bw x fcd (d - 0,4x) via bisseção
-    function resolver_x(Msd_Nmm, b_mm, d_mm, fcd) {
+    function resolver_x(Msd_Nmm, b_mm, d_mm, fcd, x_lim_ratio) {
       const maxIter = 60;
       const tol = 1e-6;
-
-      // limite normativo de ductilidade
-      const x_lim_ratio = 0.45; // fck ≤ 50 MPa (grupo I)
       const x_max = x_lim_ratio * d_mm;
       let a = 1e-6;
       let c = x_max;
       let fa = 0.68 * fcd * b_mm * a * (d_mm - 0.4 * a) - Msd_Nmm;
       let fc = 0.68 * fcd * b_mm * c * (d_mm - 0.4 * c) - Msd_Nmm;
 
-      if (fa * fc > 0) {
-        return null; // Md maior que capacidade com x = x_lim
-      }
+      if (fa * fc > 0) return null;
 
       let b = 0;
       for (let i = 0; i < maxIter; i++) {
@@ -383,12 +402,13 @@
           fa = fb;
         }
       }
-      return b; // x_mm
+      return b;
     }
 
     function calcular() {
       const fck = parseFloat(document.getElementById("fck").value);
       const fyk = parseFloat(document.getElementById("fyk").value);
+      const fyk_st = parseFloat(document.getElementById("fyk_st").value);
       const b_cm = parseFloat(document.getElementById("b").value);
       const h_cm = parseFloat(document.getElementById("h").value);
       const cob_cm = parseFloat(document.getElementById("cobertura").value);
@@ -398,9 +418,17 @@
       const phi_st = parseFloat(document.getElementById("phi_stirrup").value);
       const legs = parseInt(document.getElementById("legs").value, 10);
 
+      const gamma_c = parseFloat(document.getElementById("gamma_c").value);
+      const gamma_s = parseFloat(document.getElementById("gamma_s").value);
+      const alpha_cc = parseFloat(document.getElementById("alpha_cc").value);
+      const x_lim_input = parseFloat(document.getElementById("x_lim").value);
+      const Es = parseFloat(document.getElementById("Es").value);
+      const fydw_lim = parseFloat(document.getElementById("fydw_lim").value);
+
       const resDiv = document.getElementById("resultados");
 
-      if ([fck, fyk, b_cm, h_cm, cob_cm, phi_long, Msd_kNm, Vsd_kN, phi_st, legs]
+      if ([fck, fyk, fyk_st, b_cm, h_cm, cob_cm, phi_long, Msd_kNm, Vsd_kN, phi_st, legs,
+           gamma_c, gamma_s, alpha_cc, x_lim_input, Es, fydw_lim]
         .some(v => isNaN(v) || v <= 0)) {
         resDiv.innerHTML = `
           <h3>Erro de entrada</h3>
@@ -409,42 +437,52 @@
         return;
       }
 
-      // Conversões
       const b_mm = b_cm * 10;
       const h_mm = h_cm * 10;
       const cob_mm = cob_cm * 10;
       const d_mm = h_mm - cob_mm - phi_long / 2.0;
-      const d_m = d_mm / 1000.0;
-      const dLinha_mm = cob_mm + phi_long / 2.0; // d'
-      const b_m = b_mm / 1000.0;
+      const dLinha_mm = cob_mm + phi_long / 2.0;
 
-      // coeficientes de segurança (NBR)
-      const gamma_c = 1.4;
-      const gamma_s = 1.15;
-      const alpha_cc = 0.85;
+      if (d_mm <= 0 || d_mm < 2 * phi_long) {
+        resDiv.innerHTML = `
+          <h3>Geometria inválida</h3>
+          <p>d ficou muito pequeno ou negativo. Verifique h, cobrimento e diâmetro das barras.</p>
+        `;
+        return;
+      }
 
-      // Resistências de cálculo
-      const fcd = alpha_cc * fck / gamma_c;  // MPa
-      const fyd = fyk / gamma_s;            // MPa
+      const fcd = alpha_cc * fck / gamma_c;
+      const fyd = fyk / gamma_s;
+      const fydw = Math.min(fyk_st / gamma_s, fydw_lim);
 
-      // Resistência à tração (grupo I)
-      const fctm = 0.3 * Math.pow(fck, 2.0 / 3.0);   // MPa
+      const fctm = 0.3 * Math.pow(fck, 2.0 / 3.0);
       const fctk_inf = 0.7 * fctm;
-      const fctd = fctk_inf / gamma_c;               // MPa
+      const fctd = fctk_inf / gamma_c;
 
-      const Msd_Nm = Msd_kNm * 1000.0;
       const Msd_Nmm = Msd_kNm * 1e6;
       const Vsd_N = Vsd_kN * 1e3;
 
-      // Limite de ductilidade x/d (grupo I)
-      const x_lim_ratio = 0.45;
+      const x_lim_ratio = x_lim_input;
       const x_lim_mm = x_lim_ratio * d_mm;
-      const z_lim_mm = d_mm - 0.4 * x_lim_mm;
 
-      // ----------------------------------
-      // FLEXÃO – armadura simples / dupla
-      // ----------------------------------
-      let x_mm = resolver_x(Msd_Nmm, b_mm, d_mm, fcd);
+      const Ac_mm2 = b_mm * h_mm;
+      const rho_min = rhoMinFlexao(fck, fyk);
+      const As_min_mm2 = rho_min * b_mm * d_mm;
+      const As_maxTotal_mm2 = 0.04 * Ac_mm2;
+
+      let avisoNorma = "";
+      if (fck < 20 || fck > 50) {
+        avisoNorma += "• fck fora da faixa típica de concreto normal grupo I (20–50 MPa). Ajuste parâmetros conforme NBR.\n";
+      }
+      if (fyk < 400 || fyk > 650) {
+        avisoNorma += "• fyk das barras fora da faixa usual (CA-25/50/60). Verifique diagrama tensão-deformação.\n";
+      }
+      if (fyk_st < 400 || fyk_st > 650) {
+        avisoNorma += "• fyk dos estribos fora da faixa usual. Verifique fydw e detalhamento.\n";
+      }
+
+      // -------- FLEXÃO --------
+      let x_mm = resolver_x(Msd_Nmm, b_mm, d_mm, fcd, x_lim_ratio);
       let dominio_msg = "";
       let dominio_tag = "";
       let tipo_armadura = "";
@@ -452,32 +490,25 @@
       let As_comp_mm2 = 0;
       let x_d = 0;
       let usa_armadura_dupla = false;
+      let info_dupla = "";
+      let M1rd_Nmm = 0;
+      let Mrd_adot_Nmm = 0;
+      let T_N = 0, Cc_N = 0, Cs_N = 0, C_N = 0, desequil_percent = 0;
+      const eps_cu = 0.0035;
+      let eps_c = eps_cu, eps_s = 0, eps_s_comp = 0, eps_y = fyd / Es;
+      let status_eps_s = "", status_eps_s_comp = "";
 
-      const Ac_mm2 = b_mm * h_mm;
-      const rho_min = rhoMinFlexao(fck); // fracionário
-      const As_min_mm2 = rho_min * Ac_mm2;
-      const As_maxTotal_mm2 = 0.04 * Ac_mm2; // As + As' ≤ 4% Ac
-
-      // se não foi possível achar x com Msd (Md > capacidade com x_lim) → força armadura dupla
       if (x_mm === null) {
         usa_armadura_dupla = true;
       } else {
         x_d = x_mm / d_mm;
-        if (x_d > x_lim_ratio) {
-          // calculou x, mas viola limite x/d ≤ 0,45 → também tratar como dupla
-          usa_armadura_dupla = true;
-        }
+        if (x_d > x_lim_ratio) usa_armadura_dupla = true;
       }
 
-      let info_dupla = "";
-      let M1rd_Nmm = 0;
-
       if (!usa_armadura_dupla) {
-        // ARMADURA SIMPLES (x dentro do limite)
         const z_mm = d_mm - 0.4 * x_mm;
         As_tracao_mm2 = Msd_Nmm / (fyd * z_mm);
 
-        // verificar mínima
         if (As_tracao_mm2 < As_min_mm2) {
           As_tracao_mm2 = As_min_mm2;
           tipo_armadura = "Dimensionada pela armadura mínima.";
@@ -485,44 +516,72 @@
           tipo_armadura = "Armadura simples (tracionada) dimensionada por momento.";
         }
 
-        if (As_tracao_mm2 > As_maxTotal_mm2) {
-          tipo_armadura += " As > As,max (4% Ac). Seção muito armada → aumentar seção ou fck.";
+        const As_total = As_tracao_mm2;
+        if (As_total > As_maxTotal_mm2) {
+          tipo_armadura += " As > Asmáx (4%·Ac). Seção muito armada → aumentar seção ou fck.";
         }
 
-        // domínio aproximado conforme x/d
         if (x_d <= 0.259) {
           dominio_msg = "Domínio 2 (aço bem tracionado, ruptura dúctil).";
         } else if (x_d <= 0.628) {
-          dominio_msg = "Domínio 3 (aço ainda em escoamento, mas com maior compressão de concreto).";
+          dominio_msg = "Domínio 3 (aço ainda em escoamento, concreto mais comprimido).";
         } else {
           dominio_msg = "Domínio 4 (não desejável).";
         }
 
         if (x_d <= x_lim_ratio) {
-          dominio_tag = `<span class="tag tag-ok">x/d dentro do limite de ductilidade (≤ 0,45)</span>`;
+          dominio_tag = `<span class="tag tag-ok">x/d dentro do limite de ductilidade (≤ ${format(x_lim_ratio,2)})</span>`;
         } else {
-          dominio_tag = `<span class="tag tag-err">x/d acima do limite normativo</span>`;
+          dominio_tag = `<span class="tag tag-err">x/d acima do limite normativo adotado</span>`;
         }
+
+        const x_eq_mm = Math.min(As_tracao_mm2 * fyd / (0.68 * fcd * b_mm), x_lim_mm);
+        const z_eq_mm = d_mm - 0.4 * x_eq_mm;
+        Mrd_adot_Nmm = 0.68 * fcd * b_mm * x_eq_mm * z_eq_mm;
+        x_mm = x_eq_mm;
+        x_d = x_mm / d_mm;
+
+        // T e C
+        T_N = As_tracao_mm2 * fyd;
+        Cc_N = 0.68 * fcd * b_mm * x_mm;
+        Cs_N = 0;
+        C_N = Cc_N + Cs_N;
+        desequil_percent = Math.abs(T_N - C_N) / ((T_N + C_N)/2) * 100;
       } else {
-        // ARMADURA DUPLA – limita concreto em x_lim e leva excedente com As + As'
-        const M1rd = 0.68 * fcd * b_mm * x_lim_mm * (d_mm - 0.4 * x_lim_mm); // N·mm
-        M1rd_Nmm = M1rd;
+        const z_lim_mm = d_mm - 0.4 * x_lim_mm;
+        M1rd_Nmm = 0.68 * fcd * b_mm * x_lim_mm * z_lim_mm;
 
         if (Msd_Nmm <= M1rd_Nmm) {
-          // na prática isso não iria cair aqui, mas segurança:
-          x_mm = resolver_x(Msd_Nmm, b_mm, d_mm, fcd);
-          const z_mm = d_mm - 0.4 * x_mm;
-          As_tracao_mm2 = Msd_Nmm / (fyd * z_mm);
-          tipo_armadura = "Armadura simples (caso limite).";
-          info_dupla = "Md ficou ≤ capacidade da seção com x = x_lim; armadura dupla não necessária.";
+          const x_simple = resolver_x(Msd_Nmm, b_mm, d_mm, fcd, x_lim_ratio);
+          const z_simple = d_mm - 0.4 * x_simple;
+          As_tracao_mm2 = Msd_Nmm / (fyd * z_simple);
+          tipo_armadura = "Armadura simples (caso limite com x ≤ x_lim).";
+          info_dupla = "Md ≤ capacidade com x = x_lim; armadura dupla não é necessária.";
+          As_comp_mm2 = 0;
+          x_mm = x_simple;
+          x_d = x_mm / d_mm;
+
+          const As_total = As_tracao_mm2;
+          if (As_total > As_maxTotal_mm2) {
+            tipo_armadura += " (As > 4%·Ac).";
+          }
+          const x_eq_mm = Math.min(As_tracao_mm2 * fyd / (0.68 * fcd * b_mm), x_lim_mm);
+          const z_eq_mm = d_mm - 0.4 * x_eq_mm;
+          Mrd_adot_Nmm = 0.68 * fcd * b_mm * x_eq_mm * z_eq_mm;
+          x_mm = x_eq_mm;
+          x_d = x_mm / d_mm;
+
+          T_N = As_tracao_mm2 * fyd;
+          Cc_N = 0.68 * fcd * b_mm * x_mm;
+          Cs_N = 0;
+          C_N = Cc_N;
+          desequil_percent = Math.abs(T_N - C_N) / ((T_N + C_N)/2) * 100;
         } else {
           const deltaM_Nmm = Msd_Nmm - M1rd_Nmm;
-
-          const z_lim_mm_local = d_mm - 0.4 * x_lim_mm;
-          const As1_mm2 = M1rd_Nmm / (fyd * z_lim_mm_local); // parte equilibrando concreto
           const alavanca_dupla_mm = d_mm - dLinha_mm;
 
-          const As2_mm2 = deltaM_Nmm / (fyd * alavanca_dupla_mm); // tração adicional e compressão
+          const As1_mm2 = M1rd_Nmm / (fyd * z_lim_mm);
+          const As2_mm2 = deltaM_Nmm / (fyd * alavanca_dupla_mm);
 
           As_tracao_mm2 = As1_mm2 + As2_mm2;
           As_comp_mm2 = As2_mm2;
@@ -534,27 +593,46 @@
             tipo_armadura += " (As + As' > 4%·Ac → seção muito armada, aumentar seção ou fck).";
           }
 
-          dominio_msg = "Seção forçada a trabalhar com x = x_lim (ductilidade limite); excedente levado por aço de compressão.";
-          dominio_tag = `<span class="tag tag-warn">Necessária armadura dupla (x = 0,45·d)</span>`;
+          dominio_msg = "Seção forçada a trabalhar com x = x_lim (ductilidade limite); excedente levado por aço comprimido.";
+          dominio_tag = `<span class="tag tag-warn">Necessária armadura dupla (x = ${format(x_lim_ratio,2)}·d)</span>`;
 
           x_mm = x_lim_mm;
           x_d = x_mm / d_mm;
+
+          const M2rd_Nmm = As2_mm2 * fyd * (d_mm - dLinha_mm);
+          Mrd_adot_Nmm = M1rd_Nmm + M2rd_Nmm;
+
+          T_N = As_tracao_mm2 * fyd;
+          Cc_N = 0.68 * fcd * b_mm * x_mm;
+          Cs_N = As_comp_mm2 * fyd;
+          C_N = Cc_N + Cs_N;
+          desequil_percent = Math.abs(T_N - C_N) / ((T_N + C_N)/2) * 100;
         }
       }
+
+      // Deformações no ELU
+      eps_c = eps_cu;
+      eps_s = eps_c * (d_mm - x_mm) / x_mm;
+      eps_s_comp = x_mm > dLinha_mm ? eps_c * (x_mm - dLinha_mm) / x_mm : 0;
+
+      status_eps_s = eps_s >= eps_y ? "aço tracionado escoando" : "aço tracionado NÃO escoando";
+      status_eps_s_comp = (As_comp_mm2 > 0 && eps_s_comp > 0)
+        ? (eps_s_comp >= eps_y ? "aço comprimido escoando" : "aço comprimido NÃO escoando")
+        : "sem aço comprimido relevante";
 
       let flex_tag = "";
       const rho_adot = As_tracao_mm2 / (b_mm * d_mm);
       if (As_tracao_mm2 < As_min_mm2 * 0.999) {
         flex_tag = `<span class="tag tag-err">As < As,mín (flexão)</span>`;
-      } else if (As_tracao_mm2 > As_maxTotal_mm2) {
+      } else if (As_tracao_mm2 + As_comp_mm2 > As_maxTotal_mm2) {
         flex_tag = `<span class="tag tag-err">As > 4%·Ac (acima do máximo normativo)</span>`;
       } else {
         flex_tag = `<span class="tag tag-ok">Flexão OK dentro dos limites de taxa</span>`;
       }
 
-      // Sugestão de barras comerciais (para As_tracao_mm2)
-      const sugeridas = sugerirBarras(As_tracao_mm2);
+      const FS_M = Mrd_adot_Nmm / Msd_Nmm;
 
+      const sugeridas = sugerirBarras(As_tracao_mm2);
       let htmlSugBarras = "";
       if (sugeridas.length > 0) {
         htmlSugBarras = "<ul>";
@@ -568,45 +646,63 @@
         htmlSugBarras = `<p class="note">Nenhuma combinação simples (2–8 barras, Ø10–Ø32) encontrada acima de As,trac adotado.</p>`;
       }
 
-      // ---------------------------
-      // CISALHAMENTO – Modelo I
-      // ---------------------------
-      // VRd2 = 0,27 αv2 fcd bw d
+      // -------- CISALHAMENTO --------
       const alpha_v2 = 1.0 - fck / 250.0;
       const VRd2_N = 0.27 * alpha_v2 * fcd * b_mm * d_mm;
-
-      // Vc0 = 0,6 fctd bw d (NBR 6118, modelo I, flexão simples)
       const Vc0_N = 0.6 * fctd * b_mm * d_mm;
+
+      const vEd_MPa = Vsd_N / (b_mm * d_mm);
+      const vRd2_MPa = VRd2_N / (b_mm * d_mm);
+      const FS_V = VRd2_N / Vsd_N;
 
       let cis_tag = "";
       let cis_msg = "";
-      let Asw_s_req = 0; // mm²/mm
+      let Asw_s_req = null;
+      let Asw_s_min = null;
+      let Asw_s_dim = null;
+      let s_max_mm = null;
+      let Asw_stirrup_mm2 = null;
+      let s_mm_calc = null;
+      let s_adot_mm = null;
+      let rho_w_adot = null;
+      let estribo_tag = "";
+      let htmlSugEstr = "";
+      let shearBlock = "";
 
       if (Vsd_N > VRd2_N) {
-        cis_tag = `<span class="tag tag-err">Vsd > VRd2 → compressão diagonal não verificada (aumentar seção / reduzir carga)</span>`;
-        cis_msg = "A combinação de seção/concreto não atende à verificação da biela comprimida (VRd2). Não é possível dimensionar apenas estribos mantendo esta seção.";
+        cis_tag = `<span class="tag tag-err">Vsd > VRd2 → compressão diagonal não verificada</span>`;
+        cis_msg = "A seção não atende em compressão diagonal (VRd2). Não é aceitável apenas aumentar estribos; é necessário aumentar bw/d/fck ou reduzir Vsd.";
+
+        shearBlock = `
+          <h4>2) Cisalhamento – Modelo I (NBR 6118)</h4>
+          ${cis_tag}
+          <ul>
+            <li>VRd2 ≈ <strong>${format(VRd2_N/1e3,1)}</strong> kN (νRd2 ≈ ${format(vRd2_MPa,3)} MPa)</li>
+            <li>Vsd = <strong>${format(Vsd_kN,1)}</strong> kN (νEd ≈ ${format(vEd_MPa,3)} MPa)</li>
+            <li>FS_V = VRd2/Vsd ≈ <strong>${format(FS_V,2)}</strong></li>
+            <li>${cis_msg}</li>
+          </ul>
+          <p class="note">
+            Ajuste a geometria da viga (b ou h), aumente fck ou reduza o esforço de cálculo Vsd para voltar à faixa da NBR.
+          </p>
+        `;
       } else {
-        // pode dimensionar
+        let Vsw_N = 0;
         if (Vsd_N <= Vc0_N) {
-          cis_tag = `<span class="tag tag-ok">Vsd ≤ Vc0 → concreto resiste, usar apenas Asw/s mínima</span>`;
-          cis_msg = "Como Vsd ≤ Vc0, a força de cisalhamento pode ser resistida pelos mecanismos complementares do concreto, adotando armadura transversal mínima.";
+          cis_tag = `<span class="tag tag-ok">Vsd ≤ Vc0 → concreto resiste, usar apenas armadura mínima</span>`;
+          cis_msg = "Vsd ≤ Vc0: usa-se apenas armadura mínima de cisalhamento.";
         } else {
-          cis_tag = `<span class="tag tag-warn">Vsd > Vc0 → dimensionar Asw/s acima da mínima</span>`;
-          cis_msg = "Vsd > Vc0, parcela de cisalhamento excedente será resistida por estribos (Vsw = Vsd - Vc0).";
+          cis_tag = `<span class="tag tag-warn">Vsd > Vc0 → dimensionar armadura de cisalhamento</span>`;
+          cis_msg = "Vsd > Vc0: Vsw = Vsd − Vc0 será resistido por estribos.";
         }
 
-        const Vsw_N = Math.max(Vsd_N - Vc0_N, 0);
-        const z_mm = 0.9 * d_mm;
-        const fydw = Math.min(fyd, 435); // limite normativo típico p/ estribos
-        const Asw_s_dim = Vsw_N / (z_mm * fydw); // mm²/mm
+        Vsw_N = Math.max(Vsd_N - Vc0_N, 0);
+        const z_mm_cis = 0.9 * d_mm;
 
-        // Asw/s mínima (0,2 · fctm/fyk · bw)
-        const Asw_s_min = 0.2 * (fctm / fyk) * b_mm;
-
+        Asw_s_dim = Vsw_N > 0 ? Vsw_N / (z_mm_cis * fydw) : 0;
+        Asw_s_min = 0.2 * (fctm / fyk_st) * b_mm;
         Asw_s_req = Math.max(Asw_s_dim, Asw_s_min);
 
-        // espaçamento máximo (NBR 6118 / AltoQi): depende da razão Vsd/VRd2
-        let s_max_mm;
         const razao = Vsd_N / VRd2_N;
         if (razao <= 0.67) {
           s_max_mm = Math.min(0.6 * d_mm, 300.0);
@@ -614,21 +710,18 @@
           s_max_mm = Math.min(0.3 * d_mm, 200.0);
         }
 
-        const Asw_stirrup_mm2 = legs * Math.PI * phi_st * phi_st / 4.0;
-        const s_mm_calc = Asw_stirrup_mm2 / Asw_s_req;
-        const s_adot_mm = Math.min(s_mm_calc, s_max_mm);
-        const rho_w_adot = Asw_stirrup_mm2 / (s_adot_mm * b_mm);
+        Asw_stirrup_mm2 = legs * Math.PI * phi_st * phi_st / 4.0;
+        s_mm_calc = Asw_stirrup_mm2 / Asw_s_req;
+        s_adot_mm = Math.min(s_mm_calc, s_max_mm);
+        rho_w_adot = Asw_stirrup_mm2 / (s_adot_mm * b_mm);
 
-        let estribo_tag = "";
         if (s_mm_calc <= s_max_mm + 1e-6) {
           estribo_tag = `<span class="tag tag-ok">Espaçamento calculado ≤ s<sub>máx</sub></span>`;
         } else {
           estribo_tag = `<span class="tag tag-warn">s calculado &gt; s<sub>máx</sub>, adotado s = s<sub>máx</sub></span>`;
         }
 
-        // sugestões comerciais
         const estr_sug = sugerirEstribos(Asw_s_req, b_mm, phi_st, legs, s_max_mm);
-        let htmlSugEstr = "";
         if (estr_sug.length > 0) {
           htmlSugEstr = "<ul>";
           estr_sug.forEach(op => {
@@ -641,61 +734,24 @@
           htmlSugEstr = `<p class="note">Nenhuma combinação simples de estribos (Ø${phi_st}, 8, 10 mm; 10–30 cm) encontrada acima de Asw/s requerido respeitando s<sub>máx</sub>.</p>`;
         }
 
-        // monta tudo
-        resDiv.innerHTML = `
-          <h3>Resumo dos resultados</h3>
-
-          <p><strong>Dados básicos:</strong></p>
-          <ul>
-            <li>fck = <strong>${format(fck,0)}</strong> MPa, fyk = <strong>${format(fyk,0)}</strong> MPa</li>
-            <li>b = <strong>${format(b_cm)}</strong> cm, h = <strong>${format(h_cm)}</strong> cm, cobrimento = <strong>${format(cob_cm)}</strong> cm</li>
-            <li>Ø flexão = <strong>${format(phi_long)}</strong> mm, Ø estribo = <strong>${format(phi_st,1)}</strong> mm, ${legs} pernas na alma</li>
-            <li>Msd = <strong>${format(Msd_kNm)}</strong> kN·m, Vsd = <strong>${format(Vsd_kN)}</strong> kN</li>
-          </ul>
-
-          <p><strong>Geometria útil e materiais:</strong></p>
-          <ul>
-            <li>d = <strong>${format(d_mm/10)}</strong> cm (=${format(d_mm)} mm), d' = <strong>${format(dLinha_mm/10)}</strong> cm (=${format(dLinha_mm)} mm)</li>
-            <li>fcd = <strong>${format(fcd,2)}</strong> MPa, fyd = <strong>${format(fyd,2)}</strong> MPa, fctm ≈ <strong>${format(fctm,2)}</strong> MPa, fctd ≈ <strong>${format(fctd,2)}</strong> MPa</li>
-          </ul>
-
-          <h4>1) Flexão</h4>
-          ${flex_tag} ${dominio_tag}
-          <ul>
-            <li>Tipo de armadura: ${tipo_armadura}</li>
-            <li>x = <strong>${format(x_mm/10)}</strong> cm (=${format(x_mm)} mm) ⇒ x/d = <strong>${format(x_d,3)}</strong></li>
-            <li>Limite normativo adotado: x/d ≤ <strong>${format(x_lim_ratio,2)}</strong> (concreto grupo I, fck ≤ 50 MPa)</li>
-            <li>As,trac adotada = <strong>${format(As_tracao_mm2)}</strong> mm² = <strong>${format(As_tracao_mm2/100)}</strong> cm²</li>
-            <li>As' (compressão) = <strong>${format(As_comp_mm2)}</strong> mm² = <strong>${format(As_comp_mm2/100)}</strong> cm²</li>
-            <li>ρmín (Tabela 17.3) ≈ <strong>${format(rho_min*100,3)}</strong> % ⇒ As,mín ≈ <strong>${format(As_min_mm2)}</strong> mm²</li>
-            <li>(As + As')máx = 4%·Ac ⇒ (As + As')máx = <strong>${format(As_maxTotal_mm2)}</strong> mm²</li>
-            <li>Taxa ρ adotada (trac) = <strong>${format(rho_adot*1000,3)}</strong> ‰</li>
-          </ul>
-          <p class="note">
-            Domínio aproximado: ${dominio_msg}
-            ${info_dupla ? "<br>" + info_dupla : ""}
-          </p>
-
-          <p class="section-title">Sugestão de combinações de barras (flexão – armadura tracionada)</p>
-          ${htmlSugBarras}
-
-          <hr style="border-color:#111827; margin:10px 0;">
-
+        shearBlock = `
           <h4>2) Cisalhamento – Modelo I (NBR 6118)</h4>
           ${cis_tag}
           <ul>
-            <li>VRd2 = 0,27·(1 − fck/250)·fcd·bw·d ≈ <strong>${format(VRd2_N/1e3,1)}</strong> kN</li>
-            <li>Vc0 = 0,6·fctd·bw·d ≈ <strong>${format(Vc0_N/1e3,1)}</strong> kN</li>
-            <li>Comentário: ${cis_msg}</li>
+            <li>VRd2 ≈ <strong>${format(VRd2_N/1e3,1)}</strong> kN (νRd2 ≈ ${format(vRd2_MPa,3)} MPa)</li>
+            <li>Vsd = <strong>${format(Vsd_kN,1)}</strong> kN (νEd ≈ ${format(vEd_MPa,3)} MPa)</li>
+            <li>FS_V = VRd2/Vsd ≈ <strong>${format(FS_V,2)}</strong></li>
+            <li>Vc0 ≈ <strong>${format(Vc0_N/1e3,1)}</strong> kN</li>
+            <li>${cis_msg}</li>
             <li>Asw/s,mín ≈ <strong>${format(Asw_s_min,3)}</strong> mm²/mm</li>
-            <li>Asw/s,dim ≈ <strong>${format(Asw_s_dim,3)}</strong> mm²/mm (sem limitar à mínima)</li>
+            <li>Asw/s,dim ≈ <strong>${format(Asw_s_dim,3)}</strong> mm²/mm</li>
             <li>Asw/s,req (final) = <strong>${format(Asw_s_req,3)}</strong> mm²/mm</li>
           </ul>
 
           <p class="section-title">Estribo informado</p>
           ${estribo_tag}
           <ul>
-            <li>Asw (por estribo) = ${format(Asw_stirrup_mm2,2)} mm² (Ø${format(phi_st,1)} mm, ${legs} pernas)</li>
+            <li>Asw (por estribo) = <strong>${format(Asw_stirrup_mm2,2)}</strong> mm² (Ø${format(phi_st,1)} mm, ${legs} pernas)</li>
             <li>Espaçamento máximo s<sub>máx</sub> = <strong>${format(s_max_mm/10)}</strong> cm (=${format(s_max_mm)} mm)</li>
             <li>Espaçamento calculado s = <strong>${format(s_mm_calc/10)}</strong> cm (=${format(s_mm_calc)} mm)</li>
             <li>Espaçamento adotado s<sub>adot</sub> = <strong>${format(s_adot_mm/10)}</strong> cm (=${format(s_adot_mm)} mm)</li>
@@ -704,28 +760,78 @@
 
           <p class="section-title">Sugestão de estribos comerciais</p>
           ${htmlSugEstr}
-
-          <p class="note">
-            Modelo válido para vigas retangulares de concreto normal (grupo I) com armadura passiva.  
-            Ainda é necessário verificar ELS (flecha, fissuração), detalhamento, ancoragens e disposições construtivas conforme NBR 6118.
-          </p>
         `;
-        return;
       }
 
-      // caso Vsd > VRd2 (falha de biela comprimida) cai aqui:
       resDiv.innerHTML = `
         <h3>Resumo dos resultados</h3>
-        <p><strong>Verificação de cisalhamento:</strong></p>
-        ${cis_tag}
+
+        ${avisoNorma ? `<p class="note"><b>Aviso de domínio de validade da NBR:</b><br>${avisoNorma.replace(/\n/g,"<br>")}</p>` : ""}
+
+        <p><strong>Dados básicos:</strong></p>
         <ul>
-          <li>VRd2 ≈ <strong>${format(VRd2_N/1e3,1)}</strong> kN</li>
-          <li>Vsd = <strong>${format(Vsd_kN,1)}</strong> kN &gt; VRd2</li>
-          <li>${cis_msg}</li>
+          <li>fck = <strong>${format(fck,0)}</strong> MPa, fyk barras = <strong>${format(fyk,0)}</strong> MPa, fyk estribos = <strong>${format(fyk_st,0)}</strong> MPa</li>
+          <li>b = <strong>${format(b_cm)}</strong> cm, h = <strong>${format(h_cm)}</strong> cm, cobrimento = <strong>${format(cob_cm)}</strong> cm</li>
+          <li>Ø flexão = <strong>${format(phi_long)}</strong> mm, Ø estribo = <strong>${format(phi_st,1)}</strong> mm, ${legs} pernas na alma</li>
+          <li>Msd = <strong>${format(Msd_kNm)}</strong> kN·m (=${format(Msd_Nmm/1e6,2)} kN·m), Vsd = <strong>${format(Vsd_kN)}</strong> kN</li>
+        </ul>
+
+        <p><strong>Parâmetros adotados:</strong></p>
+        <ul>
+          <li>γc = <strong>${format(gamma_c,2)}</strong>, γs = <strong>${format(gamma_s,2)}</strong>, αcc = <strong>${format(alpha_cc,2)}</strong></li>
+          <li>Limite x/d = <strong>${format(x_lim_ratio,2)}</strong>, Es = <strong>${format(Es,0)}</strong> MPa, fydw,lim = <strong>${format(fydw_lim,0)}</strong> MPa</li>
+        </ul>
+
+        <p><strong>Geometria útil e materiais:</strong></p>
+        <ul>
+          <li>d = <strong>${format(d_mm/10)}</strong> cm (=${format(d_mm)} mm), d' = <strong>${format(dLinha_mm/10)}</strong> cm (=${format(dLinha_mm)} mm)</li>
+          <li>fcd = <strong>${format(fcd,2)}</strong> MPa, fyd = <strong>${format(fyd,2)}</strong> MPa, fydw = <strong>${format(fydw,2)}</strong> MPa</li>
+          <li>fctm ≈ <strong>${format(fctm,2)}</strong> MPa, fctd ≈ <strong>${format(fctd,2)}</strong> MPa</li>
+        </ul>
+
+        <h4>1) Flexão</h4>
+        ${flex_tag} ${dominio_tag}
+        <ul>
+          <li>Tipo de armadura: ${tipo_armadura}</li>
+          <li>x = <strong>${format(x_mm/10)}</strong> cm (=${format(x_mm)} mm) ⇒ x/d = <strong>${format(x_d,3)}</strong></li>
+          <li>As,trac adotada = <strong>${format(As_tracao_mm2)}</strong> mm² = <strong>${format(As_tracao_mm2/100)}</strong> cm²</li>
+          <li>As' (compressão) = <strong>${format(As_comp_mm2)}</strong> mm² = <strong>${format(As_comp_mm2/100)}</strong> cm²</li>
+          <li>ρmín ≈ <strong>${format(rho_min*100,3)}</strong> % ⇒ As,mín ≈ <strong>${format(As_min_mm2)}</strong> mm²</li>
+          <li>(As + As')máx = 4%·Ac ⇒ <strong>${format(As_maxTotal_mm2)}</strong> mm²</li>
+          <li>Taxa ρ (tração) adotada = <strong>${format(rho_adot*1000,3)}</strong> ‰</li>
+          <li>Mrd (armadura adotada) ≈ <strong>${format(Mrd_adot_Nmm/1e6,2)}</strong> kN·m ⇒ FS_M = Mrd/Msd ≈ <strong>${format(FS_M,2)}</strong></li>
         </ul>
         <p class="note">
-          Para esta combinação de seção, concreto e esforço cortante, a NBR 6118 não permite apenas aumentar estribos:  
-          é necessário aumentar bw e/ou d e/ou fck ou reduzir Vsd.
+          Domínio aproximado: ${dominio_msg}
+          ${info_dupla ? "<br>" + info_dupla : ""}
+        </p>
+
+        <p class="section-title">Deformações no ELU (hipótese εc = 3,5‰)</p>
+        <ul>
+          <li>εc topo ≈ <strong>${format(eps_c*1000,3)}</strong> ‰</li>
+          <li>εs tração ≈ <strong>${format(eps_s*1000,3)}</strong> ‰, εy ≈ <strong>${format(eps_y*1000,3)}</strong> ‰ → ${status_eps_s}</li>
+          <li>εs' compressão ≈ <strong>${format(eps_s_comp*1000,3)}</strong> ‰ → ${status_eps_s_comp}</li>
+        </ul>
+
+        <p class="section-title">Equilíbrio interno de forças (ELU)</p>
+        <ul>
+          <li>T = As,trac·fyd ≈ <strong>${format(T_N/1e3,2)}</strong> kN</li>
+          <li>Cc = 0,68·fcd·b·x ≈ <strong>${format(Cc_N/1e3,2)}</strong> kN</li>
+          <li>Cs = As'·fyd ≈ <strong>${format(Cs_N/1e3,2)}</strong> kN</li>
+          <li>C = Cc + Cs ≈ <strong>${format(C_N/1e3,2)}</strong> kN</li>
+          <li>Desequilíbrio relativo |T−C|/média ≈ <strong>${format(desequil_percent,2)}</strong> %</li>
+        </ul>
+
+        <p class="section-title">Sugestão de combinações de barras (flexão – armadura tracionada)</p>
+        ${htmlSugBarras}
+
+        <hr style="border-color:#111827; margin:10px 0;">
+
+        ${shearBlock}
+
+        <p class="note">
+          Este app trata ULS de flexão e cisalhamento (Modelo I) para vigas retangulares.  
+          Para projeto completo ainda faltam ELS (flecha, fissuração), flexo-compressão com Nsd ≠ 0, detalhamento, ancoragens, punção etc.
         </p>
       `;
     }
