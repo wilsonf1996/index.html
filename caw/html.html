@@ -188,8 +188,8 @@
   <div class="container">
     <h1>Viga de Concreto Armado – NBR 6118</h1>
     <div class="subtitle">
-      ULS (flexão, flexo-compressão em verificação, cisalhamento – Modelos I/II) + ELS (flecha, fissuração).<br>
-      <b>Seção retangular, concreto normal, aço passivo. Código único, sem BD.</b>
+      ULS (flexão, <b>flexo-compressão com Nsd dimensionando As</b>, cisalhamento – Modelos I/II) + ELS (flecha, fissuração).<br>
+      Seção retangular, concreto normal, aço passivo. Tudo em um único arquivo.
     </div>
 
     <div class="grid">
@@ -249,7 +249,6 @@
           <div class="field">
             <label>Limite x/d</label>
             <input type="number" id="x_lim" value="0.45" step="0.01">
-            <span class="units">Grupo I, CA-50 → ≈0,45</span>
           </div>
           <div class="field">
             <label>Es (MPa)</label>
@@ -263,7 +262,7 @@
 
         <div class="note">
           d = h − cob − Ø/2 &nbsp; e &nbsp; d' = cob + Ø/2.<br>
-          Parâmetros ajustáveis facilitam atualizar quando norma/materiais mudarem.
+          Parâmetros ajustáveis pra você acompanhar revisões de norma/materiais.
         </div>
       </div>
 
@@ -276,8 +275,8 @@
         <div class="field">
           <label>Modo de uso</label>
           <select id="modo">
-            <option value="dimensionar">Dimensionar (ULS flexão / cisalhamento)</option>
-            <option value="verificar">Verificar ULS (M, N, V com As, As' e s dados)</option>
+            <option value="dimensionar">Dimensionar (ULS flexão / flexo-comp / cisalhamento)</option>
+            <option value="verificar">Verificar ULS (N-M-V com As, As' e s dados)</option>
           </select>
         </div>
 
@@ -295,7 +294,7 @@
           <div class="field">
             <label>Nsd (kN) – força normal (compressão +, tração −)</label>
             <input type="number" id="Nsd" value="0" step="10">
-            <span class="units">Flexo-compressão/tração verificada com As, As'.</span>
+            <span class="units">Nsd &gt; 0 → flexo-compressão dimensionando As.</span>
           </div>
         </div>
 
@@ -315,7 +314,6 @@
           <div class="field">
             <label>Nº de pernas na alma</label>
             <input type="number" id="legs" value="2" step="1">
-            <span class="units">Estribo fechado comum → 2 pernas.</span>
           </div>
         </div>
 
@@ -362,9 +360,9 @@
     <div class="results" id="resultados">
       <h3>Resultados aparecerão aqui…</h3>
       <div class="note">
-        ULS: flexão/flexo-compressão (retângulo 0,68·fcd, As/As', Nsd+Msd), cisalhamento Modelos I/II.  
-        ELS: flecha de serviço (Branson – viga biapoiada com q), verificação de fissuração (Mser vs Mcr, σs, wk).  
-        Flexo-compressão com Nsd é verificada com As/As' informados; dimensionamento automático para N+M ainda não está implementado.
+        ULS: flexão, <b>flexo-compressão com dimensionamento automático de As e As′ para N+M</b>, cisalhamento (Modelos I/II).  
+        ELS: flecha de serviço (Branson – viga biapoiada com q), fissuração (Mser vs Mcr, σs, wk – aproximado).  
+        Tudo para viga retangular, concreto normal, aço passivo.
       </div>
     </div>
   </div>
@@ -443,7 +441,6 @@
       let c = x_max;
       let fa = 0.68 * fcd * b_mm * a * (d_mm - 0.4 * a) - Msd_Nmm;
       let fc = 0.68 * fcd * b_mm * c * (d_mm - 0.4 * c) - Msd_Nmm;
-
       if (fa * fc > 0) return null;
 
       let b = 0;
@@ -451,11 +448,7 @@
         b = 0.5 * (a + c);
         const fb = 0.68 * fcd * b_mm * b * (d_mm - 0.4 * b) - Msd_Nmm;
         if (Math.abs(fb) < tol) break;
-        if (fa * fb < 0) {
-          c = b; fc = fb;
-        } else {
-          a = b; fa = fb;
-        }
+        if (fa * fb < 0) { c = b; fc = fb; } else { a = b; fa = fb; }
       }
       return b;
     }
@@ -485,13 +478,72 @@
         b = 0.5 * (a + c);
         const fb = f(b);
         if (Math.abs(fb) < tol) break;
-        if (fa * fb < 0) {
-          c = b; fc = fb;
-        } else {
-          a = b; fa = fb;
-        }
+        if (fa * fb < 0) { c = b; fc = fb; } else { a = b; fa = fb; }
       }
       return b;
+    }
+
+    // Dimensionamento flexo-compressão N+M: busca em x para minimizar As_total
+    function dimensionarFlexoComp(Nsd_N, Msd_Nmm, b_mm, d_mm, dLinha_mm, fcd, fyd, x_lim_mm, As_min_mm2, As_maxTotal_mm2) {
+      const nSteps = 180;
+      const x_min = 0.05 * d_mm; // evitar x muito pequeno
+      let best = null;
+
+      for (let i = 0; i <= nSteps; i++) {
+        const x = x_min + (x_lim_mm - x_min) * (i / nSteps);
+        if (x <= 0 || x > x_lim_mm) continue;
+
+        const Cc = 0.68 * fcd * b_mm * x;
+        const yC = 0.4 * x;
+        const yS = dLinha_mm;
+        const yT = d_mm;
+
+        const denom = (yT - yS);
+        if (denom <= 1e-6) continue;
+
+        // Equações de equilíbrio: 
+        // N = Cc + Cs - T
+        // M = Cc*yC + Cs*yS - T*yT
+        // com T = Cc + Cs - N
+        // => M = Cc(yC - yT) + Cs(yS - yT) + N*yT
+        const Cs = (Msd_Nmm - Cc * (yC - yT) - Nsd_N * yT) / (yT - yS);
+        const T  = Cc + Cs - Nsd_N;
+
+        if (Cs < 0 || T <= 0) continue; // não queremos aço comprimido negativo nem tração negativa
+
+        let As_c = Cs / fyd;
+        let As_t = T  / fyd;
+        if (As_t <= 0) continue;
+
+        const As_total = As_t + As_c;
+        if (As_total > As_maxTotal_mm2) continue;
+        if (As_t < As_min_mm2) continue;
+
+        // checar equilíbrio N e M de volta
+        const Cc_chk = Cc;
+        const Cs_chk = As_c * fyd;
+        const T_chk  = As_t * fyd;
+        const N_int  = Cc_chk + Cs_chk - T_chk;
+        const M_int  = Cc_chk * yC + Cs_chk * yS - T_chk * yT;
+
+        const errN = Math.abs(N_int - Nsd_N) / Math.max(Math.abs(Nsd_N), 1e-3);
+        const errM = Math.abs(M_int - Msd_Nmm) / Math.max(Math.abs(Msd_Nmm), 1e-3);
+        const err = Math.max(errN, errM);
+
+        if (err > 0.05) continue; // exige equilíbrio razoável (<5%)
+
+        if (!best || As_total < best.As_total) {
+          best = {
+            x_mm: x,
+            As_t: As_t,
+            As_c: As_c,
+            As_total: As_total,
+            N_int: N_int,
+            M_int: M_int
+          };
+        }
+      }
+      return best;
     }
 
     function calcular() {
@@ -572,13 +624,13 @@
 
       let avisoNorma = "";
       if (fck < 20 || fck > 50) {
-        avisoNorma += "• fck fora da faixa típica de concreto normal grupo I (20–50 MPa). Ajuste parâmetros conforme NBR.\n";
+        avisoNorma += "• fck fora da faixa típica de concreto normal grupo I (20–50 MPa).\n";
       }
       if (fyk < 400 || fyk > 650) {
-        avisoNorma += "• fyk barras fora da faixa usual (CA-25/50/60). Verificar diagrama tensão-deformação.\n";
+        avisoNorma += "• fyk barras fora da faixa usual (CA-25/50/60).\n";
       }
       if (fyk_st < 400 || fyk_st > 650) {
-        avisoNorma += "• fyk estribos fora da faixa usual. Verificar fydw e detalhamento.\n";
+        avisoNorma += "• fyk estribos fora da faixa usual.\n";
       }
 
       // -------- FLEXÃO / FLEXO-COMPRESSÃO --------
@@ -586,21 +638,18 @@
       let dominio_msg = "", dominio_tag = "", tipo_armadura = "";
       let As_tracao_mm2 = 0, As_comp_mm2 = 0;
       let info_dupla = "";
-      let M1rd_Nmm = 0, Mrd_adot_Nmm = 0;
+      let Mrd_adot_Nmm = 0;
       let T_N = 0, Cc_N = 0, Cs_N = 0, C_N = 0, desequil_percent = 0;
       const eps_cu = 0.0035;
       let eps_c = eps_cu, eps_s = 0, eps_s_comp = 0, eps_y = fyd / Es;
       let status_eps_s = "", status_eps_s_comp = "";
+      let flexo_msg_extra = "";
 
       const As_trac_user_mm2 = isNaN(As_trac_user_cm2) ? 0 : As_trac_user_cm2 * 100;
       const As_comp_user_mm2 = isNaN(As_comp_user_cm2) ? 0 : As_comp_user_cm2 * 100;
       const usar_As_user = (modo === "verificar" && As_trac_user_mm2 > 0);
 
-      // 1) Dimensionar (Nsd ignorado – flexão pura) OU verificar flexão (Nsd=0) com As
-      // 2) Flexo-compressão com Nsd != 0: verificação com As/As' informados
-      let flexo_msg_extra = "";
-
-      if (!usar_As_user && Math.abs(Nsd_N) < 1e-3) {
+      if (modo === "dimensionar" && Math.abs(Nsd_N) < 1e-3) {
         // DIMENSIONAR FLEXÃO PURA
         let x_calc = resolver_x_M(Msd_Nmm, b_mm, d_mm, fcd, x_lim_ratio);
         let usa_armadura_dupla = false;
@@ -616,22 +665,20 @@
           x_d = x_mm / d_mm;
           const z_mm = d_mm - 0.4 * x_mm;
           As_tracao_mm2 = Msd_Nmm / (fyd * z_mm);
-
           if (As_tracao_mm2 < As_min_mm2) {
             As_tracao_mm2 = As_min_mm2;
             tipo_armadura = "Dimensionada pela armadura mínima (flexão).";
           } else {
             tipo_armadura = "Armadura simples (tracionada) dimensionada por momento.";
           }
-
           if (As_tracao_mm2 > As_maxTotal_mm2) {
-            tipo_armadura += " As > Asmáx (4%·Ac). Seção muito armada.";
+            tipo_armadura += " As > Asmáx (4%·Ac).";
           }
 
           if (x_d <= 0.259) {
             dominio_msg = "Domínio 2 (aço bem tracionado, ruptura dúctil).";
           } else if (x_d <= 0.628) {
-            dominio_msg = "Domínio 3 (aço ainda em escoamento, concreto mais comprimido).";
+            dominio_msg = "Domínio 3.";
           } else {
             dominio_msg = "Domínio 4 (não desejável).";
           }
@@ -652,143 +699,134 @@
           Cc_N = 0.68 * fcd * b_mm * x_mm;
           Cs_N = 0;
           C_N = Cc_N;
-          desequil_percent = Math.abs(T_N - C_N) / ((T_N + C_N)/2) * 100;
+          desequil_percent = Math.abs(T_N - C_N) / Math.max((T_N + C_N)/2,1e-3) * 100;
         } else {
           const z_lim_mm = d_mm - 0.4 * x_lim_mm;
-          M1rd_Nmm = 0.68 * fcd * b_mm * x_lim_mm * z_lim_mm;
-
+          const M1rd_Nmm = 0.68 * fcd * b_mm * x_lim_mm * z_lim_mm;
           if (Msd_Nmm <= M1rd_Nmm) {
             const x_simple = resolver_x_M(Msd_Nmm, b_mm, d_mm, fcd, x_lim_ratio);
             const z_simple = d_mm - 0.4 * x_simple;
             As_tracao_mm2 = Msd_Nmm / (fyd * z_simple);
-            tipo_armadura = "Armadura simples (caso limite com x ≤ x_lim).";
-            info_dupla = "Md ≤ capacidade com x = x_lim; armadura dupla não é necessária.";
+            tipo_armadura = "Armadura simples (caso próximo ao limite x_lim).";
+            info_dupla = "Md ≤ capacidade com x = x_lim; dupla não é necessária.";
             As_comp_mm2 = 0;
             x_mm = x_simple;
             x_d = x_mm / d_mm;
-
-            if (As_tracao_mm2 > As_maxTotal_mm2) {
-              tipo_armadura += " (As > 4%·Ac).";
-            }
             const x_eq_mm = Math.min(As_tracao_mm2 * fyd / (0.68 * fcd * b_mm), x_lim_mm);
             const z_eq_mm = d_mm - 0.4 * x_eq_mm;
             Mrd_adot_Nmm = 0.68 * fcd * b_mm * x_eq_mm * z_eq_mm;
             x_mm = x_eq_mm;
             x_d = x_mm / d_mm;
-
             T_N = As_tracao_mm2 * fyd;
             Cc_N = 0.68 * fcd * b_mm * x_mm;
             Cs_N = 0;
             C_N = Cc_N;
-            desequil_percent = Math.abs(T_N - C_N) / ((T_N + C_N)/2) * 100;
+            desequil_percent = Math.abs(T_N - C_N) / Math.max((T_N + C_N)/2,1e-3) * 100;
           } else {
             const deltaM_Nmm = Msd_Nmm - M1rd_Nmm;
             const alavanca_dupla_mm = d_mm - dLinha_mm;
-
             const As1_mm2 = M1rd_Nmm / (fyd * z_lim_mm);
             const As2_mm2 = deltaM_Nmm / (fyd * alavanca_dupla_mm);
-
             As_tracao_mm2 = As1_mm2 + As2_mm2;
             As_comp_mm2 = As2_mm2;
-
-            tipo_armadura = "Armadura dupla: As = As1 + As2 em tração e As' = As2 em compressão.";
-
+            tipo_armadura = "Armadura dupla (flexão pura).";
             const As_total = As_tracao_mm2 + As_comp_mm2;
             if (As_total > As_maxTotal_mm2) {
               tipo_armadura += " (As + As' > 4%·Ac).";
             }
 
-            dominio_msg = "Seção forçada a trabalhar com x = x_lim (ductilidade limite); excedente em aço comprimido.";
+            dominio_msg = "Seção forçada a x = x_lim; excedente levado em aço comprimido.";
             dominio_tag = `<span class="tag tag-warn">Necessária armadura dupla (x = ${format(x_lim_ratio,2)}·d)</span>`;
 
             x_mm = x_lim_mm;
             x_d = x_mm / d_mm;
-
             const M2rd_Nmm = As2_mm2 * fyd * (d_mm - dLinha_mm);
             Mrd_adot_Nmm = M1rd_Nmm + M2rd_Nmm;
-
             T_N = As_tracao_mm2 * fyd;
             Cc_N = 0.68 * fcd * b_mm * x_mm;
             Cs_N = As_comp_mm2 * fyd;
             C_N = Cc_N + Cs_N;
-            desequil_percent = Math.abs(T_N - C_N) / ((T_N + C_N)/2) * 100;
+            desequil_percent = Math.abs(T_N - C_N) / Math.max((T_N + C_N)/2,1e-3) * 100;
           }
         }
-      } else if (!usar_As_user && Math.abs(Nsd_N) > 1e-3) {
-        // Nsd ≠ 0 mas sem As informada → por enquanto, tratamos como flexão pura para dimensionar As
-        // e avisamos que Nsd só está sendo considerado em verificação.
-        let x_calc = resolver_x_M(Msd_Nmm, b_mm, d_mm, fcd, x_lim_ratio);
-        if (x_calc === null) {
+      } else if (modo === "dimensionar" && Nsd_N > 0) {
+        // DIMENSIONAR FLEXO-COMPRESSÃO N+M (As e As')
+        const best = dimensionarFlexoComp(
+          Nsd_N, Msd_Nmm, b_mm, d_mm, dLinha_mm,
+          fcd, fyd, x_lim_mm, As_min_mm2, As_maxTotal_mm2
+        );
+        if (!best) {
           resDiv.innerHTML = `
-            <h3>Limite de flexão (sem Nsd) excedido</h3>
-            <p>Mesmo sem considerar Nsd, Msd está acima da capacidade com x/d = ${format(x_lim_ratio,2)}.</p>
+            <h3>Não foi possível dimensionar flexo-compressão</h3>
+            <p>Para este par (Nsd, Msd) e esta seção, não encontrei combinação de x, As, As' dentro de x/d ≤ ${format(x_lim_ratio,2)} e As ≤ 4%·Ac.</p>
           `;
           return;
         }
-        x_mm = x_calc;
+        x_mm = best.x_mm;
+        As_tracao_mm2 = best.As_t;
+        As_comp_mm2 = best.As_c;
         x_d = x_mm / d_mm;
-        const z_mm = d_mm - 0.4 * x_mm;
-        As_tracao_mm2 = Msd_Nmm / (fyd * z_mm);
-        As_tracao_mm2 = Math.max(As_tracao_mm2, As_min_mm2);
-        As_comp_mm2 = 0;
-        const x_eq_mm = Math.min(As_tracao_mm2 * fyd / (0.68 * fcd * b_mm), x_lim_mm);
-        const z_eq_mm = d_mm - 0.4 * x_eq_mm;
-        Mrd_adot_Nmm = 0.68 * fcd * b_mm * x_eq_mm * z_eq_mm;
-        x_mm = x_eq_mm;
-        x_d = x_mm / d_mm;
-        T_N = As_tracao_mm2 * fyd;
+        tipo_armadura = "Armadura dupla dimensionada para flexo-compressão (N+M).";
         Cc_N = 0.68 * fcd * b_mm * x_mm;
-        Cs_N = 0;
-        C_N = Cc_N;
-        desequil_percent = Math.abs(T_N - C_N) / ((T_N + C_N)/2) * 100;
-        tipo_armadura = "Armadura dimensionada por flexão pura (Nsd ignorado).";
-        flexo_msg_extra = "Nsd informado será considerado apenas em verificação posterior (modo verificar).";
+        Cs_N = As_comp_mm2 * fyd;
+        T_N  = As_tracao_mm2 * fyd;
+        C_N  = Cc_N + Cs_N;
+        desequil_percent = Math.abs(C_N - T_N - Nsd_N) / Math.max(Math.abs(Nsd_N),1e-3) * 100;
+
+        const yC = 0.4 * x_mm;
+        const yS = dLinha_mm;
+        const yT = d_mm;
+        const M_int = Cc_N * yC + Cs_N * yS - T_N * yT;
+        Mrd_adot_Nmm = M_int;
+
+        if (x_d <= 0.259) {
+          dominio_msg = "Domínio 2 aproximado (flexo-comp).";
+        } else if (x_d <= 0.628) {
+          dominio_msg = "Domínio 3 aproximado (flexo-comp).";
+        } else {
+          dominio_msg = "Domínio 4 (não desejável).";
+        }
+        if (x_d <= x_lim_ratio) {
+          dominio_tag = `<span class="tag tag-ok">x/d dentro do limite (≤ ${format(x_lim_ratio,2)})</span>`;
+        } else {
+          dominio_tag = `<span class="tag tag-err">x/d acima do limite adotado</span>`;
+        }
+        flexo_msg_extra = "Flexo-compressão dimensionada com bloco 0,68·fcd e aço a fyd, buscando As+As' mínimo com equilíbrio N-M.";
       } else {
-        // VERIFICAÇÃO FLEXÃO / FLEXO-COMPRESSÃO COM As INFORMADO
+        // VERIFICAR COM As / As' INFORMADOS (N-M)
         As_tracao_mm2 = As_trac_user_mm2;
         As_comp_mm2 = Math.max(0, As_comp_user_mm2);
-
-        let x_calc;
-        if (Math.abs(Nsd_N) < 1e-3) {
-          // Nsd ~ 0 → flexão pura
-          x_calc = resolver_x_As_NM(As_tracao_mm2, As_comp_mm2, b_mm, fcd, fyd, d_mm, dLinha_mm, 0, x_lim_ratio);
-        } else {
-          // Flexo-compressão Nsd ≠ 0
-          x_calc = resolver_x_As_NM(As_tracao_mm2, As_comp_mm2, b_mm, fcd, fyd, d_mm, dLinha_mm, Nsd_N, x_lim_ratio);
-          flexo_msg_extra = "Verificação N-M: Nsd considerado no equilíbrio interno com As e As' informados.";
-        }
-
+        const x_calc = resolver_x_As_NM(
+          As_tracao_mm2, As_comp_mm2, b_mm, fcd, fyd,
+          d_mm, dLinha_mm, Nsd_N, x_lim_ratio
+        );
         if (x_calc === null) {
           resDiv.innerHTML = `
-            <h3>Erro na verificação de flexo-compressão</h3>
+            <h3>Erro na verificação N-M</h3>
             <p>Com Nsd, Msd e armaduras informadas (As, As'), não foi possível encontrar x em equilíbrio com x/d ≤ ${format(x_lim_ratio,2)}.</p>
           `;
           return;
         }
         x_mm = x_calc;
         x_d = x_mm / d_mm;
-
         const Cc = 0.68 * fcd * b_mm * x_mm;
         const Cs = As_comp_mm2 * fyd;
         const T  = As_tracao_mm2 * fyd;
-        Cc_N = Cc;
-        Cs_N = Cs;
-        C_N = Cc + Cs;
-        T_N = T;
-        desequil_percent = Math.abs((C_N - T_N) - Nsd_N) / (Math.max(Math.abs(Nsd_N),1e-3)) * 100;
-
-        const z_c = d_mm - 0.4 * x_mm;
-        const z_s = d_mm - dLinha_mm;
-        const M1 = Cc * z_c;
-        const M2 = Cs * z_s;
-        const M_s = T * (d_mm - x_mm); // momento do aço tracionado
-        // momento resistente em relação à borda comprimida:
-        Mrd_adot_Nmm = Cc * z_c + Cs * z_s;
-
+        Cc_N = Cc; Cs_N = Cs; T_N = T; C_N = Cc + Cs;
+        const yC = 0.4 * x_mm;
+        const yS = dLinha_mm;
+        const yT = d_mm;
+        const N_int = C_N - T_N;
+        const M_int = Cc * yC + Cs * yS - T * yT;
+        desequil_percent = Math.max(
+          Math.abs(N_int - Nsd_N) / Math.max(Math.abs(Nsd_N),1e-3),
+          Math.abs(M_int - Msd_Nmm) / Math.max(Math.abs(Msd_Nmm),1e-3)
+        ) * 100;
+        Mrd_adot_Nmm = M_int;
         if (x_d <= 0.259) {
-          dominio_msg = "Domínio 2 (aço bem tracionado, ruptura dúctil).";
+          dominio_msg = "Domínio 2 aproximado.";
         } else if (x_d <= 0.628) {
-          dominio_msg = "Domínio 3 (aço ainda em escoamento, concreto mais comprimido).";
+          dominio_msg = "Domínio 3 aproximado.";
         } else {
           dominio_msg = "Domínio 4 (não desejável).";
         }
@@ -811,21 +849,17 @@
 
       const rho_adot = As_tracao_mm2 / (b_mm * d_mm);
       let flex_tag = "";
-      if (As_tracao_mm2 < As_min_mm2 * 0.999 && Math.abs(Nsd_N) < 1e-3) {
-        flex_tag = `<span class="tag tag-err">As < As,mín (flexão)</span>`;
-      } else if (As_tracao_mm2 + As_comp_mm2 > As_maxTotal_mm2) {
+      if (As_tracao_mm2 + As_comp_mm2 > As_maxTotal_mm2) {
         flex_tag = `<span class="tag tag-err">As > 4%·Ac (acima do máximo normativo)</span>`;
       } else {
-        flex_tag = `<span class="tag tag-ok">Taxas de armadura dentro dos limites</span>`;
+        flex_tag = `<span class="tag tag-ok">Taxas de armadura dentro dos limites globais</span>`;
       }
 
       const FS_M = Mrd_adot_Nmm / Msd_Nmm;
 
-      const sugeridas = (!usar_As_user && Math.abs(Nsd_N) < 1e-3)
-        ? sugerirBarras(As_tracao_mm2)
-        : [];
       let htmlSugBarras = "";
-      if (!usar_As_user && Math.abs(Nsd_N) < 1e-3) {
+      if (modo === "dimensionar" && Math.abs(Nsd_N) < 1e-3) {
+        const sugeridas = sugerirBarras(As_tracao_mm2);
         if (sugeridas.length > 0) {
           htmlSugBarras = "<ul>";
           sugeridas.forEach(op => {
@@ -837,26 +871,20 @@
         } else {
           htmlSugBarras = `<p class="note">Nenhuma combinação simples (2–8 barras, Ø10–Ø32) encontrada acima de As,trac adotado.</p>`;
         }
-      } else if (!usar_As_user && Math.abs(Nsd_N) > 1e-3) {
-        htmlSugBarras = `<p class="note">As dimensionada apenas por flexão pura (Nsd ignorado). Para N-M completo, use modo VERIFICAR com As informada.</p>`;
       } else {
-        htmlSugBarras = `<p class="note">Modo verificação: As,trac e As' informadas pelo usuário, sem sugestão automática de barras.</p>`;
+        htmlSugBarras = `<p class="note">Modo flexo-comp ou verificação: combinações comerciais podem ser ajustadas manualmente a partir de As e As'.</p>`;
       }
 
       // -------- CISALHAMENTO – Modelo I / II --------
       const alpha_v2 = 1.0 - fck / 250.0;
-      const VRd2_I_N = 0.27 * alpha_v2 * fcd * b_mm * d_mm; // Modelo I
+      const VRd2_I_N = 0.27 * alpha_v2 * fcd * b_mm * d_mm;
       const Vc0_N = 0.6 * fctd * b_mm * d_mm;
 
-      // Modelo II (simplificado) – adotando θ entre 21,8° (cotθ=2,5) e 45° (cotθ=1)
-      // VRd2_II = αcw · bw · z · ν1 · fcd / (tanθ + cotθ) – aqui adotamos formulação reduzida:
-      // Usar expressão equivalente aproximada: VRd2_II ≈ 0,6·bw·d·ν1·fcd·cotθ
-      const nu1 = 0.6 * (1 - fck/250); // parecido com EC2/NBR
+      // Modelo II simplificado
+      const nu1 = 0.6 * (1 - fck/250);
       const z_mm_cis = 0.9 * d_mm;
-      const cot_theta_min = 1.0;  // θ máx = 45°
-      const cot_theta_max = 2.5;  // θ min ≈ 21,8°
-      let cot_theta = 2.0;        // valor intermediário
-      const VRd2_II_N = z_mm_cis * b_mm * nu1 * fcd * cot_theta; // simplificado
+      const cot_theta = 2.0; // valor intermediário
+      const VRd2_II_N = z_mm_cis * b_mm * nu1 * fcd * cot_theta;
 
       let VRd2_N = (modelo_cis === "I") ? VRd2_I_N : VRd2_II_N;
 
@@ -880,8 +908,7 @@
 
       if (Vsd_N > VRd2_N) {
         cis_tag = `<span class="tag tag-err">Vsd > VRd2 → compressão diagonal não verificada</span>`;
-        cis_msg = "Seção não atende em compressão diagonal (VRd2). Necessário aumentar bw/d/fck ou reduzir Vsd.";
-
+        cis_msg = "Seção não atende em compressão diagonal. Precisa aumentar bw/d/fck ou reduzir Vsd.";
         shearBlock = `
           <h4>2) Cisalhamento – Modelo ${modelo_cis}</h4>
           ${cis_tag}
@@ -896,16 +923,15 @@
         let Vsw_N = 0;
         if (Vsd_N <= Vc0_N && modelo_cis === "I") {
           cis_tag = `<span class="tag tag-ok">Vsd ≤ Vc0 → concreto resiste, usar apenas armadura mínima</span>`;
-          cis_msg = "Vsd ≤ Vc0 (Modelo I): usa-se apenas armadura mínima de cisalhamento.";
+          cis_msg = "Modelo I: Vsd ≤ Vc0 → apenas Asw mínima.";
         } else {
           cis_tag = `<span class="tag tag-warn">Dimensionar armadura de cisalhamento</span>`;
           cis_msg = (modelo_cis === "I")
-            ? "Modelo I: parcela acima de Vc0 será resistida por estribos."
-            : "Modelo II: cisalhamento resistido pelo conjunto biela-estribos com θ variável.";
+            ? "Modelo I: parcela acima de Vc0 é resistida por estribos."
+            : "Modelo II: cisalhamento pelo conjunto biela-estribos (θ variável).";
         }
 
         Vsw_N = Math.max(Vsd_N - (modelo_cis === "I" ? Vc0_N : 0), 0);
-
         const z_mm = 0.9 * d_mm;
         Asw_s_dim = Vsw_N > 0 ? Vsw_N / (z_mm * fydw) : 0;
         Asw_s_min = 0.2 * (fctm / fyk_st) * b_mm;
@@ -919,7 +945,6 @@
         }
 
         Asw_stirrup_mm2 = legs * Math.PI * phi_st * phi_st / 4.0;
-
         let s_user_mm = (modo === "verificar" && s_user_cm > 0) ? s_user_cm * 10 : 0;
         const usar_s_user = (modo === "verificar" && s_user_mm > 0);
 
@@ -993,24 +1018,19 @@
         `;
       }
 
-      // -------- ELS – Flecha e fissuração (viga biapoiada com q) --------
+      // -------- ELS – Fissuração e Flecha --------
       const L_mm = L_m * 1000;
-      const q_Npm = q_serv * 1000; // kN/m -> N/m
+      const q_Npm = q_serv * 1000;
 
-      // Eci (MPa) – NBR
       const Eci = 5600 * Math.sqrt(fck);
-      const Ec = 0.85 * Eci; // secante para serviço
+      const Ec = 0.85 * Eci;
 
       const b_m = b_mm / 1000;
       const h_m = h_mm / 1000;
 
       const Ig = b_m * Math.pow(h_m,3) / 12.0; // m^4
-      const W = Ig / (h_m/2);                 // m^3
-
-      // Momento de fissuração (Mcr_ser) em serviço: fctm * W
-      const Mcr_ser_Nm = fctm * 1e6 * W; // fctm(MPa)=N/mm² → *1e6 => N/m²; *W(m³) => N·m
-
-      // Mser para viga biapoiada com q uniforme: qL²/8
+      const W = Ig / (h_m/2);                  // m^3
+      const Mcr_ser_Nm = fctm * 1e6 * W;
       const Mser_Nm = q_Npm * Math.pow(L_m,2) / 8.0;
 
       let fiss_tag = "";
@@ -1019,51 +1039,40 @@
 
       if (Mser_Nm <= Mcr_ser_Nm) {
         fiss_tag = `<span class="tag tag-ok">Mser ≤ Mcr → seção pouco fissurada</span>`;
-        fiss_msg = "Momento de serviço abaixo do de fissuração; fissuras discretas.";
+        fiss_msg = "Momento de serviço abaixo do de fissuração.";
       } else {
         fiss_tag = `<span class="tag tag-warn">Mser > Mcr → seção fissurada em serviço</span>`;
-        // cálculo simplificado de σs usando seção fissurada aproximada
-        // momento resistente de serviço usado para σs:
-        // aqui usamos As_trac_mm2 como transformado (seção fissurada).
-        const As_m2 = As_tracao_mm2 / 1e6; // mm² -> m²
+        const nE = Es / Ec;
+        const As_m2 = As_tracao_mm2 / 1e6;
         const d_m = d_mm / 1000;
         const x_m = x_mm / 1000;
-        const z_m = d_m - 0.4 * x_m;
-
-        // inércia fissurada aproximada (retângulo comprimido + aço tracionado transformado)
-        const n = Es / Ec;
         const Ic_conc = b_m * Math.pow(x_m,3) / 3;
         const y_s = d_m - x_m;
-        const Ic_steel = n * As_m2 * y_s * y_s;
+        const Ic_steel = nE * As_m2 * y_s * y_s;
         const Icr = Ic_conc + Ic_steel;
-
-        // Branson: Ief = (Mcr/M)^3*Ig + [1-(Mcr/M)^3]*Icr
         const ratio = Math.min(Mcr_ser_Nm / Mser_Nm, 1.0);
         const Ief = Math.pow(ratio,3) * Ig + (1 - Math.pow(ratio,3)) * Icr;
 
-        // tensão de aço em serviço
-        const sigma_s_MPa = (Mser_Nm * (d_m - x_m) * n) / (Ief) / 1e6; // N/m² -> MPa
+        const sigma_s_MPa = (Mser_Nm * (d_m - x_m) * nE) / Ief / 1e6;
         const eps_sm = sigma_s_MPa / Es;
-        const srm_mm = 0.6 * 100; // comprimento de transferência ~60mm (aprox)
-        wk_mm = eps_sm * srm_mm * 1000; // m -> mm (aqui simplificado)
+        const srm_mm = 60; // comprimento típico de transferência ~60mm
+        wk_mm = eps_sm * srm_mm;
 
-        fiss_msg = `Mser > Mcr: seção fissurada. σs,ser ≈ ${format(sigma_s_MPa,2)} MPa, wk ≈ ${format(wk_mm,3)} mm (aprox).`;
+        fiss_msg = `σs,ser ≈ ${format(sigma_s_MPa,2)} MPa, wk ≈ ${format(wk_mm,3)} mm (aprox).`;
       }
 
-      // Flecha imediata (viga biapoiada com q uniforme): δ = 5 q L^4 / (384 E Ief)
-      // Usar Ief de Branson
-      const nE = Es / Ec;
-      const As_m2 = As_tracao_mm2 / 1e6;
-      const d_m = d_mm / 1000;
-      const x_m = x_mm / 1000;
-      const Ic_conc = b_m * Math.pow(x_m,3) / 3;
-      const y_s = d_m - x_m;
-      const Ic_steel = nE * As_m2 * y_s * y_s;
-      const Icr = Ic_conc + Ic_steel;
+      const nE2 = Es / Ec;
+      const As_m2_2 = As_tracao_mm2 / 1e6;
+      const d_m2 = d_mm / 1000;
+      const x_m2 = x_mm / 1000;
+      const Ic_conc2 = b_m * Math.pow(x_m2,3) / 3;
+      const y_s2 = d_m2 - x_m2;
+      const Ic_steel2 = nE2 * As_m2_2 * y_s2 * y_s2;
+      const Icr2 = Ic_conc2 + Ic_steel2;
       const ratio_els = Math.min(Mcr_ser_Nm / Mser_Nm, 1.0);
-      const Ief_serv = Math.pow(ratio_els,3) * Ig + (1 - Math.pow(ratio_els,3)) * Icr;
+      const Ief_serv = Math.pow(ratio_els,3) * Ig + (1 - Math.pow(ratio_els,3)) * Icr2;
 
-      const delta_m = (5 * q_Npm * Math.pow(L_m,4)) / (384 * Ec * 1e6 * Ief_serv); // E(MPa)->N/mm²; ajuste unidades
+      const delta_m = (5 * q_Npm * Math.pow(L_m,4)) / (384 * Ec * 1e6 * Ief_serv);
       const delta_mm = delta_m * 1000;
       const limite_L250 = L_m * 1000 / 250;
 
@@ -1071,7 +1080,7 @@
       if (delta_mm <= limite_L250) {
         flecha_tag = `<span class="tag tag-ok">δ ≤ L/250 (flecha imediata OK)</span>`;
       } else {
-        flecha_tag = `<span class="tag tag-warn">δ &gt; L/250 (verificar ELS-def)</span>`;
+        flecha_tag = `<span class="tag tag-warn">δ &gt; L/250 (verificar ELS-def com mais detalhe)</span>`;
       }
 
       resDiv.innerHTML = `
@@ -1101,21 +1110,21 @@
           <li>fctm ≈ <strong>${format(fctm,2)}</strong> MPa, fctd ≈ <strong>${format(fctd,2)}</strong> MPa</li>
         </ul>
 
-        <h4>1) ULS – Flexão / Flexo-compressão na seção</h4>
+        <h4>1) ULS – Flexão / Flexo-compressão</h4>
         ${flex_tag} ${dominio_tag}
         <ul>
           <li>Tipo de armadura / análise: ${tipo_armadura}</li>
           <li>x = <strong>${format(x_mm/10)}</strong> cm (=${format(x_mm)} mm) ⇒ x/d = <strong>${format(x_d,3)}</strong></li>
-          <li>As,trac considerada = <strong>${format(As_tracao_mm2)}</strong> mm² = <strong>${format(As_tracao_mm2/100)}</strong> cm²</li>
+          <li>As,trac = <strong>${format(As_tracao_mm2)}</strong> mm² = <strong>${format(As_tracao_mm2/100)}</strong> cm²</li>
           <li>As' (compressão) = <strong>${format(As_comp_mm2)}</strong> mm² = <strong>${format(As_comp_mm2/100)}</strong> cm²</li>
           <li>ρmín ≈ <strong>${format(rho_min*100,3)}</strong> % ⇒ As,mín ≈ <strong>${format(As_min_mm2)}</strong> mm²</li>
           <li>(As + As')máx = 4%·Ac ⇒ <strong>${format(As_maxTotal_mm2)}</strong> mm²</li>
           <li>Taxa ρ (tração) adotada = <strong>${format(rho_adot*1000,3)}</strong> ‰</li>
-          <li>Mrd (armadura considerada) ≈ <strong>${format(Mrd_adot_Nmm/1e6,2)}</strong> kN·m ⇒ FS_M = Mrd/Msd ≈ <strong>${format(FS_M,2)}</strong></li>
+          <li>Mrd (considerando N-M) ≈ <strong>${format(Mrd_adot_Nmm/1e6,2)}</strong> kN·m ⇒ FS_M = Mrd/Msd ≈ <strong>${format(FS_M,2)}</strong></li>
         </ul>
         <p class="note">
           Domínio aproximado: ${dominio_msg}<br>
-          ${info_dupla ? info_dupla + "<br>" : ""}${flexo_msg_extra}
+          ${flexo_msg_extra}
         </p>
 
         <p class="section-title">Deformações no ELU (εc = 3,5‰)</p>
@@ -1131,10 +1140,10 @@
           <li>Cc = 0,68·fcd·b·x ≈ <strong>${format(Cc_N/1e3,2)}</strong> kN</li>
           <li>Cs = As'·fyd ≈ <strong>${format(Cs_N/1e3,2)}</strong> kN</li>
           <li>C = Cc + Cs ≈ <strong>${format(C_N/1e3,2)}</strong> kN</li>
-          <li>Checagem N (quando Nsd ≠ 0): erro relativo ≈ <strong>${format(desequil_percent,2)}</strong> %</li>
+          <li>Erro relativo N/M (quando Nsd ≠ 0) ≈ <strong>${format(desequil_percent,2)}</strong> %</li>
         </ul>
 
-        <p class="section-title">Sugestão de barras (só flexão pura em dimensionamento)</p>
+        <p class="section-title">Sugestão de barras (caso flexão pura em dimensionamento)</p>
         ${htmlSugBarras}
 
         <hr style="border-color:#111827; margin:10px 0;">
@@ -1162,12 +1171,13 @@
         </ul>
 
         <p class="note">
-          Este app implementa, em código único, ULS (flexão, flexo-compressão em verificação, cisalhamento Modelos I/II) e ELS (flecha imediata, fissuração)
-          para viga retangular de concreto normal, com materiais e coeficientes ajustáveis.  
-          Para casos mais complexos (viga contínua, torção, punção, redistribuição, fluência detalhada, etc.), ainda é necessário usar software especializado ou checar manualmente.
+          Este motor numérico já te dá um nível bem avançado de viga/pilar retangular:
+          flexão, flexo-compressão com dimensionamento automático de As/As', cisalhamento Modelos I/II e ELS básico.  
+          O próximo passo, se você quiser, é pegar uma viga/pilar real do AltoQi/TQS e comparar resultado a resultado pra calibrar detalhes finos.
         </p>
       `;
     }
   </script>
 </body>
 </html>
+
