@@ -13,9 +13,9 @@
       --text:#eaf0ff; --muted:#9aa6c3; --line:rgba(255,255,255,.10);
       --good:#2dd4bf; --bad:#fb7185; --warn:#fbbf24; --brand:#60a5fa;
       --shadow: 0 20px 90px rgba(0,0,0,.58);
-      --r:18px; --r2:26px;
+      --r2:26px;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
-      --sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display","SF Pro Text","Segoe UI", Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      --sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display","SF Pro Text","Segoe UI", Roboto, Arial;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -131,7 +131,7 @@
       border-color: rgba(255,255,255,.12);
     }
 
-    input, select{
+    input{
       width:100%;
       background: rgba(0,0,0,.22);
       border: 1px solid var(--line);
@@ -143,7 +143,7 @@
       font-size: 13px;
     }
     input::placeholder{color:rgba(154,166,195,.72)}
-    input:focus, select:focus{border-color: rgba(96,165,250,.55); box-shadow: 0 0 0 4px rgba(96,165,250,.12);}
+    input:focus{border-color: rgba(96,165,250,.55); box-shadow: 0 0 0 4px rgba(96,165,250,.12);}
 
     .split{display:grid; grid-template-columns: 1fr 1fr; gap:10px;}
     @media (max-width:680px){ .split{grid-template-columns:1fr;} }
@@ -214,9 +214,6 @@
     .row .name{font-weight:950; font-size:13px;}
     .row .meta{font-size:11px; color:var(--muted); display:flex; flex-wrap:wrap; gap:8px;}
     .row .right{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;}
-    .good{color:var(--good)}
-    .bad{color:var(--bad)}
-    .warn{color:var(--warn)}
 
     .toast{
       position:fixed; left:50%; transform:translateX(-50%);
@@ -239,9 +236,8 @@
     .toast.show{display:flex}
   </style>
 
-  <!-- Firebase compat (MESMO estilo do seu app) -->
+  <!-- Firebase (só App + Database; NÃO usa Auth) -->
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
 </head>
 
@@ -252,14 +248,12 @@
         <div class="logo" aria-hidden="true"></div>
         <div>
           <h1>Portal • Apps</h1>
-          <p>Login • Home • Admin (controle de contas) • Firebase</p>
+          <p>DB Login • Home • Admin (controle de contas)</p>
         </div>
       </div>
 
       <div class="actions">
-        <div class="pill" title="Sessão">
-          <span id="sessionInfo">Carregando…</span>
-        </div>
+        <div class="pill"><span id="sessionInfo">Carregando…</span></div>
 
         <div class="tabs" id="tabsTop" style="display:none;">
           <div class="tab active" data-view="home">🏠 Home</div>
@@ -272,38 +266,33 @@
     </header>
 
     <main class="grid">
-      <!-- LEFT -->
       <section class="card">
         <div class="hd">
           <div class="title">
             <h2 id="pageTitle">Login</h2>
             <p id="pageSub">Entre ou crie sua conta</p>
           </div>
-          <div class="right">
-            <span class="badge" id="roleBadge">—</span>
-          </div>
+          <span class="badge" id="roleBadge">—</span>
         </div>
 
         <div class="bd">
-
-          <!-- AUTH VIEW -->
+          <!-- AUTH -->
           <div id="viewAuth">
             <div class="noteBox">
-              ✅ Login/Cadastro via Firebase Auth (Email/Senha)<br>
-              ✅ Você digita <b>Nome de usuário</b> + <b>Senha</b><br>
-              <span class="hint">O sistema converte “usuário” em email internamente.</span>
+              ✅ Login/Cadastro usando <b>Realtime Database</b> (sem Firebase Auth)<br>
+              ✅ Funciona no seu projeto atual (evita o erro <span class="kbd">auth/configuration-not-found</span>)
             </div>
 
             <div class="divider"></div>
 
             <div class="split">
               <div class="field">
-                <label>Nome de usuário</label>
-                <input id="inUsername" placeholder="Ex: wilson" autocomplete="username">
+                <label>Usuário</label>
+                <input id="inUsername" placeholder="Ex: wilson">
               </div>
               <div class="field">
                 <label>Senha</label>
-                <input id="inPass" type="password" placeholder="••••••••" autocomplete="current-password">
+                <input id="inPass" type="password" placeholder="••••••••">
               </div>
             </div>
 
@@ -322,44 +311,33 @@
             <div class="divider"></div>
 
             <div class="noteBox">
-              <b>Admin pré-criado (bootstrap):</b><br>
+              <b>Admin pré-criado automaticamente:</b><br>
               Nome: <span class="kbd">Wilson Fernandes Junior</span><br>
-              Senha: <span class="kbd">92290487</span><br>
-              <span class="hint">O app cria esse admin automaticamente se ainda não existir.</span>
+              Senha: <span class="kbd">92290487</span>
             </div>
           </div>
 
-          <!-- HOME VIEW -->
+          <!-- HOME -->
           <div id="viewHome" style="display:none;">
             <div class="noteBox">
               Olá, <b id="meName">—</b> 👋<br>
-              <span class="hint">Se sua conta estiver marcada como bloqueada no admin, você será desconectado automaticamente.</span>
+              <span style="color:var(--muted)">Se sua conta for bloqueada no Admin, você não consegue logar.</span>
             </div>
 
             <div class="divider"></div>
-
-            <div class="title" style="margin-bottom:8px;">
-              <h2 style="margin:0; font-size:13px;">Seus Apps</h2>
-              <p style="margin:0; font-size:12px; color:var(--muted)">Launcher rápido (estilo iOS)</p>
-            </div>
 
             <div class="apps" id="appsGrid"></div>
 
             <div class="divider"></div>
 
-            <div class="title" style="margin-bottom:8px;">
-              <h2 style="margin:0; font-size:13px;">Externos</h2>
-              <p style="margin:0; font-size:12px; color:var(--muted)">Google, Maps, etc.</p>
-            </div>
-
             <div class="apps" id="appsExternal"></div>
           </div>
 
-          <!-- ADMIN VIEW -->
+          <!-- ADMIN -->
           <div id="viewAdmin" style="display:none;">
             <div class="noteBox">
-              🛡️ <b>Controle de contas</b> (somente Admin).<br>
-              Você pode <b>bloquear</b> ou <b>liberar</b> o acesso de usuários cadastrados.
+              🛡️ <b>Controle de contas</b> (somente Admin)<br>
+              Bloqueie/libere usuários cadastrados.
             </div>
 
             <div class="divider"></div>
@@ -367,7 +345,7 @@
             <div class="split">
               <div class="field">
                 <label>Buscar</label>
-                <input id="adminSearch" placeholder="nome, username, uid…">
+                <input id="adminSearch" placeholder="nome, usuário, uid…">
               </div>
               <div class="field">
                 <label>Ações</label>
@@ -379,11 +357,9 @@
 
             <div class="list" id="usersList"></div>
           </div>
-
         </div>
       </section>
 
-      <!-- RIGHT -->
       <aside class="card">
         <div class="hd">
           <div class="title">
@@ -392,24 +368,22 @@
           </div>
         </div>
         <div class="bd">
-          <div class="noteBox" id="diagBox">
-            Carregando…
-          </div>
+          <div class="noteBox" id="diagBox">Carregando…</div>
 
           <div class="divider"></div>
 
           <div class="noteBox">
-            <b>Como funciona o “banco por usuário”</b><br>
-            • Perfil: <span class="kbd">/portal_users/{uid}</span><br>
-            • Dados do usuário (para apps): <span class="kbd">/portal_data/{uid}</span><br>
-            • Mapeamento username: <span class="kbd">/portal_usernames/{username}</span><br>
-            • Admin: <span class="kbd">/portal_admin</span>
+            <b>Estrutura no RTDB</b><br>
+            • Usuários: <span class="kbd">/portal_users/{uid}</span><br>
+            • Login: <span class="kbd">/portal_login/{username}</span><br>
+            • Dados por usuário: <span class="kbd">/portal_data/{uid}</span><br>
+            • Admin UID: <span class="kbd">/portal_admin</span>
           </div>
 
           <div class="divider"></div>
 
-          <div class="hint" style="font-size:12px; color:var(--muted); line-height:1.45;">
-            Se der erro no Firebase: abra Console (F12) e veja se é Auth desativado, permissão negada, etc.
+          <div style="font-size:12px;color:var(--muted);line-height:1.45;">
+            Se aparecer <span class="kbd">PERMISSION_DENIED</span>, suas Rules estão bloqueando escrita/leitura nesses caminhos.
           </div>
         </div>
       </aside>
@@ -417,14 +391,12 @@
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite">
-    <div class="msg" id="toastMsg">—</div>
+    <div id="toastMsg">—</div>
     <button class="btn ghost" id="toastClose">OK</button>
   </div>
 
   <script>
-    /************************************************************
-     * FirebaseConfig (EXATAMENTE o mesmo que você enviou)
-     ************************************************************/
+    /******** Firebase config (o seu, sem mexer) ********/
     const firebaseConfig = {
       apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
       authDomain: "agenda-6accc.firebaseapp.com",
@@ -437,105 +409,89 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const auth = firebase.auth();
 
     const $ = (id)=>document.getElementById(id);
 
-    /************************************************************
-     * Constantes do Admin (como você pediu)
-     ************************************************************/
+    /******** Admin fixo (como você pediu) ********/
     const ADMIN_FULLNAME = "Wilson Fernandes Junior";
     const ADMIN_PASSWORD = "92290487";
-    const ADMIN_USERNAME = "wilson_admin"; // username interno do admin (pode mudar se quiser)
-    const ADMIN_EMAIL = "wilson.admin@agenda-6accc.local"; // precisa de email para Firebase Auth
 
-    /************************************************************
-     * Paths (separados do seu /expenses, sem mexer nele)
-     ************************************************************/
+    /******** Paths ********/
     const PATH = {
       admin: "/portal_admin",
       users: "/portal_users",
-      usernames: "/portal_usernames",
+      login: "/portal_login",
       data: "/portal_data"
     };
 
-    const state = {
-      me: null,
-      meProfile: null,
-      adminUid: null,
-      users: []
-    };
+    /******** Estado ********/
+    const state = { me:null, adminUid:null, users:[] };
 
     function toast(msg){
       $("toastMsg").textContent = msg;
       $("toast").classList.add("show");
       setTimeout(()=> $("toast").classList.remove("show"), 2600);
     }
-    $("toastClose").addEventListener("click", ()=> $("toast").classList.remove("show"));
+    $("toastClose").onclick = ()=> $("toast").classList.remove("show");
 
     function safeText(s){ return String(s ?? "").replace(/[<>]/g,"").trim(); }
+    function normalizeUsername(u){
+      return safeText(u).toLowerCase().replace(/\s+/g,"_").replace(/[^a-z0-9_]/g,"").slice(0,32);
+    }
+
+    // Hash simples (não é criptografia perfeita, mas evita senha em texto puro)
+    async function sha256Hex(str){
+      const enc = new TextEncoder().encode(str);
+      const buf = await crypto.subtle.digest("SHA-256", enc);
+      return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+    }
+    // “pepper” fixo para diferenciar do hash puro
+    const PEPPER = "WF_PORTAL_2026_PEPPER_v1";
 
     function setView(view){
-      // tabs
-      document.querySelectorAll(".tab").forEach(t=>{
-        t.classList.toggle("active", t.dataset.view===view);
-      });
-
-      $("viewAuth").style.display = view==="auth" ? "block" : "none";
-      $("viewHome").style.display = view==="home" ? "block" : "none";
-      $("viewAdmin").style.display = view==="admin" ? "block" : "none";
+      document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.view===view));
+      $("viewAuth").style.display = view==="auth" ? "block":"none";
+      $("viewHome").style.display = view==="home" ? "block":"none";
+      $("viewAdmin").style.display = view==="admin" ? "block":"none";
 
       const titles = {
-        auth: ["Login", "Entre ou crie sua conta"],
-        home: ["Home", "Seus atalhos de apps"],
-        admin: ["Contas", "Controle de acesso (Admin)"]
+        auth:["Login","Entre ou crie sua conta"],
+        home:["Home","Seus atalhos de apps"],
+        admin:["Contas","Controle de acesso (Admin)"]
       };
       $("pageTitle").textContent = titles[view][0];
       $("pageSub").textContent = titles[view][1];
     }
 
+    function isAdmin(){ return !!(state.me && state.adminUid && state.me.uid===state.adminUid); }
+
     function updateTopbar(){
-      const me = state.me;
-      $("tabsTop").style.display = me ? "flex" : "none";
-      $("btnLogout").style.display = me ? "inline-flex" : "none";
-
-      const role = isAdmin() ? "Admin" : (me ? "Usuário" : "Visitante");
-      $("roleBadge").textContent = role;
-
-      if(!me){
-        $("sessionInfo").textContent = "Deslogado";
-        $("diagBox").innerHTML = `Status: <b>Sem sessão</b><br>Auth: <span class="kbd">OFF</span>`;
+      if(!state.me){
+        $("tabsTop").style.display="none";
+        $("btnLogout").style.display="none";
+        $("roleBadge").textContent="Visitante";
+        $("sessionInfo").textContent="Deslogado";
+        $("diagBox").innerHTML = `Status: <b>Sem sessão</b><br>Modo: <span class="kbd">DB Auth</span>`;
         return;
       }
-
-      const name = state.meProfile?.fullName || me.email || "Logado";
-      const active = state.meProfile?.active !== false;
-
-      $("sessionInfo").textContent = `${name} • ${active ? "ativo" : "bloqueado"}`;
+      $("tabsTop").style.display="flex";
+      $("btnLogout").style.display="inline-flex";
+      $("roleBadge").textContent = isAdmin() ? "Admin" : "Usuário";
+      $("sessionInfo").textContent = `${state.me.fullName} • ${state.me.active? "ativo":"bloqueado"}`;
       $("diagBox").innerHTML = `
         Status: <b>Logado</b><br>
-        UID: <span class="kbd">${me.uid}</span><br>
-        Email: <span class="kbd">${safeText(me.email||"—")}</span><br>
-        Perfil: <span class="kbd">${active ? "active=true" : "active=false"}</span><br>
-        AdminUID: <span class="kbd">${state.adminUid || "—"}</span>
+        UID: <span class="kbd">${state.me.uid}</span><br>
+        username: <span class="kbd">${state.me.username}</span><br>
+        Perfil: <span class="kbd">${state.me.active? "active=true":"active=false"}</span><br>
+        AdminUID: <span class="kbd">${state.adminUid||"—"}</span><br>
+        Modo: <span class="kbd">DB Auth</span>
       `;
-    }
-
-    function isAdmin(){
-      return !!(state.me && state.adminUid && state.me.uid === state.adminUid);
-    }
-
-    function normalizeUsername(u){
-      return safeText(u).toLowerCase()
-        .replace(/\s+/g,"_")
-        .replace(/[^a-z0-9_]/g,"")
-        .slice(0, 32);
     }
 
     function appButton(name, desc, url, tag="Abrir"){
       const d = document.createElement("div");
-      d.className = "appBtn";
-      d.onclick = ()=> window.location.href = url;
+      d.className="appBtn";
+      d.onclick=()=> window.location.href=url;
       d.innerHTML = `
         <div class="appMeta">
           <div class="appName">${safeText(name)}</div>
@@ -547,10 +503,10 @@
     }
 
     function renderLauncher(){
-      const grid = $("appsGrid");
-      const ext = $("appsExternal");
-      grid.innerHTML = "";
-      ext.innerHTML = "";
+      $("meName").textContent = state.me?.fullName || "—";
+
+      const grid=$("appsGrid"); grid.innerHTML="";
+      const ext=$("appsExternal"); ext.innerHTML="";
 
       const apps = [
         ["WF Engenharia Consultiva","Página principal WF","https://wilsonf1996.github.io/index.html/wf/principal.html","WF"],
@@ -560,16 +516,12 @@
         ["Música","Player","https://wilsonf1996.github.io/index.html/documentos/videox.html","Play"],
         ["Checklist","Listas","https://wilsonf1996.github.io/index.html/checklist/checklist3.html","Check"],
         ["Compras","Lista de compras","https://wilsonf1996.github.io/index.html/compras/compras.html","Shop"],
-        ["Contatos","Contatos","https://wilsonf1996.github.io/index.html/contatos/contatos.html","Contatos"],
-        ["Diário","Registro pessoal","https://wilsonf1996.github.io/index.html/diario/diario.html","Diário"],
         ["Financeiro","Gestão financeira","https://wilsonf1996.github.io/index.html/financeiro/financeirobotoes.html","R$"],
         ["Saúde","Controle de saúde","https://wilsonf1996.github.io/index.html/saúde/saude.html","Saúde"],
         ["Treino","Treinos","https://wilsonf1996.github.io/index.html/treino/treino.html","Treino"],
-        ["TV Online","TV","https://wilsonf1996.github.io/index.html/tvonline/tvonline.html","TV"],
         ["Documentos","Arquivos","https://wilsonf1996.github.io/index.html/documentos/documentos3.html","Docs"],
       ];
-
-      apps.forEach(a=> grid.appendChild(appButton(a[0],a[1],a[2],a[3])));
+      apps.forEach(a=>grid.appendChild(appButton(a[0],a[1],a[2],a[3])));
 
       const externals = [
         ["ChatGPT","Abrir ChatGPT","https://chat.openai.com/","GPT"],
@@ -580,206 +532,148 @@
         ["YouTube","Vídeos","https://www.youtube.com/","YT"],
         ["Netflix","Streaming","https://www.netflix.com/","N"],
       ];
-      externals.forEach(a=> ext.appendChild(appButton(a[0],a[1],a[2],a[3])));
-
-      $("meName").textContent = state.meProfile?.fullName || "—";
+      externals.forEach(a=>ext.appendChild(appButton(a[0],a[1],a[2],a[3])));
     }
 
-    /************************************************************
-     * Bootstrap inteligente do Admin
-     * - Cria admin se /portal_admin/adminUid não existir
-     ************************************************************/
-    async function bootstrapAdminIfNeeded(){
-      const snap = await db.ref(PATH.admin).get().catch(()=>null);
-      const v = snap && snap.exists() ? snap.val() : null;
+    /******** DB Auth: sessão ********/
+    function saveSession(sess){
+      localStorage.setItem("wf_portal_session", JSON.stringify(sess));
+    }
+    function loadSession(){
+      try{ return JSON.parse(localStorage.getItem("wf_portal_session")||"null"); }catch{ return null; }
+    }
+    function clearSession(){
+      localStorage.removeItem("wf_portal_session");
+    }
 
-      if(v && v.adminUid){
-        state.adminUid = v.adminUid;
+    /******** Bootstrap admin no DB ********/
+    async function bootstrapAdmin(){
+      // 1) garante adminUid
+      const adminSnap = await db.ref(PATH.admin).get().catch(()=>null);
+      const adminVal = adminSnap && adminSnap.exists() ? adminSnap.val() : null;
+
+      if(adminVal?.adminUid){
+        state.adminUid = adminVal.adminUid;
         return;
       }
 
-      // tenta criar admin (se já existir, só faz login)
-      try{
-        const cred = await auth.createUserWithEmailAndPassword(ADMIN_EMAIL, ADMIN_PASSWORD);
-        const user = cred.user;
+      // cria admin user/uid local (push)
+      const uid = db.ref(PATH.users).push().key;
 
-        // cria perfil
-        await db.ref(`${PATH.users}/${user.uid}`).set({
-          uid: user.uid,
-          username: ADMIN_USERNAME,
-          fullName: ADMIN_FULLNAME,
-          active: true,
-          role: "admin",
-          createdAt: Date.now(),
-          updatedAt: Date.now()
-        });
+      const username = normalizeUsername("wilson_admin");
+      const passHash = await sha256Hex(ADMIN_PASSWORD + "|" + PEPPER);
 
-        // mapeia username -> uid
-        await db.ref(`${PATH.usernames}/${ADMIN_USERNAME}`).set({
-          uid: user.uid,
-          email: ADMIN_EMAIL,
-          createdAt: Date.now()
-        });
+      // grava login map
+      await db.ref(`${PATH.login}/${username}`).set({
+        uid, username, passHash, fullName: ADMIN_FULLNAME, role:"admin",
+        active:true, createdAt: Date.now(), updatedAt: Date.now()
+      });
 
-        // marca admin
-        await db.ref(PATH.admin).set({
-          adminUid: user.uid,
-          adminUsername: ADMIN_USERNAME,
-          adminFullName: ADMIN_FULLNAME,
-          createdAt: Date.now()
-        });
+      // grava perfil
+      await db.ref(`${PATH.users}/${uid}`).set({
+        uid, username, fullName: ADMIN_FULLNAME, role:"admin", active:true,
+        createdAt: Date.now(), updatedAt: Date.now()
+      });
 
-        state.adminUid = user.uid;
-        toast("Admin criado automaticamente.");
-      }catch(err){
-        // se já existe, faz login para conseguir pegar uid e gravar /portal_admin
-        if(err && (err.code === "auth/email-already-in-use")){
-          try{
-            const cred = await auth.signInWithEmailAndPassword(ADMIN_EMAIL, ADMIN_PASSWORD);
-            const uid = cred.user.uid;
+      // marca admin
+      await db.ref(PATH.admin).set({ adminUid: uid, username, fullName: ADMIN_FULLNAME, createdAt: Date.now() });
 
-            // garante admin path
-            await db.ref(PATH.admin).set({
-              adminUid: uid,
-              adminUsername: ADMIN_USERNAME,
-              adminFullName: ADMIN_FULLNAME,
-              createdAt: Date.now()
-            });
+      // cria base do “banco por usuário”
+      await db.ref(`${PATH.data}/${uid}`).update({ createdAt: Date.now(), note:"Área admin" });
 
-            // garante perfil/admin
-            const p = await db.ref(`${PATH.users}/${uid}`).get().catch(()=>null);
-            if(!p || !p.exists()){
-              await db.ref(`${PATH.users}/${uid}`).set({
-                uid, username: ADMIN_USERNAME, fullName: ADMIN_FULLNAME,
-                active: true, role: "admin", createdAt: Date.now(), updatedAt: Date.now()
-              });
-            }else{
-              await db.ref(`${PATH.users}/${uid}`).update({ role:"admin", fullName: ADMIN_FULLNAME, active:true, updatedAt: Date.now() });
-            }
-
-            // garante username map
-            await db.ref(`${PATH.usernames}/${ADMIN_USERNAME}`).set({
-              uid, email: ADMIN_EMAIL, createdAt: Date.now()
-            });
-
-            state.adminUid = uid;
-            toast("Admin detectado e marcado no DB.");
-          }catch(e2){
-            console.warn("Falha ao marcar admin:", e2);
-          }
-        }else{
-          console.warn("Falha ao criar admin:", err);
-        }
-      }
+      state.adminUid = uid;
+      toast("Admin criado no banco.");
     }
 
-    /************************************************************
-     * Login por username (mapeia para email internamente)
-     ************************************************************/
-    async function loginByUsername(username, pass){
-      const u = normalizeUsername(username);
-      if(!u) throw new Error("Informe um usuário.");
-      if(!pass || pass.length < 6) throw new Error("Senha inválida (mín 6).");
+    /******** DB Auth: login ********/
+    async function dbLogin(usernameOrFullname, pass){
+      const uRaw = safeText(usernameOrFullname);
+      const passRaw = safeText(pass);
+      if(!uRaw) throw new Error("Informe o usuário.");
+      if(!passRaw) throw new Error("Informe a senha.");
 
-      // Admin: permite login direto pelo nome completo também
-      if(safeText(username) === ADMIN_FULLNAME || u === normalizeUsername(ADMIN_FULLNAME)){
-        return await auth.signInWithEmailAndPassword(ADMIN_EMAIL, pass);
-      }
+      // regra: se digitou o nome completo do admin, assume username wilson_admin
+      let username = normalizeUsername(uRaw);
+      if(uRaw === ADMIN_FULLNAME) username = normalizeUsername("wilson_admin");
 
-      const snap = await db.ref(`${PATH.usernames}/${u}`).get();
+      const snap = await db.ref(`${PATH.login}/${username}`).get();
       if(!snap.exists()) throw new Error("Usuário não encontrado. Crie a conta.");
-      const v = snap.val();
-      if(!v.email) throw new Error("Conta com erro (sem email).");
+      const acc = snap.val();
 
-      return await auth.signInWithEmailAndPassword(v.email, pass);
+      const passHash = await sha256Hex(passRaw + "|" + PEPPER);
+      if(passHash !== acc.passHash) throw new Error("Senha incorreta.");
+
+      // checa bloqueio
+      const profSnap = await db.ref(`${PATH.users}/${acc.uid}`).get().catch(()=>null);
+      const prof = profSnap && profSnap.exists() ? profSnap.val() : null;
+      const active = prof?.active !== false;
+      if(!active) throw new Error("Sua conta está bloqueada.");
+
+      // sessão
+      const sess = {
+        uid: acc.uid,
+        username: acc.username,
+        fullName: prof?.fullName || acc.fullName || acc.username,
+        role: prof?.role || acc.role || "user",
+        active: active,
+        loginAt: Date.now()
+      };
+      saveSession(sess);
+      state.me = sess;
+
+      // carrega adminUid
+      const adminSnap = await db.ref(PATH.admin).get().catch(()=>null);
+      state.adminUid = adminSnap?.val()?.adminUid || state.adminUid;
+
+      updateTopbar();
+      renderLauncher();
+      setView("home");
+      toast("Login OK.");
     }
 
-    async function registerUsername(username, pass, fullName){
+    /******** DB Auth: cadastro ********/
+    async function dbRegister(username, pass, fullName){
       const u = normalizeUsername(username);
-      if(!u) throw new Error("Usuário inválido.");
-      if(u === ADMIN_USERNAME) throw new Error("Usuário reservado.");
-      if(!pass || pass.length < 6) throw new Error("Senha fraca (mín 6).");
+      const p = safeText(pass);
       const fn = safeText(fullName);
-      if(!fn) throw new Error("Informe o nome completo.");
 
-      // impede colidir com admin por nome
+      if(!u) throw new Error("Usuário inválido.");
+      if(u === normalizeUsername("wilson_admin")) throw new Error("Usuário reservado.");
+      if(!p || p.length < 6) throw new Error("Senha fraca (mín 6).");
+      if(!fn) throw new Error("Informe nome completo.");
       if(fn === ADMIN_FULLNAME) throw new Error("Nome reservado para admin.");
 
-      // checa se username já existe
-      const exists = await db.ref(`${PATH.usernames}/${u}`).get();
-      if(exists.exists()) throw new Error("Este usuário já existe. Faça login.");
+      const exists = await db.ref(`${PATH.login}/${u}`).get();
+      if(exists.exists()) throw new Error("Usuário já existe. Faça login.");
 
-      // cria email interno “determinístico”
-      const email = `${u}@agenda-6accc.local`;
+      const uid = db.ref(PATH.users).push().key;
+      const passHash = await sha256Hex(p + "|" + PEPPER);
 
-      const cred = await auth.createUserWithEmailAndPassword(email, pass);
-      const user = cred.user;
-
-      await db.ref(`${PATH.usernames}/${u}`).set({
-        uid: user.uid,
-        email,
-        createdAt: Date.now()
+      await db.ref(`${PATH.login}/${u}`).set({
+        uid, username: u, passHash, fullName: fn, role:"user",
+        active:true, createdAt: Date.now(), updatedAt: Date.now()
       });
 
-      await db.ref(`${PATH.users}/${user.uid}`).set({
-        uid: user.uid,
-        username: u,
-        fullName: fn,
-        active: true,
-        role: "user",
-        createdAt: Date.now(),
-        updatedAt: Date.now()
+      await db.ref(`${PATH.users}/${uid}`).set({
+        uid, username: u, fullName: fn, role:"user", active:true,
+        createdAt: Date.now(), updatedAt: Date.now()
       });
 
-      // espaço do usuário (cada um com seu “banco”)
-      await db.ref(`${PATH.data}/${user.uid}`).update({
-        createdAt: Date.now(),
-        note: "Área de dados do usuário (apps podem usar aqui)."
-      });
+      await db.ref(`${PATH.data}/${uid}`).update({ createdAt: Date.now(), note:"Área de dados do usuário." });
 
-      toast("Conta criada e logada.");
+      toast("Conta criada.");
+      await dbLogin(u, p);
     }
 
-    /************************************************************
-     * Sessão + perfil + bloqueio
-     ************************************************************/
-    function listenMyProfile(uid){
-      db.ref(`${PATH.users}/${uid}`).on("value", async (snap)=>{
-        state.meProfile = snap.exists() ? snap.val() : null;
-
-        // bloqueio: se active=false, desloga
-        if(state.meProfile && state.meProfile.active === false){
-          toast("Sua conta foi bloqueada. Saindo…");
-          await auth.signOut().catch(()=>{});
-          return;
-        }
-
-        updateTopbar();
-        if(state.me){
-          renderLauncher();
-        }
-      });
-    }
-
-    async function loadAdminUid(){
-      const snap = await db.ref(PATH.admin).get().catch(()=>null);
-      const v = snap && snap.exists() ? snap.val() : null;
-      state.adminUid = v?.adminUid || null;
-    }
-
-    /************************************************************
-     * Admin: listar e bloquear/desbloquear
-     ************************************************************/
+    /******** Admin: listar/bloquear ********/
     async function loadUsers(){
       if(!isAdmin()){
-        $("usersList").innerHTML = `<div class="noteBox">Acesso negado. Você não é admin.</div>`;
+        $("usersList").innerHTML = `<div class="noteBox">Acesso negado.</div>`;
         return;
       }
-
       const snap = await db.ref(PATH.users).get().catch(()=>null);
       const v = snap && snap.exists() ? snap.val() : {};
       const list = Object.values(v||{}).filter(Boolean);
-
       list.sort((a,b)=> (a.fullName||"").localeCompare(b.fullName||""));
       state.users = list;
       renderUsers();
@@ -805,150 +699,118 @@
 
       list.forEach(u=>{
         const row = document.createElement("div");
-        row.className = "row";
-
-        const isMe = state.me && u.uid === state.me.uid;
+        row.className="row";
         const active = u.active !== false;
-        const role = u.role || "user";
-
+        const isAdminRow = (u.uid === state.adminUid) || (u.role === "admin");
         row.innerHTML = `
           <div class="left">
-            <div class="name">${safeText(u.fullName||"Sem nome")} ${role==="admin" ? "🛡️" : ""}</div>
+            <div class="name">${safeText(u.fullName||"Sem nome")} ${isAdminRow ? "🛡️":""}</div>
             <div class="meta">
-              <span class="badge">username: ${safeText(u.username||"—")}</span>
+              <span class="badge">user: ${safeText(u.username||"—")}</span>
               <span class="badge">uid: ${safeText(u.uid||"—")}</span>
-              <span class="badge">status: <b class="${active?"good":"bad"}">${active?"ativo":"bloqueado"}</b></span>
-              ${isMe ? `<span class="badge warn">você</span>` : ``}
+              <span class="badge">status: <b style="color:${active?'var(--good)':'var(--bad)'}">${active?'ativo':'bloqueado'}</b></span>
             </div>
           </div>
           <div class="right">
-            <button class="btn ${active?"danger":"primary"}" data-act="toggle">${active?"Bloquear":"Liberar"}</button>
+            <button class="btn ${active?'danger':'primary'}">${active?'Bloquear':'Liberar'}</button>
           </div>
         `;
-
-        const btn = row.querySelector('[data-act="toggle"]');
-        btn.onclick = async ()=>{
-          if(u.role==="admin"){
+        row.querySelector("button").onclick = async ()=>{
+          if(isAdminRow){
             alert("Não é permitido bloquear o admin.");
             return;
           }
           const next = !(u.active !== false);
           await db.ref(`${PATH.users}/${u.uid}/active`).set(next);
+          await db.ref(`${PATH.login}/${u.username}/active`).set(next);
           await db.ref(`${PATH.users}/${u.uid}/updatedAt`).set(Date.now());
+          await db.ref(`${PATH.login}/${u.username}/updatedAt`).set(Date.now());
           toast(next ? "Usuário liberado." : "Usuário bloqueado.");
           await loadUsers();
         };
-
         el.appendChild(row);
       });
     }
 
-    /************************************************************
-     * UI Handlers
-     ************************************************************/
-    $("btnLogin").addEventListener("click", async ()=>{
-      try{
-        const username = $("inUsername").value;
-        const pass = $("inPass").value;
-        await loginByUsername(username, pass);
-        toast("Login OK.");
-      }catch(err){
-        alert(err.message || "Erro no login.");
-      }
-    });
-
-    $("btnRegister").addEventListener("click", async ()=>{
-      try{
-        const username = $("inUsername").value;
-        const pass = $("inPass").value;
-        const fullName = $("inFullname").value;
-        await registerUsername(username, pass, fullName);
-      }catch(err){
-        alert(err.message || "Erro no cadastro.");
-      }
-    });
-
-    $("btnLogout").addEventListener("click", async ()=>{
-      await auth.signOut().catch(()=>{});
+    /******** Logout ********/
+    function logout(){
+      clearSession();
+      state.me = null;
+      updateTopbar();
+      setView("auth");
       toast("Saiu.");
-    });
+    }
 
-    $("btnReloadUsers").addEventListener("click", loadUsers);
-    $("adminSearch").addEventListener("input", renderUsers);
-
-    // Tabs
-    $("tabsTop").addEventListener("click",(e)=>{
+    /******** Tabs ********/
+    $("tabsTop").onclick = (e)=>{
       const t = e.target.closest(".tab");
       if(!t) return;
       const v = t.dataset.view;
-
-      if(v==="admin" && !isAdmin()){
-        toast("Acesso negado (admin).");
-        return;
-      }
-      if(v==="home" && !state.me){
-        toast("Faça login primeiro.");
-        return;
-      }
+      if(v==="admin" && !isAdmin()){ toast("Acesso negado (admin)."); return; }
+      if(v==="home" && !state.me){ toast("Faça login."); return; }
       setView(v);
       if(v==="admin") loadUsers();
-    });
+    };
 
-    /************************************************************
-     * Boot
-     ************************************************************/
+    /******** Botões ********/
+    $("btnLogin").onclick = async ()=>{
+      try{
+        await dbLogin($("inUsername").value, $("inPass").value);
+      }catch(err){
+        alert(err.message || "Erro no login.");
+      }
+    };
+
+    $("btnRegister").onclick = async ()=>{
+      try{
+        await dbRegister($("inUsername").value, $("inPass").value, $("inFullname").value);
+      }catch(err){
+        alert(err.message || "Erro no cadastro.");
+      }
+    };
+
+    $("btnLogout").onclick = logout;
+    $("btnReloadUsers").onclick = loadUsers;
+    $("adminSearch").addEventListener("input", renderUsers);
+
+    /******** Boot ********/
     async function boot(){
-      // 1) cria/garante admin (se necessário)
-      await bootstrapAdminIfNeeded();
-      // 2) lê adminUid atual
-      await loadAdminUid();
+      try{
+        await bootstrapAdmin();
+      }catch(err){
+        // Se der PERMISSION_DENIED aqui, é regra do DB
+        console.error("Bootstrap admin falhou:", err);
+        toast("Falha no bootstrap. Ver Console.");
+      }
 
-      // 3) listener auth
-      auth.onAuthStateChanged(async (user)=>{
-        state.me = user || null;
-        state.meProfile = null;
+      // carrega adminUid
+      const adminSnap = await db.ref(PATH.admin).get().catch(()=>null);
+      state.adminUid = adminSnap?.val()?.adminUid || null;
 
-        if(!user){
-          updateTopbar();
+      // restaura sessão
+      const sess = loadSession();
+      if(sess){
+        // valida bloqueio
+        const profSnap = await db.ref(`${PATH.users}/${sess.uid}`).get().catch(()=>null);
+        const prof = profSnap && profSnap.exists() ? profSnap.val() : null;
+        if(prof?.active === false){
+          clearSession();
+          state.me=null;
           setView("auth");
-          return;
+          toast("Conta bloqueada.");
+        }else{
+          state.me = { ...sess, fullName: prof?.fullName||sess.fullName, role: prof?.role||sess.role, active:true };
+          $("tabsTop").style.display="flex";
+          $("btnLogout").style.display="inline-flex";
+          renderLauncher();
+          setView("home");
         }
-
-        // garante adminUid carregado
-        await loadAdminUid();
-
-        // puxa perfil
-        listenMyProfile(user.uid);
-
-        // se não tem perfil, cria básico
-        const p = await db.ref(`${PATH.users}/${user.uid}`).get().catch(()=>null);
-        if(!p || !p.exists()){
-          await db.ref(`${PATH.users}/${user.uid}`).set({
-            uid: user.uid,
-            username: "user_"+user.uid.slice(0,6),
-            fullName: user.email || "Usuário",
-            active: true,
-            role: "user",
-            createdAt: Date.now(),
-            updatedAt: Date.now()
-          });
-        }
-
-        // Home
-        updateTopbar();
-        renderLauncher();
-        setView("home");
-
-        // Se for admin, deixa tab admin visível (já está via tabs)
-        if(isAdmin()){
-          toast("Admin logado.");
-        }
-      });
+      }else{
+        setView("auth");
+      }
 
       updateTopbar();
-      renderLauncher();
-      setView("auth");
-      toast("Portal pronto.");
+      toast("Portal pronto (DB Auth).");
     }
 
     boot();
