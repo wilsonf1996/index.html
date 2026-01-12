@@ -1,0 +1,1380 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Planilha → Gráfico Profissional (Linha + Pontos) — 1 arquivo</title>
+  <style>
+    :root{
+      --bg:#0b0f14; --panel:#121824; --text:#e8eef6; --muted:#a8b3c2;
+      --line:#243049; --accent:#6aa6ff; --ok:#77f2b4; --warn:#ffcc66; --danger:#ff5c5c;
+      --radius:14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:var(--sans); color:var(--text);
+      background: radial-gradient(1200px 800px at 20% 0%, #12203a 0%, var(--bg) 45%) fixed;
+    }
+    header{max-width:1240px;margin:0 auto;padding:18px 16px 10px}
+    h1{margin:0 0 6px;font-size:18px}
+    .sub{margin:0;color:var(--muted);font-size:13px;line-height:1.35}
+    .wrap{
+      max-width:1240px;margin:0 auto;padding:12px 16px 22px;
+      display:grid; gap:12px;
+      grid-template-columns: 1.1fr .9fr;
+    }
+    @media (max-width: 1020px){ .wrap{grid-template-columns:1fr} }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:var(--radius);
+      box-shadow: 0 12px 35px rgba(0,0,0,.35);
+      overflow:hidden;
+    }
+    .hd{
+      padding:12px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+      background: rgba(255,255,255,.03);
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    .hd b{font-size:13px}
+    .bd{padding:12px}
+
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .row + .row{margin-top:10px}
+    .sp{flex:1}
+
+    button, select, input[type="text"], input[type="number"]{
+      appearance:none;
+      border:1px solid rgba(255,255,255,.12);
+      color:var(--text);
+      background: rgba(255,255,255,.06);
+      padding:9px 10px;
+      border-radius:12px;
+      font-size:13px;
+      transition:.15s transform, .15s background, .15s border-color;
+    }
+    button{cursor:pointer}
+    button:hover{transform: translateY(-1px); background: rgba(255,255,255,.09); border-color: rgba(255,255,255,.18)}
+    button.primary{background: rgba(106,166,255,.18); border-color: rgba(106,166,255,.35)}
+    button.ok{background: rgba(119,242,180,.12); border-color: rgba(119,242,180,.28)}
+    button.danger{background: rgba(255,92,92,.12); border-color: rgba(255,92,92,.28)}
+    button.ghost{background: transparent}
+
+    .hint{color:var(--muted); font-size:12px; line-height:1.35}
+    .mono{font-family:var(--mono)}
+    .kbd{
+      font-family:var(--mono); font-size:11px;
+      padding:2px 6px; border-radius:8px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.05);
+      color:rgba(232,238,246,.9);
+    }
+    .pill{
+      padding:6px 10px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      color:var(--muted); font-size:12px;
+    }
+
+    .err, .okbox{
+      margin-top:10px; padding:10px;
+      border-radius:12px; font-size:12px; display:none;
+    }
+    .err{border:1px solid rgba(255,92,92,.35); background: rgba(255,92,92,.10); color:#ffd1d1;}
+    .okbox{border:1px solid rgba(119,242,180,.30); background: rgba(119,242,180,.08); color:#d9ffef;}
+
+    table{
+      width:100%;
+      border-collapse:separate; border-spacing:0;
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:12px; overflow:hidden;
+      background: rgba(0,0,0,.15);
+    }
+    thead th{
+      text-align:left; padding:10px; font-size:12px; color:var(--muted);
+      border-bottom:1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
+      white-space:nowrap;
+    }
+    tbody td{padding:0; border-bottom:1px solid rgba(255,255,255,.06)}
+    tbody tr:last-child td{border-bottom:none}
+    input.cell{
+      width:100%; border:none; outline:none;
+      padding:10px; font-size:13px; color:var(--text);
+      background: transparent;
+    }
+    input.cell::placeholder{color: rgba(168,179,194,.55)}
+    td.action{width:60px; text-align:center}
+
+    .grid2{display:grid; grid-template-columns: 1fr 1fr; gap:10px}
+    @media (max-width: 1020px){ .grid2{grid-template-columns:1fr} }
+
+    canvas{
+      width:100%; height:560px;
+      background: rgba(0,0,0,.18);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:12px;
+      display:block;
+      cursor: crosshair;
+    }
+    .legend{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+      color:var(--muted); font-size:12px; margin-top:8px;
+    }
+    .legend .item{
+      display:flex; gap:8px; align-items:center;
+      padding:6px 10px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.14);
+      cursor:pointer;
+      user-select:none;
+    }
+    .legend .item.off{opacity:.45; filter:saturate(.6)}
+    .dot{width:10px;height:10px;border-radius:999px;display:inline-block}
+
+    .tooltip{
+      position: fixed;
+      z-index: 10;
+      pointer-events:none;
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(10,14,22,.92);
+      color: rgba(232,238,246,.95);
+      font-size:12px;
+      box-shadow: 0 18px 40px rgba(0,0,0,.45);
+      display:none;
+      max-width: 320px;
+    }
+    .tooltip .t{font-weight:600;margin-bottom:6px}
+    .tooltip .kv{display:flex; gap:8px; justify-content:space-between}
+    .tooltip .k{color: rgba(168,179,194,.9)}
+    .tooltip .v{font-family:var(--mono)}
+    .small{font-size:11px;color:rgba(168,179,194,.9)}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Planilha → Gráfico Profissional (linha + pontos) — 1 arquivo</h1>
+  <p class="sub">
+    • Cole do Excel/Sheets dentro da tabela: <span class="kbd">Ctrl</span>+<span class="kbd">V</span> • Zoom: roda • Pan: arrastar • Tooltip: passar mouse<br/>
+    • Reg. linear e R², salvar projeto (JSON), exportar PNG/CSV.
+  </p>
+</header>
+
+<div class="wrap">
+
+  <!-- DADOS/CONFIG -->
+  <section class="card">
+    <div class="hd">
+      <b>1) Dados e Configurações</b>
+      <div class="row" style="margin:0">
+        <button id="btnAddRow">+ Linha</button>
+        <button id="btnAddSeries">+ Série Y</button>
+        <button class="ok" id="btnExample">Exemplo</button>
+        <button class="danger" id="btnClear">Limpar</button>
+      </div>
+    </div>
+
+    <div class="bd">
+
+      <div class="grid2">
+        <div class="row">
+          <span class="pill">Colar: <span class="kbd">Ctrl</span>+<span class="kbd">V</span></span>
+          <span class="pill">Pan: arrastar</span>
+          <span class="pill">Zoom: roda (<span class="kbd">Shift</span> = Y)</span>
+        </div>
+
+        <div class="row" style="justify-content:flex-end">
+          <label class="hint">Tipo de X</label>
+          <select id="xMode">
+            <option value="auto">Auto</option>
+            <option value="numeric">Numérico (escala)</option>
+            <option value="category">Texto (categorias)</option>
+          </select>
+
+          <label class="hint">Ordenar por X</label>
+          <select id="sortX">
+            <option value="auto">Auto</option>
+            <option value="no">Não</option>
+            <option value="yes">Sim</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-top:10px">
+        <div class="row">
+          <label class="hint">Título</label>
+          <input id="title" type="text" value="Gráfico: Y por X" style="min-width:260px; flex:1" />
+        </div>
+        <div class="row">
+          <label class="hint">Eixo X</label>
+          <input id="xLabel" type="text" value="X" style="min-width:160px; flex:1" />
+          <label class="hint">Eixo Y</label>
+          <input id="yLabel" type="text" value="Y" style="min-width:160px; flex:1" />
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-top:10px">
+        <div class="row">
+          <label class="hint"><input id="chkTrend" type="checkbox" /> Mostrar regressão linear (trendline)</label>
+          <label class="hint"><input id="chkR2" type="checkbox" checked /> Mostrar equação e R²</label>
+        </div>
+        <div class="row" style="justify-content:flex-end">
+          <button id="btnPlot" class="primary">Gerar gráfico</button>
+          <button id="btnResetView">Reset zoom/pan</button>
+        </div>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <table id="grid">
+        <thead>
+          <tr id="theadRow">
+            <th style="width:28%">X</th>
+            <th style="width:22%">Y1</th>
+            <th style="width:60px; text-align:center">Rem</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+
+      <div class="row" style="margin-top:12px">
+        <button id="btnImportCSV">Importar CSV</button>
+        <input id="fileCSV" type="file" accept=".csv,text/csv" style="display:none">
+        <button id="btnExportCSV">Exportar CSV</button>
+
+        <span class="sp"></span>
+
+        <button id="btnSaveProject">Salvar Projeto (JSON)</button>
+        <input id="fileProject" type="file" accept=".json,application/json" style="display:none">
+        <button id="btnLoadProject">Carregar Projeto</button>
+        <button class="ghost" id="btnResetAutosave" title="Limpa autosave local">Limpar autosave</button>
+      </div>
+
+      <div id="msgOk" class="okbox"></div>
+      <div id="msgErr" class="err"></div>
+
+      <div class="hint" style="margin-top:10px">
+        • Em Y aceita <span class="mono">10,5</span> ou <span class="mono">10.5</span>. • Linhas vazias são ignoradas.
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <div class="hd"><b>2) Estilo das Séries</b><span class="hint">Clique na série para editar</span></div>
+        <div class="bd">
+          <div id="seriesPanel" class="hint">Gere um gráfico para configurar estilos.</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- GRAFICO -->
+  <section class="card">
+    <div class="hd">
+      <b>3) Gráfico</b>
+      <div class="row" style="margin:0">
+        <button id="btnPNG">Salvar PNG</button>
+      </div>
+    </div>
+    <div class="bd">
+      <canvas id="cv"></canvas>
+      <div id="legend" class="legend"></div>
+      <div class="hint" style="margin-top:10px">
+        Tooltip mostra o ponto mais próximo. Clique na legenda para ocultar/mostrar uma série.
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div id="tooltip" class="tooltip"></div>
+
+<script>
+/* =========================================
+   Estado / Config
+========================================= */
+const palette = [
+  "rgba(106,166,255,1)",
+  "rgba(119,242,180,1)",
+  "rgba(255,204,102,1)",
+  "rgba(255,92,92,1)",
+  "rgba(186,143,255,1)",
+  "rgba(94,234,212,1)",
+  "rgba(255,120,200,1)",
+  "rgba(180,255,120,1)",
+];
+
+const state = {
+  seriesCount: 1,
+  rows: 14,
+  view: { zoomX: 1, zoomY: 1, panX: 0, panY: 0 },
+  lastPlot: null,
+  styles: [], // por série
+  visible: [], // por série
+  selectedSeries: 0,
+};
+
+const LS_KEY = "app_grafico_profissional_autosave_v1";
+
+const $ = (s) => document.querySelector(s);
+const tbody = $("#tbody");
+const theadRow = $("#theadRow");
+const legendBox = $("#legend");
+const seriesPanel = $("#seriesPanel");
+const msgErr = $("#msgErr");
+const msgOk = $("#msgOk");
+const tooltip = $("#tooltip");
+
+/* =========================================
+   Utils
+========================================= */
+function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
+function parseNumberBR(v){
+  if (v == null) return NaN;
+  v = String(v).trim();
+  if (!v) return NaN;
+  v = v.replace(/\s+/g,"");
+  if (v.includes(",")) v = v.replace(/\./g,"").replace(",",".");
+  const n = Number(v);
+  return Number.isFinite(n) ? n : NaN;
+}
+function fmt(n, d=4){
+  if (!Number.isFinite(n)) return "NaN";
+  const s = n.toFixed(d);
+  return s.replace(/\.?0+$/,""); // remove zeros finais
+}
+function showErr(msg){
+  msgOk.style.display="none"; msgOk.textContent="";
+  msgErr.style.display="block"; msgErr.textContent=msg;
+}
+function showOk(msg){
+  msgErr.style.display="none"; msgErr.textContent="";
+  msgOk.style.display="block"; msgOk.textContent=msg;
+}
+function clearMsgs(){
+  msgErr.style.display="none"; msgErr.textContent="";
+  msgOk.style.display="none"; msgOk.textContent="";
+}
+function downloadText(filename, text, type="application/octet-stream"){
+  const blob = new Blob([text], {type});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* =========================================
+   Grid (Tabela)
+========================================= */
+function rebuildHeader(){
+  theadRow.innerHTML = "";
+  const thX = document.createElement("th");
+  thX.textContent = "X";
+  thX.style.width = "28%";
+  theadRow.appendChild(thX);
+
+  for(let s=1;s<=state.seriesCount;s++){
+    const th = document.createElement("th");
+    th.textContent = "Y" + s;
+    th.style.width = (Math.max(14, Math.floor(62/state.seriesCount))) + "%";
+    theadRow.appendChild(th);
+  }
+
+  const thRem = document.createElement("th");
+  thRem.textContent = "Rem";
+  thRem.style.width = "60px";
+  thRem.style.textAlign = "center";
+  theadRow.appendChild(thRem);
+}
+
+function addRow(values=null){
+  const tr = document.createElement("tr");
+
+  const tdX = document.createElement("td");
+  const inX = document.createElement("input");
+  inX.className = "cell";
+  inX.placeholder = "Ex: 1  ou  Jan";
+  inX.value = values?.x ?? "";
+  tdX.appendChild(inX);
+  tr.appendChild(tdX);
+
+  for(let s=1;s<=state.seriesCount;s++){
+    const tdY = document.createElement("td");
+    const inY = document.createElement("input");
+    inY.className = "cell";
+    inY.placeholder = "Ex: 10,5";
+    inY.value = values?.ys?.[s-1] ?? "";
+    tdY.appendChild(inY);
+    tr.appendChild(tdY);
+  }
+
+  const tdA = document.createElement("td");
+  tdA.className = "action";
+  const btn = document.createElement("button");
+  btn.className = "danger";
+  btn.textContent = "X";
+  btn.title = "Remover linha";
+  btn.onclick = () => { tr.remove(); autosave(); };
+  tdA.appendChild(btn);
+  tr.appendChild(tdA);
+
+  tbody.appendChild(tr);
+}
+
+function clearGrid(){
+  tbody.innerHTML = "";
+  for(let i=0;i<state.rows;i++) addRow();
+}
+
+function addSeries(){
+  state.seriesCount += 1;
+  rebuildHeader();
+
+  const rows = [...tbody.querySelectorAll("tr")];
+  rows.forEach(tr => {
+    const tdY = document.createElement("td");
+    const inY = document.createElement("input");
+    inY.className = "cell";
+    inY.placeholder = "Ex: 10,5";
+    tdY.appendChild(inY);
+    tr.insertBefore(tdY, tr.lastElementChild);
+  });
+
+  ensureStyleArrays();
+  autosave();
+}
+
+function getGridMatrix(){
+  const rows = [...tbody.querySelectorAll("tr")];
+  return rows.map(tr => [...tr.querySelectorAll("input")].map(i => i.value.trim()));
+}
+
+function setGridFromMatrix(mat){
+  if (!mat.length) return;
+
+  const needCols = Math.max(2, ...mat.map(r => r.length));
+  const needSeries = Math.max(1, needCols - 1);
+
+  while(state.seriesCount < needSeries) addSeries();
+
+  const currentRows = tbody.querySelectorAll("tr").length;
+  if (currentRows < mat.length){
+    for(let i=0;i<mat.length-currentRows;i++) addRow();
+  }
+
+  const rows = [...tbody.querySelectorAll("tr")];
+  for(let r=0;r<mat.length;r++){
+    const inputs = [...rows[r].querySelectorAll("input")];
+    for(let c=0;c<Math.min(inputs.length, mat[r].length);c++){
+      inputs[c].value = mat[r][c];
+    }
+  }
+  autosave();
+}
+
+/* =========================================
+   Paste Excel/Sheets (TSV)
+========================================= */
+function parseClipboardTSV(text){
+  const lines = text.replace(/\r/g,"").split("\n").filter(l => l.length>0);
+  return lines.map(l => l.split("\t"));
+}
+$("#grid").addEventListener("paste", (e) => {
+  const text = (e.clipboardData || window.clipboardData).getData("text");
+  if (!text) return;
+  const mat = parseClipboardTSV(text);
+  if (mat.length && mat[0].length >= 2){
+    e.preventDefault();
+    setGridFromMatrix(mat);
+    showOk("Dados colados com sucesso.");
+  }
+});
+
+/* =========================================
+   CSV Import/Export
+========================================= */
+function matrixToCSV(mat){
+  const escape = (v) => {
+    const s = String(v ?? "");
+    if (/[",\n;]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
+    return s;
+  };
+  return mat.map(row => row.map(escape).join(";")).join("\n");
+}
+function csvToMatrix(csvText){
+  const text = csvText.replace(/\r/g,"").trim();
+  if (!text) return [];
+  const lines = text.split("\n");
+  const sample = lines[0];
+  const sep = sample.includes(";") ? ";" : (sample.includes(",") ? "," : ";");
+
+  const parseLine = (line) => {
+    const out = [];
+    let cur = "", inQ=false;
+    for(let i=0;i<line.length;i++){
+      const ch=line[i];
+      if (ch === '"'){
+        if (inQ && line[i+1] === '"'){ cur += '"'; i++; }
+        else inQ = !inQ;
+      } else if (!inQ && ch === sep){
+        out.push(cur); cur="";
+      } else cur += ch;
+    }
+    out.push(cur);
+    return out;
+  };
+  return lines.map(parseLine);
+}
+
+$("#btnImportCSV").addEventListener("click", () => $("#fileCSV").click());
+$("#fileCSV").addEventListener("change", async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const text = await file.text();
+  const mat = csvToMatrix(text);
+  if (!mat.length || mat[0].length < 2) return showErr("CSV inválido. Precisa ter 2+ colunas.");
+  setGridFromMatrix(mat);
+  showOk("CSV importado.");
+  e.target.value = "";
+});
+
+$("#btnExportCSV").addEventListener("click", () => {
+  const csv = matrixToCSV(getGridMatrix());
+  downloadText("dados_xy.csv", csv, "text/csv;charset=utf-8");
+});
+
+/* =========================================
+   Projeto (JSON) + Autosave
+========================================= */
+function ensureStyleArrays(){
+  while(state.styles.length < state.seriesCount){
+    const i = state.styles.length;
+    state.styles.push({
+      name: "Y" + (i+1),
+      color: palette[i % palette.length],
+      width: 2,
+      point: 4.2,
+      dashed: false,
+    });
+  }
+  while(state.visible.length < state.seriesCount) state.visible.push(true);
+}
+
+function getProject(){
+  return {
+    version: 1,
+    meta: {
+      title: $("#title").value,
+      xLabel: $("#xLabel").value,
+      yLabel: $("#yLabel").value,
+      xMode: $("#xMode").value,
+      sortX: $("#sortX").value,
+      trend: $("#chkTrend").checked,
+      showR2: $("#chkR2").checked,
+    },
+    seriesCount: state.seriesCount,
+    styles: state.styles,
+    visible: state.visible,
+    data: getGridMatrix(),
+  };
+}
+
+function loadProject(proj){
+  if (!proj || typeof proj !== "object") return showErr("Projeto inválido.");
+  state.seriesCount = Math.max(1, Number(proj.seriesCount || 1));
+  rebuildHeader();
+  clearGrid();
+
+  ensureStyleArrays();
+  if (Array.isArray(proj.styles)) state.styles = proj.styles;
+  if (Array.isArray(proj.visible)) state.visible = proj.visible;
+
+  $("#title").value = proj.meta?.title ?? "Gráfico: Y por X";
+  $("#xLabel").value = proj.meta?.xLabel ?? "X";
+  $("#yLabel").value = proj.meta?.yLabel ?? "Y";
+  $("#xMode").value = proj.meta?.xMode ?? "auto";
+  $("#sortX").value = proj.meta?.sortX ?? "auto";
+  $("#chkTrend").checked = !!proj.meta?.trend;
+  $("#chkR2").checked = proj.meta?.showR2 ?? true;
+
+  // aplicar dados
+  if (Array.isArray(proj.data)) setGridFromMatrix(proj.data);
+  ensureStyleArrays();
+
+  // reset view
+  state.view = { zoomX: 1, zoomY: 1, panX: 0, panY: 0 };
+  state.lastPlot = null;
+  legendBox.innerHTML = "";
+  seriesPanel.innerHTML = "Gere um gráfico para configurar estilos.";
+  showOk("Projeto carregado.");
+}
+
+function autosave(){
+  try{
+    localStorage.setItem(LS_KEY, JSON.stringify(getProject()));
+  }catch{}
+}
+
+function tryLoadAutosave(){
+  try{
+    const s = localStorage.getItem(LS_KEY);
+    if (!s) return;
+    loadProject(JSON.parse(s));
+    showOk("Autosave carregado.");
+  }catch{}
+}
+
+$("#btnSaveProject").addEventListener("click", () => {
+  const proj = getProject();
+  downloadText("projeto_grafico.json", JSON.stringify(proj, null, 2), "application/json;charset=utf-8");
+  showOk("Projeto salvo (JSON).");
+});
+
+$("#btnLoadProject").addEventListener("click", () => $("#fileProject").click());
+$("#fileProject").addEventListener("change", async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const text = await file.text();
+  try{
+    loadProject(JSON.parse(text));
+  }catch{
+    showErr("Não foi possível ler o JSON.");
+  }
+  e.target.value = "";
+});
+
+$("#btnResetAutosave").addEventListener("click", () => {
+  localStorage.removeItem(LS_KEY);
+  showOk("Autosave limpo.");
+});
+
+/* autosave em inputs */
+document.addEventListener("input", (e) => {
+  const t = e.target;
+  if (t && (t.matches("input") || t.matches("select"))) autosave();
+});
+
+/* =========================================
+   Leitura/Validação dos dados
+========================================= */
+function readDataFromGrid(){
+  clearMsgs();
+  ensureStyleArrays();
+
+  const mat = getGridMatrix();
+  const rows = mat.filter(r => r.some(v => v !== ""));
+  if (rows.length < 2) return { ok:false, msg:"Insira pelo menos 2 linhas com dados." };
+
+  let mode = $("#xMode").value; // auto|numeric|category
+  const xsRaw = rows.map(r => r[0]);
+  const xsNumCount = xsRaw.map(parseNumberBR).filter(n => Number.isFinite(n)).length;
+  if (mode === "auto"){
+    mode = (xsNumCount >= Math.ceil(xsRaw.length*0.7)) ? "numeric" : "category";
+  }
+
+  const series = [];
+  for(let s=0;s<state.seriesCount;s++){
+    series.push({ name: state.styles[s]?.name ?? ("Y"+(s+1)), points: [] , idx:s});
+  }
+
+  for(let i=0;i<rows.length;i++){
+    const r = rows[i];
+    const xLabel = r[0] || String(i+1);
+    const xNum = parseNumberBR(r[0]);
+
+    if (mode === "numeric" && !Number.isFinite(xNum)){
+      return { ok:false, msg:`Linha ${i+1}: X precisa ser numérico. Você colocou “${r[0]}”.` };
+    }
+
+    for(let s=0;s<state.seriesCount;s++){
+      const yStr = r[1+s] ?? "";
+      if (yStr === "") continue;
+      const yNum = parseNumberBR(yStr);
+      if (!Number.isFinite(yNum)){
+        return { ok:false, msg:`Linha ${i+1}: ${"Y"+(s+1)} inválido (“${yStr}”). Use número.` };
+      }
+      series[s].points.push({ xLabel, xNum, y: yNum, idx: i });
+    }
+  }
+
+  const anyGood = series.some(s => s.points.length >= 2);
+  if (!anyGood) return { ok:false, msg:"Você precisa de pelo menos 2 pontos em alguma série Y." };
+
+  // ordenar por X (numeric) se pedido
+  const sortUI = $("#sortX").value; // auto|no|yes
+  const doSort = (mode === "numeric") && (sortUI === "yes" || sortUI === "auto");
+  if (doSort){
+    series.forEach(s => s.points.sort((a,b)=>a.xNum-b.xNum));
+  }
+
+  return { ok:true, mode, series };
+}
+
+/* =========================================
+   Regressão linear + R²
+========================================= */
+function linearRegression(points, mode){
+  // retorna {a,b,r2} para y = a*x + b (usa xNum ou idx)
+  const pts = points
+    .map(p => ({x: mode==="numeric" ? p.xNum : p.idx, y: p.y}))
+    .filter(p => Number.isFinite(p.x) && Number.isFinite(p.y));
+
+  const n = pts.length;
+  if (n < 2) return null;
+
+  let sumX=0, sumY=0, sumXX=0, sumXY=0;
+  for(const p of pts){
+    sumX += p.x; sumY += p.y;
+    sumXX += p.x*p.x;
+    sumXY += p.x*p.y;
+  }
+  const denom = (n*sumXX - sumX*sumX);
+  if (denom === 0) return null;
+  const a = (n*sumXY - sumX*sumY) / denom;
+  const b = (sumY - a*sumX) / n;
+
+  // R²
+  const yMean = sumY / n;
+  let ssTot=0, ssRes=0;
+  for(const p of pts){
+    const yHat = a*p.x + b;
+    ssTot += (p.y - yMean)**2;
+    ssRes += (p.y - yHat)**2;
+  }
+  const r2 = ssTot === 0 ? 1 : (1 - ssRes/ssTot);
+
+  return {a,b,r2};
+}
+
+/* =========================================
+   Chart (Canvas) + Tooltip/Crosshair
+========================================= */
+const cv = $("#cv");
+const ctx = cv.getContext("2d");
+
+function resizeCanvasToCSS(){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = cv.getBoundingClientRect();
+  const w = Math.max(320, Math.round(rect.width));
+  const h = Math.max(320, Math.round(rect.height));
+  cv.width = Math.round(w * dpr);
+  cv.height = Math.round(h * dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {W:w, H:h};
+}
+
+function drawEmpty(){
+  const {W,H} = resizeCanvasToCSS();
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = "rgba(0,0,0,.10)";
+  ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = "rgba(168,179,194,.85)";
+  ctx.font = "14px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  ctx.fillText("Insira dados e clique em “Gerar gráfico”.", 16, 28);
+}
+
+function computeBounds(mode, series){
+  const ys=[];
+  series.forEach(s => {
+    if (!state.visible[s.idx]) return;
+    s.points.forEach(p => ys.push(p.y));
+  });
+  let yMin = Math.min(...ys), yMax = Math.max(...ys);
+  if (!Number.isFinite(yMin) || !Number.isFinite(yMax)){ yMin=0; yMax=1; }
+  if (yMin === yMax){ yMin -= 1; yMax += 1; }
+  const yPad = (yMax-yMin)*0.08;
+  yMin -= yPad; yMax += yPad;
+
+  let xMin=0, xMax=1;
+  if (mode === "numeric"){
+    const xs=[];
+    series.forEach(s => {
+      if (!state.visible[s.idx]) return;
+      s.points.forEach(p => xs.push(p.xNum));
+    });
+    xMin = Math.min(...xs); xMax = Math.max(...xs);
+    if (xMin === xMax){ xMin -= 1; xMax += 1; }
+    const xPad = (xMax-xMin)*0.06;
+    xMin -= xPad; xMax += xPad;
+  } else {
+    const maxN = Math.max(...series.map(s => s.points.length));
+    xMin = 0; xMax = Math.max(1, maxN-1);
+  }
+  return {xMin,xMax,yMin,yMax};
+}
+
+function buildLegend(plot){
+  legendBox.innerHTML = "";
+  plot.series.forEach(s => {
+    const idx = s.idx;
+    const st = state.styles[idx];
+    const item = document.createElement("div");
+    item.className = "item" + (state.visible[idx] ? "" : " off");
+    item.innerHTML = `<span class="dot" style="background:${st.color}"></span><span>${st.name}</span>`;
+    item.addEventListener("click", () => {
+      state.visible[idx] = !state.visible[idx];
+      autosave();
+      if (state.lastPlot) render();
+    });
+    legendBox.appendChild(item);
+  });
+}
+
+function renderSeriesPanel(){
+  if (!state.lastPlot){
+    seriesPanel.innerHTML = "Gere um gráfico para configurar estilos.";
+    return;
+  }
+  ensureStyleArrays();
+  const s = state.lastPlot.series;
+  const items = s.map(si => {
+    const st = state.styles[si.idx];
+    const active = (state.selectedSeries === si.idx);
+    return `
+      <button class="${active ? "primary" : ""}" data-s="${si.idx}">
+        ${st.name} ${state.visible[si.idx] ? "" : "(oculta)"}
+      </button>`;
+  }).join("");
+
+  const st = state.styles[state.selectedSeries] || state.styles[0];
+  seriesPanel.innerHTML = `
+    <div class="row">
+      ${items}
+    </div>
+    <div class="row" style="margin-top:12px">
+      <label class="hint">Nome</label>
+      <input id="styName" type="text" value="${st.name}" style="min-width:160px;flex:1" />
+      <label class="hint">Cor</label>
+      <input id="styColor" type="text" value="${st.color}" style="min-width:220px;flex:1" />
+    </div>
+    <div class="row">
+      <label class="hint">Espessura</label>
+      <input id="styWidth" type="number" min="1" max="8" step="1" value="${st.width}" style="width:120px" />
+      <label class="hint">Ponto</label>
+      <input id="styPoint" type="number" min="0" max="10" step="0.5" value="${st.point}" style="width:120px" />
+      <label class="hint"><input id="styDash" type="checkbox" ${st.dashed ? "checked":""}/> Tracejado</label>
+      <span class="sp"></span>
+      <span class="small">Cor pode ser: <span class="mono">rgba(r,g,b,a)</span> ou <span class="mono">#RRGGBB</span></span>
+    </div>
+  `;
+
+  // bind
+  seriesPanel.querySelectorAll("button[data-s]").forEach(b => {
+    b.addEventListener("click", () => {
+      state.selectedSeries = Number(b.getAttribute("data-s"));
+      renderSeriesPanel();
+    });
+  });
+
+  const bind = (id, fn) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener("input", fn);
+    el.addEventListener("change", fn);
+  };
+
+  bind("styName", () => {
+    state.styles[state.selectedSeries].name = $("#styName").value.trim() || ("Y"+(state.selectedSeries+1));
+    autosave(); if (state.lastPlot) render();
+  });
+  bind("styColor", () => {
+    state.styles[state.selectedSeries].color = $("#styColor").value.trim() || palette[state.selectedSeries % palette.length];
+    autosave(); if (state.lastPlot) render();
+  });
+  bind("styWidth", () => {
+    state.styles[state.selectedSeries].width = clamp(Number($("#styWidth").value)||2, 1, 8);
+    autosave(); if (state.lastPlot) render();
+  });
+  bind("styPoint", () => {
+    state.styles[state.selectedSeries].point = clamp(Number($("#styPoint").value)||0, 0, 10);
+    autosave(); if (state.lastPlot) render();
+  });
+  bind("styDash", () => {
+    state.styles[state.selectedSeries].dashed = $("#styDash").checked;
+    autosave(); if (state.lastPlot) render();
+  });
+}
+
+function computeViewWindow(bounds, plotW, plotH){
+  const zoomX = clamp(state.view.zoomX, 0.3, 30);
+  const zoomY = clamp(state.view.zoomY, 0.3, 30);
+
+  const baseXSpan = bounds.xMax - bounds.xMin;
+  const baseYSpan = bounds.yMax - bounds.yMin;
+
+  const xSpan = baseXSpan / zoomX;
+  const ySpan = baseYSpan / zoomY;
+
+  const panXUnit = (state.view.panX / plotW) * xSpan;
+  const panYUnit = (state.view.panY / plotH) * ySpan;
+
+  const xCenter = (bounds.xMin + bounds.xMax)/2 - panXUnit;
+  const yCenter = (bounds.yMin + bounds.yMax)/2 + panYUnit;
+
+  return {
+    xMin: xCenter - xSpan/2,
+    xMax: xCenter + xSpan/2,
+    yMin: yCenter - ySpan/2,
+    yMax: yCenter + ySpan/2
+  };
+}
+
+function drawChart(plot, hover=null){
+  const {W,H} = resizeCanvasToCSS();
+  ctx.clearRect(0,0,W,H);
+
+  const padL=66, padR=18, padT=34, padB=58;
+  const plotW = W-padL-padR;
+  const plotH = H-padT-padB;
+
+  // fundo
+  ctx.fillStyle="rgba(0,0,0,.10)";
+  ctx.fillRect(0,0,W,H);
+
+  // bounds
+  const baseBounds = plot.bounds;
+  const view = computeViewWindow(baseBounds, plotW, plotH);
+
+  const xToPx = (x) => padL + ((x - view.xMin)/(view.xMax-view.xMin))*plotW;
+  const yToPx = (y) => padT + (1 - (y - view.yMin)/(view.yMax-view.yMin))*plotH;
+
+  // grid
+  const gridY=5;
+  ctx.lineWidth=1;
+  for(let i=0;i<=gridY;i++){
+    const y = padT + plotH*i/gridY;
+    ctx.strokeStyle="rgba(255,255,255,.10)";
+    ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+plotW,y); ctx.stroke();
+  }
+
+  // eixos
+  ctx.strokeStyle="rgba(255,255,255,.22)";
+  ctx.beginPath(); ctx.moveTo(padL,padT); ctx.lineTo(padL,padT+plotH); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(padL,padT+plotH); ctx.lineTo(padL+plotW,padT+plotH); ctx.stroke();
+
+  // títulos
+  const title = $("#title").value.trim() || "Gráfico";
+  const xLabel = $("#xLabel").value.trim() || "X";
+  const yLabel = $("#yLabel").value.trim() || "Y";
+
+  ctx.fillStyle="rgba(232,238,246,.92)";
+  ctx.font="13px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  ctx.fillText(title, padL, 18);
+
+  // label eixos
+  ctx.fillStyle="rgba(168,179,194,.9)";
+  ctx.font="12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  ctx.fillText(xLabel, padL+plotW-ctx.measureText(xLabel).width, padT+plotH+42);
+
+  ctx.save();
+  ctx.translate(16, padT + plotH/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText(yLabel, 0, 0);
+  ctx.restore();
+
+  // labels Y
+  ctx.fillStyle="rgba(168,179,194,.85)";
+  ctx.font="12px " + getComputedStyle(document.body).fontFamily;
+  for(let i=0;i<=gridY;i++){
+    const y = padT + plotH*i/gridY;
+    const val = (view.yMax - (view.yMax-view.yMin)*i/gridY);
+    ctx.fillText(val.toFixed(2), 10, y+4);
+  }
+
+  // labels X
+  ctx.fillStyle="rgba(168,179,194,.85)";
+  ctx.font="12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial";
+
+  if (plot.mode === "numeric"){
+    const ticks = 6;
+    for(let i=0;i<=ticks;i++){
+      const vx = view.xMin + (view.xMax-view.xMin)*i/ticks;
+      const px = xToPx(vx);
+      ctx.strokeStyle="rgba(255,255,255,.08)";
+      ctx.beginPath(); ctx.moveTo(px,padT); ctx.lineTo(px,padT+plotH); ctx.stroke();
+      ctx.fillText(vx.toFixed(2), px-12, padT+plotH+18);
+    }
+  } else {
+    const base = plot.baseCategories;
+    const maxLabels = 7;
+    const step = Math.max(1, Math.ceil(base.length/maxLabels));
+    for(let i=0;i<base.length;i+=step){
+      const px = xToPx(i);
+      const label = base[i] ?? String(i+1);
+      const text = label.length>12 ? label.slice(0,12)+"…" : label;
+      ctx.save();
+      ctx.translate(px, padT+plotH+18);
+      ctx.rotate(-0.35);
+      ctx.fillText(text, -10, 0);
+      ctx.restore();
+    }
+  }
+
+  // trendline info
+  const showTrend = $("#chkTrend").checked;
+  const showR2 = $("#chkR2").checked;
+
+  // plot series
+  plot.series.forEach(s => {
+    const idx = s.idx;
+    if (!state.visible[idx]) return;
+
+    const st = state.styles[idx];
+    const color = st.color;
+    const width = st.width;
+    const pr = st.point;
+
+    // linhas
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    if (st.dashed) ctx.setLineDash([8,6]); else ctx.setLineDash([]);
+
+    ctx.beginPath();
+    s.points.forEach((p, i) => {
+      const xVal = (plot.mode === "numeric") ? p.xNum : p.idx;
+      const px = xToPx(xVal);
+      const py = yToPx(p.y);
+      if (i===0) ctx.moveTo(px,py);
+      else ctx.lineTo(px,py);
+    });
+    ctx.stroke();
+
+    // pontos
+    ctx.setLineDash([]);
+    if (pr > 0){
+      s.points.forEach((p) => {
+        const xVal = (plot.mode === "numeric") ? p.xNum : p.idx;
+        const px = xToPx(xVal);
+        const py = yToPx(p.y);
+        ctx.beginPath();
+        ctx.fillStyle = color;
+        ctx.arc(px, py, pr, 0, Math.PI*2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(0,0,0,.35)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+    }
+
+    // trendline
+    if (showTrend){
+      const lr = linearRegression(s.points, plot.mode);
+      if (lr){
+        // desenhar reta na janela de visão (xMin..xMax)
+        const x1 = view.xMin, x2 = view.xMax;
+        const y1 = lr.a*x1 + lr.b;
+        const y2 = lr.a*x2 + lr.b;
+
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = 0.55;
+        ctx.lineWidth = Math.max(1, width-0.5);
+        ctx.setLineDash([4,5]);
+        ctx.beginPath();
+        ctx.moveTo(xToPx(x1), yToPx(y1));
+        ctx.lineTo(xToPx(x2), yToPx(y2));
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
+
+        if (showR2){
+          // texto no canto
+          const eq = `y = ${fmt(lr.a,5)}x + ${fmt(lr.b,5)}  |  R² = ${fmt(lr.r2,4)}`;
+          ctx.fillStyle = "rgba(168,179,194,.85)";
+          ctx.font = "11px var(--mono)";
+          const yPos = padT + 16 + (idx*14);
+          ctx.fillText(`${st.name}: ${eq}`, padL, yPos);
+        }
+      }
+    }
+  });
+
+  // crosshair + hover highlight
+  if (hover){
+    const {xPx, yPx} = hover;
+    ctx.strokeStyle = "rgba(232,238,246,.22)";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(xPx, padT); ctx.lineTo(xPx, padT+plotH); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(padL, yPx); ctx.lineTo(padL+plotW, yPx); ctx.stroke();
+
+    ctx.beginPath();
+    ctx.fillStyle = "rgba(232,238,246,.95)";
+    ctx.arc(xPx, yPx, 5.2, 0, Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,.40)";
+    ctx.stroke();
+  }
+
+  // cache para hit-test
+  plot._render = { padL,padR,padT,padB,plotW,plotH, view, xToPx, yToPx, W, H };
+}
+
+function render(){
+  if (!state.lastPlot) return drawEmpty();
+  // recomputa bounds (considerando visibilidade)
+  state.lastPlot.bounds = computeBounds(state.lastPlot.mode, state.lastPlot.series);
+  buildLegend(state.lastPlot);
+  renderSeriesPanel();
+  drawChart(state.lastPlot, state.lastPlot._hover || null);
+}
+
+/* =========================================
+   Hit test (ponto mais próximo)
+========================================= */
+function findNearestPoint(plot, mx, my){
+  const r = plot._render;
+  if (!r) return null;
+
+  const inside = (mx >= r.padL && mx <= r.padL+r.plotW && my >= r.padT && my <= r.padT+r.plotH);
+  if (!inside) return null;
+
+  let best = null;
+  let bestD = Infinity;
+
+  for(const s of plot.series){
+    const idx = s.idx;
+    if (!state.visible[idx]) continue;
+    const st = state.styles[idx];
+
+    for(const p of s.points){
+      const xVal = (plot.mode === "numeric") ? p.xNum : p.idx;
+      const xPx = r.xToPx(xVal);
+      const yPx = r.yToPx(p.y);
+      const dx = xPx - mx, dy = yPx - my;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d < bestD){
+        bestD = d;
+        best = { seriesIdx: idx, seriesName: st.name, color: st.color, point: p, xPx, yPx, dist: d };
+      }
+    }
+  }
+
+  // tolerância de hover
+  return (best && bestD <= 18) ? best : null;
+}
+
+function showTooltip(nearest, clientX, clientY, mode){
+  if (!nearest){ tooltip.style.display="none"; return; }
+  const p = nearest.point;
+  const xText = mode === "numeric" ? fmt(p.xNum,5) : p.xLabel;
+  tooltip.innerHTML = `
+    <div class="t" style="display:flex;gap:10px;align-items:center">
+      <span class="dot" style="background:${nearest.color}"></span>
+      <span>${nearest.seriesName}</span>
+    </div>
+    <div class="kv"><span class="k">X</span><span class="v">${xText}</span></div>
+    <div class="kv"><span class="k">Y</span><span class="v">${fmt(p.y,6)}</span></div>
+    <div class="small" style="margin-top:6px;opacity:.9">Linha idx: ${p.idx+1}</div>
+  `;
+  tooltip.style.display="block";
+
+  const pad = 14;
+  const w = tooltip.offsetWidth;
+  const h = tooltip.offsetHeight;
+
+  let left = clientX + pad;
+  let top = clientY + pad;
+  if (left + w > window.innerWidth - 8) left = clientX - w - pad;
+  if (top + h > window.innerHeight - 8) top = clientY - h - pad;
+
+  tooltip.style.left = left + "px";
+  tooltip.style.top = top + "px";
+}
+
+/* =========================================
+   Plot (Gerar)
+========================================= */
+function plotNow(){
+  const res = readDataFromGrid();
+  if (!res.ok){ showErr(res.msg); return; }
+  ensureStyleArrays();
+
+  // base categories para modo category
+  let baseCategories = [];
+  if (res.mode === "category"){
+    const big = res.series.reduce((a,b)=> (b.points.length>a.points.length?b:a), res.series[0]);
+    baseCategories = big.points.map(p => p.xLabel);
+  }
+
+  state.lastPlot = {
+    mode: res.mode,
+    series: res.series,
+    baseCategories,
+    bounds: computeBounds(res.mode, res.series),
+    _hover: null,
+    _render: null,
+  };
+
+  // reset hover tooltip
+  tooltip.style.display="none";
+
+  showOk("Gráfico gerado.");
+  render();
+  autosave();
+}
+
+/* =========================================
+   Pan/Zoom
+========================================= */
+let dragging=false;
+let last={x:0,y:0};
+
+cv.addEventListener("mousedown", (e) => {
+  dragging=true;
+  last = {x:e.clientX, y:e.clientY};
+  cv.style.cursor="grabbing";
+});
+window.addEventListener("mouseup", () => { dragging=false; cv.style.cursor="crosshair"; });
+window.addEventListener("mousemove", (e) => {
+  if (dragging && state.lastPlot){
+    const dx = e.clientX - last.x;
+    const dy = e.clientY - last.y;
+    last = {x:e.clientX, y:e.clientY};
+    state.view.panX += dx;
+    state.view.panY += dy;
+    state.lastPlot._hover = null;
+    tooltip.style.display="none";
+    render();
+  }
+});
+
+cv.addEventListener("wheel", (e) => {
+  if (!state.lastPlot) return;
+  e.preventDefault();
+  const delta = Math.sign(e.deltaY);
+  const factor = (delta > 0) ? 0.9 : 1.1;
+
+  if (e.shiftKey) state.view.zoomY *= factor;
+  else state.view.zoomX *= factor;
+
+  state.view.zoomX = clamp(state.view.zoomX, 0.3, 30);
+  state.view.zoomY = clamp(state.view.zoomY, 0.3, 30);
+
+  state.lastPlot._hover = null;
+  tooltip.style.display="none";
+  render();
+}, {passive:false});
+
+cv.addEventListener("mousemove", (e) => {
+  if (!state.lastPlot || dragging) return;
+
+  const rect = cv.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  const nearest = findNearestPoint(state.lastPlot, mx, my);
+  if (nearest){
+    state.lastPlot._hover = { xPx: nearest.xPx, yPx: nearest.yPx, nearest };
+    showTooltip(nearest, e.clientX, e.clientY, state.lastPlot.mode);
+  }else{
+    state.lastPlot._hover = null;
+    tooltip.style.display="none";
+  }
+  render();
+});
+
+cv.addEventListener("mouseleave", () => {
+  tooltip.style.display="none";
+  if (state.lastPlot){
+    state.lastPlot._hover = null;
+    render();
+  }
+});
+
+$("#btnResetView").addEventListener("click", () => {
+  state.view = { zoomX: 1, zoomY: 1, panX: 0, panY: 0 };
+  tooltip.style.display="none";
+  if (state.lastPlot){
+    state.lastPlot._hover = null;
+    render();
+  }
+});
+
+/* =========================================
+   PNG export
+========================================= */
+$("#btnPNG").addEventListener("click", () => {
+  if (!state.lastPlot) return showErr("Gere um gráfico primeiro.");
+  const url = cv.toDataURL("image/png");
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "grafico.png";
+  a.click();
+});
+
+/* =========================================
+   Botões / UI
+========================================= */
+$("#btnAddRow").addEventListener("click", () => { addRow(); autosave(); });
+$("#btnAddSeries").addEventListener("click", () => addSeries());
+
+$("#btnClear").addEventListener("click", () => {
+  clearMsgs();
+  state.seriesCount = 1;
+  state.styles = [];
+  state.visible = [];
+  state.selectedSeries = 0;
+  rebuildHeader();
+  clearGrid();
+  ensureStyleArrays();
+  state.lastPlot = null;
+  state.view = { zoomX: 1, zoomY: 1, panX: 0, panY: 0 };
+  legendBox.innerHTML = "";
+  seriesPanel.innerHTML = "Gere um gráfico para configurar estilos.";
+  tooltip.style.display="none";
+  drawEmpty();
+  autosave();
+});
+
+$("#btnExample").addEventListener("click", () => {
+  clearMsgs();
+  // 2 séries
+  while(state.seriesCount < 2) addSeries();
+
+  tbody.innerHTML = "";
+  const ex = [
+    {x:"1", ys:["10","9"]},
+    {x:"2", ys:["12","11"]},
+    {x:"3", ys:["9","13"]},
+    {x:"4", ys:["14","12"]},
+    {x:"5", ys:["13,5","15"]},
+    {x:"6", ys:["16","14,5"]},
+    {x:"7", ys:["15","16"]},
+    {x:"8", ys:["18","17"]},
+    {x:"9", ys:["17","18,5"]},
+    {x:"10", ys:["19","19,5"]},
+  ];
+  ex.forEach(r => addRow(r));
+  addRow();
+  $("#title").value = "Exemplo profissional";
+  $("#xLabel").value = "X (unid.)";
+  $("#yLabel").value = "Y (unid.)";
+  $("#chkTrend").checked = true;
+  $("#chkR2").checked = true;
+  autosave();
+  plotNow();
+});
+
+$("#btnPlot").addEventListener("click", plotNow);
+
+/* =========================================
+   Start
+========================================= */
+rebuildHeader();
+clearGrid();
+ensureStyleArrays();
+drawEmpty();
+tryLoadAutosave();
+
+// redesenhar ao redimensionar
+window.addEventListener("resize", () => {
+  if (state.lastPlot) render();
+  else drawEmpty();
+});
+</script>
+</body>
+</html>
