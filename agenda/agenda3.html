@@ -1,0 +1,2534 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Agenda Pro • Apple-ish</title>
+  <meta name="theme-color" content="#0b0d12" />
+  <meta name="color-scheme" content="dark light" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <style>
+    :root{
+      --bg0:#07080b; --bg1:#0b0d12;
+      --cardA: rgba(255,255,255,.09);
+      --cardB: rgba(255,255,255,.03);
+      --text:#eaf0ff; --muted:#9aa6c3; --line:rgba(255,255,255,.10);
+      --good:#2dd4bf; --bad:#fb7185; --warn:#fbbf24; --brand:#60a5fa;
+      --shadow: 0 20px 90px rgba(0,0,0,.58);
+      --shadow2: 0 12px 38px rgba(0,0,0,.40);
+      --r:18px; --r2:26px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display","SF Pro Text","Segoe UI", Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      --ring: 0 0 0 4px rgba(96,165,250,.14);
+      --ring2: 0 0 0 5px rgba(45,212,191,.12);
+      --tap:.985;
+      --safeTop: env(safe-area-inset-top, 0px);
+      --safeBottom: env(safe-area-inset-bottom, 0px);
+    }
+    @media (prefers-color-scheme: light){
+      :root{
+        --bg0:#f7f7fb; --bg1:#eef0f6;
+        --cardA: rgba(255,255,255,.82);
+        --cardB: rgba(255,255,255,.62);
+        --text:#0b0d12; --muted:rgba(60,60,67,.70); --line:rgba(60,60,67,.16);
+        --shadow: 0 18px 60px rgba(0,0,0,.12);
+        --shadow2: 0 10px 30px rgba(0,0,0,.10);
+      }
+    }
+
+    *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+    html,body{height:100%;}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      color:var(--text);
+      background:
+        radial-gradient(1200px 800px at 15% -10%, rgba(96,165,250,.22), transparent 60%),
+        radial-gradient(1000px 800px at 95% 10%, rgba(45,212,191,.14), transparent 55%),
+        radial-gradient(900px 700px at 80% 115%, rgba(251,113,133,.12), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1) 55%, var(--bg0) 100%);
+      overflow-x:hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    .safe{padding: var(--safeTop) 0 var(--safeBottom) 0;}
+    .wrap{max-width:1280px; margin:0 auto; padding:16px 16px 96px;}
+
+    /* Topbar */
+    .topbar{
+      position:sticky; top:0; z-index:50;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:12px 14px;
+      margin:-16px -16px 12px;
+      backdrop-filter: blur(18px);
+      background: linear-gradient(180deg, rgba(7,8,11,.92), rgba(7,8,11,.30));
+      border-bottom:1px solid var(--line);
+    }
+    @media (prefers-color-scheme: light){
+      .topbar{ background: linear-gradient(180deg, rgba(238,240,246,.90), rgba(238,240,246,.35)); }
+    }
+    .brand{display:flex; align-items:center; gap:12px; min-width:240px;}
+    .logo{
+      width:40px; height:40px; border-radius:14px;
+      background:
+        radial-gradient(14px 14px at 30% 30%, rgba(255,255,255,.35), transparent 60%),
+        radial-gradient(20px 20px at 70% 30%, rgba(255,255,255,.15), transparent 60%),
+        linear-gradient(135deg, rgba(96,165,250,.95), rgba(45,212,191,.75));
+      border:1px solid rgba(255,255,255,.15);
+      box-shadow: 0 16px 48px rgba(96,165,250,.18);
+      flex:0 0 auto;
+    }
+    .brand h1{margin:0; font-size:14px; letter-spacing:.2px; line-height:1.1}
+    .brand p{margin:0; font-size:12px; color:var(--muted); line-height:1.2}
+    .pill{
+      display:flex; align-items:center; gap:10px;
+      border:1px solid var(--line); background:rgba(255,255,255,.04);
+      border-radius:999px; padding:8px 10px;
+      box-shadow: 0 6px 24px rgba(0,0,0,.25) inset;
+      max-width:min(720px, 55vw);
+      overflow:hidden;
+    }
+    .pill .dot{width:8px;height:8px;border-radius:999px;background:rgba(255,255,255,.22);box-shadow:0 0 0 3px rgba(255,255,255,.06)}
+    .dot.good{background:rgba(45,212,191,.95); box-shadow:0 0 0 3px rgba(45,212,191,.12)}
+    .dot.warn{background:rgba(251,191,36,.95); box-shadow:0 0 0 3px rgba(251,191,36,.12)}
+    .dot.bad{background:rgba(251,113,133,.95); box-shadow:0 0 0 3px rgba(251,113,133,.12)}
+    .pill span{font-size:12px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+
+    .actions{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; align-items:center}
+    .btn{
+      appearance:none; border:none; cursor:pointer;
+      border-radius:12px; padding:10px 12px;
+      color:var(--text);
+      background:rgba(255,255,255,.06);
+      border:1px solid var(--line);
+      transition: transform .08s ease, background .15s ease, border-color .15s ease, filter .15s ease;
+      font-size:13px;
+      display:inline-flex; align-items:center; gap:9px;
+      user-select:none;
+      box-shadow: 0 10px 22px rgba(0,0,0,.22);
+      outline:none;
+    }
+    .btn:hover{background:rgba(255,255,255,.09); border-color:rgba(255,255,255,.14)}
+    .btn:active{transform:scale(var(--tap))}
+    .btn:focus-visible{box-shadow: var(--shadow), var(--ring)}
+    .btn.primary{
+      background: linear-gradient(135deg, rgba(96,165,250,.95), rgba(45,212,191,.72));
+      border-color: rgba(255,255,255,.18);
+      color:#071017;
+      font-weight:850;
+    }
+    .btn.danger{background:rgba(251,113,133,.14); border-color:rgba(251,113,133,.28)}
+    .btn.ghost{background:transparent; box-shadow:none}
+
+    .tabs{
+      display:flex; gap:8px; flex-wrap:wrap;
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.20);
+      border-radius: 999px;
+      padding:6px;
+    }
+    @media (prefers-color-scheme: light){ .tabs{background: rgba(255,255,255,.65);} }
+    .tab{
+      cursor:pointer;
+      padding:9px 12px;
+      border-radius: 999px;
+      font-size:12px;
+      border:1px solid transparent;
+      color: rgba(233,240,255,.92);
+      background: transparent;
+      transition: background .15s ease, border-color .15s ease, transform .08s ease;
+      user-select:none;
+      display:flex; align-items:center; gap:8px;
+      outline:none;
+    }
+    @media (prefers-color-scheme: light){ .tab{color:rgba(11,13,18,.90);} }
+    .tab:active{transform:scale(.99)}
+    .tab:focus-visible{box-shadow: var(--ring2); border-color: rgba(45,212,191,.30)}
+    .tab.active{ background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.14); }
+    @media (prefers-color-scheme: light){ .tab.active{background: rgba(0,0,0,.06); border-color: rgba(0,0,0,.10);} }
+
+    /* Layout */
+    .grid{display:grid; grid-template-columns:1.2fr .8fr; gap:12px;}
+    @media (max-width: 980px){ .grid{grid-template-columns:1fr;} }
+
+    .card{
+      background: linear-gradient(180deg, var(--cardA), var(--cardB));
+      border:1px solid var(--line);
+      border-radius: var(--r2);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card .hd{
+      padding:14px 16px 12px;
+      border-bottom:1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), transparent);
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+      flex-wrap:wrap;
+    }
+    .title{display:flex; flex-direction:column; gap:4px;}
+    .title h2{margin:0; font-size:14px; letter-spacing:.2px}
+    .title p{margin:0; font-size:12px; color:var(--muted)}
+    .card .bd{padding:14px 16px 16px;}
+
+    .hint{font-size:12px; color:var(--muted); line-height:1.45}
+    .kbd{
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      color: rgba(233,238,252,.92);
+    }
+
+    /* Fields */
+    .filters{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;}
+    .field{display:flex; flex-direction:column; gap:6px; min-width:160px;}
+    .field label{font-size:11px; color:var(--muted)}
+    input, select, textarea{
+      width:100%;
+      background: rgba(0,0,0,.22);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding:10px 10px;
+      color: var(--text);
+      outline:none;
+      font-family: var(--sans);
+      font-size: 13px;
+    }
+    @media (prefers-color-scheme: light){
+      input,select,textarea{background: rgba(255,255,255,.70); color: #0b0d12;}
+    }
+    textarea{min-height:92px; resize: vertical;}
+    input::placeholder, textarea::placeholder{color:rgba(154,166,195,.72)}
+    input:focus, select:focus, textarea:focus{border-color: rgba(96,165,250,.55); box-shadow: var(--ring);}
+
+    .divider{height:1px; background:var(--line); margin:12px 0;}
+
+    /* Lists */
+    .list{display:flex; flex-direction:column; gap:10px;}
+    .row{
+      display:grid;
+      grid-template-columns: 1.2fr .7fr .6fr .9fr;
+      gap:10px;
+      align-items:center;
+      padding:12px;
+      border-radius: var(--r);
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.18);
+      transition: transform .08s ease, border-color .15s ease, background .15s ease;
+      cursor:pointer;
+      outline:none;
+    }
+    @media (prefers-color-scheme: light){ .row{background: rgba(255,255,255,.60);} }
+    .row:hover{border-color:rgba(255,255,255,.14); background: rgba(0,0,0,.22)}
+    @media (prefers-color-scheme: light){ .row:hover{background: rgba(255,255,255,.76); border-color: rgba(0,0,0,.12);} }
+    .row:active{transform:scale(.995)}
+    .row:focus-visible{box-shadow: var(--ring2); border-color: rgba(45,212,191,.30)}
+    @media (max-width:820px){ .row{grid-template-columns:1fr; gap:8px;} }
+
+    .main{display:flex; flex-direction:column; gap:3px;}
+    .name{font-size:13px; font-weight:900}
+    .meta{font-size:11px; color:var(--muted); display:flex; flex-wrap:wrap; gap:8px}
+    .badge{
+      font-size:11px;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      color: var(--muted);
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+    }
+    .right{display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap}
+    .mono{font-family:var(--mono)}
+    .amount{ text-align:right; font-family: var(--mono); font-size: 12px; font-weight:900; white-space:nowrap; }
+
+    /* KPI */
+    .kpis{display:grid; grid-template-columns: repeat(4, 1fr); gap:10px;}
+    @media (max-width:980px){ .kpis{grid-template-columns: repeat(2, 1fr);} }
+    .kpi{
+      background: rgba(0,0,0,.18);
+      border:1px solid var(--line);
+      border-radius: var(--r);
+      padding:12px;
+      display:flex; flex-direction:column; gap:6px;
+      min-height:78px;
+    }
+    @media (prefers-color-scheme: light){ .kpi{background: rgba(255,255,255,.60);} }
+    .kpi .label{font-size:12px; color:var(--muted)}
+    .kpi .value{font-size:18px; font-weight:900; letter-spacing:.2px}
+    .kpi .sub{font-size:11px; color:var(--muted)}
+    .good{color:var(--good)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+
+    /* Kanban */
+    .kanban{display:grid; grid-template-columns:repeat(3, 1fr); gap:10px;}
+    @media (max-width:980px){ .kanban{grid-template-columns:1fr;} }
+    .col{
+      border:1px solid var(--line);
+      border-radius:18px;
+      background: rgba(0,0,0,.16);
+      padding:10px;
+      min-height:200px;
+    }
+    @media (prefers-color-scheme: light){ .col{background: rgba(255,255,255,.55);} }
+    .colhead{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px;}
+    .coltitle{font-weight:950; font-size:12px; color:var(--muted); letter-spacing:.2px}
+    .dropzone{display:flex; flex-direction:column; gap:8px; min-height:120px;}
+    .task{
+      border:1px solid var(--line);
+      border-radius:16px;
+      background: rgba(255,255,255,.06);
+      padding:10px;
+      cursor:grab;
+      user-select:none;
+      transition: transform .08s ease, border-color .15s ease, background .15s ease;
+    }
+    @media (prefers-color-scheme: light){ .task{background: rgba(255,255,255,.72);} }
+    .task:active{cursor:grabbing; transform:scale(.997)}
+    .task b{display:block; font-size:13px; margin-bottom:4px;}
+    .task .tmeta{font-size:11px; color:var(--muted); display:flex; flex-wrap:wrap; gap:8px;}
+
+    .drop-hover{outline: 2px dashed rgba(96,165,250,.55); outline-offset: 6px;}
+
+    /* File chips */
+    .chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;}
+    .chip{
+      display:inline-flex; align-items:center; gap:8px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      border-radius:999px;
+      padding:7px 10px;
+      font-size:12px;
+      font-weight:900;
+      color: var(--text);
+      cursor:pointer;
+      user-select:none;
+    }
+    @media (prefers-color-scheme: light){ .chip{background: rgba(0,0,0,.05);} }
+    .chip:active{transform:scale(var(--tap))}
+    .chip small{font-weight:700; color:var(--muted)}
+    .chip .x{
+      width:18px;height:18px;border-radius:999px;
+      display:grid; place-items:center;
+      background: rgba(251,113,133,.14);
+      border:1px solid rgba(251,113,133,.28);
+      color: var(--bad);
+      font-weight:1000;
+      line-height:0;
+    }
+
+    /* Toast */
+    .toast{
+      position:fixed; left:50%; transform:translateX(-50%);
+      bottom: 16px;
+      z-index:999;
+      background: rgba(15,18,26,.88);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius: 999px;
+      padding:10px 14px;
+      backdrop-filter: blur(14px);
+      box-shadow: var(--shadow);
+      max-width:min(980px, calc(100% - 22px));
+      display:none;
+      font-size:13px;
+      color: var(--text);
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    @media (prefers-color-scheme: light){
+      .toast{background: rgba(255,255,255,.86); border-color: rgba(0,0,0,.12);}
+    }
+    .toast.show{display:flex}
+    .toast .msg{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:72vw}
+
+    /* Modal */
+    .modal{
+      position:fixed; inset:0; display:none; place-items:center; z-index:1000;
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(8px);
+      padding: 16px;
+    }
+    .modal.show{display:grid}
+    .panel{
+      width:min(980px, 100%);
+      border-radius: 24px;
+      border:1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      transform: translateY(4px);
+    }
+    @media (prefers-color-scheme: light){
+      .panel{border-color: rgba(0,0,0,.12); background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.70));}
+      .modal{background: rgba(0,0,0,.30);}
+    }
+    .phd{
+      padding:14px 16px;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      border-bottom:1px solid var(--line);
+    }
+    .phd h3{margin:0; font-size:14px}
+    .phd p{margin:0; font-size:12px; color:var(--muted)}
+    .pbd{padding:14px 16px 16px;}
+    .pft{
+      padding:12px 16px;
+      border-top:1px solid var(--line);
+      display:flex; gap:10px; justify-content:space-between; align-items:center; flex-wrap:wrap;
+    }
+
+    /* Loading overlay */
+    .loading{
+      position:fixed; inset:0; z-index:1200;
+      display:none; place-items:center;
+      background: rgba(0,0,0,.35);
+      backdrop-filter: blur(10px);
+      padding: 16px;
+    }
+    .loading.show{display:grid}
+    .loadingCard{
+      width:min(560px, 100%);
+      border-radius: 22px;
+      border:1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      box-shadow: var(--shadow);
+      padding: 14px 14px;
+      display:flex;
+      gap:12px;
+      align-items:center;
+    }
+    @media (prefers-color-scheme: light){
+      .loadingCard{border-color: rgba(0,0,0,.12); background: rgba(255,255,255,.85);}
+      .loading{background: rgba(0,0,0,.18);}
+    }
+    .spinner{
+      width:18px;height:18px;border-radius:999px;
+      border:2px solid rgba(255,255,255,.18);
+      border-top-color: rgba(96,165,250,.9);
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to{ transform: rotate(360deg);} }
+
+    /* Mobile bottom nav */
+    .bottomNav{
+      position:fixed; left:0; right:0; bottom:0; z-index:60;
+      padding: 10px 12px calc(10px + var(--safeBottom));
+      backdrop-filter: blur(18px);
+      background: linear-gradient(180deg, rgba(7,8,11,.10), rgba(7,8,11,.78));
+      border-top: 1px solid var(--line);
+      display:none;
+    }
+    @media (prefers-color-scheme: light){
+      .bottomNav{ background: linear-gradient(180deg, rgba(238,240,246,.15), rgba(238,240,246,.86)); }
+    }
+    .bottomNav .tabs{width:100%; justify-content:space-between;}
+    @media (max-width:980px){
+      .bottomNav{display:block;}
+      .desktopTabs{display:none;}
+      .wrap{padding-bottom:132px;}
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      *{scroll-behavior:auto !important; transition:none !important; animation:none !important}
+    }
+  </style>
+</head>
+
+<body class="safe">
+  <div class="wrap">
+    <header class="topbar" role="banner">
+      <div class="brand" aria-label="Identidade do app">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Agenda Pro</h1>
+          <p id="subtitle">Apple-ish • Agenda • Tarefas • Notas • Arquivos</p>
+        </div>
+      </div>
+
+      <div class="actions" aria-label="Ações do topo">
+        <div class="pill" title="Usuário, hora, clima e localização" aria-live="polite">
+          <span class="dot" id="statusDot" aria-hidden="true"></span>
+          <span id="statusLine">Inicializando…</span>
+        </div>
+
+        <div class="desktopTabs" aria-label="Navegação">
+          <div class="tabs" id="tabsTop" role="tablist">
+            <button class="tab active" data-tab="today" role="tab">📅 Hoje</button>
+            <button class="tab" data-tab="week" role="tab">🗓️ Semana</button>
+            <button class="tab" data-tab="tasks" role="tab">✅ Tarefas</button>
+            <button class="tab" data-tab="notes" role="tab">📝 Notas</button>
+            <button class="tab" data-tab="files" role="tab">📎 Arquivos</button>
+            <button class="tab" data-tab="settings" role="tab">⚙️ Ajustes</button>
+          </div>
+        </div>
+
+        <button class="btn ghost" id="btnBackup" title="Exportar backup JSON (Ctrl+E)">⤓ Backup</button>
+        <button class="btn primary" id="btnNew" title="Novo (N)">＋ Novo</button>
+      </div>
+    </header>
+
+    <main class="grid" role="main">
+      <!-- LEFT -->
+      <section class="card" aria-label="Conteúdo">
+        <div class="hd">
+          <div class="title">
+            <h2 id="pageTitle">Hoje</h2>
+            <p id="pageSub">Seus compromissos, atividades e quick actions</p>
+          </div>
+
+          <div class="right">
+            <div class="field" style="min-width:220px;">
+              <label for="quickFilter">Filtro rápido</label>
+              <select id="quickFilter">
+                <option value="all">Tudo</option>
+                <option value="events">Compromissos</option>
+                <option value="tasks">Tarefas</option>
+                <option value="notes">Notas</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="bd">
+          <!-- TODAY -->
+          <div id="viewToday">
+            <div class="kpis" aria-label="Indicadores do dia">
+              <div class="kpi">
+                <div class="label">Usuário</div>
+                <div class="value" id="kpiUser">—</div>
+                <div class="sub">Perfil local</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Hoje</div>
+                <div class="value" id="kpiDate">—</div>
+                <div class="sub" id="kpiClock">—</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Compromissos</div>
+                <div class="value" id="kpiEvents">—</div>
+                <div class="sub">No dia</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Tarefas</div>
+                <div class="value" id="kpiTasks">—</div>
+                <div class="sub">A fazer / em andamento</div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="filters" aria-label="Busca do dia">
+              <div class="field" style="min-width:240px;">
+                <label for="todaySearch">Buscar</label>
+                <input id="todaySearch" placeholder="Ex: reunião, médico, obra, academia…" />
+              </div>
+              <div class="field" style="min-width:220px;">
+                <label for="todayScope">Escopo</label>
+                <select id="todayScope">
+                  <option value="all">Tudo</option>
+                  <option value="event">Compromissos</option>
+                  <option value="task">Tarefas</option>
+                  <option value="note">Notas</option>
+                </select>
+              </div>
+              <div class="field" style="min-width:220px;">
+                <label>&nbsp;</label>
+                <button class="btn" id="btnQuickAdd">✨ Check-in rápido</button>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="title" style="margin-bottom:10px;">
+              <h2 style="margin:0; font-size:13px;">Linha do dia</h2>
+              <p style="margin:0; font-size:12px; color:var(--muted)">Compromissos + tarefas + notas (ordenado por horário)</p>
+            </div>
+            <div class="list" id="todayList"></div>
+          </div>
+
+          <!-- WEEK -->
+          <div id="viewWeek" style="display:none;">
+            <div class="filters">
+              <div class="field" style="min-width:220px;">
+                <label for="weekStart">Semana (início)</label>
+                <input id="weekStart" type="date" />
+              </div>
+              <div class="field" style="min-width:220px;">
+                <label for="weekSearch">Buscar</label>
+                <input id="weekSearch" placeholder="Ex: cliente, projeto, compromisso…" />
+              </div>
+              <div class="field" style="min-width:220px;">
+                <label for="weekType">Tipo</label>
+                <select id="weekType">
+                  <option value="all">Tudo</option>
+                  <option value="event">Compromissos</option>
+                  <option value="task">Tarefas</option>
+                  <option value="note">Notas</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="hint">
+              Dica: use <span class="kbd">N</span> para criar rápido • arraste tarefas no Kanban • anexos ficam salvos localmente (IndexedDB).
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="list" id="weekList"></div>
+          </div>
+
+          <!-- TASKS -->
+          <div id="viewTasks" style="display:none;">
+            <div class="filters">
+              <div class="field" style="min-width:260px;">
+                <label for="taskSearch">Buscar</label>
+                <input id="taskSearch" placeholder="Ex: enviar relatório, mercado, academia…" />
+              </div>
+              <div class="field" style="min-width:220px;">
+                <label for="taskSort">Ordenar</label>
+                <select id="taskSort">
+                  <option value="priority">Prioridade</option>
+                  <option value="due">Vencimento</option>
+                  <option value="created">Criação</option>
+                </select>
+              </div>
+              <div class="field" style="min-width:220px;">
+                <label>&nbsp;</label>
+                <button class="btn" id="btnNewTask">＋ Nova tarefa</button>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="kanban" id="kanban">
+              <div class="col" data-col="todo">
+                <div class="colhead">
+                  <div class="coltitle">A FAZER</div>
+                  <span class="badge" id="countTodo">0</span>
+                </div>
+                <div class="dropzone" id="zoneTodo"></div>
+              </div>
+
+              <div class="col" data-col="doing">
+                <div class="colhead">
+                  <div class="coltitle">EM ANDAMENTO</div>
+                  <span class="badge" id="countDoing">0</span>
+                </div>
+                <div class="dropzone" id="zoneDoing"></div>
+              </div>
+
+              <div class="col" data-col="done">
+                <div class="colhead">
+                  <div class="coltitle">FEITO</div>
+                  <span class="badge" id="countDone">0</span>
+                </div>
+                <div class="dropzone" id="zoneDone"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- NOTES -->
+          <div id="viewNotes" style="display:none;">
+            <div class="filters">
+              <div class="field" style="min-width:260px;">
+                <label for="noteSearch">Buscar</label>
+                <input id="noteSearch" placeholder="Ex: ideias, reuniões, checklist…" />
+              </div>
+              <div class="field" style="min-width:220px;">
+                <label for="noteTag">Tag</label>
+                <input id="noteTag" placeholder="Ex: obra, pessoal…" />
+              </div>
+              <div class="field" style="min-width:220px;">
+                <label>&nbsp;</label>
+                <button class="btn" id="btnNewNote">＋ Nova nota</button>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="list" id="notesList"></div>
+          </div>
+
+          <!-- FILES -->
+          <div id="viewFiles" style="display:none;">
+            <div class="filters">
+              <div class="field" style="min-width:280px;">
+                <label for="fileSearch">Buscar arquivo</label>
+                <input id="fileSearch" placeholder="Ex: pdf, contrato, foto…" />
+              </div>
+              <div class="field" style="min-width:240px;">
+                <label>&nbsp;</label>
+                <button class="btn" id="btnAddFiles">📎 Importar arquivos</button>
+                <input id="filesInput" type="file" multiple style="display:none" />
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="hint">
+              Arquivos são guardados **no seu navegador** (IndexedDB). Você pode anexar arquivos em compromissos/tarefas/notas.
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="list" id="filesList"></div>
+          </div>
+
+          <!-- SETTINGS -->
+          <div id="viewSettings" style="display:none;">
+            <div class="hint">
+              Ajustes do app (salvo localmente). Para GPS e clima, é melhor rodar em <b>HTTPS</b>.
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="filters">
+              <div class="field" style="min-width:260px;">
+                <label for="setUserName">Nome do usuário</label>
+                <input id="setUserName" placeholder="Ex: Wilson" />
+              </div>
+              <div class="field" style="min-width:260px;">
+                <label for="setGeo">Localização</label>
+                <select id="setGeo">
+                  <option value="ask">Perguntar / solicitar permissão</option>
+                  <option value="off">Desligado</option>
+                </select>
+              </div>
+              <div class="field" style="min-width:260px;">
+                <label for="setUnits">Unidades</label>
+                <select id="setUnits">
+                  <option value="metric">Métrico (°C, km)</option>
+                  <option value="imperial">Imperial (°F, mi)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="filters">
+              <div class="field" style="min-width:260px;">
+                <label>&nbsp;</label>
+                <button class="btn primary" id="btnSaveSettings">✔ Salvar ajustes</button>
+              </div>
+              <div class="field" style="min-width:260px;">
+                <label>&nbsp;</label>
+                <button class="btn" id="btnDemo">✨ Criar dados demo</button>
+              </div>
+              <div class="field" style="min-width:260px;">
+                <label>&nbsp;</label>
+                <button class="btn danger" id="btnWipe">🗑️ Limpar tudo</button>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="hint">
+              Atalhos: <span class="kbd">N</span> novo • <span class="kbd">Ctrl+E</span> backup • <span class="kbd">Esc</span> fechar modal • <span class="kbd">Ctrl+K</span> focar busca (Hoje).
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT: Quick Panel -->
+      <aside class="card" aria-label="Painel rápido">
+        <div class="hd">
+          <div class="title">
+            <h2>Centro</h2>
+            <p id="rightSub">Resumo + ações rápidas</p>
+          </div>
+          <button class="btn ghost" id="btnNow">⟳ Atualizar</button>
+        </div>
+
+        <div class="bd">
+          <div class="kpi" style="margin-bottom:10px;">
+            <div class="label">Agora</div>
+            <div class="value" id="nowTime">—</div>
+            <div class="sub" id="nowMeta">—</div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="title" style="margin-bottom:10px;">
+            <h2 style="margin:0; font-size:13px;">Próximos 3</h2>
+            <p style="margin:0; font-size:12px; color:var(--muted)">Compromissos e tarefas com vencimento</p>
+          </div>
+          <div class="list" id="nextList"></div>
+
+          <div class="divider"></div>
+
+          <div class="title">
+            <h2 style="margin:0; font-size:13px;">Privacidade (rápido)</h2>
+            <p style="margin:0; font-size:12px; color:var(--muted)">Localização só se você permitir</p>
+          </div>
+          <div class="divider"></div>
+
+          <div class="hint">
+            ✅ Sem login por enquanto<br/>
+            ✅ Salva no seu navegador (localStorage + IndexedDB)<br/>
+            ✅ Cada registro pode ter <b>horário</b>, <b>local</b>, <b>GPS</b> e <b>anexos</b>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <!-- Mobile bottom nav -->
+  <nav class="bottomNav" aria-label="Navegação inferior">
+    <div class="tabs" id="tabsBottom" role="tablist">
+      <button class="tab active" data-tab="today" title="Hoje">📅</button>
+      <button class="tab" data-tab="week" title="Semana">🗓️</button>
+      <button class="tab" data-tab="tasks" title="Tarefas">✅</button>
+      <button class="tab" data-tab="notes" title="Notas">📝</button>
+      <button class="tab" data-tab="files" title="Arquivos">📎</button>
+      <button class="tab" data-tab="settings" title="Ajustes">⚙️</button>
+    </div>
+  </nav>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-hidden="true">
+    <div class="msg" id="toastMsg">—</div>
+    <button class="btn ghost" id="toastClose" style="padding:8px 10px;">OK</button>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" id="loading" aria-hidden="true">
+    <div class="loadingCard">
+      <div class="spinner" aria-hidden="true"></div>
+      <div>
+        <div style="font-weight:950; font-size:13px;">Processando</div>
+        <div class="hint" id="loadingMsg">Carregando…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create/Edit Modal -->
+  <div class="modal" id="itemModal" aria-hidden="true">
+    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="phd">
+        <div class="title">
+          <h3 id="modalTitle">Novo</h3>
+          <p id="modalSub">Compromisso, tarefa ou nota</p>
+        </div>
+        <div class="right">
+          <button class="btn ghost" id="btnCloseModal">Fechar</button>
+        </div>
+      </div>
+
+      <div class="pbd">
+        <div class="filters">
+          <div class="field" style="min-width:220px;">
+            <label for="mType">Tipo</label>
+            <select id="mType">
+              <option value="event">Compromisso</option>
+              <option value="task">Tarefa</option>
+              <option value="note">Nota</option>
+            </select>
+          </div>
+
+          <div class="field" style="min-width:280px; flex:1 1 auto;">
+            <label for="mTitle">Título</label>
+            <input id="mTitle" placeholder="Ex: Reunião com cliente / Academia / Ideia de projeto…" />
+          </div>
+
+          <div class="field" style="min-width:220px;">
+            <label for="mPriority">Prioridade</label>
+            <select id="mPriority">
+              <option value="2">Normal</option>
+              <option value="3">Alta</option>
+              <option value="1">Baixa</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="filters">
+          <div class="field" style="min-width:240px;">
+            <label for="mStart">Início</label>
+            <input id="mStart" type="datetime-local" />
+          </div>
+          <div class="field" style="min-width:240px;">
+            <label for="mEnd">Fim</label>
+            <input id="mEnd" type="datetime-local" />
+          </div>
+          <div class="field" style="min-width:240px;">
+            <label for="mDue">Vencimento (tarefa)</label>
+            <input id="mDue" type="datetime-local" />
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="filters">
+          <div class="field" style="min-width:240px;">
+            <label for="mLocationName">Local (texto)</label>
+            <input id="mLocationName" placeholder="Ex: Escritório, Casa, Rua X…" />
+          </div>
+          <div class="field" style="min-width:240px;">
+            <label for="mTags">Tags (vírgula)</label>
+            <input id="mTags" placeholder="Ex: obra, pessoal, cliente" />
+          </div>
+          <div class="field" style="min-width:240px;">
+            <label for="mStatus">Status</label>
+            <select id="mStatus">
+              <option value="planned">Planejado</option>
+              <option value="doing">Em andamento</option>
+              <option value="done">Concluído</option>
+              <option value="canceled">Cancelado</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="filters">
+          <div class="field" style="min-width:280px; flex:1 1 auto;">
+            <label for="mBody">Anotações</label>
+            <textarea id="mBody" placeholder="Detalhes, pauta, checklist, links…"></textarea>
+          </div>
+          <div class="field" style="min-width:320px;">
+            <label for="mFiles">Anexos</label>
+            <input id="mFiles" type="file" multiple />
+            <div class="hint" style="margin-top:6px;">
+              Dica: PDFs/fotos ficam no navegador. Você consegue baixar depois.
+            </div>
+            <div class="chips" id="mFileChips"></div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="filters">
+          <div class="field" style="min-width:260px;">
+            <label>Localização (GPS)</label>
+            <button class="btn" id="btnAttachGPS">📍 Anexar GPS agora</button>
+            <div class="hint" id="gpsHint" style="margin-top:6px;">Sem GPS anexado.</div>
+          </div>
+          <div class="field" style="min-width:260px;">
+            <label>Coluna Kanban</label>
+            <select id="mKanban">
+              <option value="todo">A fazer</option>
+              <option value="doing">Em andamento</option>
+              <option value="done">Feito</option>
+            </select>
+            <div class="hint" style="margin-top:6px;">Só aplica para Tarefa.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pft">
+        <div class="hint" id="modalFootHint">Criado em: —</div>
+        <div class="right">
+          <button class="btn danger" id="btnDelete" style="display:none;">🗑️ Excluir</button>
+          <button class="btn" id="btnDuplicate">⎘ Duplicar</button>
+          <button class="btn primary" id="btnSave">✔ Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Restore Modal -->
+  <div class="modal" id="restoreModal" aria-hidden="true">
+    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="restoreTitle">
+      <div class="phd">
+        <div class="title">
+          <h3 id="restoreTitle">Importar backup</h3>
+          <p>Restaura itens (sem anexos). Anexos ficam no seu navegador.</p>
+        </div>
+        <div class="right">
+          <button class="btn ghost" id="btnCloseRestore">Fechar</button>
+        </div>
+      </div>
+      <div class="pbd">
+        <div class="filters">
+          <div class="field" style="min-width:320px;">
+            <label for="restoreFile">Arquivo JSON</label>
+            <input id="restoreFile" type="file" accept="application/json" />
+          </div>
+          <div class="field" style="min-width:240px;">
+            <label>&nbsp;</label>
+            <button class="btn primary" id="btnDoRestore">⬆ Importar</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="hint">
+          Segurança: o backup é só dados do app. Se o JSON não for do seu app, não importe.
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* =========================================================
+   Agenda Pro — single-file app
+   Data: localStorage + IndexedDB (files)
+   ========================================================= */
+
+const $ = (id)=>document.getElementById(id);
+const $$ = (sel, root=document)=>Array.from(root.querySelectorAll(sel));
+
+const LS_KEY = "agenda_pro_v1";
+const LS_SETTINGS = "agenda_pro_settings_v1";
+const DB_NAME = "AgendaProDB";
+const DB_VER = 1;
+
+const state = {
+  activeTab: "today",
+  items: [], // {id,type,title,body,tags[],start,end,due,priority,status,kanban,locationName,geo:{lat,lon,accuracy,address},files:[fileId],createdAt,updatedAt}
+  settings: {
+    userName: "Wilson",
+    geo: "ask", // ask|off
+    units: "metric"
+  },
+  geo: {
+    ok: false,
+    lat: null, lon: null, accuracy: null,
+    address: "",
+    city: "",
+    lastFixAt: 0
+  },
+  weather: {
+    ok:false, temp:null, desc:"", code:null
+  },
+  toastsTimer: null,
+  modalFocus: { active:false, lastFocus:null, handler:null },
+  renderQueued: false,
+  editingId: null,
+  tempFiles: [], // file ids attached in modal (while editing)
+  lastSearch: { today:"", week:"", notes:"", files:"", tasks:"" }
+};
+
+/* =========================================================
+   UX helpers (toast/loading/render scheduling) — inspired by your f80
+   ========================================================= */
+function showLoading(msg="Carregando…"){
+  $("loadingMsg").textContent = msg;
+  $("loading").classList.add("show");
+  $("loading").setAttribute("aria-hidden","false");
+}
+function hideLoading(){
+  $("loading").classList.remove("show");
+  $("loading").setAttribute("aria-hidden","true");
+}
+function toast(msg){
+  $("toastMsg").textContent = msg;
+  $("toast").classList.add("show");
+  $("toast").setAttribute("aria-hidden","false");
+  clearTimeout(state.toastsTimer);
+  state.toastsTimer = setTimeout(()=> {
+    $("toast").classList.remove("show");
+    $("toast").setAttribute("aria-hidden","true");
+  }, 2600);
+}
+$("toastClose").addEventListener("click", ()=> {
+  $("toast").classList.remove("show");
+  $("toast").setAttribute("aria-hidden","true");
+});
+
+function rafRender(){
+  if(state.renderQueued) return;
+  state.renderQueued = true;
+  requestAnimationFrame(()=>{
+    state.renderQueued = false;
+    renderAll();
+  });
+}
+function debounce(fn, ms){
+  let t=null;
+  return (...args)=>{
+    clearTimeout(t);
+    t=setTimeout(()=>fn(...args), ms);
+  };
+}
+
+/* =========================================================
+   Modal accessibility (focus trap + restore focus + click outside)
+   ========================================================= */
+function getFocusable(container){
+  return Array.from(container.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+    .filter(el=>!el.disabled && el.offsetParent!==null);
+}
+function openModal(id){
+  const m = $(id);
+  state.modalFocus.lastFocus = document.activeElement;
+  m.classList.add("show");
+  m.setAttribute("aria-hidden","false");
+  document.body.style.overflow = "hidden";
+
+  const panel = m.querySelector(".panel");
+  const f = getFocusable(panel);
+  if(f[0]) f[0].focus({preventScroll:true});
+
+  const handler = (e)=>{
+    if(e.key !== "Tab") return;
+    const items = getFocusable(panel);
+    if(items.length===0) return;
+    const first = items[0];
+    const last = items[items.length-1];
+    if(e.shiftKey && document.activeElement === first){
+      e.preventDefault(); last.focus();
+    }else if(!e.shiftKey && document.activeElement === last){
+      e.preventDefault(); first.focus();
+    }
+  };
+  state.modalFocus.active = true;
+  state.modalFocus.handler = handler;
+  document.addEventListener("keydown", handler);
+
+  // click outside closes
+  m.addEventListener("mousedown", modalBackdropClose);
+}
+function modalBackdropClose(e){
+  const m = e.currentTarget;
+  const panel = m.querySelector(".panel");
+  if(!panel.contains(e.target)){
+    if(m.id==="itemModal") closeModal("itemModal");
+    if(m.id==="restoreModal") closeModal("restoreModal");
+  }
+}
+function closeModal(id){
+  const m = $(id);
+  m.classList.remove("show");
+  m.setAttribute("aria-hidden","true");
+  document.body.style.overflow = "";
+  m.removeEventListener("mousedown", modalBackdropClose);
+
+  if(state.modalFocus.active){
+    document.removeEventListener("keydown", state.modalFocus.handler);
+    state.modalFocus.active = false;
+    state.modalFocus.handler = null;
+    if(state.modalFocus.lastFocus) state.modalFocus.lastFocus.focus({preventScroll:true});
+  }
+}
+
+/* =========================================================
+   Date helpers
+   ========================================================= */
+function pad(n){return String(n).padStart(2,"0");}
+function toISODate(d){
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function toLocalDTInputValue(d){
+  // yyyy-MM-ddTHH:mm (local)
+  return `${toISODate(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function parseDT(v){
+  if(!v) return null;
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? null : d;
+}
+function fmtNiceDT(dt){
+  if(!dt) return "—";
+  const d = (dt instanceof Date) ? dt : new Date(dt);
+  if(isNaN(d.getTime())) return "—";
+  return d.toLocaleString("pt-BR", {weekday:"short", day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"});
+}
+function fmtNiceDate(dt){
+  const d = (dt instanceof Date) ? dt : new Date(dt);
+  return d.toLocaleDateString("pt-BR", {weekday:"long", day:"2-digit", month:"long", year:"numeric"});
+}
+function startOfWeek(d){
+  const x = new Date(d);
+  const day = x.getDay(); // 0 dom
+  const diff = (day===0 ? -6 : 1-day); // monday start
+  x.setDate(x.getDate()+diff);
+  x.setHours(0,0,0,0);
+  return x;
+}
+function addDays(d, n){
+  const x = new Date(d);
+  x.setDate(x.getDate()+n);
+  return x;
+}
+function withinDay(item, day){
+  const s = item.start ? new Date(item.start) : null;
+  const e = item.end ? new Date(item.end) : null;
+  const due = item.due ? new Date(item.due) : null;
+
+  const day0 = new Date(day); day0.setHours(0,0,0,0);
+  const day1 = new Date(day0); day1.setDate(day0.getDate()+1);
+
+  // Event: overlaps
+  if(item.type==="event"){
+    const a = s || due || new Date(item.createdAt);
+    const b = e || s || a;
+    return (a < day1 && b >= day0);
+  }
+
+  // Task: due day or created day if no due
+  if(item.type==="task"){
+    const a = due || s || new Date(item.createdAt);
+    return (a >= day0 && a < day1);
+  }
+
+  // Note: created day
+  const a = new Date(item.createdAt);
+  return (a >= day0 && a < day1);
+}
+function rangeFilter(items, from, to){
+  const a = new Date(from); a.setHours(0,0,0,0);
+  const b = new Date(to); b.setHours(23,59,59,999);
+  return items.filter(it=>{
+    const key = it.start || it.due || it.createdAt;
+    const d = new Date(key);
+    return d>=a && d<=b;
+  });
+}
+
+/* =========================================================
+   Storage: local data
+   ========================================================= */
+function loadAll(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    state.items = raw ? JSON.parse(raw) : [];
+  }catch(e){
+    state.items = [];
+  }
+  try{
+    const rawS = localStorage.getItem(LS_SETTINGS);
+    if(rawS){
+      const s = JSON.parse(rawS);
+      state.settings = {...state.settings, ...s};
+    }
+  }catch(e){}
+}
+function saveAll(){
+  localStorage.setItem(LS_KEY, JSON.stringify(state.items));
+  localStorage.setItem(LS_SETTINGS, JSON.stringify(state.settings));
+}
+function uid(prefix="i"){
+  return prefix + "_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
+}
+
+/* =========================================================
+   IndexedDB: files
+   ========================================================= */
+function openDB(){
+  return new Promise((resolve, reject)=>{
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = ()=>{
+      const db = req.result;
+      if(!db.objectStoreNames.contains("files")){
+        const st = db.createObjectStore("files", {keyPath:"id"});
+        st.createIndex("name","name",{unique:false});
+        st.createIndex("addedAt","addedAt",{unique:false});
+      }
+    };
+    req.onsuccess = ()=>resolve(req.result);
+    req.onerror = ()=>reject(req.error);
+  });
+}
+async function idbPutFile(file){
+  const db = await openDB();
+  const id = uid("f");
+  const rec = {
+    id,
+    name: file.name,
+    type: file.type || "application/octet-stream",
+    size: file.size,
+    addedAt: Date.now(),
+    blob: file
+  };
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction("files","readwrite");
+    tx.objectStore("files").put(rec);
+    tx.oncomplete = ()=>resolve(rec);
+    tx.onerror = ()=>reject(tx.error);
+  });
+}
+async function idbGetFile(id){
+  const db = await openDB();
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction("files","readonly");
+    const req = tx.objectStore("files").get(id);
+    req.onsuccess = ()=>resolve(req.result || null);
+    req.onerror = ()=>reject(req.error);
+  });
+}
+async function idbDeleteFile(id){
+  const db = await openDB();
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction("files","readwrite");
+    tx.objectStore("files").delete(id);
+    tx.oncomplete = ()=>resolve(true);
+    tx.onerror = ()=>reject(tx.error);
+  });
+}
+async function idbListFiles(){
+  const db = await openDB();
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction("files","readonly");
+    const req = tx.objectStore("files").getAll();
+    req.onsuccess = ()=>resolve(req.result || []);
+    req.onerror = ()=>reject(req.error);
+  });
+}
+function bytes(n){
+  if(n==null) return "—";
+  const u=["B","KB","MB","GB"];
+  let i=0, x=n;
+  while(x>=1024 && i<u.length-1){ x/=1024; i++; }
+  return `${x.toFixed(i?1:0)} ${u[i]}`;
+}
+async function downloadFile(id){
+  const rec = await idbGetFile(id);
+  if(!rec) return toast("Arquivo não encontrado.");
+  const url = URL.createObjectURL(rec.blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = rec.name || "arquivo";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1500);
+}
+
+/* =========================================================
+   Geo + Weather (Open-Meteo, no key) + Reverse geocode (Nominatim)
+   ========================================================= */
+function setStatusDot(){
+  // green if geo ok; yellow if partial; red if off/error
+  const d = $("statusDot");
+  if(state.settings.geo==="off"){
+    d.className = "dot bad";
+    return;
+  }
+  if(state.geo.ok) d.className = "dot good";
+  else d.className = "dot warn";
+}
+async function ensureGeo(){
+  if(state.settings.geo==="off") return false;
+  if(!("geolocation" in navigator)){
+    state.geo.ok = false;
+    setStatusDot();
+    return false;
+  }
+  return new Promise((resolve)=>{
+    navigator.geolocation.getCurrentPosition(async (pos)=>{
+      state.geo.ok = true;
+      state.geo.lat = pos.coords.latitude;
+      state.geo.lon = pos.coords.longitude;
+      state.geo.accuracy = pos.coords.accuracy;
+      state.geo.lastFixAt = Date.now();
+      setStatusDot();
+      // reverse geocode (best effort)
+      try{
+        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${state.geo.lat}&lon=${state.geo.lon}`;
+        const r = await fetch(url, {headers: {"Accept":"application/json"}});
+        if(r.ok){
+          const j = await r.json();
+          state.geo.address = j.display_name || "";
+          const a = j.address || {};
+          state.geo.city = a.city || a.town || a.village || a.suburb || "";
+        }
+      }catch(e){}
+      resolve(true);
+    }, (err)=>{
+      state.geo.ok = false;
+      setStatusDot();
+      resolve(false);
+    }, {enableHighAccuracy:true, timeout: 9000, maximumAge: 20_000});
+  });
+}
+
+function wxDescFromCode(code){
+  // Open-Meteo weather codes
+  const map = [
+    {codes:[0], d:"Céu limpo"},
+    {codes:[1,2,3], d:"Poucas nuvens / nublado"},
+    {codes:[45,48], d:"Nevoeiro"},
+    {codes:[51,53,55,56,57], d:"Garoa"},
+    {codes:[61,63,65,66,67], d:"Chuva"},
+    {codes:[71,73,75,77], d:"Neve"},
+    {codes:[80,81,82], d:"Pancadas"},
+    {codes:[85,86], d:"Pancadas de neve"},
+    {codes:[95,96,99], d:"Tempestade"}
+  ];
+  for(const it of map){ if(it.codes.includes(code)) return it.d; }
+  return "Tempo";
+}
+async function fetchWeather(){
+  if(!state.geo.ok) return false;
+  try{
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${state.geo.lat}&longitude=${state.geo.lon}&current=temperature_2m,weather_code&timezone=auto`;
+    const r = await fetch(url);
+    if(!r.ok) throw new Error("wx");
+    const j = await r.json();
+    const t = j.current?.temperature_2m;
+    const code = j.current?.weather_code;
+    state.weather.ok = true;
+    state.weather.temp = t;
+    state.weather.code = code;
+    state.weather.desc = wxDescFromCode(code);
+    return true;
+  }catch(e){
+    state.weather.ok = false;
+    return false;
+  }
+}
+
+function formatWeather(){
+  if(!state.weather.ok) return "Clima: —";
+  if(state.settings.units==="imperial"){
+    const f = (state.weather.temp * 9/5) + 32;
+    return `${state.weather.desc} • ${f.toFixed(0)}°F`;
+  }
+  return `${state.weather.desc} • ${Number(state.weather.temp).toFixed(0)}°C`;
+}
+
+/* =========================================================
+   Tabs / Navigation
+   ========================================================= */
+function setTab(tab){
+  state.activeTab = tab;
+  const all = ["today","week","tasks","notes","files","settings"];
+  for(const t of all){
+    $$(`.tab[data-tab="${t}"]`).forEach(btn=>btn.classList.toggle("active", t===tab));
+  }
+
+  $("viewToday").style.display = tab==="today" ? "block" : "none";
+  $("viewWeek").style.display  = tab==="week" ? "block" : "none";
+  $("viewTasks").style.display = tab==="tasks" ? "block" : "none";
+  $("viewNotes").style.display = tab==="notes" ? "block" : "none";
+  $("viewFiles").style.display = tab==="files" ? "block" : "none";
+  $("viewSettings").style.display = tab==="settings" ? "block" : "none";
+
+  const titles = {
+    today:["Hoje","Compromissos, tarefas e notas do dia"],
+    week:["Semana","Visão semanal (agenda + tarefas + notas)"],
+    tasks:["Tarefas","Kanban com drag & drop"],
+    notes:["Notas","Anotações com anexos e (opcional) GPS"],
+    files:["Arquivos","Biblioteca local (IndexedDB)"],
+    settings:["Ajustes","Perfil, privacidade e ferramentas"]
+  };
+  $("pageTitle").textContent = titles[tab][0];
+  $("pageSub").textContent = titles[tab][1];
+  $("rightSub").textContent = titles[tab][1];
+
+  rafRender();
+}
+function bindTabs(){
+  $$('[data-tab]').forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const t = btn.getAttribute("data-tab");
+      setTab(t);
+    });
+  });
+}
+
+/* =========================================================
+   Item CRUD
+   ========================================================= */
+function normalizeTags(v){
+  const x = String(v||"").split(",").map(s=>s.trim()).filter(Boolean);
+  return Array.from(new Set(x)).slice(0,25);
+}
+function clampText(s, n=2000){ return String(s||"").slice(0,n); }
+
+function makeItemBase(type){
+  const now = Date.now();
+  return {
+    id: uid("it"),
+    type,
+    title: "",
+    body: "",
+    tags: [],
+    start: null,
+    end: null,
+    due: null,
+    priority: 2,
+    status: "planned",
+    kanban: "todo",
+    locationName: "",
+    geo: null, // {lat,lon,accuracy,address}
+    files: [],
+    createdAt: now,
+    updatedAt: now
+  };
+}
+function upsertItem(item){
+  item.updatedAt = Date.now();
+  const i = state.items.findIndex(x=>x.id===item.id);
+  if(i>=0) state.items[i] = item;
+  else state.items.unshift(item);
+  saveAll();
+  rafRender();
+}
+function deleteItem(id){
+  const i = state.items.findIndex(x=>x.id===id);
+  if(i>=0){
+    state.items.splice(i,1);
+    saveAll();
+    rafRender();
+  }
+}
+function getItem(id){
+  return state.items.find(x=>x.id===id) || null;
+}
+
+/* =========================================================
+   Modal: create/edit
+   ========================================================= */
+function resetModal(){
+  state.editingId = null;
+  state.tempFiles = [];
+  $("btnDelete").style.display = "none";
+  $("modalTitle").textContent = "Novo";
+  $("modalSub").textContent = "Compromisso, tarefa ou nota";
+  $("modalFootHint").textContent = "Criado em: —";
+
+  $("mType").value = "event";
+  $("mTitle").value = "";
+  $("mPriority").value = "2";
+  $("mStart").value = "";
+  $("mEnd").value = "";
+  $("mDue").value = "";
+  $("mLocationName").value = "";
+  $("mTags").value = "";
+  $("mStatus").value = "planned";
+  $("mBody").value = "";
+  $("mKanban").value = "todo";
+  $("gpsHint").textContent = "Sem GPS anexado.";
+  $("mFileChips").innerHTML = "";
+  $("mFiles").value = "";
+}
+
+function fillModal(item){
+  state.editingId = item.id;
+  state.tempFiles = Array.isArray(item.files) ? [...item.files] : [];
+  $("btnDelete").style.display = "inline-flex";
+  $("modalTitle").textContent = "Editar";
+  $("modalSub").textContent = `${item.type==="event"?"Compromisso":item.type==="task"?"Tarefa":"Nota"} • ${item.id}`;
+  $("modalFootHint").textContent = `Criado em: ${new Date(item.createdAt).toLocaleString("pt-BR")} • Atualizado: ${new Date(item.updatedAt).toLocaleString("pt-BR")}`;
+
+  $("mType").value = item.type;
+  $("mTitle").value = item.title || "";
+  $("mPriority").value = String(item.priority ?? 2);
+  $("mStart").value = item.start ? toLocalDTInputValue(new Date(item.start)) : "";
+  $("mEnd").value = item.end ? toLocalDTInputValue(new Date(item.end)) : "";
+  $("mDue").value = item.due ? toLocalDTInputValue(new Date(item.due)) : "";
+  $("mLocationName").value = item.locationName || "";
+  $("mTags").value = (item.tags||[]).join(", ");
+  $("mStatus").value = item.status || "planned";
+  $("mBody").value = item.body || "";
+  $("mKanban").value = item.kanban || "todo";
+
+  if(item.geo){
+    $("gpsHint").textContent = `GPS anexado: ${item.geo.lat.toFixed(6)}, ${item.geo.lon.toFixed(6)} (±${Math.round(item.geo.accuracy||0)}m)`;
+    if(item.geo.address) $("gpsHint").textContent += ` • ${item.geo.address}`;
+  }else{
+    $("gpsHint").textContent = "Sem GPS anexado.";
+  }
+
+  renderModalFileChips();
+}
+
+function openNewModal(prefType=null){
+  resetModal();
+  if(prefType) $("mType").value = prefType;
+  openModal("itemModal");
+}
+function openEditModal(id){
+  const it = getItem(id);
+  if(!it) return toast("Item não encontrado.");
+  resetModal();
+  fillModal(it);
+  openModal("itemModal");
+}
+
+async function renderModalFileChips(){
+  const wrap = $("mFileChips");
+  wrap.innerHTML = "";
+  if(!state.tempFiles.length){
+    wrap.innerHTML = `<span class="hint">Nenhum anexo.</span>`;
+    return;
+  }
+  // show by fetching metadata (best effort)
+  for(const fid of state.tempFiles){
+    const rec = await idbGetFile(fid);
+    const name = rec?.name || fid;
+    const el = document.createElement("div");
+    el.className = "chip";
+    el.title = "Clique para baixar • X remove";
+    el.innerHTML = `📎 ${escapeHtml(name)} <small>${rec?bytes(rec.size):""}</small> <span class="x" data-x="${fid}">×</span>`;
+    el.addEventListener("click", async (e)=>{
+      const x = e.target?.getAttribute?.("data-x");
+      if(x){
+        e.stopPropagation();
+        state.tempFiles = state.tempFiles.filter(v=>v!==x);
+        renderModalFileChips();
+        return;
+      }
+      await downloadFile(fid);
+    });
+    wrap.appendChild(el);
+  }
+}
+
+function escapeHtml(s){
+  return String(s||"")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+/* =========================================================
+   Render: Today / Week / Notes / Files / Tasks
+   ========================================================= */
+function priorityBadge(p){
+  if(p>=3) return `<span class="badge">⚡ Alta</span>`;
+  if(p<=1) return `<span class="badge">🐢 Baixa</span>`;
+  return `<span class="badge">• Normal</span>`;
+}
+function statusBadge(s){
+  const map = {
+    planned:`<span class="badge">🕒 Planejado</span>`,
+    doing:`<span class="badge">🏃 Em andamento</span>`,
+    done:`<span class="badge">✅ Concluído</span>`,
+    canceled:`<span class="badge">⛔ Cancelado</span>`
+  };
+  return map[s] || `<span class="badge">•</span>`;
+}
+function typeEmoji(t){
+  if(t==="event") return "📅";
+  if(t==="task") return "✅";
+  return "📝";
+}
+function keyDate(it){
+  return it.start || it.due || it.createdAt;
+}
+
+function renderKPIs(){
+  $("kpiUser").textContent = state.settings.userName || "—";
+  const now = new Date();
+  $("kpiDate").textContent = now.toLocaleDateString("pt-BR", {day:"2-digit", month:"2-digit", year:"numeric"});
+  $("kpiClock").textContent = now.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+  $("nowTime").textContent = now.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+  $("nowMeta").textContent = fmtNiceDate(now);
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todays = state.items.filter(it=>withinDay(it, today));
+  const events = todays.filter(x=>x.type==="event").length;
+  const openTasks = state.items.filter(x=>x.type==="task" && x.status!=="done" && x.kanban!=="done").length;
+  $("kpiEvents").textContent = events;
+  $("kpiTasks").textContent = openTasks;
+}
+
+function renderStatusLine(){
+  const now = new Date();
+  const user = state.settings.userName || "Usuário";
+  const time = now.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"});
+  const wx = formatWeather();
+  let loc = "Local: —";
+  if(state.settings.geo==="off") loc = "Localização: desligada";
+  else if(state.geo.ok){
+    loc = state.geo.city ? `📍 ${state.geo.city}` : (state.geo.address ? "📍 endereço ok" : "📍 GPS ok");
+  }else{
+    loc = "📍 pedir permissão";
+  }
+  $("statusLine").textContent = `${user} • ${time} • ${wx} • ${loc}`;
+  setStatusDot();
+}
+
+function renderToday(){
+  const list = $("todayList");
+  const q = (state.lastSearch.today || "").toLowerCase().trim();
+  const scope = $("todayScope").value;
+
+  const day = new Date(); day.setHours(0,0,0,0);
+  let items = state.items.filter(it=>withinDay(it, day));
+
+  if(scope!=="all") items = items.filter(x=>x.type===scope);
+
+  if(q){
+    items = items.filter(it=>{
+      const hay = `${it.title||""} ${it.body||""} ${(it.tags||[]).join(" ")} ${it.locationName||""}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }
+
+  items.sort((a,b)=> new Date(keyDate(a)) - new Date(keyDate(b)));
+
+  if(!items.length){
+    list.innerHTML = `<div class="hint">Nada por aqui ainda. Clique em <b>＋ Novo</b> para criar um compromisso/tarefa/nota.</div>`;
+    return;
+  }
+
+  list.innerHTML = items.map(it=>{
+    const dt = it.type==="event" ? (it.start ? fmtNiceDT(it.start) : "Sem horário")
+             : it.type==="task" ? (it.due ? `Vence: ${fmtNiceDT(it.due)}` : "Sem vencimento")
+             : `Criado: ${fmtNiceDT(it.createdAt)}`;
+
+    const loc = it.locationName ? `📍 ${escapeHtml(it.locationName)}` : (it.geo?.address ? `📍 ${escapeHtml(it.geo.address)}` : "");
+    const tags = (it.tags||[]).slice(0,3).map(t=>`<span class="badge">#${escapeHtml(t)}</span>`).join(" ");
+    const files = (it.files||[]).length ? `<span class="badge">📎 ${(it.files||[]).length}</span>` : "";
+
+    return `
+      <div class="row" tabindex="0" role="button" aria-label="Abrir item" data-open="${it.id}">
+        <div class="main">
+          <div class="name">${typeEmoji(it.type)} ${escapeHtml(it.title||"(sem título)")}</div>
+          <div class="meta">
+            <span class="badge">${escapeHtml(dt)}</span>
+            ${loc ? `<span class="badge">${loc}</span>` : ""}
+            ${files}
+            ${tags}
+          </div>
+        </div>
+        <div class="amount">${priorityBadge(it.priority)}</div>
+        <div class="amount">${statusBadge(it.status)}</div>
+        <div class="right">
+          <button class="btn" data-edit="${it.id}">Editar</button>
+          <button class="btn danger" data-del="${it.id}">Excluir</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  // bind row actions
+  $$("[data-open]", list).forEach(el=>{
+    el.addEventListener("click",(e)=>{
+      const id = el.getAttribute("data-open");
+      const t = e.target;
+      if(t?.getAttribute?.("data-edit")) return;
+      if(t?.getAttribute?.("data-del")) return;
+      openEditModal(id);
+    });
+    el.addEventListener("keydown",(e)=>{
+      if(e.key==="Enter" || e.key===" "){
+        e.preventDefault();
+        openEditModal(el.getAttribute("data-open"));
+      }
+    });
+  });
+  $$("[data-edit]", list).forEach(btn=>btn.addEventListener("click",(e)=>{
+    e.stopPropagation();
+    openEditModal(btn.getAttribute("data-edit"));
+  }));
+  $$("[data-del]", list).forEach(btn=>btn.addEventListener("click",(e)=>{
+    e.stopPropagation();
+    const id = btn.getAttribute("data-del");
+    if(confirm("Excluir este item?")) deleteItem(id);
+  }));
+}
+
+function renderWeek(){
+  const list = $("weekList");
+  const startStr = $("weekStart").value;
+  const base = startStr ? new Date(startStr+"T00:00") : startOfWeek(new Date());
+  const from = new Date(base); from.setHours(0,0,0,0);
+  const to = addDays(from, 6);
+
+  const q = (state.lastSearch.week||"").toLowerCase().trim();
+  const type = $("weekType").value;
+
+  let items = rangeFilter(state.items, from, to);
+  if(type!=="all") items = items.filter(x=>x.type===type);
+  if(q){
+    items = items.filter(it=>{
+      const hay = `${it.title||""} ${it.body||""} ${(it.tags||[]).join(" ")} ${it.locationName||""}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }
+  items.sort((a,b)=> new Date(keyDate(a)) - new Date(keyDate(b)));
+
+  const days = Array.from({length:7}, (_,i)=>addDays(from,i));
+  const groups = days.map(d=>{
+    const arr = items.filter(it=>withinDay(it,d));
+    return {d, arr};
+  });
+
+  list.innerHTML = groups.map(g=>{
+    const head = `<div class="hint" style="font-weight:950; color:var(--text); margin:10px 0 6px;">${fmtNiceDate(g.d)}</div>`;
+    if(!g.arr.length) return head + `<div class="hint" style="margin-bottom:10px;">— vazio —</div>`;
+    const rows = g.arr.map(it=>{
+      const dt = it.type==="event" ? (it.start ? fmtNiceDT(it.start) : "Sem horário")
+               : it.type==="task" ? (it.due ? `Vence: ${fmtNiceDT(it.due)}` : "Sem vencimento")
+               : `Criado: ${fmtNiceDT(it.createdAt)}`;
+      const files = (it.files||[]).length ? `<span class="badge">📎 ${(it.files||[]).length}</span>` : "";
+      return `
+        <div class="row" tabindex="0" data-open="${it.id}">
+          <div class="main">
+            <div class="name">${typeEmoji(it.type)} ${escapeHtml(it.title||"(sem título)")}</div>
+            <div class="meta">
+              <span class="badge">${escapeHtml(dt)}</span>
+              ${it.locationName ? `<span class="badge">📍 ${escapeHtml(it.locationName)}</span>` : ""}
+              ${files}
+              ${(it.tags||[]).slice(0,3).map(t=>`<span class="badge">#${escapeHtml(t)}</span>`).join(" ")}
+            </div>
+          </div>
+          <div class="amount">${priorityBadge(it.priority)}</div>
+          <div class="amount">${statusBadge(it.status)}</div>
+          <div class="right">
+            <button class="btn" data-edit="${it.id}">Editar</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+    return head + rows;
+  }).join("");
+
+  $$("[data-open]", list).forEach(el=>{
+    el.addEventListener("click",(e)=>{
+      const t = e.target;
+      if(t?.getAttribute?.("data-edit")) return;
+      openEditModal(el.getAttribute("data-open"));
+    });
+    el.addEventListener("keydown",(e)=>{
+      if(e.key==="Enter" || e.key===" "){
+        e.preventDefault();
+        openEditModal(el.getAttribute("data-open"));
+      }
+    });
+  });
+  $$("[data-edit]", list).forEach(btn=>btn.addEventListener("click",(e)=>{
+    e.stopPropagation();
+    openEditModal(btn.getAttribute("data-edit"));
+  }));
+}
+
+function renderNotes(){
+  const list = $("notesList");
+  const q = (state.lastSearch.notes||"").toLowerCase().trim();
+  const tag = ( $("noteTag").value || "" ).toLowerCase().trim();
+
+  let items = state.items.filter(x=>x.type==="note");
+  if(q){
+    items = items.filter(it=>{
+      const hay = `${it.title||""} ${it.body||""} ${(it.tags||[]).join(" ")}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }
+  if(tag){
+    items = items.filter(it=>(it.tags||[]).some(t=>String(t).toLowerCase().includes(tag)));
+  }
+  items.sort((a,b)=> (b.updatedAt||0) - (a.updatedAt||0));
+
+  if(!items.length){
+    list.innerHTML = `<div class="hint">Nenhuma nota ainda. Clique em <b>＋ Nova nota</b>.</div>`;
+    return;
+  }
+
+  list.innerHTML = items.map(it=>{
+    const files = (it.files||[]).length ? `<span class="badge">📎 ${(it.files||[]).length}</span>` : "";
+    const excerpt = clampText(it.body, 140).replace(/\n/g," ");
+    return `
+      <div class="row" tabindex="0" data-open="${it.id}">
+        <div class="main">
+          <div class="name">📝 ${escapeHtml(it.title||"(sem título)")}</div>
+          <div class="meta">
+            <span class="badge">Atualizado: ${escapeHtml(fmtNiceDT(it.updatedAt))}</span>
+            ${files}
+            ${(it.tags||[]).slice(0,4).map(t=>`<span class="badge">#${escapeHtml(t)}</span>`).join(" ")}
+          </div>
+          <div class="hint" style="margin-top:6px;">${escapeHtml(excerpt || "—")}</div>
+        </div>
+        <div class="right">
+          <button class="btn" data-edit="${it.id}">Editar</button>
+          <button class="btn danger" data-del="${it.id}">Excluir</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  $$("[data-open]", list).forEach(el=>{
+    el.addEventListener("click",(e)=>{
+      const t = e.target;
+      if(t?.getAttribute?.("data-edit")) return;
+      if(t?.getAttribute?.("data-del")) return;
+      openEditModal(el.getAttribute("data-open"));
+    });
+    el.addEventListener("keydown",(e)=>{
+      if(e.key==="Enter" || e.key===" "){
+        e.preventDefault();
+        openEditModal(el.getAttribute("data-open"));
+      }
+    });
+  });
+  $$("[data-edit]", list).forEach(btn=>btn.addEventListener("click",(e)=>{
+    e.stopPropagation();
+    openEditModal(btn.getAttribute("data-edit"));
+  }));
+  $$("[data-del]", list).forEach(btn=>btn.addEventListener("click",(e)=>{
+    e.stopPropagation();
+    const id = btn.getAttribute("data-del");
+    if(confirm("Excluir esta nota?")) deleteItem(id);
+  }));
+}
+
+async function renderFiles(){
+  const list = $("filesList");
+  const q = (state.lastSearch.files||"").toLowerCase().trim();
+
+  let files = [];
+  try{ files = await idbListFiles(); }catch(e){ files=[]; }
+
+  if(q){
+    files = files.filter(f=> String(f.name||"").toLowerCase().includes(q) || String(f.type||"").toLowerCase().includes(q));
+  }
+  files.sort((a,b)=> (b.addedAt||0)-(a.addedAt||0));
+
+  if(!files.length){
+    list.innerHTML = `<div class="hint">Nenhum arquivo ainda. Clique em <b>📎 Importar arquivos</b>.</div>`;
+    return;
+  }
+
+  list.innerHTML = files.map(f=>{
+    return `
+      <div class="row" tabindex="0" data-file="${f.id}">
+        <div class="main">
+          <div class="name">📎 ${escapeHtml(f.name||"(sem nome)")}</div>
+          <div class="meta">
+            <span class="badge">${escapeHtml(f.type||"arquivo")}</span>
+            <span class="badge">${bytes(f.size)}</span>
+            <span class="badge">Adicionado: ${escapeHtml(fmtNiceDT(f.addedAt))}</span>
+          </div>
+        </div>
+        <div class="right">
+          <button class="btn" data-dl="${f.id}">Baixar</button>
+          <button class="btn danger" data-rm="${f.id}">Excluir</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  $$("[data-dl]", list).forEach(btn=>btn.addEventListener("click", async (e)=>{
+    e.stopPropagation();
+    await downloadFile(btn.getAttribute("data-dl"));
+  }));
+  $$("[data-rm]", list).forEach(btn=>btn.addEventListener("click", async (e)=>{
+    e.stopPropagation();
+    const id = btn.getAttribute("data-rm");
+    if(!confirm("Excluir este arquivo do navegador?")) return;
+
+    // remove from any items referencing it
+    state.items.forEach(it=>{
+      it.files = (it.files||[]).filter(x=>x!==id);
+    });
+    saveAll();
+
+    await idbDeleteFile(id);
+    toast("Arquivo excluído.");
+    rafRender();
+  }));
+  $$("[data-file]", list).forEach(el=>{
+    el.addEventListener("dblclick", async ()=>{
+      await downloadFile(el.getAttribute("data-file"));
+    });
+  });
+}
+
+function renderTasks(){
+  const q = (state.lastSearch.tasks||"").toLowerCase().trim();
+  const sort = $("taskSort").value;
+
+  let tasks = state.items.filter(x=>x.type==="task");
+  if(q){
+    tasks = tasks.filter(it=>{
+      const hay = `${it.title||""} ${it.body||""} ${(it.tags||[]).join(" ")} ${it.locationName||""}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }
+
+  function keySort(it){
+    if(sort==="due") return it.due ? new Date(it.due).getTime() : 9e15;
+    if(sort==="created") return it.createdAt || 0;
+    // priority
+    return -(it.priority||2);
+  }
+  tasks.sort((a,b)=> keySort(a) - keySort(b));
+
+  const zones = {todo:$("zoneTodo"), doing:$("zoneDoing"), done:$("zoneDone")};
+  Object.values(zones).forEach(z=>z.innerHTML="");
+
+  const by = {todo:[], doing:[], done:[]};
+  for(const t of tasks){
+    const col = (t.kanban || (t.status==="done" ? "done":"todo"));
+    by[col] = by[col] || [];
+    by[col].push(t);
+  }
+
+  $("countTodo").textContent = by.todo.length;
+  $("countDoing").textContent = by.doing.length;
+  $("countDone").textContent = by.done.length;
+
+  function taskCard(t){
+    const due = t.due ? `Vence: ${fmtNiceDT(t.due)}` : "Sem vencimento";
+    const loc = t.locationName ? `📍 ${escapeHtml(t.locationName)}` : "";
+    const files = (t.files||[]).length ? `📎 ${t.files.length}` : "";
+    const el = document.createElement("div");
+    el.className = "task";
+    el.setAttribute("draggable","true");
+    el.dataset.id = t.id;
+    el.innerHTML = `
+      <b>${escapeHtml(t.title||"(sem título)")}</b>
+      <div class="tmeta">
+        <span class="badge">${escapeHtml(due)}</span>
+        ${files ? `<span class="badge">${files}</span>` : ""}
+        ${loc ? `<span class="badge">${loc}</span>` : ""}
+        ${priorityBadge(t.priority)}
+      </div>
+      <div class="hint" style="margin-top:6px;">${escapeHtml(clampText(t.body, 110).replace(/\n/g," "))}</div>
+    `;
+    el.addEventListener("dblclick", ()=>openEditModal(t.id));
+    el.addEventListener("dragstart",(e)=>{
+      e.dataTransfer.setData("text/plain", t.id);
+      e.dataTransfer.effectAllowed = "move";
+    });
+    return el;
+  }
+
+  for(const t of by.todo) zones.todo.appendChild(taskCard(t));
+  for(const t of by.doing) zones.doing.appendChild(taskCard(t));
+  for(const t of by.done) zones.done.appendChild(taskCard(t));
+
+  // Drag & drop
+  Object.entries(zones).forEach(([col,zone])=>{
+    const parent = zone.closest(".col");
+    parent.addEventListener("dragover",(e)=>{
+      e.preventDefault();
+      parent.classList.add("drop-hover");
+    });
+    parent.addEventListener("dragleave",()=>parent.classList.remove("drop-hover"));
+    parent.addEventListener("drop",(e)=>{
+      e.preventDefault();
+      parent.classList.remove("drop-hover");
+      const id = e.dataTransfer.getData("text/plain");
+      const it = getItem(id);
+      if(!it || it.type!=="task") return;
+      it.kanban = col;
+      if(col==="done") it.status = "done";
+      else if(col==="doing") it.status = "doing";
+      else if(it.status==="done") it.status = "planned";
+      upsertItem(it);
+      toast("Tarefa movida.");
+    });
+  });
+}
+
+function renderNext3(){
+  const list = $("nextList");
+  const now = Date.now();
+  const upcoming = state.items
+    .filter(it=>{
+      if(it.status==="done" || it.status==="canceled") return false;
+      const d = new Date(keyDate(it)).getTime();
+      return d >= now - 60_000; // allow just passed
+    })
+    .sort((a,b)=> new Date(keyDate(a)) - new Date(keyDate(b)))
+    .slice(0,3);
+
+  if(!upcoming.length){
+    list.innerHTML = `<div class="hint">Nada urgente agora. Respira 😄</div>`;
+    return;
+  }
+
+  list.innerHTML = upcoming.map(it=>{
+    const dt = it.type==="event" ? (it.start ? fmtNiceDT(it.start) : "Sem horário") :
+              it.type==="task" ? (it.due ? fmtNiceDT(it.due) : "Sem vencimento") :
+              fmtNiceDT(it.createdAt);
+    return `
+      <div class="row" tabindex="0" data-open="${it.id}" style="grid-template-columns:1fr;">
+        <div class="main">
+          <div class="name">${typeEmoji(it.type)} ${escapeHtml(it.title||"(sem título)")}</div>
+          <div class="meta">
+            <span class="badge">${escapeHtml(dt)}</span>
+            ${it.locationName ? `<span class="badge">📍 ${escapeHtml(it.locationName)}</span>` : ""}
+            ${(it.files||[]).length ? `<span class="badge">📎 ${it.files.length}</span>` : ""}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  $$("[data-open]", list).forEach(el=>{
+    el.addEventListener("click", ()=>openEditModal(el.getAttribute("data-open")));
+  });
+}
+
+async function renderAll(){
+  renderKPIs();
+  renderStatusLine();
+  renderNext3();
+
+  if(state.activeTab==="today") renderToday();
+  if(state.activeTab==="week") renderWeek();
+  if(state.activeTab==="tasks") renderTasks();
+  if(state.activeTab==="notes") renderNotes();
+  if(state.activeTab==="files") await renderFiles();
+  if(state.activeTab==="settings") renderSettingsUI();
+}
+
+/* =========================================================
+   Settings UI
+   ========================================================= */
+function renderSettingsUI(){
+  $("setUserName").value = state.settings.userName || "Wilson";
+  $("setGeo").value = state.settings.geo || "ask";
+  $("setUnits").value = state.settings.units || "metric";
+}
+function saveSettingsFromUI(){
+  state.settings.userName = clampText($("setUserName").value, 60) || "Wilson";
+  state.settings.geo = $("setGeo").value;
+  state.settings.units = $("setUnits").value;
+  saveAll();
+  toast("Ajustes salvos.");
+  // refresh geo/weather
+  initNow(true);
+}
+
+/* =========================================================
+   Backup / Restore
+   ========================================================= */
+function doBackup(){
+  const payload = {
+    meta: {
+      app: "Agenda Pro",
+      version: 1,
+      exportedAt: Date.now(),
+      note: "Backup não inclui anexos (arquivos ficam no IndexedDB do navegador)."
+    },
+    settings: state.settings,
+    items: state.items
+  };
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `agenda_pro_backup_${toISODate(new Date())}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1200);
+  toast("Backup exportado.");
+}
+async function doRestore(file){
+  showLoading("Importando backup…");
+  try{
+    const txt = await file.text();
+    const j = JSON.parse(txt);
+    if(!j || !Array.isArray(j.items)) throw new Error("Formato inválido");
+    state.settings = {...state.settings, ...(j.settings||{})};
+    state.items = j.items;
+    saveAll();
+    toast("Backup importado.");
+    closeModal("restoreModal");
+    rafRender();
+  }catch(e){
+    toast("Falha ao importar JSON.");
+  }finally{
+    hideLoading();
+  }
+}
+
+/* =========================================================
+   Events / Bindings
+   ========================================================= */
+function bindTopActions(){
+  $("btnNew").addEventListener("click", ()=>openNewModal());
+  $("btnNewTask").addEventListener("click", ()=>openNewModal("task"));
+  $("btnNewNote").addEventListener("click", ()=>openNewModal("note"));
+  $("btnQuickAdd").addEventListener("click", ()=>{
+    openNewModal("note");
+    $("mTitle").value = "Check-in rápido";
+    $("mBody").value = `Agora: ${new Date().toLocaleString("pt-BR")}\n\n`;
+    toast("Check-in: adicione detalhes e salve.");
+  });
+
+  $("btnCloseModal").addEventListener("click", ()=>closeModal("itemModal"));
+  document.addEventListener("keydown",(e)=>{
+    if(e.key==="Escape"){
+      if($("itemModal").classList.contains("show")) closeModal("itemModal");
+      if($("restoreModal").classList.contains("show")) closeModal("restoreModal");
+    }
+  });
+
+  $("btnSave").addEventListener("click", async ()=>{
+    const type = $("mType").value;
+    const title = clampText($("mTitle").value, 140);
+    const body = clampText($("mBody").value, 4000);
+    const tags = normalizeTags($("mTags").value);
+    const priority = Number($("mPriority").value||2);
+    const status = $("mStatus").value;
+    const locationName = clampText($("mLocationName").value, 180);
+    const kanban = $("mKanban").value;
+
+    const start = parseDT($("mStart").value);
+    const end = parseDT($("mEnd").value);
+    const due = parseDT($("mDue").value);
+
+    if(!title.trim()){
+      toast("Dê um título (mesmo curto).");
+      $("mTitle").focus();
+      return;
+    }
+
+    let it = state.editingId ? getItem(state.editingId) : null;
+    if(!it){
+      it = makeItemBase(type);
+    }
+
+    it.type = type;
+    it.title = title;
+    it.body = body;
+    it.tags = tags;
+    it.priority = priority;
+    it.status = status;
+    it.locationName = locationName;
+    it.start = start ? start.toISOString() : null;
+    it.end = end ? end.toISOString() : null;
+    it.due = due ? due.toISOString() : null;
+    it.kanban = (type==="task") ? kanban : it.kanban;
+    it.files = [...state.tempFiles];
+
+    // sanity: if task moved to done column, mark done
+    if(it.type==="task" && it.kanban==="done") it.status = "done";
+
+    upsertItem(it);
+    toast("Salvo.");
+    closeModal("itemModal");
+  });
+
+  $("btnDelete").addEventListener("click", ()=>{
+    const id = state.editingId;
+    if(!id) return;
+    if(confirm("Excluir este item?")){ deleteItem(id); closeModal("itemModal"); toast("Excluído."); }
+  });
+
+  $("btnDuplicate").addEventListener("click", ()=>{
+    const id = state.editingId;
+    const it = id ? getItem(id) : null;
+    if(!it){
+      toast("Nada para duplicar.");
+      return;
+    }
+    const copy = {...it, id: uid("it"), createdAt: Date.now(), updatedAt: Date.now(), status: "planned"};
+    state.items.unshift(copy);
+    saveAll();
+    toast("Duplicado.");
+    rafRender();
+  });
+
+  // attach files inside modal
+  $("mFiles").addEventListener("change", async (e)=>{
+    const files = Array.from(e.target.files || []);
+    if(!files.length) return;
+    showLoading("Salvando anexos…");
+    try{
+      for(const f of files){
+        const rec = await idbPutFile(f);
+        state.tempFiles.unshift(rec.id);
+      }
+      toast("Anexos adicionados.");
+      renderModalFileChips();
+    }catch(err){
+      toast("Falha ao salvar anexo.");
+    }finally{
+      hideLoading();
+      $("mFiles").value = "";
+    }
+  });
+
+  // attach GPS snapshot
+  $("btnAttachGPS").addEventListener("click", async ()=>{
+    showLoading("Pegando GPS…");
+    const ok = await ensureGeo();
+    if(ok){
+      const snap = {
+        lat: state.geo.lat,
+        lon: state.geo.lon,
+        accuracy: state.geo.accuracy,
+        address: state.geo.address || ""
+      };
+      // attach to modal's item preview by keeping a "tempGeo" on editing item if exists; easiest: store into a temp place then on save apply
+      // We'll store into hidden dataset on button:
+      $("btnAttachGPS").dataset.geo = JSON.stringify(snap);
+      $("gpsHint").textContent = `GPS anexado: ${snap.lat.toFixed(6)}, ${snap.lon.toFixed(6)} (±${Math.round(snap.accuracy||0)}m)` + (snap.address ? ` • ${snap.address}` : "");
+      toast("GPS anexado ao registro.");
+      // apply immediately if editing existing item (so it persists even if user closes by mistake)
+      if(state.editingId){
+        const it = getItem(state.editingId);
+        if(it){ it.geo = snap; upsertItem(it); }
+      }
+    }else{
+      toast("Sem permissão de localização (ou falha no GPS).");
+    }
+    hideLoading();
+  });
+
+  // when opening modal, if user attached GPS and then saves, ensure it is persisted:
+  const origSave = $("btnSave").onclick;
+
+  // We used addEventListener above; so we'll patch on save by listening again:
+  $("btnSave").addEventListener("click", ()=>{
+    const g = $("btnAttachGPS").dataset.geo;
+    if(!g) return;
+    try{
+      const snap = JSON.parse(g);
+      const id = state.editingId;
+      // if already persisted above, fine; else apply after save by intercepting in upsert (we do it when editingId null by keeping dataset and applying after create)
+      // We'll handle right after item creation in the save handler by checking dataset (handled below in a safer way):
+    }catch(e){}
+  });
+
+  // Backup/restore buttons
+  $("btnBackup").addEventListener("click", doBackup);
+
+  // Files view importer
+  $("btnAddFiles").addEventListener("click", ()=>$("filesInput").click());
+  $("filesInput").addEventListener("change", async (e)=>{
+    const files = Array.from(e.target.files || []);
+    if(!files.length) return;
+    showLoading("Importando arquivos…");
+    try{
+      for(const f of files) await idbPutFile(f);
+      toast("Arquivos importados.");
+      rafRender();
+    }catch(err){
+      toast("Falha ao importar.");
+    }finally{
+      hideLoading();
+      $("filesInput").value = "";
+    }
+  });
+
+  // Settings buttons
+  $("btnSaveSettings").addEventListener("click", saveSettingsFromUI);
+  $("btnDemo").addEventListener("click", ()=>{
+    if(!confirm("Criar dados de demonstração?")) return;
+    seedDemo();
+    toast("Demo criada.");
+    rafRender();
+  });
+  $("btnWipe").addEventListener("click", async ()=>{
+    if(!confirm("Apagar TODOS os itens? (Arquivos permanecem no navegador)")) return;
+    state.items = [];
+    saveAll();
+    toast("Itens apagados.");
+    rafRender();
+  });
+
+  // Restore modal open (shift+backup or use Ctrl+E = backup; we'll use Ctrl+I = import)
+  $("btnBackup").addEventListener("contextmenu",(e)=>{
+    e.preventDefault();
+    openModal("restoreModal");
+  });
+  $("btnCloseRestore").addEventListener("click", ()=>closeModal("restoreModal"));
+  $("btnDoRestore").addEventListener("click", async ()=>{
+    const f = $("restoreFile").files?.[0];
+    if(!f) return toast("Escolha um JSON.");
+    await doRestore(f);
+  });
+
+  // Quick refresh
+  $("btnNow").addEventListener("click", ()=>initNow(true));
+}
+
+function bindSearchInputs(){
+  $("todaySearch").addEventListener("input", debounce(()=>{
+    state.lastSearch.today = $("todaySearch").value;
+    rafRender();
+  }, 120));
+
+  $("weekSearch").addEventListener("input", debounce(()=>{
+    state.lastSearch.week = $("weekSearch").value;
+    rafRender();
+  }, 120));
+
+  $("noteSearch").addEventListener("input", debounce(()=>{
+    state.lastSearch.notes = $("noteSearch").value;
+    rafRender();
+  }, 120));
+
+  $("fileSearch").addEventListener("input", debounce(()=>{
+    state.lastSearch.files = $("fileSearch").value;
+    rafRender();
+  }, 120));
+
+  $("taskSearch").addEventListener("input", debounce(()=>{
+    state.lastSearch.tasks = $("taskSearch").value;
+    rafRender();
+  }, 120));
+
+  $("weekType").addEventListener("change", rafRender);
+  $("weekStart").addEventListener("change", rafRender);
+  $("todayScope").addEventListener("change", rafRender);
+  $("taskSort").addEventListener("change", rafRender);
+  $("noteTag").addEventListener("input", debounce(rafRender, 120));
+
+  // Ctrl+K focus today search
+  document.addEventListener("keydown",(e)=>{
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="k"){
+      e.preventDefault();
+      setTab("today");
+      $("todaySearch").focus();
+    }
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="e"){
+      e.preventDefault();
+      doBackup();
+    }
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="i"){
+      e.preventDefault();
+      openModal("restoreModal");
+    }
+    if(e.key.toLowerCase()==="n" && !($("itemModal").classList.contains("show") || $("restoreModal").classList.contains("show"))){
+      openNewModal();
+    }
+  });
+}
+
+/* =========================================================
+   Fix: apply GPS snapshot + files when saving new item
+   ========================================================= */
+(function patchSaveForNewItem(){
+  // Replace the save click logic by wrapping: easiest is to listen AFTER and adjust last inserted if needed.
+  // We'll do it via mutation on close: if dataset geo exists and editingId was null, we apply on most recent item with matching title/time.
+  $("btnSave").addEventListener("click", ()=>{
+    // After save handler runs, if it created new item, state.editingId stays null, so we can't tell.
+    // We'll rely on the last item being the just-upserted one (unshift). This is true for new item path.
+    const g = $("btnAttachGPS").dataset.geo;
+    if(!g) return;
+
+    // If modal is still open, it means validation failed; do nothing.
+    // We'll schedule after a tick:
+    setTimeout(()=>{
+      // if modal closed, apply to most recent item if it doesn't have geo yet
+      if($("itemModal").classList.contains("show")) return;
+      const snap = (()=>{ try{return JSON.parse(g);}catch(e){return null;} })();
+      if(!snap) return;
+
+      const top = state.items[0];
+      if(top && !top.geo){
+        top.geo = snap;
+        saveAll();
+        rafRender();
+      }
+      // clear dataset
+      delete $("btnAttachGPS").dataset.geo;
+    }, 0);
+  });
+
+  // Clear dataset when opening modal fresh
+  const _openNewModal = openNewModal;
+  openNewModal = function(prefType=null){
+    delete $("btnAttachGPS").dataset.geo;
+    _openNewModal(prefType);
+  };
+
+  // Clear dataset on close
+  const _closeModal = closeModal;
+  closeModal = function(id){
+    if(id==="itemModal"){
+      delete $("btnAttachGPS").dataset.geo;
+    }
+    _closeModal(id);
+  };
+})();
+
+/* =========================================================
+   Demo data
+   ========================================================= */
+function seedDemo(){
+  const now = new Date();
+  const a = makeItemBase("event");
+  a.title = "Reunião • Projeto";
+  a.body = "Pauta: cronograma, entregas, pendências.\nLevar arquivos.";
+  a.tags = ["trabalho","projeto"];
+  a.start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 30).toISOString();
+  a.end   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 11, 15).toISOString();
+  a.priority = 3;
+  a.locationName = "Escritório";
+  a.status = "planned";
+
+  const b = makeItemBase("task");
+  b.title = "Treino (30–45min)";
+  b.body = "Cardio leve + força.";
+  b.tags = ["saúde"];
+  b.due = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 19, 0).toISOString();
+  b.priority = 2;
+  b.kanban = "todo";
+  b.status = "planned";
+
+  const c = makeItemBase("note");
+  c.title = "Ideias rápidas";
+  c.body = "• Melhorar fluxo de tarefas\n• Rever lista de livros\n• Ajustar rotina semanal";
+  c.tags = ["pessoal","planejamento"];
+
+  const d = makeItemBase("task");
+  d.title = "Enviar relatório";
+  d.body = "PDF final + planilha.";
+  d.tags = ["trabalho"];
+  d.due = addDays(now, 1).toISOString();
+  d.priority = 3;
+  d.kanban = "doing";
+  d.status = "doing";
+
+  state.items = [a,b,c,d, ...state.items];
+  saveAll();
+}
+
+/* =========================================================
+   Init (clock/geo/weather)
+   ========================================================= */
+function tickClock(){
+  renderKPIs();
+  renderStatusLine();
+}
+async function initNow(force=false){
+  // clock always
+  tickClock();
+
+  // geo + weather (best effort)
+  if(state.settings.geo!=="off"){
+    if(force || !state.geo.ok || (Date.now()-state.geo.lastFixAt>120_000)){
+      await ensureGeo();
+    }
+    if(state.geo.ok){
+      await fetchWeather();
+    }
+  }else{
+    state.geo.ok = false;
+    state.weather.ok = false;
+  }
+
+  renderStatusLine();
+  rafRender();
+}
+
+/* =========================================================
+   Boot
+   ========================================================= */
+function init(){
+  loadAll();
+  bindTabs();
+  bindTopActions();
+  bindSearchInputs();
+
+  // initial weekStart default
+  const w = startOfWeek(new Date());
+  $("weekStart").value = toISODate(w);
+
+  // initial settings UI
+  renderSettingsUI();
+
+  // periodic clock
+  setInterval(tickClock, 1000);
+
+  // first init
+  initNow(true);
+
+  // initial render
+  setTab("today");
+}
+init();
+</script>
+</body>
+</html>
