@@ -1,0 +1,2975 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Checklist Pro • Kanban</title>
+  <meta name="theme-color" content="#0b0d12" />
+  <style>
+    :root{
+      --bg0:#07080b; --bg1:#0b0d12; --card:#0f131b; --card2:#121826;
+      --text:#e9eef7; --muted:#a9b4c7; --muted2:#7f8aa1; --line:#1c2434;
+      --shadow: 0 18px 60px rgba(0,0,0,.55);
+      --shadow2: 0 10px 30px rgba(0,0,0,.40);
+      --r12:12px; --r16:16px; --r20:20px; --r24:24px;
+      --accent:#5ee4ff; --accent2:#7c5cff; --ok:#31d07f; --warn:#ffb020; --bad:#ff4d4d;
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --focus: 0 0 0 4px rgba(94,228,255,.18);
+      --glass: rgba(18,24,38,.78);
+      --glass2: rgba(15,19,27,.78);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:var(--font);
+      color:var(--text);
+      background:
+        radial-gradient(1200px 600px at 10% 10%, rgba(124,92,255,.20), transparent 60%),
+        radial-gradient(900px 500px at 90% 20%, rgba(94,228,255,.18), transparent 55%),
+        radial-gradient(700px 400px at 50% 100%, rgba(49,208,127,.10), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+    }
+
+    /* App */
+    .app{
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 18px 14px 50px;
+    }
+
+    /* Sticky topbar */
+    .topbarSticky{
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      padding-top: 10px;
+      margin: -10px -14px 12px;
+      padding-left: 14px;
+      padding-right: 14px;
+      background: linear-gradient(180deg, rgba(7,8,11,.96), rgba(7,8,11,.0));
+      backdrop-filter: blur(10px);
+    }
+
+    .topbar{
+      display:flex;
+      gap:14px;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom: 10px;
+    }
+    .brand{
+      display:flex; align-items:center; gap:12px;
+      min-width: 240px;
+    }
+    .logo{
+      width:42px; height:42px; border-radius:14px;
+      background: linear-gradient(135deg, rgba(94,228,255,.95), rgba(124,92,255,.95));
+      box-shadow: 0 10px 25px rgba(124,92,255,.22);
+      position:relative;
+      overflow:hidden;
+    }
+    .logo:before{
+      content:"";
+      position:absolute; inset:-40%;
+      background: conic-gradient(from 180deg, rgba(255,255,255,.0), rgba(255,255,255,.25), rgba(255,255,255,0));
+      animation: spin 3.5s linear infinite;
+      filter: blur(.2px);
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .brand h1{
+      font-size: 15px;
+      line-height: 1.1;
+      margin:0;
+      font-weight: 780;
+      letter-spacing: .2px;
+    }
+    .brand .sub{
+      margin:2px 0 0;
+      font-size:12px;
+      color:var(--muted);
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
+    .syncPill{
+      display:inline-flex; gap:8px; align-items:center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.05);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .dot{
+      width:8px; height:8px; border-radius:999px;
+      background: rgba(127,138,161,.9);
+      box-shadow: 0 0 0 3px rgba(255,255,255,.04);
+    }
+    .dot.ok{background: rgba(49,208,127,.95)}
+    .dot.warn{background: rgba(255,176,32,.95)}
+    .dot.bad{background: rgba(255,77,77,.95)}
+
+    .actions{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    /* Cards */
+    .card{
+      background: linear-gradient(180deg, var(--glass), var(--glass2));
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: var(--r24);
+      box-shadow: var(--shadow2);
+      backdrop-filter: blur(12px);
+    }
+    .panel{padding: 14px;}
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    @media (max-width: 980px){
+      .grid{grid-template-columns: 1fr}
+      .brand{min-width:auto}
+    }
+
+    /* Inputs */
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .field{display:flex; flex-direction:column; gap:6px; flex:1; min-width:220px}
+    .label{font-size:12px; color:var(--muted)}
+    input[type="text"], input[type="date"], input[type="datetime-local"], select, textarea{
+      width:100%;
+      padding: 11px 12px;
+      background: rgba(10,12,18,.55);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 14px;
+      color: var(--text);
+      outline:none;
+      transition: .15s ease;
+      box-shadow: 0 8px 18px rgba(0,0,0,.12) inset;
+    }
+    textarea{min-height: 72px; resize: vertical}
+    input:focus, select:focus, textarea:focus{
+      border-color: rgba(94,228,255,.45);
+      box-shadow: var(--focus), 0 10px 22px rgba(0,0,0,.18) inset;
+    }
+    .hint{font-size:12px;color:var(--muted2)}
+    .hint .kbd{
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      padding: 2px 6px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.20);
+    }
+
+    /* Buttons */
+    .btn{
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 14px;
+      cursor:pointer;
+      font-weight:700;
+      letter-spacing:.2px;
+      transition: .15s ease;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      user-select:none;
+      min-height: 40px;
+      white-space: nowrap;
+    }
+    .btn:hover{transform: translateY(-1px); background: rgba(255,255,255,.085)}
+    .btn:active{transform: translateY(0px); opacity:.95}
+    .btn.primary{
+      border: 1px solid rgba(94,228,255,.28);
+      background: linear-gradient(135deg, rgba(94,228,255,.22), rgba(124,92,255,.18));
+      box-shadow: 0 14px 30px rgba(94,228,255,.10);
+    }
+    .btn.good{
+      border: 1px solid rgba(49,208,127,.28);
+      background: linear-gradient(135deg, rgba(49,208,127,.18), rgba(94,228,255,.08));
+    }
+    .btn.bad{
+      border: 1px solid rgba(255,77,77,.28);
+      background: linear-gradient(135deg, rgba(255,77,77,.16), rgba(124,92,255,.08));
+    }
+    .btn.ghost{background: transparent;border: 1px solid rgba(255,255,255,.08)}
+    .pill{
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.05);
+      color: var(--muted);
+      display:inline-flex; gap:8px; align-items:center;
+    }
+
+    /* Tabs */
+    .tabs{display:flex; gap:8px; flex-wrap:wrap; padding: 10px;}
+    .tab{
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.04);
+      color: var(--muted);
+      cursor:pointer;
+      transition:.15s ease;
+      font-weight:750;
+      user-select:none;
+    }
+    .tab.active{
+      color: var(--text);
+      border-color: rgba(94,228,255,.22);
+      background: linear-gradient(135deg, rgba(94,228,255,.14), rgba(124,92,255,.10));
+      box-shadow: 0 14px 30px rgba(94,228,255,.08);
+    }
+
+    /* Views chips */
+    .views{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .vchip{
+      padding: 9px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.05);
+      color: var(--muted);
+      font-weight:750;
+      cursor:pointer;
+      user-select:none;
+      transition:.12s ease;
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+    }
+    .vchip:hover{transform: translateY(-1px); background: rgba(255,255,255,.075)}
+    .vchip.active{
+      color: var(--text);
+      border-color: rgba(94,228,255,.22);
+      background: linear-gradient(135deg, rgba(94,228,255,.14), rgba(124,92,255,.10));
+      box-shadow: 0 14px 30px rgba(94,228,255,.08);
+    }
+
+    /* Summary */
+    .summary{
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+    }
+    @media (max-width: 980px){
+      .summary{grid-template-columns: repeat(2, 1fr)}
+    }
+    .metric{
+      padding: 12px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.07);
+      background: rgba(255,255,255,.04);
+    }
+    .metric .k{font-size:12px; color:var(--muted); margin-bottom:6px}
+    .metric .v{font-size:18px; font-weight:850; letter-spacing:.2px}
+    .metric .s{font-size:12px; color:var(--muted2); margin-top:6px}
+
+    /* Kanban */
+    .kanban{
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      padding: 12px;
+    }
+    @media (max-width: 1180px){
+      .kanban{grid-template-columns: repeat(2, 1fr)}
+    }
+    @media (max-width: 650px){
+      .kanban{grid-template-columns: 1fr}
+    }
+
+    .col{
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.07);
+      background: rgba(255,255,255,.03);
+      overflow:hidden;
+      min-height: 180px;
+      display:flex;
+      flex-direction:column;
+      transition: .12s ease;
+    }
+    .colhead{
+      padding: 12px 12px 10px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      background: rgba(0,0,0,.10);
+    }
+    .coltitle{display:flex; flex-direction:column; gap:2px}
+    .coltitle b{font-size:13px}
+    .coltitle span{font-size:12px; color:var(--muted)}
+    .colcount{
+      font-size:12px;
+      color:var(--muted);
+      padding: 6px 10px;
+      border-radius:999px;
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.04);
+    }
+
+    .dropzone{
+      padding: 10px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      flex:1;
+      position: relative;
+    }
+
+    .emptyState{
+      border: 1px dashed rgba(255,255,255,.14);
+      border-radius: 16px;
+      background: rgba(255,255,255,.02);
+      padding: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .emptyState b{color: var(--text)}
+    .emptyState .mini{color: var(--muted2)}
+
+    /* Task card */
+    .task{
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.08);
+      background: linear-gradient(180deg, rgba(18,24,38,.72), rgba(15,19,27,.72));
+      box-shadow: 0 10px 22px rgba(0,0,0,.25);
+      padding: 10px 10px 9px;
+      cursor: grab;
+      user-select:none;
+      transition: transform .14s ease, background .14s ease, opacity .14s ease;
+      position:relative;
+      overflow:hidden;
+      will-change: transform;
+    }
+    .task:hover{transform: translateY(-1px)}
+    .task:active{cursor:grabbing; transform: translateY(0)}
+    .task.dragging{opacity:.55}
+    .task .top{
+      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+    }
+    .task .title{
+      font-weight:860;
+      letter-spacing:.2px;
+      font-size: 13px;
+      line-height:1.25;
+      margin:0;
+      word-break: break-word;
+    }
+    .task .meta{
+      display:flex; flex-wrap:wrap; gap:6px;
+      margin-top: 8px;
+      align-items:center;
+    }
+    .chip{
+      display:inline-flex; align-items:center; gap:6px;
+      font-size: 11px;
+      color: var(--muted);
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      max-width: 100%;
+    }
+    .chip strong{color: var(--text); font-weight:800}
+    .prioDot{
+      width:8px; height:8px; border-radius:999px;
+      background: var(--muted2);
+      box-shadow: 0 0 0 3px rgba(255,255,255,.04);
+    }
+    .prio-low{background: rgba(94,228,255,.95)}
+    .prio-med{background: rgba(255,176,32,.95)}
+    .prio-high{background: rgba(255,77,77,.95)}
+
+    .due.overdue{
+      color: rgba(255,77,77,.95);
+      border-color: rgba(255,77,77,.24);
+      background: rgba(255,77,77,.10);
+    }
+    .due.today{
+      color: rgba(255,176,32,.95);
+      border-color: rgba(255,176,32,.26);
+      background: rgba(255,176,32,.10);
+    }
+    .done{
+      color: rgba(49,208,127,.95);
+      border-color: rgba(49,208,127,.22);
+      background: rgba(49,208,127,.10);
+    }
+
+    .taskBtns{display:flex; gap:6px}
+    .iconbtn{
+      width:34px; height:34px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.05);
+      cursor:pointer;
+      display:grid; place-items:center;
+      transition:.15s ease;
+      flex: 0 0 auto;
+    }
+    .iconbtn:hover{background: rgba(255,255,255,.08); transform: translateY(-1px)}
+    .iconbtn:active{transform: translateY(0)}
+    .icon{width:16px; height:16px; opacity:.9; fill: currentColor}
+
+    /* Drop indicator */
+    .dropIndicator{
+      height: 8px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(94,228,255,.75), rgba(124,92,255,.75));
+      box-shadow: 0 10px 22px rgba(94,228,255,.12);
+      opacity: .0;
+      transform: scaleX(.92);
+      transition: .10s ease;
+    }
+    .dropIndicator.show{opacity: 1; transform: scaleX(1)}
+
+    /* List view */
+    .listwrap{padding: 12px}
+    table{
+      width:100%;
+      border-collapse: collapse;
+      overflow:hidden;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.07);
+      background: rgba(255,255,255,.03);
+    }
+    thead th{
+      font-size: 12px;
+      color: var(--muted);
+      text-align:left;
+      padding: 12px 12px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      background: rgba(0,0,0,.12);
+    }
+    tbody td{
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+      vertical-align: top;
+      font-size: 13px;
+    }
+    tbody tr:hover td{background: rgba(255,255,255,.03)}
+    .small{font-size: 12px; color: var(--muted)}
+    .nowrap{white-space: nowrap}
+    .right{text-align:right}
+
+    /* Toast */
+    .toast{
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 18px;
+      background: rgba(10,12,18,.85);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 16px;
+      padding: 10px 12px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      display:none;
+      gap:10px;
+      align-items:flex-start;
+      max-width: 92vw;
+      width: 560px;
+      z-index: 9999;
+    }
+    .toast.show{display:flex}
+    .toast b{font-size: 13px}
+    .toast p{margin:2px 0 0; font-size: 12px; color:var(--muted)}
+    .toast .tbtn{margin-left:auto}
+
+    /* Modal */
+    .modalBack{
+      position:fixed; inset:0;
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(10px);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index: 9998;
+      padding: 16px;
+    }
+    .modalBack.show{display:flex}
+    .modal{
+      width: 980px;
+      max-width: 100%;
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(18,24,38,.94), rgba(15,19,27,.94));
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      transform: translateY(6px) scale(.99);
+      opacity: .0;
+      animation: pop .16s ease forwards;
+    }
+    @keyframes pop{
+      to{transform: translateY(0) scale(1); opacity: 1}
+    }
+    .modalHead{
+      padding: 14px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      background: rgba(0,0,0,.12);
+    }
+    .modalHead b{font-size: 13px; letter-spacing:.2px}
+    .modalBody{padding: 14px}
+    .modalGrid{
+      display:grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 920px){
+      .modalGrid{grid-template-columns: 1fr}
+    }
+    .divider{height:1px;background: rgba(255,255,255,.08); margin: 12px 0}
+
+    .tagRow{
+      display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+    }
+    .tag{
+      display:inline-flex; gap:8px; align-items:center;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      cursor:pointer;
+      transition:.12s ease;
+      color: var(--muted);
+      font-weight:750;
+      font-size: 12px;
+      user-select:none;
+    }
+    .tag:hover{transform: translateY(-1px)}
+    .tag.active{
+      color: var(--text);
+      border-color: rgba(94,228,255,.28);
+      background: linear-gradient(135deg, rgba(94,228,255,.14), rgba(124,92,255,.10));
+    }
+
+    /* Subtasks */
+    .subtasks{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      padding: 10px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
+    }
+    .subRow{
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    .subRow input[type="text"]{padding: 9px 10px; border-radius: 12px}
+    .check{
+      width:18px; height:18px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(0,0,0,.15);
+      display:grid;
+      place-items:center;
+      cursor:pointer;
+      user-select:none;
+      flex: 0 0 auto;
+    }
+    .check.on{
+      border-color: rgba(49,208,127,.35);
+      background: rgba(49,208,127,.16);
+    }
+    .check svg{width:14px; height:14px; fill: rgba(49,208,127,.95); opacity: 0}
+    .check.on svg{opacity: 1}
+    .subText{
+      font-size: 13px;
+      color: var(--text);
+      flex: 1;
+      min-width: 0;
+      overflow:hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .subText.done{color: var(--muted); text-decoration: line-through}
+    .miniBtn{
+      width:34px; height:34px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.05);
+      cursor:pointer;
+      display:grid; place-items:center;
+      transition:.12s ease;
+      flex: 0 0 auto;
+    }
+    .miniBtn:hover{transform: translateY(-1px); background: rgba(255,255,255,.08)}
+    .miniBtn svg{width:16px;height:16px;fill:currentColor;opacity:.9}
+
+    /* Footer */
+    .foot{
+      margin-top: 12px;
+      display:flex; flex-wrap:wrap; gap:10px;
+      justify-content: space-between;
+      align-items:center;
+      padding: 12px 14px;
+    }
+
+    .col.dragover{
+      outline: 2px solid rgba(94,228,255,.32);
+      box-shadow: var(--focus);
+      transform: translateY(-1px);
+    }
+
+    /* Command palette */
+    .palette{
+      width: 780px;
+      max-width: 100%;
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: linear-gradient(180deg, rgba(18,24,38,.95), rgba(15,19,27,.95));
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .paletteHead{
+      padding: 14px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      display:flex;
+      gap:10px;
+      align-items:center;
+      background: rgba(0,0,0,.12);
+    }
+    .paletteList{max-height: 420px; overflow:auto}
+    .pItem{
+      padding: 12px 14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      cursor:pointer;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      transition:.10s ease;
+    }
+    .pItem:hover{background: rgba(255,255,255,.04)}
+    .pItem b{font-size: 13px}
+    .pItem span{font-size: 12px; color: var(--muted)}
+    .pRight{display:flex; gap:8px; align-items:center}
+    .kbd{
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      padding: 2px 6px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.20);
+    }
+  </style>
+
+  <!-- Firebase (mesmas configs do seu app - NÃO alterado) -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+</head>
+
+<body>
+  <div class="app">
+    <div class="topbarSticky">
+      <div class="topbar">
+        <div class="brand">
+          <div class="logo" aria-hidden="true"></div>
+          <div>
+            <h1>Checklist Pro • Kanban</h1>
+            <div class="sub">
+              <span>Kanban + Checklist interno + Views + Import/Export • Firebase RTDB</span>
+              <span class="syncPill" id="syncPill"><span class="dot" id="syncDot"></span><span id="syncText">Carregando…</span></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <span class="pill">Atalhos: <span class="kbd">N</span> nova • <span class="kbd">/</span> buscar • <span class="kbd">Ctrl/⌘ K</span> comandos</span>
+          <button class="btn ghost" id="btnGoHome">Voltar</button>
+          <button class="btn" id="btnOpenPalette">Comandos</button>
+          <button class="btn primary" id="btnOpenNew">Nova tarefa</button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card panel">
+          <div class="row">
+            <div class="field" style="min-width:260px">
+              <div class="label">Checklist / Projeto</div>
+              <div class="row" style="gap:8px">
+                <select id="projectSelect" style="flex:1; min-width:220px"></select>
+                <button class="btn bad" id="btnDeleteProject">Excluir</button>
+              </div>
+              <div class="hint">Dica: nomes simples. (Sem “/ . # $ [ ]” no nome)</div>
+            </div>
+
+            <div class="field">
+              <div class="label">Criar novo</div>
+              <div class="row" style="gap:8px">
+                <input type="text" id="projectName" placeholder="Ex: WF • Obras • Jan 2026" />
+                <button class="btn good" id="btnCreateProject">Criar</button>
+              </div>
+              <div class="hint">Você pode exportar e importar projetos em JSON.</div>
+            </div>
+          </div>
+
+          <div class="summary">
+            <div class="metric">
+              <div class="k">Total</div>
+              <div class="v" id="mTotal">0</div>
+              <div class="s">tarefas</div>
+            </div>
+            <div class="metric">
+              <div class="k">Concluídas</div>
+              <div class="v" id="mDone">0</div>
+              <div class="s">entregas</div>
+            </div>
+            <div class="metric">
+              <div class="k">Atrasadas</div>
+              <div class="v" id="mLate">0</div>
+              <div class="s">prazo vencido</div>
+            </div>
+            <div class="metric">
+              <div class="k">Hoje</div>
+              <div class="v" id="mToday">0</div>
+              <div class="s">vence hoje</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card panel">
+          <div class="row">
+            <div class="field">
+              <div class="label">Buscar</div>
+              <input type="text" id="search" placeholder="Buscar por título, descrição, tags, subtasks..." />
+              <div class="hint">Pressione <span class="hint"><span class="kbd">/</span></span> para focar na busca.</div>
+            </div>
+
+            <div class="field" style="min-width:220px">
+              <div class="label">Filtro</div>
+              <select id="filter">
+                <option value="all">Tudo</option>
+                <option value="late">Atrasadas</option>
+                <option value="today">Vence hoje</option>
+                <option value="week">Vence em 7 dias</option>
+                <option value="high">Prioridade alta</option>
+                <option value="done">Concluídas</option>
+                <option value="noplan">Sem prazo</option>
+              </select>
+              <div class="hint">Aplica em Kanban e Lista.</div>
+            </div>
+
+            <div class="field" style="min-width:260px">
+              <div class="label">Importar</div>
+              <div class="row" style="gap:8px">
+                <input type="file" id="fileInput" accept=".txt,.csv,text/plain,text/csv" />
+                <button class="btn" id="btnImport">Importar</button>
+              </div>
+              <div class="hint">
+                TXT: 1 por linha — <span class="kbd">Título | 2026-01-20 18:00 | alta | #tag</span><br/>
+                CSV: colunas <span class="kbd">title,due,prio,tags,desc</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px; justify-content:space-between">
+            <div class="tabs card" style="padding:6px; border-radius: 18px;">
+              <div class="tab active" data-tab="kanban">Kanban</div>
+              <div class="tab" data-tab="list">Lista</div>
+              <div class="tab" data-tab="insights">Insights</div>
+            </div>
+
+            <div class="row" style="gap:8px">
+              <div class="views" id="views"></div>
+              <button class="btn" id="btnSaveView">Salvar view</button>
+              <button class="btn" id="btnExport">Exportar JSON</button>
+              <button class="btn bad" id="btnClearAll">Limpar</button>
+              <button class="btn primary" id="btnSaveNow">Salvar agora</button>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px; justify-content:space-between">
+            <div class="hint">
+              Drag & drop: move e <b>reordena</b> dentro da coluna. Double click no card = alterna concluída.
+            </div>
+            <div class="row" style="gap:8px">
+              <span class="pill">Auto-save: <span id="autosaveState" class="kbd">OFF</span></span>
+              <button class="btn" id="btnToggleAutosave">Ativar Auto-save</button>
+              <button class="btn" id="btnUndo">Desfazer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kanban -->
+    <div class="card" id="kanbanView">
+      <div class="kanban" id="kanbanBoard"></div>
+      <div class="foot">
+        <div class="hint">Offline-ready: alterações ficam em cache e sincronizam quando voltar a internet.</div>
+        <div class="row" style="gap:8px">
+          <button class="btn" id="btnBulk">Adicionar em massa</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- List view -->
+    <div class="card" id="listView" style="display:none">
+      <div class="listwrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:26%">Tarefa</th>
+              <th style="width:16%">Status</th>
+              <th style="width:14%">Prioridade</th>
+              <th style="width:18%">Prazo</th>
+              <th style="width:14%">Progresso</th>
+              <th style="width:12%">Tags</th>
+              <th class="right" style="width:14%">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="listBody"></tbody>
+        </table>
+        <div class="hint" style="margin-top:10px">Lista é ótima para auditoria rápida e limpeza de backlog.</div>
+      </div>
+    </div>
+
+    <!-- Insights -->
+    <div class="card" id="insightsView" style="display:none">
+      <div class="panel">
+        <div class="row" style="justify-content:space-between">
+          <div>
+            <div style="font-weight:860; letter-spacing:.2px">Insights (sem libs, rápido e pro)</div>
+            <div class="hint">Últimos 7 e 30 dias — criadas, concluídas e lead time médio (tempo até concluir).</div>
+          </div>
+          <button class="btn" id="btnRefreshInsights">Atualizar</button>
+        </div>
+
+        <div class="summary" style="margin-top:12px">
+          <div class="metric">
+            <div class="k">Criadas (7d)</div>
+            <div class="v" id="iC7">0</div>
+            <div class="s">tarefas novas</div>
+          </div>
+          <div class="metric">
+            <div class="k">Concluídas (7d)</div>
+            <div class="v" id="iD7">0</div>
+            <div class="s">entregas</div>
+          </div>
+          <div class="metric">
+            <div class="k">Criadas (30d)</div>
+            <div class="v" id="iC30">0</div>
+            <div class="s">tarefas novas</div>
+          </div>
+          <div class="metric">
+            <div class="k">Lead time médio</div>
+            <div class="v" id="iLead">—</div>
+            <div class="s">dias até concluir</div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row" style="gap:12px; align-items:stretch">
+          <div class="metric" style="flex:1">
+            <div class="k">Backlog por coluna</div>
+            <div class="s" id="iCols">—</div>
+          </div>
+          <div class="metric" style="flex:1">
+            <div class="k">Top tags</div>
+            <div class="s" id="iTags">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">
+      <div>
+        <b id="toastTitle">Ok</b>
+        <p id="toastMsg">Mensagem</p>
+      </div>
+      <button class="btn tbtn" id="toastBtn">Fechar</button>
+    </div>
+
+    <!-- Modal tarefa -->
+    <div class="modalBack" id="modalBack" aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modalHead">
+          <b id="modalTitle">Editar tarefa</b>
+          <div class="row" style="gap:8px">
+            <button class="btn" id="btnDuplicateTask">Duplicar</button>
+            <button class="btn ghost" id="btnCloseModal">Fechar</button>
+          </div>
+        </div>
+        <div class="modalBody">
+          <div class="modalGrid">
+            <div>
+              <div class="field">
+                <div class="label">Título</div>
+                <input type="text" id="tTitle" placeholder="Ex: Revisar memorial de cálculo" />
+              </div>
+
+              <div class="field" style="margin-top:10px">
+                <div class="label">Descrição</div>
+                <textarea id="tDesc" placeholder="Notas, links, checklist interno, etc."></textarea>
+              </div>
+
+              <div class="row" style="margin-top:10px">
+                <div class="field" style="min-width:220px">
+                  <div class="label">Prazo (data e hora)</div>
+                  <input type="datetime-local" id="tDue" />
+                  <div class="hint">Se vazio, fica “Sem prazo”.</div>
+                </div>
+
+                <div class="field" style="min-width:210px">
+                  <div class="label">Status</div>
+                  <select id="tStatus"></select>
+                </div>
+
+                <div class="field" style="min-width:210px">
+                  <div class="label">Prioridade</div>
+                  <select id="tPrio">
+                    <option value="low">Baixa</option>
+                    <option value="med">Média</option>
+                    <option value="high">Alta</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="divider"></div>
+
+              <div class="field">
+                <div class="label">Tags</div>
+                <input type="text" id="tTags" placeholder="Ex: #obra #orçamento #pessoal" />
+                <div class="hint">Separe por espaço. Clique numa tag do Kanban para filtrar.</div>
+              </div>
+
+              <div class="divider"></div>
+
+              <div class="field">
+                <div class="label">Checklist interno (subtarefas)</div>
+                <div class="subtasks" id="subtasksBox"></div>
+                <div class="row" style="margin-top:10px; justify-content:space-between">
+                  <div class="hint">Progresso aparece no card e na lista.</div>
+                  <button class="btn" id="btnAddSub">Adicionar item</button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="metric" style="border-radius:22px">
+                <div class="k">Status do prazo</div>
+                <div class="v" id="dueHealth">—</div>
+                <div class="s" id="dueHealthSub">Defina um prazo para alertas.</div>
+              </div>
+
+              <div class="metric" style="margin-top:10px; border-radius:22px">
+                <div class="k">Progresso</div>
+                <div class="v" id="progBig">—</div>
+                <div class="s" id="progSub">Checklist interno.</div>
+              </div>
+
+              <div class="metric" style="margin-top:10px; border-radius:22px">
+                <div class="k">Carimbo</div>
+                <div class="v" style="font-size:13px; font-family:var(--mono)" id="stamp">—</div>
+                <div class="s">Criada / atualizada automaticamente.</div>
+              </div>
+
+              <div class="divider"></div>
+
+              <div class="field">
+                <div class="label">Ações rápidas</div>
+                <div class="tagRow">
+                  <div class="tag" data-quick="toggleDone">Alternar concluída</div>
+                  <div class="tag" data-quick="moveLeft">Mover ←</div>
+                  <div class="tag" data-quick="moveRight">Mover →</div>
+                  <div class="tag" data-quick="clearDue">Remover prazo</div>
+                </div>
+                <div class="hint" style="margin-top:8px">Ações sem sair do modal.</div>
+              </div>
+
+              <div class="divider"></div>
+
+              <div class="row" style="justify-content:space-between">
+                <button class="btn bad" id="btnDeleteTask">Excluir</button>
+                <div class="row" style="gap:8px">
+                  <button class="btn" id="btnCancelEdit">Cancelar</button>
+                  <button class="btn primary" id="btnSaveTask">Salvar</button>
+                </div>
+              </div>
+
+              <div class="hint" style="margin-top:10px">Atalhos: <span class="kbd">Esc</span> fechar • <span class="kbd">Enter</span> salvar (no modal).</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Command palette -->
+    <div class="modalBack" id="paletteBack" aria-hidden="true">
+      <div class="palette" role="dialog" aria-modal="true">
+        <div class="paletteHead">
+          <input type="text" id="pSearch" placeholder="Comandos… (ex: nova, salvar, exportar, view, limpar)" />
+          <button class="btn ghost" id="btnClosePalette">Fechar</button>
+        </div>
+        <div class="paletteList" id="pList"></div>
+      </div>
+    </div>
+
+    <!-- Bulk add -->
+    <div class="modalBack" id="bulkBack" aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="modalHead">
+          <b>Adicionar em massa</b>
+          <button class="btn ghost" id="btnCloseBulk">Fechar</button>
+        </div>
+        <div class="modalBody">
+          <div class="hint">1 por linha. Formato opcional: <span class="kbd">Título | 2026-01-20 18:00 | alta | #tag</span></div>
+          <div style="margin-top:10px">
+            <textarea id="bulkText" style="min-height:220px" placeholder="Ex:
+Comprar material | 2026-01-20 18:00 | alta | #obra
+Revisar planilha | 2026-01-15 09:00 | média | #financeiro"></textarea>
+          </div>
+          <div class="row" style="margin-top:10px; justify-content:space-between">
+            <div class="hint">As tarefas entram em “Não iniciada”.</div>
+            <div class="row" style="gap:8px">
+              <button class="btn" id="btnBulkClear">Limpar</button>
+              <button class="btn primary" id="btnBulkAdd">Adicionar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ============================
+    // Firebase (NÃO ALTERADO)
+    // ============================
+    const firebaseConfig = {
+      apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+      authDomain: "agenda-6accc.firebaseapp.com",
+      databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+      projectId: "agenda-6accc",
+      storageBucket: "agenda-6accc.appspot.com",
+      messagingSenderId: "794262176773",
+      appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+      measurementId: "G-CVBQ54PERH"
+    };
+    const app = firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    // ============================
+    // Model
+    // ============================
+    const STATUSES = [
+      { key:"todo",  label:"Não iniciada" },
+      { key:"doing", label:"Em andamento" },
+      { key:"review",label:"Revisão" },
+      { key:"done",  label:"Concluída" }
+    ];
+
+    // In-memory
+    let projects = {};                 // { [projectName]: Task[] }
+    let currentProject = null;
+    let autosave = false;
+    let autosaveTimer = null;
+    let editingId = null;
+
+    // Drag reorder state
+    let dragId = null;
+    let dragFromStatus = null;
+    let indicatorEl = null;
+
+    // Offline cache / sync
+    const LS_KEY = "checklist_pro_v2_cache";
+    const LS_VIEWS_KEY = "checklist_pro_v2_views";
+    let pendingWrites = 0;
+    let lastSyncAt = "";
+    let undoStack = []; // snapshots of current project tasks
+
+    // Views
+    const BASE_VIEWS = [
+      { id:"all",   name:"Tudo",        filter:"all", icon:"✨" },
+      { id:"today", name:"Hoje",        filter:"today", icon:"📅" },
+      { id:"late",  name:"Atrasadas",   filter:"late", icon:"⏱️" },
+      { id:"week",  name:"7 dias",      filter:"week", icon:"🗓️" },
+      { id:"high",  name:"Alta",        filter:"high", icon:"⚡" },
+      { id:"done",  name:"Concluídas",  filter:"done", icon:"✅" }
+    ];
+    let activeViewId = "all";
+
+    // ============================
+    // Helpers
+    // ============================
+    const $ = (id)=> document.getElementById(id);
+
+    function nowISO(){
+      const d = new Date();
+      const pad = (n)=> String(n).padStart(2,'0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+
+    function uid(){
+      return "t_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
+    }
+
+    function safeProjectName(name){
+      return String(name || "")
+        .trim()
+        .replace(/[\/\.\#\$\[\]]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function escapeHtml(s){
+      return String(s||"")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function prioLabel(p){
+      if(p === "high") return "Alta";
+      if(p === "med") return "Média";
+      return "Baixa";
+    }
+
+    function statusLabel(k){
+      return (STATUSES.find(s=>s.key===k)?.label) || k;
+    }
+
+    function toLocalDTInput(isoLike){
+      // accepts "YYYY-MM-DDTHH:mm" or "YYYY-MM-DD HH:mm:ss" or "YYYY-MM-DD"
+      if(!isoLike) return "";
+      const s = String(isoLike);
+      const m1 = s.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+      if(m1) return `${m1[1]}T${m1[2]}`;
+      const m2 = s.match(/^(\d{4}-\d{2}-\d{2})\s(\d{2}:\d{2})/);
+      if(m2) return `${m2[1]}T${m2[2]}`;
+      const m3 = s.match(/^(\d{4}-\d{2}-\d{2})$/);
+      if(m3) return `${m3[1]}T09:00`;
+      return "";
+    }
+
+    function parseDueDT(inputVal){
+      // inputVal from datetime-local (YYYY-MM-DDTHH:mm)
+      const v = (inputVal || "").trim();
+      if(!v) return null;
+      const d = new Date(v);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    function humanDueBadge(dueDT, isDone){
+      if(isDone) return { cls:"chip done", text:"Concluída" };
+      if(!dueDT) return { cls:"chip", text:"Sem prazo" };
+
+      const now = new Date();
+      const ms = dueDT.getTime() - now.getTime();
+      const hours = Math.round(ms / (1000*60*60));
+      const days = Math.round(ms / (1000*60*60*24));
+
+      const pad = (n)=> String(n).padStart(2,'0');
+      const dueStr = `${dueDT.getFullYear()}-${pad(dueDT.getMonth()+1)}-${pad(dueDT.getDate())} ${pad(dueDT.getHours())}:${pad(dueDT.getMinutes())}`;
+
+      // “hoje” considera a data
+      const today0 = new Date(); today0.setHours(0,0,0,0);
+      const due0 = new Date(dueDT); due0.setHours(0,0,0,0);
+      const dayDiff = Math.round((due0.getTime()-today0.getTime())/(1000*60*60*24));
+
+      if(ms < 0){
+        return { cls:"chip due overdue", text:`${dueStr} • atrasada` };
+      }
+      if(dayDiff === 0){
+        return { cls:"chip due today", text:`${dueStr} • hoje${hours<=6? " • urgente":""}` };
+      }
+      if(dayDiff === 1){
+        return { cls:"chip due today", text:`${dueStr} • amanhã` };
+      }
+      // fallback
+      return { cls:"chip due", text: dueStr };
+    }
+
+    function taskProgress(t){
+      const subs = Array.isArray(t.subtasks) ? t.subtasks : [];
+      if(!subs.length) return { pct:null, done:0, total:0 };
+      const done = subs.filter(x=>x && x.done).length;
+      const total = subs.length;
+      const pct = Math.round((done/total)*100);
+      return { pct, done, total };
+    }
+
+    function normalizeTask(raw){
+      const t = raw || {};
+      const isLegacy = ("description" in t) || ("situation" in t) || ("estimatedDate" in t);
+
+      if(isLegacy){
+        const mapSituation = (s)=>{
+          if(s === "Concluída") return "done";
+          if(s === "Em Andamento") return "doing";
+          return "todo";
+        };
+        const st = mapSituation(t.situation);
+        return {
+          id: uid(),
+          title: (t.description || "").trim() || "Sem título",
+          desc: "",
+          status: st,
+          prio: "med",
+          due: toLocalDTInput(t.estimatedDate || ""), // old: date string
+          tags: "",
+          subtasks: [],
+          createdAt: t.date || nowISO(),
+          updatedAt: nowISO(),
+          doneAt: (st==="done") ? nowISO() : "",
+          order: 0
+        };
+      }
+
+      return {
+        id: t.id || uid(),
+        title: (t.title || "Sem título").trim(),
+        desc: t.desc || "",
+        status: t.status || "todo",
+        prio: t.prio || "med",
+        due: toLocalDTInput(t.due || t.estimatedDate || ""),
+        tags: t.tags || "",
+        subtasks: Array.isArray(t.subtasks) ? t.subtasks : [],
+        createdAt: t.createdAt || nowISO(),
+        updatedAt: t.updatedAt || nowISO(),
+        doneAt: t.doneAt || "",
+        order: Number.isFinite(+t.order) ? (+t.order) : 0
+      };
+    }
+
+    function serializeArray(taskList){
+      // mantemos /checklists/{project} como array (sem alterar Firebase config)
+      return taskList.map(t => ({
+        id: t.id,
+        title: t.title,
+        desc: t.desc || "",
+        status: t.status,
+        prio: t.prio,
+        due: t.due || "",
+        tags: t.tags || "",
+        subtasks: Array.isArray(t.subtasks)? t.subtasks : [],
+        createdAt: t.createdAt,
+        updatedAt: t.updatedAt,
+        doneAt: t.doneAt || "",
+        order: Number.isFinite(+t.order) ? (+t.order) : 0
+      }));
+    }
+
+    function getCurrentTasks(){
+      if(!currentProject) return [];
+      return projects[currentProject] || [];
+    }
+
+    function setCurrentTasks(list){
+      if(!currentProject) return;
+      projects[currentProject] = list;
+      cacheToLocal();
+    }
+
+    function toast(title, msg){
+      $("toastTitle").textContent = title;
+      $("toastMsg").textContent = msg;
+      $("toast").classList.add("show");
+      $("toastBtn").onclick = () => $("toast").classList.remove("show");
+      clearTimeout(toast._t);
+      toast._t = setTimeout(() => $("toast").classList.remove("show"), 4200);
+    }
+
+    function setSyncState(kind, text){
+      // kind: ok|warn|bad|neutral
+      const dot = $("syncDot");
+      dot.classList.remove("ok","warn","bad");
+      if(kind==="ok") dot.classList.add("ok");
+      if(kind==="warn") dot.classList.add("warn");
+      if(kind==="bad") dot.classList.add("bad");
+      $("syncText").textContent = text;
+    }
+
+    function cacheToLocal(){
+      try{
+        const payload = {
+          savedAt: nowISO(),
+          currentProject,
+          projects
+        };
+        localStorage.setItem(LS_KEY, JSON.stringify(payload));
+      }catch(e){}
+    }
+
+    function loadFromLocal(){
+      try{
+        const raw = localStorage.getItem(LS_KEY);
+        if(!raw) return false;
+        const data = JSON.parse(raw);
+        if(!data || typeof data !== "object") return false;
+        if(data.projects && typeof data.projects === "object"){
+          projects = data.projects;
+          currentProject = data.currentProject || null;
+
+          // normalize (important)
+          Object.keys(projects).forEach(p=>{
+            const arr = Array.isArray(projects[p]) ? projects[p] : [];
+            projects[p] = arr.map(normalizeTask);
+            ensureOrders(p);
+          });
+          return true;
+        }
+      }catch(e){}
+      return false;
+    }
+
+    function saveUndoSnapshot(){
+      if(!currentProject) return;
+      const snap = JSON.parse(JSON.stringify(getCurrentTasks()));
+      undoStack.push(snap);
+      if(undoStack.length > 12) undoStack.shift();
+    }
+
+    function undo(){
+      if(!currentProject) return;
+      const prev = undoStack.pop();
+      if(!prev){
+        toast("Nada para desfazer", "Sem histórico de alterações.");
+        return;
+      }
+      setCurrentTasks(prev);
+      render();
+      requestAutosave();
+      toast("Desfeito", "Voltamos uma etapa.");
+    }
+
+    // ============================
+    // Views (saved in localStorage)
+    // ============================
+    function getSavedViews(){
+      try{
+        const raw = localStorage.getItem(LS_VIEWS_KEY);
+        const data = raw ? JSON.parse(raw) : {};
+        return (data && typeof data === "object") ? data : {};
+      }catch(e){ return {}; }
+    }
+    function setSavedViews(obj){
+      try{ localStorage.setItem(LS_VIEWS_KEY, JSON.stringify(obj||{})); }catch(e){}
+    }
+    function listViewsForProject(project){
+      const saved = getSavedViews();
+      const custom = (saved[project] && Array.isArray(saved[project])) ? saved[project] : [];
+      return [...BASE_VIEWS, ...custom];
+    }
+    function renderViews(){
+      const box = $("views");
+      box.innerHTML = "";
+      const views = listViewsForProject(currentProject || "_");
+      views.forEach(v=>{
+        const b = document.createElement("div");
+        b.className = "vchip" + (v.id===activeViewId ? " active":"");
+        b.textContent = `${v.icon||"👁️"} ${v.name}`;
+        b.title = v.id.startsWith("custom_") ? "Clique para ativar. Shift+clique para excluir." : "Clique para ativar.";
+        b.addEventListener("click", (e)=>{
+          if(v.id.startsWith("custom_") && e.shiftKey){
+            deleteView(v.id);
+            return;
+          }
+          activeViewId = v.id;
+          applyView(v);
+        });
+        box.appendChild(b);
+      });
+    }
+    function deleteView(id){
+      if(!currentProject) return;
+      const saved = getSavedViews();
+      const arr = (saved[currentProject] && Array.isArray(saved[currentProject])) ? saved[currentProject] : [];
+      const next = arr.filter(x=>x.id!==id);
+      saved[currentProject] = next;
+      setSavedViews(saved);
+      if(activeViewId===id) activeViewId="all";
+      render();
+      toast("View removida", "View custom apagada. (Shift+clique)");
+    }
+    function applyView(v){
+      // simple mapping to filter + optional quick search/tag
+      $("filter").value = v.filter || "all";
+      if(v.query != null) $("search").value = v.query;
+      if(v.tag){
+        const q = ($("search").value || "").trim();
+        const add = v.tag.startsWith("#") ? v.tag : ("#"+v.tag);
+        $("search").value = q ? (q + " " + add) : add;
+      }
+      render();
+    }
+    function saveCurrentAsView(){
+      if(!currentProject){
+        toast("Selecione um projeto", "Crie/seleciona um projeto antes de salvar view.");
+        return;
+      }
+      const name = prompt("Nome da view (ex: Obra / Hoje / Alta):");
+      if(!name) return;
+      const id = "custom_" + uid();
+      const v = {
+        id,
+        name: name.trim().slice(0,40),
+        icon: "⭐",
+        filter: $("filter").value,
+        query: ($("search").value||"").trim()
+      };
+      const saved = getSavedViews();
+      const arr = (saved[currentProject] && Array.isArray(saved[currentProject])) ? saved[currentProject] : [];
+      arr.push(v);
+      saved[currentProject] = arr;
+      setSavedViews(saved);
+      activeViewId = id;
+      render();
+      toast("View salva", "View criada. (Shift+clique para excluir)");
+    }
+
+    // ============================
+    // Filters / matching
+    // ============================
+    function matchesFilters(task){
+      const q = ($("search").value || "").trim().toLowerCase();
+      const f = $("filter").value;
+
+      const subsText = (Array.isArray(task.subtasks) ? task.subtasks.map(s=>s?.text||"").join(" ") : "");
+      const text = `${task.title} ${task.desc} ${task.tags} ${subsText}`.toLowerCase();
+      if(q && !text.includes(q)) return false;
+
+      const due = parseDueDT(task.due);
+      const now = new Date();
+      const today0 = new Date(); today0.setHours(0,0,0,0);
+      const isDone = task.status === "done";
+
+      const hasDue = !!due;
+      const due0 = due ? new Date(due) : null;
+      if(due0) due0.setHours(0,0,0,0);
+
+      const isLate = (hasDue && due < now && !isDone);
+      const isToday = (hasDue && due0.getTime()===today0.getTime() && !isDone);
+      const isWeek = (hasDue && (due0.getTime() - today0.getTime())/(1000*60*60*24) >= 0 && (due0.getTime() - today0.getTime())/(1000*60*60*24) <= 7 && !isDone);
+
+      if(f === "late") return isLate;
+      if(f === "today") return isToday;
+      if(f === "week") return isWeek;
+      if(f === "high") return task.prio === "high" && !isDone;
+      if(f === "done") return isDone;
+      if(f === "noplan") return !hasDue && !isDone;
+      return true;
+    }
+
+    // ============================
+    // Ordering
+    // ============================
+    function ensureOrders(projectName){
+      const tasks = (projects[projectName] || []).slice();
+      const byStatus = {};
+      STATUSES.forEach(s=> byStatus[s.key] = []);
+      tasks.forEach(t=>{
+        if(!byStatus[t.status]) byStatus[t.status]=[];
+        byStatus[t.status].push(t);
+      });
+      // normalize per status
+      Object.keys(byStatus).forEach(st=>{
+        byStatus[st].sort((a,b)=> (a.order-b.order) || (a.updatedAt||"").localeCompare(b.updatedAt||""));
+        byStatus[st].forEach((t,i)=> t.order = i);
+      });
+      projects[projectName] = tasks;
+    }
+
+    function renumberStatus(status){
+      const tasks = getCurrentTasks().slice();
+      const list = tasks.filter(t=>t.status===status).sort((a,b)=>a.order-b.order);
+      list.forEach((t,i)=> t.order=i);
+      setCurrentTasks(tasks);
+    }
+
+    // ============================
+    // Summary
+    // ============================
+    function updateSummary(){
+      const tasks = getCurrentTasks();
+      let total=0, done=0, late=0, todayN=0;
+
+      const now = new Date();
+      const today0 = new Date(); today0.setHours(0,0,0,0);
+
+      tasks.forEach(t=>{
+        total++;
+        if(t.status==="done") done++;
+        const due = parseDueDT(t.due);
+        if(due){
+          const due0 = new Date(due); due0.setHours(0,0,0,0);
+          if(due < now && t.status!=="done") late++;
+          if(due0.getTime()===today0.getTime() && t.status!=="done") todayN++;
+        }
+      });
+
+      $("mTotal").textContent = total;
+      $("mDone").textContent = done;
+      $("mLate").textContent = late;
+      $("mToday").textContent = todayN;
+    }
+
+    // ============================
+    // Autosave / sync
+    // ============================
+    function requestAutosave(){
+      if(!autosave) return;
+      $("autosaveState").textContent = "ON";
+      clearTimeout(autosaveTimer);
+      autosaveTimer = setTimeout(()=> saveProjectToFirebase(true), 650);
+    }
+
+    function markPending(){
+      pendingWrites++;
+      setSyncState(navigator.onLine ? "warn":"bad", navigator.onLine ? `Alterações pendentes (${pendingWrites})…` : `Offline • pendentes (${pendingWrites})`);
+    }
+    function markSynced(){
+      pendingWrites = 0;
+      lastSyncAt = nowISO();
+      setSyncState("ok", `Sincronizado • ${lastSyncAt.split(" ")[1]}`);
+    }
+
+    // ============================
+    // Kanban render
+    // ============================
+    function buildBoard(){
+      const board = $("kanbanBoard");
+      board.innerHTML = "";
+
+      const tasksAll = getCurrentTasks().filter(matchesFilters);
+
+      STATUSES.forEach(st=>{
+        const col = document.createElement("div");
+        col.className = "col";
+        col.dataset.status = st.key;
+
+        const tasks = tasksAll
+          .filter(t=>t.status===st.key)
+          .sort((a,b)=> (a.order-b.order) || (a.updatedAt||"").localeCompare(b.updatedAt||""));
+
+        const head = document.createElement("div");
+        head.className = "colhead";
+
+        const title = document.createElement("div");
+        title.className = "coltitle";
+        title.innerHTML = `<b>${st.label}</b><span>${st.key.toUpperCase()}</span>`;
+
+        const badge = document.createElement("div");
+        badge.className = "colcount";
+        badge.textContent = `${tasks.length}`;
+
+        head.appendChild(title);
+        head.appendChild(badge);
+
+        const zone = document.createElement("div");
+        zone.className = "dropzone";
+        zone.dataset.status = st.key;
+
+        // drop indicator
+        const ind = document.createElement("div");
+        ind.className = "dropIndicator";
+        zone.appendChild(ind);
+
+        // Column drag events
+        col.addEventListener("dragover", (e)=>{
+          e.preventDefault();
+          col.classList.add("dragover");
+          const afterEl = getDragAfterElement(zone, e.clientY);
+          showIndicator(zone, afterEl);
+        });
+        col.addEventListener("dragleave", ()=>{
+          col.classList.remove("dragover");
+          hideIndicator(zone);
+        });
+        col.addEventListener("drop", (e)=>{
+          e.preventDefault();
+          col.classList.remove("dragover");
+          hideIndicator(zone);
+          const id = e.dataTransfer.getData("text/plain");
+          const afterEl = getDragAfterElement(zone, e.clientY);
+          dropMoveAndReorder(id, st.key, afterEl?.dataset?.id || null);
+        });
+
+        if(!tasks.length){
+          const empty = document.createElement("div");
+          empty.className = "emptyState";
+          empty.innerHTML = `
+            <div><b>Coluna vazia</b></div>
+            <div class="mini">Arraste tarefas pra cá ou crie uma nova.</div>
+            <button class="btn" type="button">Criar tarefa</button>
+          `;
+          empty.querySelector("button").addEventListener("click", ()=> openNew(st.key));
+          zone.appendChild(empty);
+        } else {
+          tasks.forEach(t=>{
+            zone.appendChild(renderTaskCard(t));
+          });
+        }
+
+        col.appendChild(head);
+        col.appendChild(zone);
+        board.appendChild(col);
+      });
+    }
+
+    function getDragAfterElement(container, y){
+      const draggableEls = [...container.querySelectorAll(".task:not(.dragging)")];
+      let closest = { offset: Number.NEGATIVE_INFINITY, element: null };
+      draggableEls.forEach(child=>{
+        const box = child.getBoundingClientRect();
+        const offset = y - (box.top + box.height/2);
+        if(offset < 0 && offset > closest.offset){
+          closest = { offset, element: child };
+        }
+      });
+      return closest.element;
+    }
+
+    function showIndicator(zone, afterEl){
+      const ind = zone.querySelector(".dropIndicator");
+      if(!ind) return;
+      ind.classList.add("show");
+      if(afterEl){
+        zone.insertBefore(ind, afterEl);
+      } else {
+        zone.appendChild(ind);
+      }
+    }
+    function hideIndicator(zone){
+      const ind = zone.querySelector(".dropIndicator");
+      if(!ind) return;
+      ind.classList.remove("show");
+      // keep it at top to avoid layout jumps
+      if(zone.firstChild !== ind) zone.insertBefore(ind, zone.firstChild);
+    }
+
+    function renderTaskCard(t){
+      const card = document.createElement("div");
+      card.className = "task";
+      card.draggable = true;
+      card.dataset.id = t.id;
+
+      card.addEventListener("dragstart", (e)=>{
+        dragId = t.id;
+        dragFromStatus = t.status;
+        card.classList.add("dragging");
+        e.dataTransfer.setData("text/plain", t.id);
+        e.dataTransfer.effectAllowed = "move";
+      });
+      card.addEventListener("dragend", ()=>{
+        card.classList.remove("dragging");
+        dragId = null;
+        dragFromStatus = null;
+      });
+
+      // Double click: toggle done
+      card.addEventListener("dblclick", ()=>{
+        toggleDone(t.id);
+      });
+
+      const prioDotClass = t.prio === "high" ? "prio-high" : (t.prio === "med" ? "prio-med" : "prio-low");
+
+      const dueDT = parseDueDT(t.due);
+      const dueBadge = humanDueBadge(dueDT, t.status==="done");
+
+      const tags = (t.tags || "").trim();
+      const progress = taskProgress(t);
+      const progChip = (progress.total>0)
+        ? `<span class="chip">✅ <strong>${progress.pct}%</strong> <span style="opacity:.9">(${progress.done}/${progress.total})</span></span>`
+        : "";
+
+      const tagsChip = tags ? `<span class="chip" title="Clique para filtrar" data-tags="${escapeHtml(tags)}">🏷️ ${escapeHtml(tags)}</span>` : "";
+
+      card.innerHTML = `
+        <div class="top">
+          <div style="min-width:0">
+            <div class="title">${escapeHtml(t.title)}</div>
+            <div class="meta">
+              <span class="chip"><span class="prioDot ${prioDotClass}"></span> ${prioLabel(t.prio)}</span>
+              <span class="${dueBadge.cls}">📅 ${escapeHtml(dueBadge.text)}</span>
+              ${progChip}
+              ${tagsChip}
+            </div>
+          </div>
+          <div class="taskBtns">
+            <button class="iconbtn" title="Editar">
+              ${svgPencil()}
+            </button>
+          </div>
+        </div>
+      `;
+
+      const editBtn = card.querySelector(".iconbtn");
+      editBtn.addEventListener("click", (e)=>{ e.stopPropagation(); openEdit(t.id); });
+
+      // click card open edit
+      card.addEventListener("click", ()=> openEdit(t.id));
+
+      // tags click => filter
+      const tagsEl = card.querySelector('[data-tags]');
+      if(tagsEl){
+        tagsEl.addEventListener("click", (e)=>{
+          e.stopPropagation();
+          const firstTag = (tags||"").split(/\s+/).find(x=>x.startsWith("#")) || (tags||"").split(/\s+/)[0];
+          if(!firstTag) return;
+          $("search").value = firstTag.startsWith("#") ? firstTag : ("#"+firstTag);
+          $("filter").value = "all";
+          activeViewId = "all";
+          render();
+          toast("Filtro por tag", `Mostrando: ${$("search").value}`);
+        });
+      }
+
+      return card;
+    }
+
+    function dropMoveAndReorder(id, newStatus, beforeId){
+      if(!currentProject) return;
+      const tasks = getCurrentTasks().slice();
+      const moving = tasks.find(x=>x.id===id);
+      if(!moving) return;
+
+      saveUndoSnapshot();
+
+      // move status
+      moving.status = newStatus;
+      moving.updatedAt = nowISO();
+      if(newStatus==="done"){
+        moving.doneAt = moving.doneAt || nowISO();
+      } else {
+        moving.doneAt = "";
+      }
+
+      // Build list in target status ordered (excluding moving)
+      const target = tasks
+        .filter(t=>t.status===newStatus && t.id!==id)
+        .sort((a,b)=>a.order-b.order);
+
+      // Insert at correct position
+      if(beforeId){
+        const idx = target.findIndex(t=>t.id===beforeId);
+        if(idx>=0) target.splice(idx,0,moving);
+        else target.push(moving);
+      } else {
+        target.push(moving);
+      }
+
+      // Renumber target orders
+      target.forEach((t,i)=> t.order = i);
+
+      // Also renumber origin column if changed
+      const origin = dragFromStatus;
+      if(origin && origin!==newStatus){
+        const originList = tasks.filter(t=>t.status===origin && t.id!==id).sort((a,b)=>a.order-b.order);
+        originList.forEach((t,i)=> t.order=i);
+      }
+
+      setCurrentTasks(tasks);
+      render();
+      requestAutosave();
+      markPending();
+      toast("Organizado", `Movida para: ${statusLabel(newStatus)} e reordenada.`);
+    }
+
+    function moveTaskToStatus(id, status){
+      dropMoveAndReorder(id, status, null);
+    }
+
+    function toggleDone(id){
+      const tasks = getCurrentTasks().slice();
+      const idx = tasks.findIndex(x=>x.id===id);
+      if(idx<0) return;
+
+      saveUndoSnapshot();
+
+      const t = tasks[idx];
+      const newStatus = (t.status==="done") ? "todo" : "done";
+      t.status = newStatus;
+      t.updatedAt = nowISO();
+      t.doneAt = (newStatus==="done") ? nowISO() : "";
+
+      // move to bottom of new status
+      const list = tasks.filter(x=>x.status===newStatus && x.id!==t.id).sort((a,b)=>a.order-b.order);
+      list.push(t);
+      list.forEach((x,i)=> x.order=i);
+
+      // renumber old status
+      const old = (newStatus==="done") ? "done" : "todo";
+      // above line isn't correct for old; just renumber all statuses quickly:
+      STATUSES.forEach(s=>{
+        const l = tasks.filter(x=>x.status===s.key).sort((a,b)=>a.order-b.order);
+        l.forEach((x,i)=> x.order=i);
+      });
+
+      setCurrentTasks(tasks);
+      render();
+      requestAutosave();
+      markPending();
+      toast("Status", newStatus==="done" ? "Marcada como concluída." : "Reaberta.");
+    }
+
+    // ============================
+    // List render
+    // ============================
+    function buildList(){
+      const body = $("listBody");
+      body.innerHTML = "";
+
+      const tasks = getCurrentTasks()
+        .filter(matchesFilters)
+        .slice()
+        .sort((a,b)=>{
+          // group by status order, then order
+          const sa = STATUSES.findIndex(s=>s.key===a.status);
+          const sb = STATUSES.findIndex(s=>s.key===b.status);
+          return (sa-sb) || (a.order-b.order);
+        });
+
+      tasks.forEach(t=>{
+        const tr = document.createElement("tr");
+
+        const dueDT = parseDueDT(t.due);
+        const dueBadge = humanDueBadge(dueDT, t.status==="done");
+        const prog = taskProgress(t);
+        const progText = (prog.total>0) ? `${prog.pct}% (${prog.done}/${prog.total})` : "—";
+
+        tr.innerHTML = `
+          <td>
+            <div style="font-weight:860">${escapeHtml(t.title)}</div>
+            <div class="small">${escapeHtml((t.desc || "").slice(0,120))}${(t.desc||"").length>120?"…":""}</div>
+          </td>
+          <td class="nowrap"><span class="chip">${escapeHtml(statusLabel(t.status))}</span></td>
+          <td class="nowrap"><span class="chip"><span class="prioDot ${t.prio==="high"?"prio-high":(t.prio==="med"?"prio-med":"prio-low")}"></span> ${prioLabel(t.prio)}</span></td>
+          <td class="nowrap"><span class="${dueBadge.cls}">📅 ${escapeHtml(dueBadge.text)}</span></td>
+          <td class="nowrap"><span class="chip">📈 <strong>${escapeHtml(progText)}</strong></span></td>
+          <td class="nowrap"><span class="chip">🏷️ ${escapeHtml((t.tags||"").trim() || "—")}</span></td>
+          <td class="right nowrap">
+            <button class="btn" data-act="edit">Editar</button>
+            <button class="btn bad" data-act="del">Excluir</button>
+          </td>
+        `;
+
+        tr.querySelector('[data-act="edit"]').addEventListener("click", ()=> openEdit(t.id));
+        tr.querySelector('[data-act="del"]').addEventListener("click", ()=> deleteTask(t.id));
+
+        body.appendChild(tr);
+      });
+    }
+
+    // ============================
+    // Modal task (edit/create)
+    // ============================
+    function showModal(on){
+      $("modalBack").classList.toggle("show", !!on);
+      $("modalBack").setAttribute("aria-hidden", on ? "false":"true");
+      if(on) setTimeout(()=> $("tTitle").focus(), 25);
+    }
+
+    function openNew(forceStatus=null){
+      if(!currentProject){
+        toast("Selecione um projeto", "Crie ou selecione um checklist/projeto antes de adicionar tarefas.");
+        return;
+      }
+      editingId = null;
+      $("modalTitle").textContent = "Nova tarefa";
+      $("tTitle").value = "";
+      $("tDesc").value = "";
+      $("tDue").value = "";
+      $("tStatus").value = forceStatus || "todo";
+      $("tPrio").value = "med";
+      $("tTags").value = "";
+      $("stamp").textContent = "—";
+      $("btnDeleteTask").style.display = "none";
+      $("btnDuplicateTask").style.display = "none";
+      setSubtasks([]);
+      updateDueHealth();
+      updateProgressUI();
+      showModal(true);
+    }
+
+    function openEdit(id){
+      const t = getCurrentTasks().find(x=>x.id===id);
+      if(!t) return;
+      editingId = id;
+
+      $("modalTitle").textContent = "Editar tarefa";
+      $("tTitle").value = t.title || "";
+      $("tDesc").value = t.desc || "";
+      $("tDue").value = toLocalDTInput(t.due || "");
+      $("tStatus").value = t.status || "todo";
+      $("tPrio").value = t.prio || "med";
+      $("tTags").value = t.tags || "";
+      $("stamp").textContent = `created=${t.createdAt || "—"} | updated=${t.updatedAt || "—"} | order=${t.order}`;
+      $("btnDeleteTask").style.display = "";
+      $("btnDuplicateTask").style.display = "";
+      setSubtasks(Array.isArray(t.subtasks)? t.subtasks : []);
+      updateDueHealth();
+      updateProgressUI();
+      showModal(true);
+    }
+
+    function updateDueHealth(){
+      const due = parseDueDT($("tDue").value);
+      const status = $("tStatus").value;
+
+      if(status === "done"){
+        $("dueHealth").textContent = "Concluída ✅";
+        $("dueHealthSub").textContent = "Tarefa finalizada — ótimo!";
+        return;
+      }
+      if(!due){
+        $("dueHealth").textContent = "Sem prazo";
+        $("dueHealthSub").textContent = "Defina um prazo para alertas e priorização automática.";
+        return;
+      }
+
+      const now = new Date();
+      const ms = due.getTime() - now.getTime();
+      const hours = Math.round(ms / (1000*60*60));
+      const days = Math.round(ms / (1000*60*60*24));
+
+      if(ms < 0){
+        $("dueHealth").textContent = `Atrasada (${Math.abs(hours)}h)`;
+        $("dueHealthSub").textContent = "Repriorize ou mova para execução imediata.";
+      } else if(hours <= 6){
+        $("dueHealth").textContent = "Urgente (≤6h)";
+        $("dueHealthSub").textContent = "Boa hora de atacar agora e concluir.";
+      } else if(days === 0){
+        $("dueHealth").textContent = "Vence hoje";
+        $("dueHealthSub").textContent = "Se for crítica, mova para “Em andamento”.";
+      } else if(days === 1){
+        $("dueHealth").textContent = "Vence amanhã";
+        $("dueHealthSub").textContent = "Agende um bloco amanhã cedo.";
+      } else if(days <= 7){
+        $("dueHealth").textContent = `Vence em ${days}d`;
+        $("dueHealthSub").textContent = "Janela boa de execução — programe.";
+      } else {
+        $("dueHealth").textContent = `No prazo (+${days}d)`;
+        $("dueHealthSub").textContent = "Tudo certo — mantenha cadência.";
+      }
+    }
+
+    function saveFromModal(){
+      const title = ($("tTitle").value || "").trim();
+      if(!title){
+        toast("Título obrigatório", "Coloque um título curto e objetivo.");
+        $("tTitle").focus();
+        return;
+      }
+
+      if(!currentProject) return;
+
+      const tasks = getCurrentTasks().slice();
+      const status = $("tStatus").value;
+      const prio = $("tPrio").value;
+      const due = ($("tDue").value || "").trim();
+      const desc = $("tDesc").value || "";
+      const tags = ($("tTags").value || "").trim();
+      const subtasks = getSubtasks();
+
+      saveUndoSnapshot();
+
+      if(editingId){
+        const idx = tasks.findIndex(x=>x.id===editingId);
+        if(idx<0) return;
+        const t = tasks[idx];
+
+        const statusChanged = (t.status !== status);
+
+        t.title = title;
+        t.desc = desc;
+        t.status = status;
+        t.prio = prio;
+        t.due = due;
+        t.tags = tags;
+        t.subtasks = subtasks;
+        t.updatedAt = nowISO();
+        if(status==="done" && !t.doneAt) t.doneAt = nowISO();
+        if(status!=="done") t.doneAt = "";
+
+        if(statusChanged){
+          // move to bottom of new status
+          const list = tasks.filter(x=>x.status===status && x.id!==t.id).sort((a,b)=>a.order-b.order);
+          list.push(t);
+          list.forEach((x,i)=> x.order=i);
+
+          // renumber old status
+          STATUSES.forEach(s=>{
+            const l = tasks.filter(x=>x.status===s.key).sort((a,b)=>a.order-b.order);
+            l.forEach((x,i)=> x.order=i);
+          });
+        }
+      } else {
+        const list = tasks.filter(x=>x.status===status).sort((a,b)=>a.order-b.order);
+        const order = list.length;
+
+        tasks.push({
+          id: uid(),
+          title,
+          desc,
+          status,
+          prio,
+          due,
+          tags,
+          subtasks,
+          createdAt: nowISO(),
+          updatedAt: nowISO(),
+          doneAt: status==="done" ? nowISO() : "",
+          order
+        });
+      }
+
+      setCurrentTasks(tasks);
+      showModal(false);
+      render();
+      requestAutosave();
+      markPending();
+      toast("Salvo", "Tarefa salva com sucesso.");
+    }
+
+    function deleteTask(id){
+      if(!currentProject) return;
+      const tasks = getCurrentTasks().slice();
+      const idx = tasks.findIndex(x=>x.id===id);
+      if(idx<0) return;
+      const t = tasks[idx];
+      if(!confirm(`Excluir a tarefa:\n\n"${t.title}"\n\nTem certeza?`)) return;
+
+      saveUndoSnapshot();
+
+      tasks.splice(idx,1);
+
+      // renumber all statuses
+      STATUSES.forEach(s=>{
+        const l = tasks.filter(x=>x.status===s.key).sort((a,b)=>a.order-b.order);
+        l.forEach((x,i)=> x.order=i);
+      });
+
+      setCurrentTasks(tasks);
+      render();
+      requestAutosave();
+      markPending();
+      toast("Excluída", "Tarefa removida.");
+    }
+
+    function duplicateCurrent(){
+      if(!editingId || !currentProject) return;
+      const tasks = getCurrentTasks().slice();
+      const t = tasks.find(x=>x.id===editingId);
+      if(!t) return;
+
+      saveUndoSnapshot();
+
+      const list = tasks.filter(x=>x.status===t.status).sort((a,b)=>a.order-b.order);
+      const order = list.length;
+
+      tasks.push({
+        ...JSON.parse(JSON.stringify(t)),
+        id: uid(),
+        title: t.title + " (cópia)",
+        createdAt: nowISO(),
+        updatedAt: nowISO(),
+        doneAt: "",
+        status: "todo",
+        order: tasks.filter(x=>x.status==="todo").length
+      });
+
+      // renumber todo
+      const todo = tasks.filter(x=>x.status==="todo").sort((a,b)=>a.order-b.order);
+      todo.forEach((x,i)=> x.order=i);
+
+      setCurrentTasks(tasks);
+      render();
+      requestAutosave();
+      markPending();
+      toast("Duplicada", "Criamos uma cópia (em Não iniciada).");
+    }
+
+    function quickAction(action){
+      if(!editingId || !currentProject) return;
+      const tasks = getCurrentTasks().slice();
+      const idx = tasks.findIndex(x=>x.id===editingId);
+      if(idx<0) return;
+      const t = tasks[idx];
+
+      saveUndoSnapshot();
+
+      if(action==="toggleDone"){
+        t.status = (t.status==="done") ? "todo" : "done";
+        t.doneAt = (t.status==="done") ? (t.doneAt||nowISO()) : "";
+        $("tStatus").value = t.status;
+      }
+      if(action==="moveLeft"){
+        const i = STATUSES.findIndex(s=>s.key===t.status);
+        if(i>0){ t.status = STATUSES[i-1].key; $("tStatus").value = t.status; }
+      }
+      if(action==="moveRight"){
+        const i = STATUSES.findIndex(s=>s.key===t.status);
+        if(i>=0 && i<STATUSES.length-1){ t.status = STATUSES[i+1].key; $("tStatus").value = t.status; }
+      }
+      if(action==="clearDue"){
+        $("tDue").value = "";
+        t.due = "";
+      }
+
+      t.updatedAt = nowISO();
+
+      // move to bottom of its status
+      const list = tasks.filter(x=>x.status===t.status && x.id!==t.id).sort((a,b)=>a.order-b.order);
+      list.push(t);
+      list.forEach((x,i)=> x.order=i);
+
+      // renumber other statuses
+      STATUSES.forEach(s=>{
+        const l = tasks.filter(x=>x.status===s.key).sort((a,b)=>a.order-b.order);
+        l.forEach((x,i)=> x.order=i);
+      });
+
+      setCurrentTasks(tasks);
+      $("stamp").textContent = `created=${t.createdAt||"—"} | updated=${t.updatedAt||"—"} | order=${t.order}`;
+      updateDueHealth();
+      render();
+      requestAutosave();
+      markPending();
+      toast("Pronto", "Ação aplicada.");
+    }
+
+    // ============================
+    // Subtasks UI
+    // ============================
+    let modalSubtasks = [];
+
+    function setSubtasks(arr){
+      modalSubtasks = (Array.isArray(arr) ? arr : []).map(s=>({
+        id: s.id || uid(),
+        text: (s.text||"").toString(),
+        done: !!s.done
+      }));
+      renderSubtasks();
+    }
+
+    function getSubtasks(){
+      // read from modalSubtasks (already updated on interactions)
+      return modalSubtasks.map(s=>({ id:s.id, text:(s.text||"").trim(), done:!!s.done })).filter(s=>s.text);
+    }
+
+    function renderSubtasks(){
+      const box = $("subtasksBox");
+      box.innerHTML = "";
+
+      const list = modalSubtasks;
+
+      if(!list.length){
+        const empty = document.createElement("div");
+        empty.className = "hint";
+        empty.textContent = "Sem subtarefas. Clique em “Adicionar item”.";
+        box.appendChild(empty);
+        updateProgressUI();
+        return;
+      }
+
+      list.forEach((s, idx)=>{
+        const row = document.createElement("div");
+        row.className = "subRow";
+
+        const chk = document.createElement("div");
+        chk.className = "check" + (s.done ? " on":"");
+        chk.innerHTML = `${svgCheck()}`;
+        chk.addEventListener("click", ()=>{
+          s.done = !s.done;
+          renderSubtasks();
+          updateProgressUI();
+        });
+
+        const inp = document.createElement("input");
+        inp.type = "text";
+        inp.value = s.text || "";
+        inp.placeholder = "Ex: Separar documentos / Enviar e-mail / Revisar";
+        inp.addEventListener("input", ()=>{
+          s.text = inp.value;
+        });
+
+        const del = document.createElement("button");
+        del.className = "miniBtn";
+        del.title = "Remover";
+        del.innerHTML = svgTrash();
+        del.addEventListener("click", ()=>{
+          modalSubtasks.splice(idx,1);
+          renderSubtasks();
+          updateProgressUI();
+        });
+
+        row.appendChild(chk);
+        row.appendChild(inp);
+        row.appendChild(del);
+        box.appendChild(row);
+      });
+
+      updateProgressUI();
+    }
+
+    function updateProgressUI(){
+      const subs = getSubtasks();
+      const done = subs.filter(x=>x.done).length;
+      const total = subs.length;
+      if(total===0){
+        $("progBig").textContent = "—";
+        $("progSub").textContent = "Sem checklist interno.";
+        return;
+      }
+      const pct = Math.round((done/total)*100);
+      $("progBig").textContent = `${pct}%`;
+      $("progSub").textContent = `${done}/${total} itens concluídos.`;
+    }
+
+    // ============================
+    // Projects CRUD
+    // ============================
+    function populateProjectSelect(){
+      const sel = $("projectSelect");
+      sel.innerHTML = "";
+      const names = Object.keys(projects).sort((a,b)=>a.localeCompare(b));
+
+      const opt0 = document.createElement("option");
+      opt0.value = "";
+      opt0.textContent = "Selecione um checklist/projeto";
+      sel.appendChild(opt0);
+
+      names.forEach(name=>{
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+
+      if(currentProject && names.includes(currentProject)) sel.value = currentProject;
+      else sel.value = "";
+    }
+
+    function createProject(){
+      const name = safeProjectName($("projectName").value);
+      if(!name){
+        toast("Nome inválido", "Digite um nome para o checklist/projeto.");
+        return;
+      }
+      if(projects[name]){
+        toast("Já existe", "Esse projeto já existe. Escolha outro nome.");
+        return;
+      }
+      projects[name] = [];
+      currentProject = name;
+      $("projectName").value = "";
+      populateProjectSelect();
+      activeViewId = "all";
+      render();
+      markPending();
+      saveProjectToFirebase(true);
+      toast("Criado", `Projeto "${name}" criado.`);
+    }
+
+    function deleteProject(){
+      const name = $("projectSelect").value;
+      if(!name) return;
+      if(!confirm(`Excluir o projeto "${name}" e todas as tarefas?`)) return;
+
+      delete projects[name];
+      cacheToLocal();
+
+      database.ref(`/checklists/${name}`).remove()
+        .then(()=> toast("Excluído", "Projeto removido do Firebase."))
+        .catch(()=> toast("Atenção", "Não foi possível remover no Firebase (regras/permissões)."));
+
+      currentProject = null;
+      populateProjectSelect();
+      activeViewId="all";
+      render();
+    }
+
+    // ============================
+    // Firebase sync (sem alterar config)
+    // ============================
+    function loadAllFromFirebase(){
+      setSyncState("warn","Carregando do Firebase…");
+      const ref = database.ref("/checklists");
+      ref.on("value", (snapshot)=>{
+        const data = snapshot.val() || {};
+        const next = {};
+
+        Object.keys(data).forEach(projectName=>{
+          const rawList = data[projectName];
+          const arr = Array.isArray(rawList) ? rawList : Object.values(rawList || {});
+          next[projectName] = arr.map(normalizeTask);
+        });
+
+        // merge: se temos cache local com pendências, preferimos o local (last write)
+        // (simples e prático: mantém o que está no cache e sincroniza ao salvar)
+        const hadLocal = loadFromLocal();
+        if(!hadLocal){
+          projects = next;
+          const names = Object.keys(projects).sort((a,b)=>a.localeCompare(b));
+          if(!currentProject && names.length) currentProject = names[0];
+        } else {
+          // se local não tem o projeto, adiciona do firebase
+          Object.keys(next).forEach(p=>{
+            if(!projects[p]) projects[p] = next[p];
+          });
+        }
+
+        Object.keys(projects).forEach(p=> ensureOrders(p));
+
+        populateProjectSelect();
+        render(false);
+        markSynced();
+      }, ()=>{
+        // error callback
+        setSyncState("bad", "Falha ao conectar no Firebase.");
+      });
+    }
+
+    function saveProjectToFirebase(silent=false){
+      if(!currentProject){
+        if(!silent) toast("Sem projeto", "Selecione um checklist/projeto antes de salvar.");
+        return;
+      }
+      const tasks = getCurrentTasks().slice();
+      const ref = database.ref(`/checklists/${currentProject}`);
+
+      markPending();
+
+      ref.set(serializeArray(tasks))
+        .then(()=>{
+          markSynced();
+          if(!silent) toast("Salvo", "Projeto salvo no Firebase.");
+        })
+        .catch(()=>{
+          setSyncState("bad", "Erro ao salvar (offline ou regras). Mantido no cache.");
+          if(!silent) toast("Erro", "Falha ao salvar no Firebase. Ficou no cache local.");
+        });
+    }
+
+    // Retry sync when back online
+    function trySyncOnOnline(){
+      if(!navigator.onLine) return;
+      if(!currentProject) return;
+      if(pendingWrites>0){
+        saveProjectToFirebase(true);
+      } else {
+        setSyncState("ok", `Online • ${lastSyncAt ? ("Sincronizado "+lastSyncAt.split(" ")[1]) : "Pronto"}`);
+      }
+    }
+
+    // ============================
+    // Import / Export
+    // ============================
+    function importFile(){
+      if(!currentProject){
+        toast("Selecione um projeto", "Crie/seleciona um projeto antes de importar.");
+        return;
+      }
+      const f = $("fileInput").files[0];
+      if(!f){
+        toast("Arquivo faltando", "Selecione um .txt ou .csv.");
+        return;
+      }
+      const ext = (f.name.split(".").pop() || "").toLowerCase();
+      const reader = new FileReader();
+      reader.onload = (e)=>{
+        const content = String(e.target.result || "");
+        if(ext === "csv"){
+          importCSV(content);
+        } else {
+          importTXT(content);
+        }
+      };
+      reader.readAsText(f);
+    }
+
+    function parseLineToTask(line){
+      // "Título | 2026-01-20 18:00 | alta | #tag1 #tag2 | desc opcional"
+      const parts = line.split("|").map(p=>p.trim());
+      const title = parts[0] || "Sem título";
+      const due = (parts[1] || "").match(/\d{4}-\d{2}-\d{2}(\s|\T)\d{2}:\d{2}/)?.[0]
+        || (parts[1] || "").match(/\d{4}-\d{2}-\d{2}/)?.[0]
+        || "";
+
+      const dueNorm = due
+        ? (due.includes("T") ? due : (due.length===10 ? `${due}T09:00` : due.replace(" ","T")))
+        : "";
+
+      const prioRaw = (parts[2] || "").toLowerCase();
+      const prio = prioRaw.includes("alta") ? "high" : (prioRaw.includes("baixa") ? "low" : "med");
+      const tags = (parts[3] || "").trim();
+      const desc = (parts[4] || "").trim();
+
+      return {
+        id: uid(),
+        title,
+        desc,
+        status: "todo",
+        prio,
+        due: dueNorm ? toLocalDTInput(dueNorm) : "",
+        tags,
+        subtasks: [],
+        createdAt: nowISO(),
+        updatedAt: nowISO(),
+        doneAt: "",
+        order: 0
+      };
+    }
+
+    function importTXT(content){
+      const lines = content.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+      if(!lines.length){
+        toast("Vazio", "Arquivo sem linhas com tarefas.");
+        return;
+      }
+      saveUndoSnapshot();
+      const tasks = getCurrentTasks().slice();
+      const toAdd = lines.map(parseLineToTask);
+
+      // append and set order in todo
+      const todo = tasks.filter(x=>x.status==="todo").sort((a,b)=>a.order-b.order);
+      let start = todo.length;
+      toAdd.forEach((t,i)=> { t.order = start+i; tasks.push(t); });
+
+      setCurrentTasks(tasks);
+      render();
+      requestAutosave();
+      markPending();
+      toast("Importado", `${toAdd.length} tarefa(s) importada(s) do TXT.`);
+    }
+
+    function importCSV(content){
+      // simple CSV (comma). Expected header: title,due,prio,tags,desc
+      const lines = content.split(/\r?\n/).filter(l=>l.trim().length>0);
+      if(lines.length<1){
+        toast("Vazio", "CSV sem linhas.");
+        return;
+      }
+
+      // parse header
+      const header = lines[0].split(",").map(s=>s.trim().toLowerCase());
+      const idx = (name)=> header.indexOf(name);
+
+      const it = {
+        title: idx("title"),
+        due: idx("due"),
+        prio: idx("prio"),
+        tags: idx("tags"),
+        desc: idx("desc")
+      };
+      if(it.title<0){
+        toast("CSV inválido", "O CSV precisa ter a coluna 'title'.");
+        return;
+      }
+
+      const rows = lines.slice(1).map(line=> splitCSVLine(line));
+      const valid = rows.filter(r=>r.length && (r[it.title]||"").trim());
+
+      if(!valid.length){
+        toast("CSV sem dados", "Nenhuma linha válida encontrada.");
+        return;
+      }
+
+      saveUndoSnapshot();
+      const tasks = getCurrentTasks().slice();
+      const todo = tasks.filter(x=>x.status==="todo").sort((a,b)=>a.order-b.order);
+      let start = todo.length;
+
+      valid.forEach((r,i)=>{
+        const title = (r[it.title]||"").trim();
+        const dueRaw = (it.due>=0 ? (r[it.due]||"").trim() : "");
+        const prioRaw = (it.prio>=0 ? (r[it.prio]||"").trim().toLowerCase() : "");
+        const tags = (it.tags>=0 ? (r[it.tags]||"").trim() : "");
+        const desc = (it.desc>=0 ? (r[it.desc]||"").trim() : "");
+
+        const prio = prioRaw.includes("high")||prioRaw.includes("alta") ? "high"
+          : (prioRaw.includes("low")||prioRaw.includes("baixa") ? "low" : "med");
+
+        const due = dueRaw
+          ? (dueRaw.includes("T") ? dueRaw : (dueRaw.includes(" ") ? dueRaw.replace(" ","T") : (dueRaw.length===10 ? `${dueRaw}T09:00` : "")))
+          : "";
+
+        tasks.push({
+          id: uid(),
+          title,
+          desc,
+          status: "todo",
+          prio,
+          due: due ? toLocalDTInput(due) : "",
+          tags,
+          subtasks: [],
+          createdAt: nowISO(),
+          updatedAt: nowISO(),
+          doneAt: "",
+          order: start+i
+        });
+      });
+
+      setCurrentTasks(tasks);
+      render();
+      requestAutosave();
+      markPending();
+      toast("Importado", `${valid.length} tarefa(s) importada(s) do CSV.`);
+    }
+
+    function splitCSVLine(line){
+      // minimal CSV parser (supports quotes)
+      const out = [];
+      let cur = "";
+      let q = false;
+      for(let i=0;i<line.length;i++){
+        const ch = line[i];
+        if(ch === '"' ){
+          if(q && line[i+1] === '"'){ cur += '"'; i++; }
+          else q = !q;
+        } else if(ch === "," && !q){
+          out.push(cur);
+          cur = "";
+        } else {
+          cur += ch;
+        }
+      }
+      out.push(cur);
+      return out;
+    }
+
+    function exportJson(){
+      if(!currentProject){
+        toast("Sem projeto", "Selecione um projeto para exportar.");
+        return;
+      }
+      const payload = {
+        project: currentProject,
+        exportedAt: nowISO(),
+        tasks: getCurrentTasks()
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `checklist_${currentProject.replace(/\s+/g,"_")}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast("Exportado", "Arquivo JSON baixado.");
+    }
+
+    // ============================
+    // Bulk add
+    // ============================
+    function showBulk(on){
+      $("bulkBack").classList.toggle("show", !!on);
+      $("bulkBack").setAttribute("aria-hidden", on ? "false":"true");
+      if(on) setTimeout(()=> $("bulkText").focus(), 25);
+    }
+    function bulkAdd(){
+      if(!currentProject){
+        toast("Selecione um projeto", "Crie/seleciona um projeto antes.");
+        return;
+      }
+      const text = ($("bulkText").value || "").trim();
+      if(!text){
+        toast("Nada para adicionar", "Cole linhas de tarefas.");
+        return;
+      }
+      const lines = text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+      if(!lines.length) return;
+
+      saveUndoSnapshot();
+
+      const tasks = getCurrentTasks().slice();
+      const todo = tasks.filter(x=>x.status==="todo").sort((a,b)=>a.order-b.order);
+      let start = todo.length;
+
+      const toAdd = lines.map(parseLineToTask);
+      toAdd.forEach((t,i)=> { t.order = start+i; tasks.push(t); });
+
+      setCurrentTasks(tasks);
+      render();
+      requestAutosave();
+      markPending();
+      toast("Adicionado", `${toAdd.length} tarefa(s) criada(s).`);
+      showBulk(false);
+    }
+
+    // ============================
+    // Insights
+    // ============================
+    function calcInsights(){
+      const tasks = getCurrentTasks().slice();
+      const now = new Date();
+      const ms7 = 7*24*60*60*1000;
+      const ms30 = 30*24*60*60*1000;
+
+      let c7=0,d7=0,c30=0;
+      const leadTimes = [];
+
+      tasks.forEach(t=>{
+        const created = parseISOish(t.createdAt);
+        const done = parseISOish(t.doneAt);
+        if(created){
+          if(now - created <= ms7) c7++;
+          if(now - created <= ms30) c30++;
+        }
+        if(done){
+          if(now - done <= ms7) d7++;
+          if(created){
+            const lead = Math.max(0, Math.round((done - created)/(1000*60*60*24)));
+            leadTimes.push(lead);
+          }
+        }
+      });
+
+      const leadAvg = leadTimes.length ? (leadTimes.reduce((a,b)=>a+b,0)/leadTimes.length).toFixed(1) : "—";
+
+      $("iC7").textContent = c7;
+      $("iD7").textContent = d7;
+      $("iC30").textContent = c30;
+      $("iLead").textContent = leadAvg==="—" ? "—" : `${leadAvg}d`;
+
+      // backlog per column
+      const byCol = {};
+      STATUSES.forEach(s=> byCol[s.key]=0);
+      tasks.forEach(t=> { if(byCol[t.status]!=null) byCol[t.status]++; });
+      $("iCols").textContent = STATUSES.map(s=> `${s.label}: ${byCol[s.key]}`).join(" • ");
+
+      // top tags
+      const tagCount = {};
+      tasks.forEach(t=>{
+        (t.tags||"").split(/\s+/).filter(Boolean).forEach(tag=>{
+          const k = tag.startsWith("#") ? tag : ("#"+tag);
+          tagCount[k] = (tagCount[k]||0)+1;
+        });
+      });
+      const top = Object.entries(tagCount).sort((a,b)=>b[1]-a[1]).slice(0,8);
+      $("iTags").textContent = top.length ? top.map(([k,v])=> `${k} (${v})`).join(" • ") : "—";
+    }
+
+    function parseISOish(s){
+      if(!s) return null;
+      const m = String(s).match(/^(\d{4}-\d{2}-\d{2})\s(\d{2}:\d{2}:\d{2})$/);
+      if(m) return new Date(m[1]+"T"+m[2]);
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    // ============================
+    // Tabs
+    // ============================
+    function setTab(tab){
+      document.querySelectorAll(".tab").forEach(el=>{
+        el.classList.toggle("active", el.dataset.tab === tab);
+      });
+      $("kanbanView").style.display = tab === "kanban" ? "" : "none";
+      $("listView").style.display = tab === "list" ? "" : "none";
+      $("insightsView").style.display = tab === "insights" ? "" : "none";
+      if(tab==="insights") calcInsights();
+      render();
+    }
+
+    // ============================
+    // Command palette
+    // ============================
+    function showPalette(on){
+      $("paletteBack").classList.toggle("show", !!on);
+      $("paletteBack").setAttribute("aria-hidden", on ? "false":"true");
+      if(on){
+        $("pSearch").value = "";
+        buildPalette();
+        setTimeout(()=> $("pSearch").focus(), 25);
+      }
+    }
+
+    function paletteCommands(){
+      const canProject = !!currentProject;
+      return [
+        { name:"Nova tarefa", desc:"Criar uma nova tarefa", hotkey:"N", run:()=> openNew() },
+        { name:"Salvar agora", desc:"Forçar sync para Firebase", hotkey:"Ctrl+S", run:()=> saveProjectToFirebase(false), enabled: canProject },
+        { name:"Exportar JSON", desc:"Baixar projeto atual", hotkey:"", run:()=> exportJson(), enabled: canProject },
+        { name:"Adicionar em massa", desc:"Colar várias tarefas", hotkey:"", run:()=> showBulk(true), enabled: canProject },
+        { name:"Desfazer", desc:"Volta uma etapa", hotkey:"Ctrl+Z", run:()=> undo(), enabled: canProject },
+        { name:"Toggle Auto-save", desc:"Liga/desliga auto-save", hotkey:"", run:()=> toggleAutosave() },
+        { name:"View: Tudo", desc:"Mostra tudo", hotkey:"", run:()=> {activeViewId="all"; $("filter").value="all"; $("search").value=""; render();} },
+        { name:"View: Hoje", desc:"Vence hoje", hotkey:"", run:()=> {activeViewId="today"; $("filter").value="today"; render();} },
+        { name:"View: Atrasadas", desc:"Prazos vencidos", hotkey:"", run:()=> {activeViewId="late"; $("filter").value="late"; render();} },
+        { name:"Ir para Kanban", desc:"Abrir visão Kanban", hotkey:"", run:()=> setTab("kanban") },
+        { name:"Ir para Lista", desc:"Abrir visão Lista", hotkey:"", run:()=> setTab("list") },
+        { name:"Ir para Insights", desc:"Abrir visão Insights", hotkey:"", run:()=> setTab("insights") },
+      ].filter(c=> c.enabled !== false);
+    }
+
+    function buildPalette(){
+      const list = $("pList");
+      list.innerHTML = "";
+      const q = ($("pSearch").value||"").trim().toLowerCase();
+      const items = paletteCommands().filter(c=>{
+        if(!q) return true;
+        return (c.name+" "+(c.desc||"")).toLowerCase().includes(q);
+      });
+
+      items.forEach(cmd=>{
+        const row = document.createElement("div");
+        row.className = "pItem";
+        row.innerHTML = `
+          <div>
+            <b>${escapeHtml(cmd.name)}</b>
+            <div><span>${escapeHtml(cmd.desc||"")}</span></div>
+          </div>
+          <div class="pRight">
+            ${cmd.hotkey ? `<span class="kbd">${escapeHtml(cmd.hotkey)}</span>` : ""}
+          </div>
+        `;
+        row.addEventListener("click", ()=>{
+          showPalette(false);
+          cmd.run();
+        });
+        list.appendChild(row);
+      });
+
+      if(!items.length){
+        const empty = document.createElement("div");
+        empty.className = "pItem";
+        empty.innerHTML = `<div><b>Nenhum comando</b><div><span>Tente outro termo.</span></div></div><div></div>`;
+        list.appendChild(empty);
+      }
+    }
+
+    // ============================
+    // Render all
+    // ============================
+    function render(updateSaveState=true){
+      // status dropdown
+      $("tStatus").innerHTML = STATUSES.map(s=>`<option value="${s.key}">${s.label}</option>`).join("");
+
+      updateSummary();
+      renderViews();
+      buildBoard();
+      buildList();
+
+      if(updateSaveState){
+        $("autosaveState").textContent = autosave ? "ON" : "OFF";
+      }
+      cacheToLocal();
+    }
+
+    // ============================
+    // Autosave toggle
+    // ============================
+    function toggleAutosave(){
+      autosave = !autosave;
+      $("autosaveState").textContent = autosave ? "ON" : "OFF";
+      $("btnToggleAutosave").textContent = autosave ? "Desativar Auto-save" : "Ativar Auto-save";
+      toast("Auto-save", autosave ? "Ativado (salva após alterações)." : "Desativado.");
+    }
+
+    // ============================
+    // SVG
+    // ============================
+    function svgPencil(){
+      return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm2.92 2.83H5v-.92l8.06-8.06.92.92L5.92 20.08zM20.71 7.04a1.003 1.003 0 000-1.42l-2.34-2.34a1.003 1.003 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/>
+      </svg>`;
+    }
+    function svgTrash(){
+      return `<svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 7h12l-1 14H7L6 7zm3-3h6l1 2H8l1-2z"/>
+      </svg>`;
+    }
+    function svgCheck(){
+      return `<svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/>
+      </svg>`;
+    }
+
+    // ============================
+    // Events
+    // ============================
+    document.addEventListener("DOMContentLoaded", ()=>{
+      // Try local cache first (fast)
+      const hadLocal = loadFromLocal();
+      if(hadLocal){
+        populateProjectSelect();
+        setSyncState(navigator.onLine ? "warn" : "bad", navigator.onLine ? "Cache carregado • aguardando Firebase…" : "Offline • usando cache local");
+      }
+
+      // Tabs
+      document.querySelectorAll(".tab").forEach(t=>{
+        t.addEventListener("click", ()=> setTab(t.dataset.tab));
+      });
+
+      // Project select
+      $("projectSelect").addEventListener("change", ()=>{
+        const name = $("projectSelect").value;
+        currentProject = name || null;
+        activeViewId = "all";
+        render();
+      });
+
+      // Project actions
+      $("btnCreateProject").addEventListener("click", createProject);
+      $("projectName").addEventListener("keydown", (e)=>{ if(e.key==="Enter") createProject(); });
+      $("btnDeleteProject").addEventListener("click", deleteProject);
+
+      // Task actions
+      $("btnOpenNew").addEventListener("click", ()=> openNew());
+      $("btnSaveNow").addEventListener("click", ()=> saveProjectToFirebase(false));
+      $("btnImport").addEventListener("click", importFile);
+      $("btnExport").addEventListener("click", exportJson);
+
+      $("btnClearAll").addEventListener("click", ()=>{
+        if(!currentProject) return;
+        if(!confirm("Limpar TODAS as tarefas deste projeto? (Faz snapshot para desfazer)")) return;
+        saveUndoSnapshot();
+        setCurrentTasks([]);
+        render();
+        requestAutosave();
+        markPending();
+        toast("Limpo", "Todas as tarefas foram removidas.");
+      });
+
+      $("btnGoHome").addEventListener("click", ()=>{
+        window.location.href = "https://wilsonf1996.github.io/index.html/";
+      });
+
+      // Search / filter
+      $("search").addEventListener("input", ()=>{ activeViewId="all"; render(); });
+      $("filter").addEventListener("change", ()=>{ activeViewId="all"; render(); });
+
+      // Views
+      $("btnSaveView").addEventListener("click", saveCurrentAsView);
+
+      // Autosave
+      $("btnToggleAutosave").addEventListener("click", toggleAutosave);
+
+      // Undo
+      $("btnUndo").addEventListener("click", undo);
+
+      // Bulk
+      $("btnBulk").addEventListener("click", ()=> showBulk(true));
+      $("btnCloseBulk").addEventListener("click", ()=> showBulk(false));
+      $("btnBulkClear").addEventListener("click", ()=> $("bulkText").value="");
+      $("btnBulkAdd").addEventListener("click", bulkAdd);
+      $("bulkBack").addEventListener("click", (e)=>{ if(e.target===$("bulkBack")) showBulk(false); });
+
+      // Modal
+      $("btnCloseModal").addEventListener("click", ()=> showModal(false));
+      $("btnCancelEdit").addEventListener("click", ()=> showModal(false));
+      $("btnSaveTask").addEventListener("click", saveFromModal);
+      $("btnDeleteTask").addEventListener("click", ()=>{
+        if(editingId) deleteTask(editingId);
+        showModal(false);
+      });
+      $("btnDuplicateTask").addEventListener("click", duplicateCurrent);
+
+      $("tDue").addEventListener("input", updateDueHealth);
+      $("tStatus").addEventListener("change", updateDueHealth);
+      $("tStatus").addEventListener("change", ()=> updateProgressUI());
+
+      $("modalBack").addEventListener("click", (e)=>{ if(e.target===$("modalBack")) showModal(false); });
+
+      document.querySelectorAll(".tag[data-quick]").forEach(el=>{
+        el.addEventListener("click", ()=> quickAction(el.dataset.quick));
+      });
+
+      $("btnAddSub").addEventListener("click", ()=>{
+        modalSubtasks.push({ id: uid(), text:"", done:false });
+        renderSubtasks();
+      });
+
+      // Enter to save in modal (unless textarea)
+      document.addEventListener("keydown", (e)=>{
+        const modalOpen = $("modalBack").classList.contains("show");
+        const paletteOpen = $("paletteBack").classList.contains("show");
+        const bulkOpen = $("bulkBack").classList.contains("show");
+
+        if(e.key==="Escape"){
+          if(paletteOpen) showPalette(false);
+          else if(bulkOpen) showBulk(false);
+          else if(modalOpen) showModal(false);
+          return;
+        }
+
+        // shortcuts when not typing in input? we allow global
+        if(!modalOpen && !paletteOpen && !bulkOpen){
+          if(e.key==="n" || e.key==="N"){ e.preventDefault(); openNew(); }
+          if(e.key==="/"){ e.preventDefault(); $("search").focus(); }
+          if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="k"){ e.preventDefault(); showPalette(true); }
+          if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="s"){ e.preventDefault(); saveProjectToFirebase(false); }
+          if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="z"){ e.preventDefault(); undo(); }
+        }
+
+        if(modalOpen && e.key==="Enter" && !(e.target && e.target.tagName==="TEXTAREA")){
+          e.preventDefault();
+          saveFromModal();
+        }
+      });
+
+      // Palette
+      $("btnOpenPalette").addEventListener("click", ()=> showPalette(true));
+      $("btnClosePalette").addEventListener("click", ()=> showPalette(false));
+      $("pSearch").addEventListener("input", buildPalette);
+      $("paletteBack").addEventListener("click", (e)=>{ if(e.target===$("paletteBack")) showPalette(false); });
+
+      // Insights
+      $("btnRefreshInsights").addEventListener("click", calcInsights);
+
+      // Online/offline
+      window.addEventListener("online", ()=>{
+        setSyncState("warn","Online • tentando sincronizar…");
+        trySyncOnOnline();
+      });
+      window.addEventListener("offline", ()=>{
+        setSyncState("bad", `Offline • pendentes (${pendingWrites})`);
+      });
+
+      // Load Firebase
+      if(navigator.onLine){
+        loadAllFromFirebase();
+      } else {
+        setSyncState("bad", "Offline • usando cache local");
+      }
+
+      // First render
+      render();
+    });
+  </script>
+</body>
+</html>
