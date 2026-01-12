@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Entrada X/Y → Gráfico (linha com pontos)</title>
+  <style>
+    :root{
+      --bg:#0b0f14; --panel:#121824; --text:#e8eef6; --muted:#a8b3c2;
+      --line:#25314a; --accent:#6aa6ff; --danger:#ff5c5c; --ok:#77f2b4;
+      --radius:14px; --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:var(--sans); color:var(--text);
+      background: radial-gradient(1200px 700px at 20% 0%, #14264a 0%, var(--bg) 48%) fixed;
+    }
+    header{max-width:1100px;margin:0 auto;padding:18px 16px 8px}
+    h1{margin:0 0 6px;font-size:18px}
+    .sub{margin:0;color:var(--muted);font-size:13px}
+    .wrap{
+      max-width:1100px;margin:0 auto;padding:12px 16px 22px;
+      display:grid; gap:12px;
+      grid-template-columns: 1fr 1fr;
+    }
+    @media (max-width: 980px){ .wrap{grid-template-columns:1fr} }
+    .card{
+      border:1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border-radius:var(--radius);
+      box-shadow:0 12px 35px rgba(0,0,0,.35);
+      overflow:hidden;
+    }
+    .hd{
+      padding:12px; display:flex; align-items:center; justify-content:space-between; gap:10px;
+      border-bottom:1px solid rgba(255,255,255,.07);
+      background: rgba(255,255,255,.03);
+    }
+    .hd b{font-size:13px}
+    .bd{padding:12px}
+    .row{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px}
+    button{
+      appearance:none; border:1px solid rgba(255,255,255,.12); color:var(--text);
+      background: rgba(255,255,255,.06);
+      padding:9px 10px; border-radius:12px; cursor:pointer;
+      font-size:13px; transition:.15s transform, .15s background, .15s border-color;
+    }
+    button:hover{transform: translateY(-1px); background: rgba(255,255,255,.09); border-color: rgba(255,255,255,.18)}
+    button.primary{background: rgba(106,166,255,.18); border-color: rgba(106,166,255,.35)}
+    button.danger{background: rgba(255,92,92,.12); border-color: rgba(255,92,92,.28)}
+    button.ok{background: rgba(119,242,180,.12); border-color: rgba(119,242,180,.28)}
+    .hint{color:var(--muted); font-size:12px; line-height:1.35}
+    table{
+      width:100%; border-collapse:separate; border-spacing:0;
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:12px; overflow:hidden;
+      background: rgba(0,0,0,.15);
+    }
+    thead th{
+      text-align:left; padding:10px; font-size:12px; color:var(--muted);
+      border-bottom:1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
+    }
+    tbody td{padding:0; border-bottom:1px solid rgba(255,255,255,.06)}
+    tbody tr:last-child td{border-bottom:none}
+    input.cell{
+      width:100%; border:none; outline:none;
+      padding:10px; font-size:13px; color:var(--text);
+      background: transparent;
+    }
+    input.cell::placeholder{color: rgba(168,179,194,.55)}
+    td.action{
+      width:64px; text-align:center;
+    }
+    .err{
+      margin-top:10px; padding:10px;
+      border:1px solid rgba(255,92,92,.35);
+      background: rgba(255,92,92,.10);
+      border-radius:12px;
+      color:#ffd1d1; font-size:12px; display:none;
+    }
+    canvas{
+      width:100%; height:460px;
+      background: rgba(0,0,0,.18);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:12px;
+      display:block;
+    }
+    .legend{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+      color:var(--muted); font-size:12px; margin-top:8px;
+    }
+    .dot{
+      width:10px; height:10px; border-radius:999px; background:var(--accent);
+      box-shadow:0 0 0 3px rgba(106,166,255,.18);
+    }
+    .mono{font-family:var(--mono)}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Entrada X/Y → Gráfico (linha com pontos)</h1>
+  <p class="sub">O usuário digita/cola os dados na tabela. Clique em <span class="mono">Gerar gráfico</span>.</p>
+</header>
+
+<div class="wrap">
+  <!-- Entrada -->
+  <section class="card">
+    <div class="hd">
+      <b>1) Dados (X e Y)</b>
+      <div class="row" style="margin:0">
+        <button id="btnAdd">+ Adicionar linha</button>
+        <button class="ok" id="btnEx">Exemplo</button>
+        <button class="danger" id="btnClear">Limpar</button>
+      </div>
+    </div>
+    <div class="bd">
+      <div class="hint">
+        • <b>X</b>: pode ser número (ex: 1, 2, 3) ou texto (ex: Jan, Fev, Mar).<br/>
+        • <b>Y</b>: número (aceita <span class="mono">10,5</span> ou <span class="mono">10.5</span>). Linhas vazias são ignoradas.<br/>
+        • Você pode colar uma coluna em X e outra em Y.
+      </div>
+
+      <div style="height:10px"></div>
+
+      <table id="grid">
+        <thead>
+          <tr>
+            <th style="width:45%">Coluna X</th>
+            <th style="width:45%">Coluna Y</th>
+            <th style="width:10%; text-align:center">Remover</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+
+      <div class="row" style="margin-top:12px">
+        <button class="primary" id="btnPlot">Gerar gráfico</button>
+      </div>
+
+      <div id="err" class="err"></div>
+    </div>
+  </section>
+
+  <!-- Gráfico -->
+  <section class="card">
+    <div class="hd">
+      <b>2) Gráfico</b>
+      <span class="hint">Linha + pontos (auto escala)</span>
+    </div>
+    <div class="bd">
+      <canvas id="cv" width="980" height="460"></canvas>
+      <div class="legend">
+        <span class="dot"></span> Série Y
+        <span style="opacity:.75">|</span>
+        <span>Observação: se X for texto, o eixo X vira “categorias”.</span>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  // ---------- Helpers ----------
+  const $ = (s) => document.querySelector(s);
+  const tbody = $("#tbody");
+  const errBox = $("#err");
+
+  function showErr(msg){
+    errBox.style.display = "block";
+    errBox.textContent = msg;
+  }
+  function clearErr(){
+    errBox.style.display = "none";
+    errBox.textContent = "";
+  }
+
+  function parseNumberBR(v){
+    if (v == null) return NaN;
+    v = String(v).trim();
+    if (!v) return NaN;
+    // permite "1.234,56" e "1234,56" e "1234.56"
+    // remove espaços
+    v = v.replace(/\s+/g,"");
+    // se tem vírgula, assume vírgula decimal e remove pontos de milhar
+    if (v.includes(",")){
+      v = v.replace(/\./g,"").replace(",",".");
+    }
+    const n = Number(v);
+    return Number.isFinite(n) ? n : NaN;
+  }
+
+  function addRow(x="", y=""){
+    const tr = document.createElement("tr");
+
+    const tdX = document.createElement("td");
+    const inX = document.createElement("input");
+    inX.className = "cell";
+    inX.placeholder = "Ex: 1  (ou)  Jan";
+    inX.value = x;
+    tdX.appendChild(inX);
+
+    const tdY = document.createElement("td");
+    const inY = document.createElement("input");
+    inY.className = "cell";
+    inY.placeholder = "Ex: 10,5";
+    inY.value = y;
+    tdY.appendChild(inY);
+
+    const tdA = document.createElement("td");
+    tdA.className = "action";
+    const btn = document.createElement("button");
+    btn.className = "danger";
+    btn.textContent = "X";
+    btn.title = "Remover linha";
+    btn.onclick = () => tr.remove();
+    tdA.appendChild(btn);
+
+    tr.appendChild(tdX);
+    tr.appendChild(tdY);
+    tr.appendChild(tdA);
+
+    tbody.appendChild(tr);
+  }
+
+  function clearGrid(){
+    tbody.innerHTML = "";
+    for(let i=0;i<12;i++) addRow("","");
+  }
+
+  // inicial
+  clearGrid();
+
+  // ---------- UI Buttons ----------
+  $("#btnAdd").addEventListener("click", () => addRow("",""));
+  $("#btnClear").addEventListener("click", () => { clearGrid(); clearErr(); drawEmpty(); });
+  $("#btnEx").addEventListener("click", () => {
+    clearGrid();
+    const ex = [
+      ["1","10"], ["2","12"], ["3","9"], ["4","14"], ["5","13.5"], ["6","16"],
+      ["7","15"], ["8","18"], ["9","17"], ["10","19"]
+    ];
+    tbody.innerHTML = "";
+    ex.forEach(r => addRow(r[0], r[1]));
+    addRow("","");
+    clearErr();
+  });
+
+  // ---------- Chart Drawing ----------
+  const cv = $("#cv");
+  const ctx = cv.getContext("2d");
+
+  function resizeCanvasToCSS(){
+    // mantém resolução boa (HiDPI)
+    const dpr = window.devicePixelRatio || 1;
+    const rect = cv.getBoundingClientRect();
+    const w = Math.max(320, Math.round(rect.width));
+    const h = Math.max(320, Math.round(rect.height));
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(h * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+
+  function drawEmpty(){
+    resizeCanvasToCSS();
+    const rect = cv.getBoundingClientRect();
+    const W = rect.width, H = rect.height;
+    ctx.clearRect(0,0,W,H);
+
+    // fundo
+    ctx.fillStyle = "rgba(0,0,0,.10)";
+    ctx.fillRect(0,0,W,H);
+
+    // texto
+    ctx.fillStyle = "rgba(168,179,194,.75)";
+    ctx.font = "14px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("Insira dados e clique em “Gerar gráfico”.", 16, 28);
+  }
+
+  function drawChart(points, isXNumeric){
+    resizeCanvasToCSS();
+    const rect = cv.getBoundingClientRect();
+    const W = rect.width, H = rect.height;
+
+    ctx.clearRect(0,0,W,H);
+
+    // layout
+    const padL = 56, padR = 18, padT = 18, padB = 46;
+    const plotW = W - padL - padR;
+    const plotH = H - padT - padB;
+
+    // fundo
+    ctx.fillStyle = "rgba(0,0,0,.10)";
+    ctx.fillRect(0,0,W,H);
+
+    // eixos + grid
+    ctx.strokeStyle = "rgba(255,255,255,.10)";
+    ctx.lineWidth = 1;
+
+    // grid horizontal (Y)
+    const gridY = 5;
+    for(let i=0;i<=gridY;i++){
+      const y = padT + (plotH * i/gridY);
+      ctx.beginPath();
+      ctx.moveTo(padL, y);
+      ctx.lineTo(padL+plotW, y);
+      ctx.stroke();
+    }
+
+    // eixo Y
+    ctx.strokeStyle = "rgba(255,255,255,.22)";
+    ctx.beginPath();
+    ctx.moveTo(padL, padT);
+    ctx.lineTo(padL, padT+plotH);
+    ctx.stroke();
+
+    // eixo X
+    ctx.beginPath();
+    ctx.moveTo(padL, padT+plotH);
+    ctx.lineTo(padL+plotW, padT+plotH);
+    ctx.stroke();
+
+    // min/max Y
+    const ys = points.map(p => p.y);
+    let yMin = Math.min(...ys);
+    let yMax = Math.max(...ys);
+    if (yMin === yMax){
+      yMin -= 1; yMax += 1;
+    }
+    const yPad = (yMax - yMin) * 0.08;
+    yMin -= yPad; yMax += yPad;
+
+    // escala X
+    let xMin=0, xMax=points.length-1;
+    if (isXNumeric){
+      const xs = points.map(p => p.xNum);
+      xMin = Math.min(...xs);
+      xMax = Math.max(...xs);
+      if (xMin === xMax){ xMin -= 1; xMax += 1; }
+      const xPad = (xMax - xMin) * 0.06;
+      xMin -= xPad; xMax += xPad;
+    }
+
+    const xToPx = (p, idx) => {
+      const t = isXNumeric
+        ? (p.xNum - xMin)/(xMax - xMin)
+        : (points.length === 1 ? 0.5 : idx/(points.length-1));
+      return padL + t * plotW;
+    };
+    const yToPx = (y) => padT + (1 - (y - yMin)/(yMax - yMin)) * plotH;
+
+    // labels Y
+    ctx.fillStyle = "rgba(168,179,194,.85)";
+    ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Courier New', monospace";
+    for(let i=0;i<=gridY;i++){
+      const y = padT + (plotH * i/gridY);
+      const val = (yMax - (yMax-yMin)*i/gridY);
+      ctx.fillText(val.toFixed(2), 10, y+4);
+    }
+
+    // labels X (poucos)
+    const maxLabels = 6;
+    const step = Math.max(1, Math.ceil(points.length / maxLabels));
+    ctx.font = "12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(168,179,194,.85)";
+    for(let i=0;i<points.length;i+=step){
+      const px = xToPx(points[i], i);
+      const label = points[i].xLabel;
+      const text = (label.length > 12) ? label.slice(0,12)+"…" : label;
+      ctx.save();
+      ctx.translate(px, padT+plotH+18);
+      ctx.rotate(-0.35);
+      ctx.fillText(text, -10, 0);
+      ctx.restore();
+    }
+
+    // linha
+    ctx.strokeStyle = "rgba(106,166,255,.95)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    points.forEach((p, i) => {
+      const px = xToPx(p, i);
+      const py = yToPx(p.y);
+      if (i===0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    });
+    ctx.stroke();
+
+    // pontos
+    points.forEach((p, i) => {
+      const px = xToPx(p, i);
+      const py = yToPx(p.y);
+      ctx.beginPath();
+      ctx.fillStyle = "rgba(106,166,255,1)";
+      ctx.arc(px, py, 4.2, 0, Math.PI*2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(0,0,0,.35)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    });
+
+    // título
+    ctx.fillStyle = "rgba(232,238,246,.92)";
+    ctx.font = "13px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("Gráfico: Y por X (linha com pontos)", padL, 16);
+  }
+
+  function readData(){
+    const rows = [...tbody.querySelectorAll("tr")];
+    const raw = rows.map(tr => {
+      const inputs = tr.querySelectorAll("input");
+      return { x: inputs[0].value.trim(), y: inputs[1].value.trim() };
+    }).filter(r => r.x !== "" || r.y !== "");
+
+    // validação básica
+    const cleaned = [];
+    let hasTextX = false;
+    let hasNumX = false;
+
+    for (let i=0;i<raw.length;i++){
+      const r = raw[i];
+      if (r.x === "" && r.y === "") continue;
+
+      const yNum = parseNumberBR(r.y);
+      if (!Number.isFinite(yNum)){
+        return { ok:false, msg:`Erro na linha ${i+1}: Y inválido (“${r.y}”). Use número (ex: 10,5).` };
+      }
+
+      const xNum = parseNumberBR(r.x);
+      const isXNumeric = Number.isFinite(xNum);
+      if (isXNumeric) hasNumX = true; else hasTextX = true;
+
+      cleaned.push({
+        xLabel: r.x === "" ? String(i+1) : r.x,
+        xNum: isXNumeric ? xNum : NaN,
+        y: yNum
+      });
+    }
+
+    if (cleaned.length < 2){
+      return { ok:false, msg:"Insira pelo menos 2 pontos (linhas) válidos para gerar o gráfico." };
+    }
+
+    // se misturar X numérico e texto, usa categorias (texto)
+    const useNumericX = hasNumX && !hasTextX;
+
+    // se X numérico, ordenar por X
+    const points = cleaned.slice();
+    if (useNumericX){
+      points.sort((a,b) => a.xNum - b.xNum);
+    }
+
+    return { ok:true, points, isXNumeric: useNumericX };
+  }
+
+  $("#btnPlot").addEventListener("click", () => {
+    clearErr();
+    const res = readData();
+    if (!res.ok){
+      showErr(res.msg);
+      return;
+    }
+    drawChart(res.points, res.isXNumeric);
+  });
+
+  // redesenhar ao redimensionar
+  window.addEventListener("resize", () => {
+    // se já tem gráfico, tenta redesenhar; senão, vazio
+    const res = readData();
+    if (res.ok) drawChart(res.points, res.isXNumeric);
+    else drawEmpty();
+  });
+
+  // start
+  drawEmpty();
+</script>
+</body>
+</html>
