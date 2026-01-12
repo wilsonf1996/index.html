@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registro de Localização</title>
+  <link rel="icon" href="favicon.ico" type="image/x-icon" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+  <style>
+    :root{
+      --bg:#f0f4f8;
+      --card:#fff;
+      --text:#1f2937;
+      --muted:#6b7280;
+      --primary:#1d3557;
+      --accent:#2a9d8f;
+      --accent2:#264653;
+      --border:#e5e7eb;
+      --shadow: 0 10px 30px rgba(0,0,0,.12);
+      --shadow2: 0 12px 36px rgba(0,0,0,.18);
+      --radius: 14px;
+    }
+    *{box-sizing:border-box}
+    body{
+      font-family:'Roboto',sans-serif;
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+    }
+    header{
+      background:var(--primary);
+      color:#fff;
+      width:100%;
+      padding:18px 14px;
+      position:sticky;
+      top:0;
+      z-index:10;
+      box-shadow:0 8px 24px rgba(0,0,0,.28);
+    }
+    header .wrap{
+      max-width:980px;
+      margin:0 auto;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:0 10px;
+    }
+    h1{
+      margin:0;
+      font-size:22px;
+      letter-spacing:.4px;
+      font-weight:700;
+    }
+    .status-pill{
+      font-size:12px;
+      padding:8px 10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.14);
+      display:flex;
+      align-items:center;
+      gap:8px;
+      user-select:none;
+      white-space:nowrap;
+    }
+    .dot{
+      width:8px;height:8px;border-radius:50%;
+      background:#9ca3af;
+      box-shadow:0 0 0 4px rgba(255,255,255,.08);
+    }
+    .dot.online{ background:#34d399; }
+    .dot.offline{ background:#fbbf24; }
+
+    main{
+      width:100%;
+      max-width:980px;
+      padding:18px 12px 40px;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:14px;
+      align-items:start;
+    }
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:14px;
+    }
+    .card h2{
+      margin:0 0 10px;
+      font-size:16px;
+      color:var(--primary);
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap:10px;
+    }
+    input[type="text"], textarea, input[type="file"]{
+      width:100%;
+      padding:12px 12px;
+      border-radius:12px;
+      border:1px solid #cbd5e1;
+      outline:none;
+      transition:.2s;
+      font-size:14px;
+      background:#fff;
+    }
+    textarea{resize:vertical; min-height:92px;}
+    input[type="text"]:focus, textarea:focus{
+      border-color:#457b9d;
+      box-shadow:0 0 0 4px rgba(69,123,157,.18);
+      transform:translateY(-1px);
+    }
+    .actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:10px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .btn{
+      border:none;
+      border-radius:12px;
+      padding:12px 14px;
+      cursor:pointer;
+      font-weight:600;
+      font-size:14px;
+      transition:.2s;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      user-select:none;
+      white-space:nowrap;
+    }
+    .btn-primary{ background:var(--accent); color:#fff; }
+    .btn-primary:hover{ background:var(--accent2); transform:translateY(-1px); box-shadow:var(--shadow2); }
+    .btn-ghost{ background:#f3f4f6; color:#111827; }
+    .btn-ghost:hover{ background:#e5e7eb; transform:translateY(-1px); }
+    .btn-danger{ background:#fee2e2; color:#991b1b; }
+    .btn-danger:hover{ background:#fecaca; transform:translateY(-1px); }
+
+    .hint{
+      color:var(--muted);
+      font-size:12px;
+      margin-top:8px;
+      line-height:1.3;
+    }
+
+    #map{
+      height:520px;
+      border-radius:var(--radius);
+      border:1px solid var(--border);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+
+    #location-list .list-item{
+      padding:14px;
+      border:1px solid var(--border);
+      border-radius:14px;
+      margin-bottom:10px;
+      background:#fff;
+      box-shadow: 0 8px 18px rgba(0,0,0,.08);
+      transition:.2s;
+    }
+    #location-list .list-item:hover{
+      transform:translateY(-1px);
+      box-shadow: 0 12px 26px rgba(0,0,0,.14);
+    }
+    .item-head{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:flex-start;
+    }
+    .item-title{
+      margin:0;
+      font-size:16px;
+      color:var(--primary);
+      font-weight:800;
+      line-height:1.2;
+    }
+    .badge{
+      font-size:11px;
+      padding:6px 10px;
+      border-radius:999px;
+      background:#eef2ff;
+      color:#3730a3;
+      white-space:nowrap;
+    }
+    .meta{
+      margin:8px 0 0;
+      color:#111827;
+      font-size:13px;
+    }
+    .meta small{ color:var(--muted); }
+    .file-list{
+      margin-top:10px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+    }
+    .file-link{
+      color:var(--accent);
+      text-decoration:none;
+      font-weight:600;
+      font-size:13px;
+      padding:8px 10px;
+      border-radius:999px;
+      background:#ecfeff;
+      border:1px solid #cffafe;
+      transition:.2s;
+    }
+    .file-link:hover{ text-decoration:underline; transform:translateY(-1px); }
+
+    .item-actions{
+      margin-top:10px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+
+    /* Toast */
+    .toast-wrap{
+      position:fixed;
+      top:74px;
+      right:12px;
+      z-index:999;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      width:min(360px, calc(100% - 24px));
+      pointer-events:none;
+    }
+    .toast{
+      pointer-events:auto;
+      background:#111827;
+      color:#fff;
+      padding:12px 12px;
+      border-radius:14px;
+      box-shadow:0 16px 40px rgba(0,0,0,.25);
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      animation: pop .18s ease-out;
+    }
+    .toast p{ margin:0; font-size:13px; line-height:1.35; }
+    .toast button{
+      border:none;
+      background:rgba(255,255,255,.12);
+      color:#fff;
+      border-radius:10px;
+      padding:6px 10px;
+      cursor:pointer;
+      font-weight:700;
+    }
+    @keyframes pop{ from{ transform:translateY(-6px); opacity:.6 } to{ transform:none; opacity:1 } }
+
+    @media (max-width: 980px){
+      main{ grid-template-columns:1fr; }
+      .grid{ grid-template-columns:1fr; }
+      #map{ height:460px; }
+    }
+  </style>
+</head>
+
+<body>
+<header>
+  <div class="wrap">
+    <h1>Registro de Localização</h1>
+    <div class="status-pill" title="Status de conexão">
+      <span id="net-dot" class="dot"></span>
+      <span id="net-text">Verificando…</span>
+    </div>
+  </div>
+</header>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<main>
+  <section class="card">
+    <h2>Novo registro</h2>
+
+    <form id="location-form">
+      <textarea id="note" placeholder="Digite uma nota (ex.: vistoria, reunião, visita técnica…)" required></textarea>
+      <div class="hint">Dica: seja específico. Ex.: “Obra X — conferência de armação — pendências de concretagem”.</div>
+
+      <div style="margin-top:10px">
+        <input type="file" id="file-upload" multiple />
+        <div class="hint">Arquivos ficam no Firebase Storage. Evite mandar arquivos gigantes (recomendável até ~15MB).</div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" id="btn-add" type="submit">
+          <span id="btn-add-label">Adicionar Registro</span>
+        </button>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap">
+          <button class="btn btn-ghost" type="button" id="btn-toggle">Ocultar Lista</button>
+          <button class="btn btn-ghost" type="button" id="btn-refresh">Recarregar</button>
+        </div>
+      </div>
+
+      <div class="hint" id="saving-hint" style="display:none;margin-top:10px;">
+        Salvando… (pegando localização, buscando endereço e enviando arquivos)
+      </div>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Filtros</h2>
+    <div class="grid">
+      <input type="text" id="filter-note" placeholder="Filtrar por nota…" />
+      <input type="text" id="filter-date" placeholder="Filtrar por data (AAAA-MM-DD)..." />
+      <input type="text" id="filter-location" placeholder="Filtrar por localização…" />
+    </div>
+    <div class="hint">Você pode digitar parte do texto. Ex.: “tatuapé”, “2026-01”, “vistoria”.</div>
+  </section>
+
+  <section class="card" id="list-card">
+    <h2>Registros</h2>
+    <div id="location-list"></div>
+  </section>
+
+  <section>
+    <div id="map"></div>
+  </section>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+  // =========================
+  // Firebase config (o seu)
+  // =========================
+  const firebaseConfig = {
+    apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+    authDomain: "agenda-6accc.firebaseapp.com",
+    databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+    projectId: "agenda-6accc",
+    storageBucket: "agenda-6accc.appspot.com",
+    messagingSenderId: "794262176773",
+    appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+    measurementId: "G-CVBQ54PERH"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
+  const storage = firebase.storage();
+
+  // =========================
+  // UI refs
+  // =========================
+  const form = document.getElementById('location-form');
+  const locationList = document.getElementById('location-list');
+
+  const btnAdd = document.getElementById('btn-add');
+  const btnAddLabel = document.getElementById('btn-add-label');
+  const savingHint = document.getElementById('saving-hint');
+
+  const btnToggle = document.getElementById('btn-toggle');
+  const btnRefresh = document.getElementById('btn-refresh');
+  const listCard = document.getElementById('list-card');
+
+  const filterNote = document.getElementById('filter-note');
+  const filterDate = document.getElementById('filter-date');
+  const filterLocation = document.getElementById('filter-location');
+
+  const netDot = document.getElementById('net-dot');
+  const netText = document.getElementById('net-text');
+
+  // =========================
+  // Toast
+  // =========================
+  function toast(message, ms = 3200) {
+    const wrap = document.getElementById('toasts');
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.innerHTML = `<p>${escapeHtml(message)}</p><button aria-label="Fechar">OK</button>`;
+    el.querySelector('button').onclick = () => el.remove();
+    wrap.appendChild(el);
+    setTimeout(() => { if (el.isConnected) el.remove(); }, ms);
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (m) => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[m]));
+  }
+
+  // =========================
+  // Online/offline status
+  // =========================
+  function updateNetUI() {
+    const online = navigator.onLine;
+    netDot.classList.toggle('online', online);
+    netDot.classList.toggle('offline', !online);
+    netText.textContent = online ? 'Online' : 'Offline (salva local)';
+  }
+  window.addEventListener('online', () => { updateNetUI(); sendOfflineRecords(); });
+  window.addEventListener('offline', updateNetUI);
+
+  // =========================
+  // Leaflet map
+  // =========================
+  const map = L.map('map').setView([-23.5505, -46.6333], 13);
+  const markersLayer = L.layerGroup().addTo(map);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap'
+  }).addTo(map);
+
+  // =========================
+  // Helpers
+  // =========================
+  function uniqueName(original) {
+    const safe = original.replace(/[^\w.\-]+/g, '_');
+    return `${Date.now()}_${Math.random().toString(16).slice(2)}_${safe}`;
+  }
+
+  function getCurrentPositionAsync(options) {
+    return new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, options);
+    });
+  }
+
+  function setSaving(isSaving) {
+    btnAdd.disabled = isSaving;
+    btnAdd.style.opacity = isSaving ? 0.7 : 1;
+    btnAdd.style.cursor = isSaving ? 'not-allowed' : 'pointer';
+    btnAddLabel.textContent = isSaving ? 'Salvando…' : 'Adicionar Registro';
+    savingHint.style.display = isSaving ? 'block' : 'none';
+  }
+
+  // Cache do reverse geocode
+  async function getPreciseLocation(lat, lon) {
+    const key = `geo_${lat.toFixed(5)}_${lon.toFixed(5)}`;
+    const cached = localStorage.getItem(key);
+    if (cached) return cached;
+
+    const apiUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1&accept-language=pt-BR`;
+    const response = await fetch(apiUrl);
+    if (!response.ok) throw new Error('Erro ao obter nome da localização');
+    const data = await response.json();
+    const name = data.display_name || 'Localização Desconhecida';
+    localStorage.setItem(key, name);
+    return name;
+  }
+
+  async function uploadFiles(files, recordId) {
+    const fileUrls = [];
+    const maxMB = 15;
+
+    for (const file of files) {
+      if (file.size > maxMB * 1024 * 1024) {
+        toast(`Arquivo muito grande: ${file.name} (máx ${maxMB}MB). Ignorado.`);
+        continue;
+      }
+      const path = `files/${recordId}/${uniqueName(file.name)}`;
+      const storageRef = storage.ref().child(path);
+
+      await storageRef.put(file);
+      const fileUrl = await storageRef.getDownloadURL();
+      fileUrls.push({ name: file.name, url: fileUrl, path });
+    }
+    return fileUrls;
+  }
+
+  function saveOfflineRecord(record) {
+    const offlineRecords = JSON.parse(localStorage.getItem('offlineRecords')) || [];
+    offlineRecords.push(record);
+    localStorage.setItem('offlineRecords', JSON.stringify(offlineRecords));
+    toast('Registro salvo localmente. Será enviado quando voltar a conexão.');
+  }
+
+  async function sendOfflineRecords() {
+    const offlineRecords = JSON.parse(localStorage.getItem('offlineRecords')) || [];
+    if (!offlineRecords.length) return;
+
+    try {
+      for (const record of offlineRecords) {
+        const newRef = database.ref('locations').push();
+        await newRef.set(record);
+      }
+      localStorage.removeItem('offlineRecords');
+      toast('Registros offline enviados com sucesso!');
+      loadRecords();
+    } catch (e) {
+      console.error(e);
+      toast('Falha ao enviar registros offline. Tentarei novamente quando ficar online.');
+    }
+  }
+
+  function openInMaps(lat, lon) {
+    const url = `https://www.google.com/maps?q=${lat},${lon}`;
+    window.open(url, '_blank', 'noopener');
+  }
+
+  async function deleteRecord(id, record) {
+    if (!confirm('Excluir este registro?')) return;
+
+    try {
+      // apaga DB
+      await database.ref(`locations/${id}`).remove();
+
+      // apaga arquivos no storage (se tiver path salvo)
+      if (record.files && record.files.length) {
+        for (const f of record.files) {
+          if (f.path) {
+            try { await storage.ref().child(f.path).delete(); } catch {}
+          }
+        }
+      }
+      toast('Registro excluído.');
+      loadRecords();
+    } catch (e) {
+      console.error(e);
+      toast('Falha ao excluir registro.');
+    }
+  }
+
+  // =========================
+  // Core: add location
+  // =========================
+  async function addLocation() {
+    if (!navigator.geolocation) {
+      toast('Geolocalização não é suportada por este navegador.');
+      return;
+    }
+
+    const note = document.getElementById('note').value.trim();
+    if (!note) {
+      toast('Digite uma nota antes de salvar.');
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const pos = await getCurrentPositionAsync({
+        enableHighAccuracy: true,
+        timeout: 12000,
+        maximumAge: 30000
+      });
+
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
+
+      const now = new Date();
+      const currentDate = now.toISOString().slice(0, 10);
+      const currentTime = now.toLocaleTimeString('pt-BR', {
+        hour:'2-digit', minute:'2-digit', second:'2-digit'
+      });
+
+      const locationName = await getPreciseLocation(lat, lon);
+
+      // gera um id antecipado (pra organizar pasta de upload)
+      const recordId = database.ref('locations').push().key;
+
+      const files = document.getElementById('file-upload').files;
+      const fileUrls = await uploadFiles(files, recordId);
+
+      const newRecord = {
+        note,
+        date: currentDate,
+        time: currentTime,
+        location: locationName,
+        coordinates: `${lat}, ${lon}`,
+        files: fileUrls
+      };
+
+      if (navigator.onLine) {
+        await database.ref(`locations/${recordId}`).set(newRecord);
+        toast('Registro salvo com sucesso!');
+      } else {
+        saveOfflineRecord(newRecord);
+      }
+
+      form.reset();
+      loadRecords();
+
+    } catch (error) {
+      console.error(error);
+      const msg =
+        error?.code === 1 ? 'Permissão negada para localização.' :
+        error?.code === 2 ? 'Não foi possível determinar a localização.' :
+        error?.code === 3 ? 'Tempo esgotado ao obter localização.' :
+        'Erro ao salvar registro.';
+      toast(msg);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // =========================
+  // Load + render
+  // =========================
+  function displayRecord(record, id) {
+    const recordDiv = document.createElement('div');
+    recordDiv.className = 'list-item';
+    recordDiv.dataset.id = id;
+
+    const head = document.createElement('div');
+    head.className = 'item-head';
+
+    const title = document.createElement('h3');
+    title.className = 'item-title';
+    title.textContent = record.note || '(Sem nota)';
+
+    const badge = document.createElement('div');
+    badge.className = 'badge';
+    badge.textContent = record.date ? record.date : '—';
+
+    head.appendChild(title);
+    head.appendChild(badge);
+    recordDiv.appendChild(head);
+
+    const pDate = document.createElement('p');
+    pDate.className = 'meta record-date';
+    pDate.innerHTML = `<small>Data/Hora:</small> ${escapeHtml(record.date || '')} ${escapeHtml(record.time || '')}`;
+    recordDiv.appendChild(pDate);
+
+    const pLoc = document.createElement('p');
+    pLoc.className = 'meta record-location';
+    pLoc.innerHTML = `<small>Local:</small> ${escapeHtml(record.location || '—')}`;
+    recordDiv.appendChild(pLoc);
+
+    let lat = null, lon = null;
+    if (record.coordinates) {
+      const parts = record.coordinates.split(',').map(s => parseFloat(s.trim()));
+      if (parts.length === 2 && Number.isFinite(parts[0]) && Number.isFinite(parts[1])) {
+        lat = parts[0]; lon = parts[1];
+
+        const pCoord = document.createElement('p');
+        pCoord.className = 'meta';
+        pCoord.innerHTML = `<small>Coordenadas:</small> ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+        recordDiv.appendChild(pCoord);
+      }
+    }
+
+    if (record.files && record.files.length) {
+      const fileList = document.createElement('div');
+      fileList.className = 'file-list';
+      record.files.forEach(file => {
+        const a = document.createElement('a');
+        a.href = file.url;
+        a.className = 'file-link';
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.textContent = file.name;
+        fileList.appendChild(a);
+      });
+      recordDiv.appendChild(fileList);
+    }
+
+    const actions = document.createElement('div');
+    actions.className = 'item-actions';
+
+    if (lat !== null && lon !== null) {
+      const btnMap = document.createElement('button');
+      btnMap.className = 'btn btn-ghost';
+      btnMap.type = 'button';
+      btnMap.textContent = 'Abrir no Maps';
+      btnMap.onclick = () => openInMaps(lat, lon);
+      actions.appendChild(btnMap);
+
+      const btnCopy = document.createElement('button');
+      btnCopy.className = 'btn btn-ghost';
+      btnCopy.type = 'button';
+      btnCopy.textContent = 'Copiar coords';
+      btnCopy.onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(`${lat}, ${lon}`);
+          toast('Coordenadas copiadas!');
+        } catch {
+          toast('Não consegui copiar (permissão do navegador).');
+        }
+      };
+      actions.appendChild(btnCopy);
+    }
+
+    const btnDel = document.createElement('button');
+    btnDel.className = 'btn btn-danger';
+    btnDel.type = 'button';
+    btnDel.textContent = 'Excluir';
+    btnDel.onclick = () => deleteRecord(id, record);
+    actions.appendChild(btnDel);
+
+    recordDiv.appendChild(actions);
+
+    locationList.appendChild(recordDiv);
+
+    // marker
+    if (lat !== null && lon !== null) {
+      L.marker([lat, lon]).addTo(markersLayer)
+        .bindPopup(`<b>${escapeHtml(record.note || '')}</b><br>${escapeHtml(record.location || '')}`);
+    }
+  }
+
+  function loadRecords() {
+    database.ref('locations').once('value', (snapshot) => {
+      locationList.innerHTML = '';
+      markersLayer.clearLayers();
+
+      const items = [];
+      snapshot.forEach((child) => {
+        items.push({ id: child.key, ...child.val() });
+      });
+
+      // ordena por data + hora (desc)
+      items.sort((a,b) => {
+        const da = `${a.date || ''} ${a.time || ''}`.trim();
+        const db = `${b.date || ''} ${b.time || ''}`.trim();
+        return db.localeCompare(da);
+      });
+
+      const bounds = [];
+      for (const item of items) {
+        displayRecord(item, item.id);
+
+        if (item.coordinates) {
+          const parts = item.coordinates.split(',').map(s => parseFloat(s.trim()));
+          if (parts.length === 2 && Number.isFinite(parts[0]) && Number.isFinite(parts[1])) {
+            bounds.push([parts[0], parts[1]]);
+          }
+        }
+      }
+
+      if (bounds.length) map.fitBounds(bounds, { padding: [20, 20] });
+      filterRecords(); // aplica filtro atual se tiver
+    });
+
+    if (navigator.onLine) sendOfflineRecords();
+  }
+
+  // =========================
+  // Filters (corrigido)
+  // =========================
+  let filterTimer;
+  function filterRecordsDebounced() {
+    clearTimeout(filterTimer);
+    filterTimer = setTimeout(filterRecords, 150);
+  }
+
+  function filterRecords() {
+    const noteF = (filterNote.value || '').toLowerCase();
+    const dateF = (filterDate.value || '').toLowerCase();
+    const locF  = (filterLocation.value || '').toLowerCase();
+
+    const records = locationList.querySelectorAll('.list-item');
+    records.forEach((record) => {
+      const note = record.querySelector('.item-title')?.textContent.toLowerCase() || '';
+      const date = record.querySelector('.record-date')?.textContent.toLowerCase() || '';
+      const loc  = record.querySelector('.record-location')?.textContent.toLowerCase() || '';
+
+      const match =
+        (!noteF || note.includes(noteF)) &&
+        (!dateF || date.includes(dateF)) &&
+        (!locF  || loc.includes(locF));
+
+      record.style.display = match ? 'block' : 'none';
+    });
+  }
+
+  // =========================
+  // Events
+  // =========================
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    addLocation();
+  });
+
+  btnToggle.addEventListener('click', () => {
+    const hidden = listCard.style.display === 'none';
+    listCard.style.display = hidden ? 'block' : 'none';
+    btnToggle.textContent = hidden ? 'Ocultar Lista' : 'Mostrar Lista';
+  });
+
+  btnRefresh.addEventListener('click', () => loadRecords());
+
+  filterNote.addEventListener('input', filterRecordsDebounced);
+  filterDate.addEventListener('input', filterRecordsDebounced);
+  filterLocation.addEventListener('input', filterRecordsDebounced);
+
+  // init
+  updateNetUI();
+  window.addEventListener('load', () => {
+    updateNetUI();
+    loadRecords();
+  });
+</script>
+</body>
+</html>
