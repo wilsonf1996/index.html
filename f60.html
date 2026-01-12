@@ -1,0 +1,2734 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Financeiro Pessoal • Apple-level (HTML único + Firebase)</title>
+
+  <!-- Firebase (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+
+  <!-- Charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#0b0c0f; --bg2:#0f1117;
+      --card:#141827cc; --card2:#121520cc;
+      --text:#eef1ff; --muted:#aab2d6;
+      --line:#242a44;
+      --accent:#6aa6ff;
+      --good:#35d07f;
+      --bad:#ff5c7a;
+      --warn:#ffcc66;
+      --shadow:0 18px 60px rgba(0,0,0,.45);
+      --radius:22px; --radius2:16px;
+      --blur:14px;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    [data-theme="light"]{
+      --bg:#f6f7fb; --bg2:#eef1f8;
+      --card:#ffffffcc; --card2:#ffffffcc;
+      --text:#0f1222; --muted:#58607a;
+      --line:#dde2f1; --accent:#2d74ff;
+      --shadow:0 18px 60px rgba(9,18,40,.14);
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:var(--sans); color:var(--text); overflow-x:hidden;
+      background:
+        radial-gradient(1100px 600px at 10% -10%, rgba(106,166,255,.22), transparent 55%),
+        radial-gradient(900px 700px at 95% 10%, rgba(53,208,127,.18), transparent 55%),
+        radial-gradient(800px 600px at 50% 120%, rgba(255,92,122,.12), transparent 55%),
+        linear-gradient(180deg, var(--bg), var(--bg2));
+    }
+
+    .app{max-width:1240px; margin:0 auto; padding:18px 18px 86px;}
+    .topbar{
+      position:sticky; top:0; z-index:40;
+      padding:10px 0 12px;
+      backdrop-filter: blur(var(--blur));
+      -webkit-backdrop-filter: blur(var(--blur));
+      background: linear-gradient(180deg, rgba(10,11,15,.78), rgba(10,11,15,.30), transparent);
+    }
+    [data-theme="light"] .topbar{background: linear-gradient(180deg, rgba(246,247,251,.90), rgba(246,247,251,.55), transparent);}
+
+    .topRow{display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;}
+    .brand{display:flex; gap:12px; align-items:center; min-width:240px}
+    .logo{
+      width:42px; height:42px; border-radius:14px;
+      background:
+        radial-gradient(14px 14px at 28% 30%, rgba(255,255,255,.35), transparent 55%),
+        linear-gradient(145deg, rgba(106,166,255,.95), rgba(53,208,127,.85));
+      box-shadow: 0 16px 40px rgba(45,116,255,.28);
+    }
+    .brandTxt{line-height:1.1}
+    .brandTxt b{font-size:15px; letter-spacing:.2px}
+    .brandTxt span{display:block; font-size:12px; color:var(--muted); margin-top:4px}
+
+    .actions{display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end}
+    .chip{
+      font-family:var(--mono); font-size:11px;
+      padding:6px 10px; border-radius:999px;
+      border:1px solid var(--line);
+      color:var(--muted); background:rgba(255,255,255,.05);
+      white-space:nowrap;
+    }
+    .btn{
+      border:1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+      color:var(--text);
+      padding:10px 12px; border-radius:14px;
+      cursor:pointer; user-select:none;
+      box-shadow: 0 10px 26px rgba(0,0,0,.12);
+      transition: transform .15s ease, border-color .15s ease;
+      font-weight:700; font-size:13px;
+      display:inline-flex; align-items:center; gap:9px;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .btn:hover{transform:translateY(-1px); border-color: rgba(106,166,255,.55)}
+    .btn:active{transform:translateY(0) scale(.99)}
+    .btn.primary{border-color: rgba(106,166,255,.55); background: linear-gradient(180deg, rgba(45,116,255,.26), rgba(45,116,255,.10));}
+    .btn.good{border-color: rgba(53,208,127,.55); background: linear-gradient(180deg, rgba(53,208,127,.22), rgba(53,208,127,.08));}
+    .btn.bad{border-color: rgba(255,92,122,.55); background: linear-gradient(180deg, rgba(255,92,122,.18), rgba(255,92,122,.07));}
+    .btn.ghost{background:transparent; box-shadow:none}
+    .mini{padding:8px 10px; border-radius:12px; font-size:12px; font-weight:800;}
+
+    .tabs{display:flex; gap:10px; flex-wrap:wrap; margin-top: 12px;}
+    .tab{
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      color:var(--muted);
+      padding:9px 12px; border-radius:999px;
+      cursor:pointer;
+      font-weight:750; font-size:12px;
+      transition: border-color .15s ease, transform .15s ease, background .15s ease;
+    }
+    .tab:hover{transform: translateY(-1px); border-color: rgba(106,166,255,.55)}
+    .tab.active{
+      color:var(--text);
+      border-color: rgba(106,166,255,.55);
+      background: rgba(45,116,255,.16);
+    }
+
+    .card{
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--card);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(var(--blur));
+      -webkit-backdrop-filter: blur(var(--blur));
+      overflow:hidden;
+    }
+    .cardHeader{
+      padding:16px 16px 12px;
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+      border-bottom:1px solid rgba(255,255,255,.05);
+    }
+    [data-theme="light"] .cardHeader{border-bottom:1px solid rgba(15,18,34,.06)}
+    .cardHeader h2{margin:0; font-size:14px; letter-spacing:.2px}
+    .cardHeader p{margin:5px 0 0; font-size:12px; color:var(--muted)}
+    .cardBody{padding:14px 16px 16px}
+
+    .grid{display:grid; grid-template-columns: 1.15fr .85fr; gap:16px; margin-top:16px;}
+    @media (max-width: 980px){ .grid{grid-template-columns:1fr;} .brand{min-width:auto} }
+
+    .summary{display:grid; grid-template-columns: repeat(4,1fr); gap:12px; margin-top:14px;}
+    @media (max-width: 980px){ .summary{grid-template-columns: repeat(2,1fr);} }
+    @media (max-width: 520px){ .summary{grid-template-columns: 1fr;} }
+    .kpi{
+      border:1px solid var(--line);
+      border-radius: var(--radius2);
+      background: var(--card2);
+      padding:14px 14px 12px;
+    }
+    .kpi .label{font-size:12px; color:var(--muted); display:flex; align-items:center; justify-content:space-between; gap:10px;}
+    .kpi .value{font-size:22px; font-weight:900; letter-spacing:-.4px; margin-top:8px; line-height:1.05;}
+    .kpi .hint{margin-top:8px; font-size:12px; color:var(--muted); display:flex; gap:8px; align-items:center}
+    .dot{width:8px; height:8px; border-radius:999px; background: var(--accent); box-shadow: 0 0 0 6px rgba(106,166,255,.12);}
+    .dot.good{background:var(--good); box-shadow:0 0 0 6px rgba(53,208,127,.12);}
+    .dot.bad{background:var(--bad); box-shadow:0 0 0 6px rgba(255,92,122,.12);}
+    .dot.warn{background:var(--warn); box-shadow:0 0 0 6px rgba(255,204,102,.14);}
+
+    .controls{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:10px;}
+    .input, select, textarea{
+      width:100%; border-radius:14px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      color:var(--text);
+      padding:10px 12px;
+      outline:none;
+      font-size:13px;
+      transition: border-color .15s ease;
+    }
+    [data-theme="light"] .input, [data-theme="light"] select, [data-theme="light"] textarea{background: rgba(15,18,34,.03);}
+    .input:focus, select:focus, textarea:focus{border-color: rgba(106,166,255,.55)}
+    textarea{resize: vertical; min-height: 92px;}
+    select{cursor:pointer}
+    .controls .grow{flex: 1 1 220px}
+    .controls .small{flex: 0 0 170px}
+    @media (max-width:520px){ .controls .small{flex: 1 1 170px} }
+
+    .sep{height:1px; background: rgba(255,255,255,.06); margin:12px 0;}
+    [data-theme="light"] .sep{background: rgba(15,18,34,.06);}
+
+    .txList{display:flex; flex-direction:column; gap:10px; margin-top:10px;}
+    .txRow{
+      border:1px solid var(--line);
+      border-radius:16px;
+      background: rgba(255,255,255,.04);
+      padding:12px;
+      display:flex; gap:10px; align-items:center; justify-content:space-between;
+    }
+    .txMain{display:flex; gap:10px; align-items:center; min-width:0; flex:1 1 auto}
+    .badge{
+      width:38px; height:38px; border-radius:14px;
+      display:flex; align-items:center; justify-content:center;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      font-weight:900; flex: 0 0 auto;
+    }
+    .badge.income{border-color: rgba(53,208,127,.55); background: rgba(53,208,127,.12);}
+    .badge.expense{border-color: rgba(255,92,122,.55); background: rgba(255,92,122,.10);}
+    .badge.transfer{border-color: rgba(106,166,255,.55); background: rgba(106,166,255,.12);}
+    .badge.auto{border-color: rgba(255,204,102,.65); background: rgba(255,204,102,.12);}
+
+    .txText{min-width:0}
+    .txText b{display:block; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .txText span{display:block; font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:3px;}
+
+    .txRight{display:flex; align-items:center; gap:10px; flex: 0 0 auto;}
+    .amount{
+      font-family: var(--mono);
+      font-weight:900; font-size:12.5px;
+      padding:8px 10px; border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      white-space:nowrap;
+    }
+    .amount.good{border-color: rgba(53,208,127,.55);}
+    .amount.bad{border-color: rgba(255,92,122,.55);}
+
+    .miniBtns{display:flex; gap:8px;}
+
+    .accGrid{display:grid; grid-template-columns: repeat(2,1fr); gap:12px; margin-top:10px;}
+    @media (max-width:520px){ .accGrid{grid-template-columns: 1fr;} }
+    .accCard{
+      border:1px solid var(--line);
+      border-radius:16px;
+      background: rgba(255,255,255,.04);
+      padding:12px;
+      display:flex; flex-direction:column; gap:10px;
+    }
+    .accTop{display:flex; justify-content:space-between; gap:10px; align-items:flex-start;}
+    .accTop b{font-size:13px}
+    .accTop span{font-size:12px; color:var(--muted); display:block; margin-top:3px}
+    .accVal{font-family: var(--mono); font-weight:900; font-size:13px; padding:8px 10px; border-radius:999px; border:1px solid var(--line); background: rgba(255,255,255,.05); width: fit-content;}
+    .pill{font-size:11px; padding:6px 10px; border-radius:999px; border:1px solid var(--line); color:var(--muted); background: rgba(255,255,255,.05); width: fit-content;}
+
+    .goal{
+      border:1px solid var(--line);
+      border-radius:16px;
+      background: rgba(255,255,255,.04);
+      padding:12px;
+      display:flex; flex-direction:column; gap:10px;
+      margin-top:10px;
+    }
+    .goalTop{display:flex; justify-content:space-between; gap:10px; align-items:flex-start;}
+    .goalTop b{font-size:13px}
+    .goalTop span{font-size:12px; color:var(--muted); display:block; margin-top:3px}
+    .bar{
+      height:10px; border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      overflow:hidden;
+    }
+    .bar > i{
+      display:block; height:100%; width:0%;
+      background: linear-gradient(90deg, rgba(106,166,255,.95), rgba(53,208,127,.90));
+      border-radius:999px;
+      transition: width .3s ease;
+    }
+
+    .bottomNav{
+      position:fixed; left:0; right:0; bottom:0; z-index:60;
+      padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+      backdrop-filter: blur(var(--blur));
+      -webkit-backdrop-filter: blur(var(--blur));
+      background: rgba(10,11,15,.68);
+      border-top: 1px solid rgba(255,255,255,.06);
+      display:none;
+    }
+    [data-theme="light"] .bottomNav{
+      background: rgba(246,247,251,.80);
+      border-top: 1px solid rgba(15,18,34,.06);
+    }
+    .bottomNavRow{display:flex; gap:10px; justify-content:space-between;}
+    .navBtn{
+      flex:1 1 auto;
+      border:1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255,255,255,.04);
+      color: var(--muted);
+      padding: 10px 10px;
+      font-weight: 850;
+      font-size: 12px;
+      cursor:pointer;
+    }
+    .navBtn.active{
+      color:var(--text);
+      border-color: rgba(106,166,255,.55);
+      background: rgba(45,116,255,.16);
+    }
+    @media (max-width: 980px){
+      .bottomNav{display:block;}
+      .app{padding-bottom: 120px;}
+    }
+
+    .modalWrap{
+      position:fixed; inset:0; z-index:80;
+      display:none; align-items:flex-end; justify-content:center;
+      padding:18px;
+      background: rgba(0,0,0,.55);
+    }
+    .modal{
+      width: min(840px, 100%);
+      border-radius: 26px;
+      border:1px solid var(--line);
+      background: var(--card);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(var(--blur));
+      -webkit-backdrop-filter: blur(var(--blur));
+      overflow:hidden;
+    }
+    .modalHeader{
+      padding:16px 16px 12px;
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      border-bottom:1px solid rgba(255,255,255,.05);
+    }
+    [data-theme="light"] .modalHeader{border-bottom:1px solid rgba(15,18,34,.06)}
+    .modalHeader b{font-size:14px}
+    .modalBody{padding:14px 16px 16px}
+    .formGrid{display:grid; grid-template-columns: 1fr 1fr; gap:10px;}
+    @media (max-width: 720px){ .formGrid{grid-template-columns:1fr;} }
+    .row2{grid-column: 1 / -1;}
+    .help{color:var(--muted); font-size:12px; line-height:1.4; margin-top:6px}
+
+    .toast{
+      position:fixed; left:50%; transform: translateX(-50%);
+      bottom: 16px; z-index:90;
+      border:1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(0,0,0,.55);
+      color:#fff;
+      padding: 10px 14px;
+      font-size: 12.5px;
+      font-weight: 750;
+      display:none;
+      max-width: min(820px, calc(100% - 28px));
+      text-align:center;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    [data-theme="light"] .toast{background: rgba(15,18,34,.78); color:#fff;}
+
+    @media print{
+      .topbar, .bottomNav, .actions, .controls, .miniBtns, .btn, .modalWrap, #toast {display:none !important;}
+      body{background:#fff !important; color:#000 !important;}
+      .card{box-shadow:none !important; background:#fff !important; border:1px solid #ddd !important;}
+      .app{max-width: 1100px;}
+    }
+  </style>
+</head>
+
+<body>
+  <div class="topbar">
+    <div class="app">
+      <div class="topRow">
+        <div class="brand">
+          <div class="logo"></div>
+          <div class="brandTxt">
+            <b>Financeiro Pessoal</b>
+            <span id="subTitle">Sincronizado no Firebase • HTML único • sem login</span>
+          </div>
+        </div>
+
+        <div class="actions">
+          <span class="chip" id="dbInfo">DB: /expenses</span>
+          <button class="btn ghost" id="btnTheme" title="Alternar tema">☀️/🌙 Tema</button>
+          <button class="btn primary" id="btnAddTx">＋ Transação</button>
+          <button class="btn good" id="btnAddGoal">🎯 Meta</button>
+          <button class="btn" id="btnAddRecurring">⏱️ Recorrência</button>
+          <button class="btn" id="btnAddInstallment">💳 Parcelado</button>
+          <button class="btn" id="btnReport">📄 Relatório</button>
+          <button class="btn" id="btnPrint">🖨️ PDF</button>
+          <button class="btn" id="btnSettings">⚙️ Ajustes</button>
+          <button class="btn bad" id="btnHome">↩️ Página principal</button>
+        </div>
+      </div>
+
+      <div class="tabs" id="tabsTop">
+        <button class="tab active" data-tab="dash">Dashboard</button>
+        <button class="tab" data-tab="tx">Transações</button>
+        <button class="tab" data-tab="goals">Metas</button>
+        <button class="tab" data-tab="plans">Planos</button>
+      </div>
+
+      <div class="summary" aria-label="Resumo">
+        <div class="kpi">
+          <div class="label"><span>Saldo do mês</span><span class="dot" id="dotBalance"></span></div>
+          <div class="value" id="kpiBalance">R$ 0,00</div>
+          <div class="hint" id="kpiBalanceHint">—</div>
+        </div>
+        <div class="kpi">
+          <div class="label"><span>Receitas (mês)</span><span class="dot good"></span></div>
+          <div class="value" id="kpiIncome">R$ 0,00</div>
+          <div class="hint" id="kpiIncomeHint">—</div>
+        </div>
+        <div class="kpi">
+          <div class="label"><span>Despesas (mês)</span><span class="dot bad"></span></div>
+          <div class="value" id="kpiExpense">R$ 0,00</div>
+          <div class="hint" id="kpiExpenseHint">—</div>
+        </div>
+        <div class="kpi">
+          <div class="label"><span>Poupança</span><span class="dot warn"></span></div>
+          <div class="value" id="kpiSavingsRate">0%</div>
+          <div class="hint" id="kpiSavingsHint">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="app">
+    <!-- DASHBOARD -->
+    <section id="view_dash">
+      <div class="grid">
+        <div class="card">
+          <div class="cardHeader">
+            <div>
+              <h2>Gráficos premium</h2>
+              <p>Linha do saldo diário + categorias (clique para “drill-down”).</p>
+            </div>
+            <span class="chip" id="chartLabel">Mês atual</span>
+          </div>
+          <div class="cardBody">
+            <div class="controls">
+              <div class="grow">
+                <input class="input" id="qMonth" type="month"/>
+              </div>
+              <div class="small">
+                <select id="qMode">
+                  <option value="real">Realizado (Pago)</option>
+                  <option value="real+prev">Realizado + Previsto</option>
+                </select>
+              </div>
+              <button class="btn" id="btnRefresh">⟲ Atualizar</button>
+            </div>
+
+            <div class="sep"></div>
+
+            <div style="display:grid; grid-template-columns:1fr; gap:14px;">
+              <div style="border:1px solid var(--line); border-radius:16px; padding:12px; background:rgba(255,255,255,.04);">
+                <canvas id="chartDaily" height="170"></canvas>
+              </div>
+              <div style="border:1px solid var(--line); border-radius:16px; padding:12px; background:rgba(255,255,255,.04);">
+                <canvas id="chartCategories" height="170"></canvas>
+                <div class="help" id="catHelp">Dica: clique numa categoria no gráfico para ver as transações dessa categoria.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          <div class="card">
+            <div class="cardHeader">
+              <div>
+                <h2>Contas e Cartões</h2>
+                <p>Saldo calculado automaticamente (inclui transferências).</p>
+              </div>
+              <span class="chip" id="accCount">0 contas</span>
+            </div>
+            <div class="cardBody">
+              <div class="accGrid" id="accountsWrap"></div>
+              <div class="help" id="emptyAccounts" style="display:none;">
+                Configure suas contas em Ajustes. Ex.: Banco, Cartão, Carteira, Investimentos.
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="cardHeader">
+              <div>
+                <h2>Top gastos</h2>
+                <p>As maiores despesas do mês.</p>
+              </div>
+              <span class="chip" id="topSpendLabel">—</span>
+            </div>
+            <div class="cardBody">
+              <div class="txList" id="topSpendWrap"></div>
+              <div class="help" id="emptyTopSpend" style="display:none;">Sem despesas neste mês.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TRANSAÇÕES -->
+    <section id="view_tx" style="display:none;">
+      <div class="card">
+        <div class="cardHeader">
+          <div>
+            <h2>Transações</h2>
+            <p>Busca, filtros e edição — sincronizado no Firebase.</p>
+          </div>
+          <span class="chip" id="txCount">0 itens</span>
+        </div>
+        <div class="cardBody">
+          <div class="controls">
+            <div class="grow">
+              <input class="input" id="qSearch" placeholder="Buscar (descrição, categoria, fonte, conta, tags)..." />
+            </div>
+            <div class="small">
+              <select id="qType">
+                <option value="all">Todos</option>
+                <option value="income">Receitas</option>
+                <option value="expense">Despesas</option>
+                <option value="transfer">Transferências</option>
+              </select>
+            </div>
+            <div class="small">
+              <select id="qStatus">
+                <option value="all">Pago + Pendente</option>
+                <option value="paid">Pago</option>
+                <option value="pending">Pendente</option>
+              </select>
+            </div>
+            <button class="btn" id="btnClearFilters">🧽 Limpar</button>
+          </div>
+
+          <div class="sep"></div>
+
+          <div class="txList" id="txList"></div>
+          <div class="help" id="emptyTx" style="display:none;">
+            Ainda não há transações neste filtro. Clique em <b>“＋ Transação”</b>.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- METAS -->
+    <section id="view_goals" style="display:none;">
+      <div class="card">
+        <div class="cardHeader">
+          <div>
+            <h2>Metas</h2>
+            <p>Reserva, viagem, curso, etc. Associe transações à meta.</p>
+          </div>
+          <span class="chip" id="goalCount">0 metas</span>
+        </div>
+        <div class="cardBody">
+          <div id="goalsWrap"></div>
+          <div class="help" id="emptyGoals" style="display:none;">
+            Crie metas (ex.: Reserva de emergência). Depois, associe transações no cadastro.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PLANOS -->
+    <section id="view_plans" style="display:none;">
+      <div class="grid">
+        <div class="card">
+          <div class="cardHeader">
+            <div>
+              <h2>Recorrências</h2>
+              <p>Salário, aluguel, assinaturas (gera automaticamente).</p>
+            </div>
+            <span class="chip" id="recCount">0 regras</span>
+          </div>
+          <div class="cardBody">
+            <div class="txList" id="recWrap"></div>
+            <div class="help" id="emptyRec" style="display:none;">Nenhuma recorrência cadastrada.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="cardHeader">
+            <div>
+              <h2>Parcelamentos</h2>
+              <p>Compra em X vezes (gera parcelas mensais).</p>
+            </div>
+            <span class="chip" id="instCountLabel">0 planos</span>
+          </div>
+          <div class="cardBody">
+            <div class="txList" id="instWrap"></div>
+            <div class="help" id="emptyInst" style="display:none;">Nenhum parcelamento cadastrado.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Bottom nav (mobile) -->
+  <div class="bottomNav">
+    <div class="bottomNavRow" id="bottomNavRow">
+      <button class="navBtn active" data-tab="dash">🏠 Dashboard</button>
+      <button class="navBtn" data-tab="tx">📒 Transações</button>
+      <button class="navBtn" data-tab="goals">🎯 Metas</button>
+      <button class="navBtn" data-tab="plans">🧩 Planos</button>
+    </div>
+  </div>
+
+  <!-- MODAL: TRANSAÇÃO -->
+  <div class="modalWrap" id="modalTxWrap" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modalHeader">
+        <b id="txModalTitle">Nova transação</b>
+        <button class="btn ghost" id="btnCloseTx">✕</button>
+      </div>
+      <div class="modalBody">
+        <div class="formGrid">
+          <div>
+            <label class="help">Tipo</label>
+            <select id="txType">
+              <option value="expense">Despesa</option>
+              <option value="income">Receita</option>
+              <option value="transfer">Transferência</option>
+            </select>
+          </div>
+          <div>
+            <label class="help">Status</label>
+            <select id="txStatus">
+              <option value="paid">Pago</option>
+              <option value="pending">Pendente</option>
+            </select>
+          </div>
+
+          <div class="row2">
+            <label class="help">Descrição</label>
+            <input class="input" id="txName" placeholder="Ex.: Mercado, Salário, Aluguel..." />
+          </div>
+
+          <div>
+            <label class="help">Valor (R$)</label>
+            <input class="input" id="txAmount" type="number" step="0.01" placeholder="0,00" />
+          </div>
+
+          <div>
+            <label class="help">Data e hora</label>
+            <input class="input" id="txDateTime" type="datetime-local" />
+          </div>
+
+          <div id="blockNormalA">
+            <label class="help">Fonte (entrada/saída)</label>
+            <select id="txSource"></select>
+          </div>
+          <div id="blockNormalB">
+            <label class="help">Categoria</label>
+            <select id="txCategory"></select>
+          </div>
+          <div id="blockNormalC">
+            <label class="help">Conta</label>
+            <select id="txAccount"></select>
+          </div>
+
+          <div id="blockTransferA" style="display:none;">
+            <label class="help">De (conta)</label>
+            <select id="txFromAccount"></select>
+          </div>
+          <div id="blockTransferB" style="display:none;">
+            <label class="help">Para (conta)</label>
+            <select id="txToAccount"></select>
+          </div>
+
+          <div class="row2">
+            <label class="help">Meta (opcional)</label>
+            <select id="txGoal"></select>
+          </div>
+
+          <div class="row2">
+            <label class="help">Tags (opcional, separadas por vírgula)</label>
+            <input class="input" id="txTags" placeholder="Ex.: carro, saúde, obra, curso" />
+          </div>
+
+          <div class="row2">
+            <label class="help">Observação (opcional)</label>
+            <textarea id="txNote" placeholder="Detalhes..."></textarea>
+          </div>
+        </div>
+
+        <div class="sep"></div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;">
+          <button class="btn bad" id="btnDeleteTx" style="display:none;">🗑️ Excluir</button>
+          <button class="btn" id="btnCancelTx">Cancelar</button>
+          <button class="btn primary" id="btnSaveTx">Salvar</button>
+        </div>
+
+        <div class="help" id="txModalHelp">
+          Tudo salva no Firebase em <span class="chip">/expenses</span> (formato profissional por ID). Sem mexer no Console.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: META -->
+  <div class="modalWrap" id="modalGoalWrap" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modalHeader">
+        <b id="goalModalTitle">Nova meta</b>
+        <button class="btn ghost" id="btnCloseGoal">✕</button>
+      </div>
+      <div class="modalBody">
+        <div class="formGrid">
+          <div class="row2">
+            <label class="help">Nome</label>
+            <input class="input" id="goalName" placeholder="Ex.: Reserva, Viagem, Curso, iPhone..." />
+          </div>
+          <div>
+            <label class="help">Alvo (R$)</label>
+            <input class="input" id="goalTarget" type="number" step="0.01" placeholder="0,00" />
+          </div>
+          <div>
+            <label class="help">Já tenho (R$)</label>
+            <input class="input" id="goalCurrent" type="number" step="0.01" placeholder="0,00" />
+          </div>
+          <div>
+            <label class="help">Prazo</label>
+            <input class="input" id="goalDue" type="date" />
+          </div>
+          <div>
+            <label class="help">Conta (opcional)</label>
+            <select id="goalAccount"></select>
+          </div>
+        </div>
+
+        <div class="sep"></div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;">
+          <button class="btn bad" id="btnDeleteGoal" style="display:none;">🗑️ Excluir</button>
+          <button class="btn" id="btnCancelGoal">Cancelar</button>
+          <button class="btn primary" id="btnSaveGoal">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: RECORRÊNCIA -->
+  <div class="modalWrap" id="modalRecWrap" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modalHeader">
+        <b id="recModalTitle">Nova recorrência</b>
+        <button class="btn ghost" id="btnCloseRec">✕</button>
+      </div>
+      <div class="modalBody">
+        <div class="formGrid">
+          <div>
+            <label class="help">Tipo</label>
+            <select id="recType">
+              <option value="income">Receita</option>
+              <option value="expense">Despesa</option>
+            </select>
+          </div>
+          <div>
+            <label class="help">Dia do mês (1..28)</label>
+            <input class="input" id="recDay" type="number" min="1" max="28" placeholder="1..28" />
+          </div>
+          <div class="row2">
+            <label class="help">Descrição</label>
+            <input class="input" id="recName" placeholder="Ex.: Salário, Aluguel, Netflix..." />
+          </div>
+          <div>
+            <label class="help">Valor (R$)</label>
+            <input class="input" id="recAmount" type="number" step="0.01" placeholder="0,00" />
+          </div>
+
+          <div>
+            <label class="help">Status ao gerar</label>
+            <select id="recStatus">
+              <option value="paid">Pago</option>
+              <option value="pending">Pendente</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="help">Fonte</label>
+            <select id="recSource"></select>
+          </div>
+          <div>
+            <label class="help">Categoria</label>
+            <select id="recCategory"></select>
+          </div>
+          <div>
+            <label class="help">Conta</label>
+            <select id="recAccount"></select>
+          </div>
+
+          <div class="row2">
+            <label class="help">Gerar para próximos meses</label>
+            <select id="recHorizon">
+              <option value="1">Apenas mês atual</option>
+              <option value="3" selected>3 meses (recomendado)</option>
+              <option value="6">6 meses</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="sep"></div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;">
+          <button class="btn bad" id="btnDeleteRec" style="display:none;">🗑️ Excluir</button>
+          <button class="btn" id="btnCancelRec">Cancelar</button>
+          <button class="btn primary" id="btnSaveRec">Salvar</button>
+        </div>
+
+        <div class="help">
+          O app marca cada ocorrência em <span class="chip">/finance_recurring_generated</span> para nunca duplicar.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: PARCELAMENTO -->
+  <div class="modalWrap" id="modalInstWrap" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modalHeader">
+        <b id="instModalTitle">Novo parcelamento</b>
+        <button class="btn ghost" id="btnCloseInst">✕</button>
+      </div>
+      <div class="modalBody">
+        <div class="formGrid">
+          <div class="row2">
+            <label class="help">Descrição</label>
+            <input class="input" id="instName" placeholder="Ex.: Notebook, Curso, Celular..." />
+          </div>
+          <div>
+            <label class="help">Valor da parcela (R$)</label>
+            <input class="input" id="instAmount" type="number" step="0.01" placeholder="0,00" />
+          </div>
+          <div>
+            <label class="help">Número de parcelas</label>
+            <input class="input" id="instCount" type="number" min="2" max="48" placeholder="Ex.: 10" />
+          </div>
+          <div>
+            <label class="help">Data da 1ª parcela</label>
+            <input class="input" id="instStart" type="date" />
+          </div>
+
+          <div>
+            <label class="help">Fonte</label>
+            <select id="instSource"></select>
+          </div>
+          <div>
+            <label class="help">Categoria</label>
+            <select id="instCategory"></select>
+          </div>
+          <div>
+            <label class="help">Conta (cartão)</label>
+            <select id="instAccount"></select>
+          </div>
+
+          <div class="row2">
+            <label class="help">Status ao gerar</label>
+            <select id="instStatus">
+              <option value="paid">Pago</option>
+              <option value="pending" selected>Pendente</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="sep"></div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;">
+          <button class="btn bad" id="btnDeleteInst" style="display:none;">🗑️ Excluir</button>
+          <button class="btn" id="btnCancelInst">Cancelar</button>
+          <button class="btn primary" id="btnSaveInst">Salvar</button>
+        </div>
+
+        <div class="help">
+          As parcelas são criadas automaticamente em <span class="chip">/expenses</span> com referência ao plano.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: AJUSTES -->
+  <div class="modalWrap" id="modalSettingsWrap" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modalHeader">
+        <b>Ajustes</b>
+        <button class="btn ghost" id="btnCloseSettings">✕</button>
+      </div>
+      <div class="modalBody">
+        <div class="formGrid">
+          <div>
+            <label class="help">Moeda</label>
+            <select id="setCurrency">
+              <option value="BRL">BRL (R$)</option>
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
+            </select>
+          </div>
+          <div>
+            <label class="help">Ano (relatórios)</label>
+            <select id="setYear"></select>
+          </div>
+
+          <div class="row2">
+            <label class="help">Fontes (uma por linha)</label>
+            <textarea id="setSources"></textarea>
+          </div>
+          <div class="row2">
+            <label class="help">Categorias (uma por linha)</label>
+            <textarea id="setCategories"></textarea>
+          </div>
+          <div class="row2">
+            <label class="help">Contas (uma por linha)</label>
+            <textarea id="setAccounts"></textarea>
+          </div>
+          <div class="row2">
+            <label class="help">Orçamentos (opcional) — Categoria=Valor (um por linha)</label>
+            <textarea id="setBudgets" placeholder="Alimentação=900&#10;Moradia=2500"></textarea>
+          </div>
+        </div>
+
+        <div class="sep"></div>
+
+        <div style="display:flex; gap:10px; justify-content:space-between; flex-wrap:wrap;">
+          <button class="btn" id="btnAudit">🔎 Verificar banco</button>
+          <button class="btn good" id="btnFixDb">✅ Consertar banco</button>
+          <div style="display:flex; gap:10px; margin-left:auto; flex-wrap:wrap;">
+            <button class="btn" id="btnCancelSettings">Cancelar</button>
+            <button class="btn primary" id="btnSaveSettings">Salvar</button>
+          </div>
+        </div>
+
+        <div class="help">
+          “Consertar banco” padroniza <span class="chip">/expenses</span> para formato profissional por ID (se estiver em array antigo) e corrige campos faltantes.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    /************************************************************
+     * Firebase Config (a mesma que você forneceu)
+     ************************************************************/
+    const firebaseConfig = {
+      apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+      authDomain: "agenda-6accc.firebaseapp.com",
+      databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+      projectId: "agenda-6accc",
+      storageBucket: "agenda-6accc.appspot.com",
+      messagingSenderId: "794262176773",
+      appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+      measurementId: "G-CVBQ54PERH"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    /************************************************************
+     * Paths (sem mexer no console)
+     ************************************************************/
+    const PATH = {
+      expenses: "/expenses",
+      settings: "/finance_settings",
+      goals: "/finance_goals",
+      recurring: "/finance_recurring",
+      recurringGen: "/finance_recurring_generated",
+      installments: "/finance_installments"
+    };
+
+    /************************************************************
+     * State
+     ************************************************************/
+    const state = {
+      theme: "dark",
+      settings: null,
+      tx: [],
+      goals: [],
+      recurring: [],
+      installments: [],
+      selectedYear: new Date().getFullYear(),
+      filters: {
+        month: "",
+        mode: "real", // real | real+prev
+        search: "",
+        type: "all",
+        status: "all",
+        drillCategory: ""
+      },
+      editing: { txId:null, goalId:null, recId:null, instId:null },
+      rawExpensesIsArray: false,
+      charts: { daily:null, cats:null },
+    };
+
+    /************************************************************
+     * Helpers
+     ************************************************************/
+    const $ = (id)=>document.getElementById(id);
+
+    function toast(msg){
+      const el = $("toast");
+      el.textContent = msg;
+      el.style.display = "block";
+      clearTimeout(toast._t);
+      toast._t = setTimeout(()=> el.style.display="none", 2600);
+    }
+    function safeText(v){ return (v===null || v===undefined) ? "" : String(v).trim(); }
+    function pad2(n){ return String(n).padStart(2,"0"); }
+    function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
+
+    function toMoney(v){
+      const cur = state.settings?.currency || "BRL";
+      const val = Number(v||0);
+      return new Intl.NumberFormat("pt-BR",{style:"currency",currency:cur,maximumFractionDigits:2})
+        .format(Number.isFinite(val)?val:0);
+    }
+
+    function monthKeyFromTs(ts){
+      const d = new Date(ts);
+      return `${d.getFullYear()}-${pad2(d.getMonth()+1)}`;
+    }
+    function startEndFromMonth(monthStr){
+      const [y,m] = monthStr.split("-").map(Number);
+      const start = new Date(y, m-1, 1, 0,0,0,0).getTime();
+      const end = new Date(y, m, 1, 0,0,0,0).getTime();
+      return { start, end };
+    }
+    function toDatetimeLocal(ts){
+      const d = new Date(ts);
+      return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    }
+
+    function parseLines(text){
+      return safeText(text).split("\n").map(s=>s.trim()).filter(Boolean);
+    }
+    function parseBudgets(text){
+      const out = {};
+      for(const ln of parseLines(text)){
+        const idx = ln.indexOf("=");
+        if(idx===-1) continue;
+        const k = ln.slice(0,idx).trim();
+        const v = Number(ln.slice(idx+1).trim().replace(",","."));
+        if(k && Number.isFinite(v) && v>=0) out[k]=v;
+      }
+      return out;
+    }
+    function budgetsToText(budgets){
+      const keys = Object.keys(budgets||{}).sort((a,b)=>a.localeCompare(b));
+      return keys.map(k=>`${k}=${budgets[k]}`).join("\n");
+    }
+
+    /************************************************************
+     * Defaults
+     ************************************************************/
+    function defaultSettings(){
+      return {
+        currency: "BRL",
+        sources: ["Salário","Empresa","Freela","Investimentos","Outros"],
+        categories: ["Moradia","Alimentação","Transporte","Saúde","Lazer","Educação","Contas","Impostos","Assinaturas","Outros"],
+        accounts: ["Banco","Cartão","Carteira","Investimentos"],
+        budgets: {"Alimentação":900,"Lazer":300,"Assinaturas":120}
+      };
+    }
+
+    /************************************************************
+     * Normalização (compat com seu formato antigo)
+     ************************************************************/
+    function normalizeLegacyTx(id, raw){
+      const out = {};
+      out.id = id;
+
+      out.type = (raw?.type === "income") ? "income" : (raw?.type === "transfer" ? "transfer" : "expense");
+      out.name = safeText(raw?.name || raw?.description || "Sem descrição");
+
+      out.amount = Number(raw?.amount ?? 0);
+      if(!Number.isFinite(out.amount)) out.amount = 0;
+
+      if(raw?.ts){
+        out.ts = Number(raw.ts);
+      }else if(raw?.dateTime){
+        const t = new Date(raw.dateTime).getTime();
+        out.ts = Number.isFinite(t) ? t : Date.now();
+      }else{
+        out.ts = Date.now();
+      }
+
+      out.status = (raw?.status === "pending") ? "pending" : "paid";
+
+      out.source = safeText(raw?.source || "");
+      out.category = safeText(raw?.category || "");
+      out.account = safeText(raw?.account || "");
+      out.fromAccount = safeText(raw?.fromAccount || "");
+      out.toAccount = safeText(raw?.toAccount || "");
+
+      out.goalId = safeText(raw?.goalId || "");
+      out.note = safeText(raw?.note || "");
+      out.tags = safeText(raw?.tags || "");
+      out.recurringKey = safeText(raw?.recurringKey || "");
+      out.installmentId = safeText(raw?.installmentId || "");
+      out.installmentNo = Number(raw?.installmentNo || 0);
+
+      out.createdAt = Number(raw?.createdAt || out.ts);
+      out.updatedAt = Number(raw?.updatedAt || out.ts);
+
+      // defaults seguros
+      if(out.type === "transfer"){
+        out.fromAccount = out.fromAccount || state.settings?.accounts?.[0] || "Banco";
+        out.toAccount = out.toAccount || state.settings?.accounts?.[1] || state.settings?.accounts?.[0] || "Cartão";
+        out.source = ""; out.category = ""; out.account = "";
+      }else{
+        out.source = out.source || (out.type==="income" ? "Salário" : "Empresa");
+        out.category = out.category || "Outros";
+        out.account = out.account || (state.settings?.accounts?.[0] || "Banco");
+        out.fromAccount = ""; out.toAccount = "";
+      }
+      out.createdAt = Number(out.createdAt || out.ts || Date.now());
+      out.updatedAt = Number.isFinite(out.updatedAt) ? out.updatedAt : Date.now();
+
+      return out;
+    }
+
+    function validateTx(tx){
+      const issues=[];
+      if(!["income","expense","transfer"].includes(tx.type)) issues.push("type inválido");
+      if(!["paid","pending"].includes(tx.status||"paid")) issues.push("status inválido");
+      if(!Number.isFinite(Number(tx.amount)) || Number(tx.amount)<=0) issues.push("amount inválido");
+      if(!Number.isFinite(Number(tx.ts)) || Number(tx.ts)<=0) issues.push("ts inválido");
+      if(!tx.name || tx.name.trim().length<2) issues.push("descrição vazia");
+      if(tx.type==="transfer"){
+        if(!tx.fromAccount) issues.push("transfer sem fromAccount");
+        if(!tx.toAccount) issues.push("transfer sem toAccount");
+        if(tx.fromAccount && tx.toAccount && tx.fromAccount===tx.toAccount) issues.push("transfer contas iguais");
+      }else{
+        if(!tx.source) issues.push("sem fonte");
+        if(!tx.category) issues.push("sem categoria");
+        if(!tx.account) issues.push("sem conta");
+      }
+      return issues;
+    }
+
+    async function auditDatabase(){
+      const snap = await db.ref(PATH.expenses).get().catch(()=>null);
+      if(!snap || !snap.exists()) return {mode:"empty", total:0, issues:[]};
+
+      const v = snap.val();
+      const mode = Array.isArray(v) ? "legacy_array" : "object_by_id";
+      const list = [];
+
+      if(Array.isArray(v)){
+        v.forEach((raw, idx)=>{ if(raw) list.push(normalizeLegacyTx(String(idx), raw)); });
+      }else{
+        Object.keys(v).forEach(id=>{ if(v[id]) list.push(normalizeLegacyTx(id, v[id])); });
+      }
+
+      const issues=[];
+      list.forEach(t=>{
+        const errs = validateTx(t);
+        if(errs.length) issues.push({id:t.id, name:t.name, errs});
+      });
+
+      return {mode, total:list.length, issues};
+    }
+
+    async function fixDatabaseToProfessionalFormat(){
+      const snap = await db.ref(PATH.expenses).get().catch(()=>null);
+      if(!snap || !snap.exists()){
+        toast("DB vazio: nada para corrigir.");
+        return;
+      }
+      const v = snap.val();
+      const now = Date.now();
+      const obj = {};
+
+      if(Array.isArray(v)){
+        for(const raw of v.filter(Boolean)){
+          const ref = db.ref(PATH.expenses).push();
+          const id = ref.key;
+          const n = normalizeLegacyTx(id, raw);
+          n.id = id;
+          n.createdAt = n.createdAt || now;
+          n.updatedAt = now;
+          obj[id] = n;
+        }
+      }else{
+        for(const id of Object.keys(v)){
+          const raw = v[id];
+          if(!raw) continue;
+          const n = normalizeLegacyTx(id, raw);
+          n.id = id;
+          n.createdAt = n.createdAt || now;
+          n.updatedAt = now;
+          obj[id] = n;
+        }
+      }
+
+      await db.ref(PATH.expenses).set(obj);
+      toast("Banco consertado ✅ (/expenses por id, padronizado)");
+    }
+
+    /************************************************************
+     * Settings
+     ************************************************************/
+    async function loadSettings(){
+      const snap = await db.ref(PATH.settings).get().catch(()=>null);
+      let s = snap?.val();
+      if(!s){
+        s = defaultSettings();
+        await db.ref(PATH.settings).set(s);
+      }else{
+        const d = defaultSettings();
+        s.currency = s.currency || d.currency;
+        s.sources = Array.isArray(s.sources)&&s.sources.length ? s.sources : d.sources;
+        s.categories = Array.isArray(s.categories)&&s.categories.length ? s.categories : d.categories;
+        s.accounts = Array.isArray(s.accounts)&&s.accounts.length ? s.accounts : d.accounts;
+        s.budgets = (s.budgets && typeof s.budgets==="object") ? s.budgets : d.budgets;
+      }
+      state.settings = s;
+    }
+
+    function listenSettings(){
+      db.ref(PATH.settings).on("value",(snap)=>{
+        const s = snap.val();
+        if(s){
+          state.settings = s;
+          rebuildAllSelects();
+          renderAll();
+          renderCharts();
+        }
+      });
+    }
+
+    /************************************************************
+     * Listeners
+     ************************************************************/
+    function listenGoals(){
+      db.ref(PATH.goals).on("value",(snap)=>{
+        const v = snap.val();
+        const list=[];
+        if(v && typeof v==="object"){
+          Object.keys(v).forEach(id=>{
+            const g=v[id]; if(!g) return;
+            list.push({
+              id,
+              name: safeText(g.name||"Meta"),
+              target: Number(g.target||0),
+              current: Number(g.current||0),
+              due: safeText(g.due||""),
+              account: safeText(g.account||""),
+              createdAt: Number(g.createdAt||Date.now()),
+              updatedAt: Number(g.updatedAt||Date.now())
+            });
+          });
+        }
+        list.sort((a,b)=>(a.due||"").localeCompare(b.due||"") || (b.updatedAt-a.updatedAt));
+        state.goals = list;
+        rebuildGoalSelect();
+        renderGoals();
+      });
+    }
+
+    function listenRecurring(){
+      db.ref(PATH.recurring).on("value",(snap)=>{
+        const v = snap.val();
+        const list=[];
+        if(v && typeof v==="object"){
+          Object.keys(v).forEach(id=>{
+            const r=v[id]; if(!r) return;
+            list.push({
+              id,
+              type: (r.type==="income")?"income":"expense",
+              day: Number(r.day||1),
+              name: safeText(r.name||"Recorrência"),
+              amount: Number(r.amount||0),
+              status: (r.status==="pending")?"pending":"paid",
+              source: safeText(r.source|| (r.type==="income"?"Salário":"Empresa")),
+              category: safeText(r.category||"Outros"),
+              account: safeText(r.account|| (state.settings?.accounts?.[0]||"Banco")),
+              horizon: Number(r.horizon||3),
+              createdAt: Number(r.createdAt||Date.now()),
+              updatedAt: Number(r.updatedAt||Date.now())
+            });
+          });
+        }
+        list.sort((a,b)=>b.updatedAt-a.updatedAt);
+        state.recurring = list;
+        renderRecurring();
+      });
+    }
+
+    function listenInstallments(){
+      db.ref(PATH.installments).on("value",(snap)=>{
+        const v=snap.val();
+        const list=[];
+        if(v && typeof v==="object"){
+          Object.keys(v).forEach(id=>{
+            const p=v[id]; if(!p) return;
+            list.push({
+              id,
+              name: safeText(p.name||"Parcelado"),
+              amount: Number(p.amount||0),
+              count: Number(p.count||0),
+              start: safeText(p.start||""),
+              status: (p.status==="paid")?"paid":"pending",
+              source: safeText(p.source||"Empresa"),
+              category: safeText(p.category||"Outros"),
+              account: safeText(p.account|| (state.settings?.accounts?.[0]||"Cartão")),
+              createdAt: Number(p.createdAt||Date.now()),
+              updatedAt: Number(p.updatedAt||Date.now())
+            });
+          });
+        }
+        list.sort((a,b)=>b.updatedAt-a.updatedAt);
+        state.installments = list;
+        renderInstallments();
+      });
+    }
+
+    function listenExpenses(){
+      db.ref(PATH.expenses).on("value",(snap)=>{
+        const v = snap.val();
+        state.rawExpensesIsArray = Array.isArray(v);
+
+        let list=[];
+        if(Array.isArray(v)){
+          list = v.map((raw, idx)=> raw ? normalizeLegacyTx(String(idx), raw) : null).filter(Boolean);
+        }else if(v && typeof v==="object"){
+          list = Object.keys(v).map(id=> normalizeLegacyTx(id, v[id])).filter(Boolean);
+        }else{
+          list = [];
+        }
+
+        list.sort((a,b)=>b.ts-a.ts);
+        state.tx = list;
+
+        $("dbInfo").textContent =
+          `DB: /expenses • itens: ${state.tx.length}` + (state.rawExpensesIsArray ? " • formato antigo" : "");
+
+        renderAll();
+        renderCharts();
+      });
+    }
+
+    /************************************************************
+     * Select rebuilds
+     ************************************************************/
+    function rebuildSelect(el, arr, placeholder){
+      el.innerHTML="";
+      if(placeholder!==null && placeholder!==undefined){
+        const opt=document.createElement("option");
+        opt.value=""; opt.textContent=placeholder;
+        el.appendChild(opt);
+      }
+      (arr||[]).forEach(v=>{
+        const opt=document.createElement("option");
+        opt.value=v; opt.textContent=v;
+        el.appendChild(opt);
+      });
+    }
+
+    function rebuildGoalSelect(){
+      const el=$("txGoal");
+      el.innerHTML="";
+      const o0=document.createElement("option");
+      o0.value=""; o0.textContent="Sem meta";
+      el.appendChild(o0);
+      state.goals.forEach(g=>{
+        const opt=document.createElement("option");
+        opt.value=g.id; opt.textContent=g.name;
+        el.appendChild(opt);
+      });
+    }
+
+    function rebuildAllSelects(){
+      rebuildSelect($("txSource"), state.settings?.sources||[], null);
+      rebuildSelect($("txCategory"), state.settings?.categories||[], null);
+      rebuildSelect($("txAccount"), state.settings?.accounts||[], null);
+      rebuildSelect($("txFromAccount"), state.settings?.accounts||[], null);
+      rebuildSelect($("txToAccount"), state.settings?.accounts||[], null);
+
+      rebuildSelect($("goalAccount"), ["", ...(state.settings?.accounts||[])], "Sem conta");
+
+      rebuildSelect($("recSource"), state.settings?.sources||[], null);
+      rebuildSelect($("recCategory"), state.settings?.categories||[], null);
+      rebuildSelect($("recAccount"), state.settings?.accounts||[], null);
+
+      rebuildSelect($("instSource"), state.settings?.sources||[], null);
+      rebuildSelect($("instCategory"), state.settings?.categories||[], null);
+      rebuildSelect($("instAccount"), state.settings?.accounts||[], null);
+
+      rebuildGoalSelect();
+    }
+
+    function rebuildYearSelect(){
+      const y=new Date().getFullYear();
+      const el=$("setYear");
+      el.innerHTML="";
+      for(let i=y-5;i<=y+1;i++){
+        const opt=document.createElement("option");
+        opt.value=String(i); opt.textContent=String(i);
+        el.appendChild(opt);
+      }
+      el.value=String(state.selectedYear);
+    }
+
+    /************************************************************
+     * Tabs / Views
+     ************************************************************/
+    function setTab(tab){
+      document.querySelectorAll(".tab").forEach(b=>{
+        b.classList.toggle("active", b.dataset.tab===tab);
+      });
+      document.querySelectorAll(".navBtn").forEach(b=>{
+        b.classList.toggle("active", b.dataset.tab===tab);
+      });
+
+      ["dash","tx","goals","plans"].forEach(k=>{
+        const el = document.getElementById("view_"+k);
+        if(el) el.style.display = (k===tab) ? "block" : "none";
+      });
+
+      if(tab!=="dash"){
+        state.filters.drillCategory="";
+        $("catHelp").textContent = "Dica: clique numa categoria no gráfico para ver as transações dessa categoria.";
+      }
+    }
+
+    /************************************************************
+     * Rendering
+     ************************************************************/
+    function applyTxFilters(list){
+      const f = state.filters;
+      let out = list.slice();
+
+      if(f.month){
+        const {start,end} = startEndFromMonth(f.month);
+        out = out.filter(t=> t.ts>=start && t.ts<end);
+      }
+      if(f.mode === "real"){
+        out = out.filter(t=> (t.status||"paid") === "paid");
+      }
+      if(f.drillCategory){
+        out = out.filter(t=> t.type==="expense" && (t.category||"Outros") === f.drillCategory);
+      }
+      if(f.search){
+        const q = f.search.toLowerCase();
+        out = out.filter(t=>{
+          const blob = [t.name,t.source,t.category,t.account,t.fromAccount,t.toAccount,t.note,t.tags].join(" ").toLowerCase();
+          return blob.includes(q);
+        });
+      }
+      if(f.type !== "all") out = out.filter(t=> t.type===f.type);
+      if(f.status !== "all") out = out.filter(t=> (t.status||"paid")===f.status);
+
+      return out;
+    }
+
+    function computeMonthKPIs(){
+      const month = state.filters.month || monthKeyFromTs(Date.now());
+      const {start,end} = startEndFromMonth(month);
+      const mode = state.filters.mode;
+
+      const tx = state.tx.filter(t=> t.ts>=start && t.ts<end).filter(t=>{
+        if(mode==="real") return (t.status||"paid")==="paid";
+        return true;
+      });
+
+      let income=0, expense=0;
+      tx.forEach(t=>{
+        if(t.type==="income") income += t.amount;
+        else if(t.type==="expense") expense += t.amount;
+      });
+      const balance = income-expense;
+      const rate = income>0 ? (balance/income) : 0;
+      return {month, income, expense, balance, rate, count: tx.length};
+    }
+
+    function renderKPIs(){
+      const k = computeMonthKPIs();
+      $("kpiIncome").textContent = toMoney(k.income);
+      $("kpiExpense").textContent = toMoney(k.expense);
+      $("kpiBalance").textContent = toMoney(k.balance);
+      $("kpiSavingsRate").textContent = `${Math.round(clamp(k.rate*100,-999,999))}%`;
+
+      const dot = $("dotBalance");
+      dot.className = "dot";
+      if(k.balance>0) dot.classList.add("good");
+      if(k.balance<0) dot.classList.add("bad");
+
+      $("kpiIncomeHint").textContent = `${k.month} • ${k.count} lançamentos`;
+      $("kpiExpenseHint").textContent = `${k.month} • controle de gastos`;
+      $("kpiBalanceHint").textContent = k.balance>=0 ? "Você está no positivo 💚" : "Atenção: saldo negativo 🔥";
+      $("kpiSavingsHint").textContent = k.income>0 ? "Saldo ÷ Receitas" : "Cadastre receitas para ver";
+      $("chartLabel").textContent = `Mês: ${k.month} • ${state.filters.mode==="real" ? "Realizado" : "Real + Previsto"}`;
+    }
+
+    function iconForTx(t){
+      if(t.type==="income") return "＋";
+      if(t.type==="expense") return "−";
+      return "⇄";
+    }
+    function badgeClassForTx(t){
+      if(t.recurringKey && t.recurringKey.startsWith("inst:")) return "auto";
+      if(t.recurringKey) return "auto";
+      return t.type;
+    }
+    function txSubtitle(t){
+      const dt = new Date(t.ts).toLocaleString("pt-BR");
+      const st = (t.status==="pending") ? "Pendente" : "Pago";
+      if(t.type==="transfer"){
+        return `${dt} • ${t.fromAccount} → ${t.toAccount} • ${st}`;
+      }
+      const kind = t.type==="income" ? "Receita" : "Despesa";
+      const src = t.source || "—";
+      const cat = t.category || "—";
+      const acc = t.account || "—";
+      const extra = [];
+      if(t.recurringKey && !t.recurringKey.startsWith("inst:")) extra.push("Auto");
+      if(t.installmentId) extra.push(`Parc. ${t.installmentNo}`);
+      return `${dt} • ${kind} • ${src} • ${cat} • ${acc} • ${st}` + (extra.length ? ` • ${extra.join(" • ")}` : "");
+    }
+
+    function renderTxList(){
+      const list = applyTxFilters(state.tx);
+      $("txCount").textContent = `${list.length} itens`;
+      const wrap = $("txList");
+      wrap.innerHTML = "";
+      $("emptyTx").style.display = list.length ? "none" : "block";
+
+      list.forEach(t=>{
+        const row=document.createElement("div");
+        row.className="txRow";
+
+        const main=document.createElement("div");
+        main.className="txMain";
+
+        const badge=document.createElement("div");
+        badge.className=`badge ${badgeClassForTx(t)}`;
+        badge.textContent=iconForTx(t);
+
+        const text=document.createElement("div");
+        text.className="txText";
+        const b=document.createElement("b"); b.textContent=t.name;
+        const s=document.createElement("span"); s.textContent=txSubtitle(t);
+        text.appendChild(b); text.appendChild(s);
+
+        main.appendChild(badge); main.appendChild(text);
+
+        const right=document.createElement("div");
+        right.className="txRight";
+
+        const amt=document.createElement("div");
+        amt.className="amount";
+        if(t.type==="income") amt.classList.add("good");
+        if(t.type==="expense") amt.classList.add("bad");
+        amt.textContent = (t.type==="expense" ? "− " : (t.type==="income" ? "+ " : "")) + toMoney(Math.abs(t.amount));
+
+        const mini=document.createElement("div");
+        mini.className="miniBtns";
+        const edit=document.createElement("button");
+        edit.className="btn mini";
+        edit.textContent="Editar";
+        edit.onclick=()=> openTxModal(t.id);
+        mini.appendChild(edit);
+
+        right.appendChild(amt);
+        right.appendChild(mini);
+
+        row.appendChild(main);
+        row.appendChild(right);
+        wrap.appendChild(row);
+      });
+    }
+
+    function computeAccountBalances(){
+      const accounts = state.settings?.accounts || [];
+      const map = {};
+      accounts.forEach(a=> map[a] = 0);
+
+      const month = state.filters.month || monthKeyFromTs(Date.now());
+      const {start,end} = startEndFromMonth(month);
+      const mode = state.filters.mode;
+
+      const tx = state.tx.filter(t=> t.ts>=start && t.ts<end).filter(t=>{
+        if(mode==="real") return (t.status||"paid")==="paid";
+        return true;
+      });
+
+      tx.forEach(t=>{
+        if(t.type==="income"){
+          map[t.account] = (map[t.account]||0) + t.amount;
+        }else if(t.type==="expense"){
+          map[t.account] = (map[t.account]||0) - t.amount;
+        }else if(t.type==="transfer"){
+          map[t.fromAccount] = (map[t.fromAccount]||0) - t.amount;
+          map[t.toAccount] = (map[t.toAccount]||0) + t.amount;
+        }
+      });
+
+      return {month, map};
+    }
+
+    function renderAccounts(){
+      const wrap = $("accountsWrap");
+      const accounts = state.settings?.accounts || [];
+      $("accCount").textContent = `${accounts.length} contas`;
+      wrap.innerHTML="";
+
+      if(!accounts.length){
+        $("emptyAccounts").style.display="block";
+        return;
+      }
+      $("emptyAccounts").style.display="none";
+
+      const {month, map} = computeAccountBalances();
+
+      accounts.forEach(a=>{
+        const val = map[a] ?? 0;
+        const box=document.createElement("div");
+        box.className="accCard";
+
+        const top=document.createElement("div");
+        top.className="accTop";
+
+        const left=document.createElement("div");
+        const b=document.createElement("b"); b.textContent=a;
+        const s=document.createElement("span"); s.textContent=`Fluxo líquido em ${month}`;
+        left.appendChild(b); left.appendChild(s);
+
+        const right=document.createElement("div");
+        const pill=document.createElement("div");
+        pill.className="pill";
+        pill.textContent = (val>=0) ? "Positivo" : "Negativo";
+        right.appendChild(pill);
+
+        top.appendChild(left); top.appendChild(right);
+
+        const v=document.createElement("div");
+        v.className="accVal";
+        v.textContent = toMoney(val);
+
+        box.appendChild(top);
+        box.appendChild(v);
+        wrap.appendChild(box);
+      });
+    }
+
+    function renderTopSpend(){
+      const wrap = $("topSpendWrap");
+      const month = state.filters.month || monthKeyFromTs(Date.now());
+      const {start,end} = startEndFromMonth(month);
+      const mode = state.filters.mode;
+
+      const exp = state.tx
+        .filter(t=>t.type==="expense")
+        .filter(t=>t.ts>=start && t.ts<end)
+        .filter(t=> mode==="real" ? (t.status||"paid")==="paid" : true)
+        .slice()
+        .sort((a,b)=>b.amount-a.amount)
+        .slice(0,6);
+
+      $("topSpendLabel").textContent = month;
+      wrap.innerHTML="";
+      $("emptyTopSpend").style.display = exp.length ? "none" : "block";
+
+      exp.forEach(t=>{
+        const row=document.createElement("div");
+        row.className="txRow";
+        row.style.cursor="pointer";
+        row.onclick=()=> openTxModal(t.id);
+
+        const main=document.createElement("div");
+        main.className="txMain";
+
+        const badge=document.createElement("div");
+        badge.className="badge expense";
+        badge.textContent="−";
+
+        const text=document.createElement("div");
+        text.className="txText";
+        const b=document.createElement("b"); b.textContent=t.name;
+        const s=document.createElement("span"); s.textContent=`${t.category||"Outros"} • ${t.account||"—"}`;
+        text.appendChild(b); text.appendChild(s);
+
+        main.appendChild(badge); main.appendChild(text);
+
+        const right=document.createElement("div");
+        right.className="txRight";
+        const amt=document.createElement("div");
+        amt.className="amount bad";
+        amt.textContent="− "+toMoney(t.amount);
+
+        right.appendChild(amt);
+        row.appendChild(main); row.appendChild(right);
+        wrap.appendChild(row);
+      });
+    }
+
+    function renderGoals(){
+      $("goalCount").textContent = `${state.goals.length} metas`;
+      const wrap = $("goalsWrap");
+      wrap.innerHTML="";
+
+      $("emptyGoals").style.display = state.goals.length ? "none" : "block";
+
+      state.goals.forEach(g=>{
+        const box=document.createElement("div");
+        box.className="goal";
+
+        const top=document.createElement("div");
+        top.className="goalTop";
+
+        const left=document.createElement("div");
+        const name=document.createElement("b"); name.textContent=g.name;
+        const dueTxt = g.due ? new Date(g.due+"T00:00:00").toLocaleDateString("pt-BR") : "Sem prazo";
+        const sub=document.createElement("span");
+        sub.textContent = `${toMoney(g.current)} / ${toMoney(g.target)} • prazo: ${dueTxt}` + (g.account ? ` • conta: ${g.account}` : "");
+        left.appendChild(name); left.appendChild(sub);
+
+        const right=document.createElement("div");
+        const edit=document.createElement("button");
+        edit.className="btn mini";
+        edit.textContent="Editar";
+        edit.onclick=()=> openGoalModal(g.id);
+        right.appendChild(edit);
+
+        top.appendChild(left);
+        top.appendChild(right);
+
+        const bar=document.createElement("div");
+        bar.className="bar";
+        const i=document.createElement("i");
+        const pct = g.target>0 ? clamp((g.current/g.target)*100,0,100) : 0;
+        i.style.width = pct.toFixed(1)+"%";
+        bar.appendChild(i);
+
+        box.appendChild(top);
+        box.appendChild(bar);
+        wrap.appendChild(box);
+      });
+    }
+
+    function renderRecurring(){
+      $("recCount").textContent = `${state.recurring.length} regras`;
+      const wrap = $("recWrap");
+      wrap.innerHTML="";
+      $("emptyRec").style.display = state.recurring.length ? "none" : "block";
+
+      state.recurring.forEach(r=>{
+        const row=document.createElement("div");
+        row.className="txRow";
+
+        const main=document.createElement("div");
+        main.className="txMain";
+        const badge=document.createElement("div");
+        badge.className="badge auto";
+        badge.textContent="⏱️";
+        const text=document.createElement("div");
+        text.className="txText";
+        const b=document.createElement("b");
+        b.textContent = `${r.name} • dia ${r.day}`;
+        const s=document.createElement("span");
+        s.textContent = `${r.type==="income" ? "Receita" : "Despesa"} • ${toMoney(r.amount)} • ${r.source} • ${r.category} • ${r.account} • gerar: ${r.horizon}m`;
+        text.appendChild(b); text.appendChild(s);
+        main.appendChild(badge); main.appendChild(text);
+
+        const right=document.createElement("div");
+        right.className="txRight";
+        const mini=document.createElement("div");
+        mini.className="miniBtns";
+        const edit=document.createElement("button");
+        edit.className="btn mini";
+        edit.textContent="Editar";
+        edit.onclick=()=> openRecModal(r.id);
+        mini.appendChild(edit);
+
+        const gen=document.createElement("button");
+        gen.className="btn mini";
+        gen.textContent="Gerar agora";
+        gen.onclick=()=> generateRecurringForRule(r.id, r.horizon || 3, true);
+        mini.appendChild(gen);
+
+        right.appendChild(mini);
+        row.appendChild(main); row.appendChild(right);
+        wrap.appendChild(row);
+      });
+    }
+
+    function renderInstallments(){
+      $("instCountLabel").textContent = `${state.installments.length} planos`;
+      const wrap = $("instWrap");
+      wrap.innerHTML="";
+      $("emptyInst").style.display = state.installments.length ? "none" : "block";
+
+      state.installments.forEach(p=>{
+        const tx = state.tx.filter(t=>t.installmentId === p.id).sort((a,b)=>a.ts-b.ts);
+        const done = tx.filter(t=>(t.status||"paid")==="paid").length;
+        const total = p.count || tx.length || 0;
+
+        const row=document.createElement("div");
+        row.className="txRow";
+
+        const main=document.createElement("div");
+        main.className="txMain";
+        const badge=document.createElement("div");
+        badge.className="badge auto";
+        badge.textContent="💳";
+        const text=document.createElement("div");
+        text.className="txText";
+        const b=document.createElement("b");
+        b.textContent = `${p.name} • ${done}/${total} pagas`;
+        const s=document.createElement("span");
+        s.textContent = `${toMoney(p.amount)} • ${p.count}x • início: ${p.start || "—"} • ${p.category} • ${p.account}`;
+        text.appendChild(b); text.appendChild(s);
+        main.appendChild(badge); main.appendChild(text);
+
+        const right=document.createElement("div");
+        right.className="txRight";
+        const mini=document.createElement("div");
+        mini.className="miniBtns";
+        const edit=document.createElement("button");
+        edit.className="btn mini";
+        edit.textContent="Editar";
+        edit.onclick=()=> openInstModal(p.id);
+        mini.appendChild(edit);
+
+        const regen=document.createElement("button");
+        regen.className="btn mini";
+        regen.textContent="Regerar parcelas";
+        regen.onclick=()=> regenerateInstallment(p.id);
+        mini.appendChild(regen);
+
+        right.appendChild(mini);
+        row.appendChild(main); row.appendChild(right);
+        wrap.appendChild(row);
+      });
+    }
+
+    function renderAll(){
+      renderKPIs();
+      renderAccounts();
+      renderTopSpend();
+      renderTxList();
+      renderGoals();
+      renderRecurring();
+      renderInstallments();
+    }
+
+    /************************************************************
+     * Charts
+     ************************************************************/
+    function getCss(varName){
+      return getComputedStyle(document.documentElement).getPropertyValue(varName).trim() || "#999";
+    }
+
+    function ensureCharts(){
+      if(!state.charts.daily){
+        state.charts.daily = new Chart($("chartDaily"),{
+          type:"line",
+          data:{ labels:[], datasets:[
+            { label:"Saldo diário", data:[], tension:.35, fill:false }
+          ]},
+          options:{
+            responsive:true, maintainAspectRatio:false,
+            plugins:{
+              legend:{ labels:{ color: getCss("--muted") } },
+              tooltip:{ callbacks:{ label:(ctx)=> `${ctx.dataset.label}: ${toMoney(ctx.parsed.y)}` } }
+            },
+            scales:{
+              x:{ ticks:{ color:getCss("--muted") }, grid:{ color:"rgba(255,255,255,.06)" } },
+              y:{ ticks:{ color:getCss("--muted") }, grid:{ color:"rgba(255,255,255,.06)" } }
+            }
+          }
+        });
+      }
+
+      if(!state.charts.cats){
+        state.charts.cats = new Chart($("chartCategories"),{
+          type:"doughnut",
+          data:{ labels:[], datasets:[{ label:"Despesas por categoria", data:[] }] },
+          options:{
+            responsive:true, maintainAspectRatio:false,
+            plugins:{
+              legend:{ position:"bottom", labels:{ color:getCss("--muted") } },
+              tooltip:{ callbacks:{ label:(ctx)=> `${ctx.label}: ${toMoney(ctx.parsed)}` } }
+            },
+            onClick: (evt, elements)=>{
+              if(!elements || !elements.length) return;
+              const idx = elements[0].index;
+              const label = state.charts.cats.data.labels[idx];
+              if(!label || label==="Sem dados") return;
+
+              state.filters.drillCategory = label;
+              $("catHelp").textContent = `Filtrando categoria: “${label}”. (Despesas)`;
+
+              setTab("tx");
+              state.filters.search = "";
+              $("qSearch").value = "";
+              state.filters.type = "expense";
+              $("qType").value = "expense";
+              renderTxList();
+            }
+          }
+        });
+      }
+    }
+
+    function renderCharts(){
+      if(!state.settings) return;
+      ensureCharts();
+
+      const month = state.filters.month || monthKeyFromTs(Date.now());
+      const {start,end} = startEndFromMonth(month);
+      const mode = state.filters.mode;
+
+      const daysInMonth = new Date(Number(month.slice(0,4)), Number(month.slice(5,7)), 0).getDate();
+      const labels = Array.from({length:daysInMonth}, (_,i)=> String(i+1));
+      const dailyDelta = new Array(daysInMonth).fill(0);
+
+      const tx = state.tx
+        .filter(t=>t.ts>=start && t.ts<end)
+        .filter(t=> mode==="real" ? (t.status||"paid")==="paid" : true);
+
+      tx.forEach(t=>{
+        const d = new Date(t.ts);
+        const idx = d.getDate()-1;
+        if(idx<0 || idx>=daysInMonth) return;
+        if(t.type==="income") dailyDelta[idx] += t.amount;
+        else if(t.type==="expense") dailyDelta[idx] -= t.amount;
+      });
+
+      const dailyBalance=[];
+      let acc=0;
+      for(let i=0;i<daysInMonth;i++){
+        acc += dailyDelta[i];
+        dailyBalance.push(+acc.toFixed(2));
+      }
+
+      state.charts.daily.data.labels = labels;
+      state.charts.daily.data.datasets[0].data = dailyBalance;
+      state.charts.daily.update();
+
+      const catMap = {};
+      tx.forEach(t=>{
+        if(t.type!=="expense") return;
+        const c = t.category || "Outros";
+        catMap[c] = (catMap[c]||0) + t.amount;
+      });
+
+      const catLabels = Object.keys(catMap).sort((a,b)=>catMap[b]-catMap[a]).slice(0,10);
+      const catData = catLabels.map(k=> +catMap[k].toFixed(2));
+
+      state.charts.cats.data.labels = catLabels.length ? catLabels : ["Sem dados"];
+      state.charts.cats.data.datasets[0].data = catLabels.length ? catData : [1];
+      state.charts.cats.update();
+    }
+
+    /************************************************************
+     * Recorrências: geração sem duplicar
+     ************************************************************/
+    function monthAdd(monthStr, delta){
+      const y = Number(monthStr.slice(0,4));
+      const m = Number(monthStr.slice(5,7));
+      const d = new Date(y, m-1+delta, 1);
+      return `${d.getFullYear()}-${pad2(d.getMonth()+1)}`;
+    }
+    function tsForMonthDay(monthStr, day){
+      const y = Number(monthStr.slice(0,4));
+      const m = Number(monthStr.slice(5,7));
+      const dd = clamp(Number(day||1), 1, 28);
+      return new Date(y, m-1, dd, 12, 0, 0, 0).getTime();
+    }
+
+    async function generateRecurringForRule(ruleId, horizonMonths=3, manual=false){
+      const r = state.recurring.find(x=>x.id===ruleId);
+      if(!r) { toast("Regra não encontrada."); return; }
+
+      const baseMonth = state.filters.month || monthKeyFromTs(Date.now());
+      const horizon = clamp(Number(horizonMonths||3), 1, 12);
+
+      const updates = {};
+      let created = 0;
+
+      for(let i=0;i<horizon;i++){
+        const month = monthAdd(baseMonth, i);
+        const occDateKey = `${month}-${pad2(clamp(r.day,1,28))}`;
+        const genPath = `${PATH.recurringGen}/${month}/${ruleId}/${occDateKey}`;
+
+        const snap = await db.ref(genPath).get().catch(()=>null);
+        if(snap && snap.exists()) continue;
+
+        const ref = db.ref(PATH.expenses).push();
+        const id = ref.key;
+        const ts = tsForMonthDay(month, r.day);
+
+        const tx = normalizeLegacyTx(id, {
+          type: r.type,
+          name: r.name,
+          amount: r.amount,
+          ts,
+          status: r.status,
+          source: r.source,
+          category: r.category,
+          account: r.account,
+          recurringKey: `${ruleId}:${occDateKey}`,
+          note: manual ? "Gerado manualmente pela regra" : "Gerado automaticamente",
+          tags: "recorrente"
+        });
+        tx.id = id;
+        tx.createdAt = Date.now();
+        tx.updatedAt = Date.now();
+
+        updates[`${PATH.expenses}/${id}`] = tx;
+        updates[genPath] = { txId: id, createdAt: Date.now() };
+        created++;
+      }
+
+      if(created){
+        await db.ref().update(updates);
+        toast(`Recorrência: ${created} transações geradas ✅`);
+      }else{
+        toast("Nenhuma nova transação (já estava tudo gerado).");
+      }
+    }
+
+    async function autoGenerateAllRecurring(){
+      for(const r of state.recurring){
+        await generateRecurringForRule(r.id, r.horizon || 3, false);
+      }
+    }
+
+    /************************************************************
+     * Parcelamentos
+     ************************************************************/
+    function addMonthsToDate(dateStr, delta){
+      const [y,m,d] = dateStr.split("-").map(Number);
+      const base = new Date(y, m-1, d, 12,0,0,0);
+      const nd = new Date(base.getFullYear(), base.getMonth()+delta, base.getDate(), 12,0,0,0);
+      return `${nd.getFullYear()}-${pad2(nd.getMonth()+1)}-${pad2(nd.getDate())}`;
+    }
+
+    async function createInstallmentTransactions(plan){
+      const updates = {};
+      let created = 0;
+
+      const existingKeys = new Set(state.tx.filter(t=>t.installmentId===plan.id).map(t=>t.recurringKey));
+
+      for(let n=1;n<=plan.count;n++){
+        const key = `inst:${plan.id}:${n}`;
+        if(existingKeys.has(key)) continue;
+
+        const dateStr = addMonthsToDate(plan.start, n-1);
+        const ts = new Date(dateStr+"T12:00:00").getTime();
+
+        const ref = db.ref(PATH.expenses).push();
+        const id = ref.key;
+
+        const tx = normalizeLegacyTx(id, {
+          type: "expense",
+          name: `${plan.name} (${n}/${plan.count})`,
+          amount: plan.amount,
+          ts,
+          status: plan.status,
+          source: plan.source,
+          category: plan.category,
+          account: plan.account,
+          installmentId: plan.id,
+          installmentNo: n,
+          recurringKey: key,
+          tags: "parcelado"
+        });
+        tx.id = id;
+        tx.createdAt = Date.now();
+        tx.updatedAt = Date.now();
+
+        updates[`${PATH.expenses}/${id}`] = tx;
+        created++;
+      }
+
+      if(created){
+        await db.ref().update(updates);
+        toast(`Parcelado: ${created} parcelas criadas ✅`);
+      }else{
+        toast("Parcelas já existem (nada a fazer).");
+      }
+    }
+
+    async function regenerateInstallment(planId){
+      const p = state.installments.find(x=>x.id===planId);
+      if(!p){ toast("Plano não encontrado."); return; }
+      const ok = confirm("Regerar parcelas cria as que estiverem faltando. Continuar?");
+      if(!ok) return;
+      await createInstallmentTransactions(p);
+    }
+
+    /************************************************************
+     * Modals helpers
+     ************************************************************/
+    function openModal(id){ $(id).style.display="flex"; document.body.style.overflow="hidden"; }
+    function closeModal(id){ $(id).style.display="none"; document.body.style.overflow=""; }
+
+    function showTxBlocks(type){
+      const isTransfer = type==="transfer";
+      $("blockNormalA").style.display = isTransfer ? "none" : "block";
+      $("blockNormalB").style.display = isTransfer ? "none" : "block";
+      $("blockNormalC").style.display = isTransfer ? "none" : "block";
+      $("blockTransferA").style.display = isTransfer ? "block" : "none";
+      $("blockTransferB").style.display = isTransfer ? "block" : "none";
+    }
+
+    /************************************************************
+     * TX Modal
+     ************************************************************/
+    function clearTxModal(){
+      state.editing.txId = null;
+      $("txModalTitle").textContent="Nova transação";
+      $("btnDeleteTx").style.display="none";
+
+      $("txType").value="expense";
+      $("txStatus").value="paid";
+      $("txName").value="";
+      $("txAmount").value="";
+      $("txDateTime").value = toDatetimeLocal(Date.now());
+
+      $("txSource").value = state.settings?.sources?.[0] || "Salário";
+      $("txCategory").value = state.settings?.categories?.[0] || "Outros";
+      $("txAccount").value = state.settings?.accounts?.[0] || "Banco";
+      $("txFromAccount").value = state.settings?.accounts?.[0] || "Banco";
+      $("txToAccount").value = state.settings?.accounts?.[1] || state.settings?.accounts?.[0] || "Cartão";
+
+      $("txGoal").value = "";
+      $("txTags").value = "";
+      $("txNote").value = "";
+      showTxBlocks("expense");
+    }
+
+    function openTxModal(id){
+      rebuildAllSelects();
+      if(!id){
+        clearTxModal();
+        openModal("modalTxWrap");
+        return;
+      }
+      const t = state.tx.find(x=>x.id===id);
+      if(!t){ toast("Item não encontrado."); return; }
+
+      state.editing.txId = id;
+      $("txModalTitle").textContent="Editar transação";
+      $("btnDeleteTx").style.display="inline-flex";
+
+      $("txType").value = t.type;
+      $("txStatus").value = t.status || "paid";
+      $("txName").value = t.name || "";
+      $("txAmount").value = Number(t.amount||0);
+      $("txDateTime").value = toDatetimeLocal(t.ts);
+      $("txGoal").value = t.goalId || "";
+      $("txTags").value = t.tags || "";
+      $("txNote").value = t.note || "";
+
+      if(t.type==="transfer"){
+        $("txFromAccount").value = t.fromAccount || (state.settings?.accounts?.[0] || "Banco");
+        $("txToAccount").value = t.toAccount || (state.settings?.accounts?.[1] || state.settings?.accounts?.[0] || "Cartão");
+      }else{
+        $("txSource").value = t.source || (t.type==="income" ? "Salário" : "Empresa");
+        $("txCategory").value = t.category || "Outros";
+        $("txAccount").value = t.account || (state.settings?.accounts?.[0] || "Banco");
+      }
+
+      showTxBlocks(t.type);
+      openModal("modalTxWrap");
+    }
+
+    async function saveTx(){
+      const type = $("txType").value;
+      const status = $("txStatus").value;
+      const name = safeText($("txName").value);
+      const amount = Number($("txAmount").value);
+      const dt = $("txDateTime").value;
+      const ts = dt ? new Date(dt).getTime() : Date.now();
+      const goalId = safeText($("txGoal").value);
+      const tags = safeText($("txTags").value);
+      const note = safeText($("txNote").value);
+
+      if(!name || name.length<2){ toast("Descrição inválida."); return; }
+      if(!Number.isFinite(amount) || amount<=0){ toast("Valor inválido."); return; }
+      if(!Number.isFinite(ts) || ts<=0){ toast("Data inválida."); return; }
+
+      const base = { type, status, name, amount, ts, goalId: goalId||"", tags, note };
+      let payload=null;
+
+      if(type==="transfer"){
+        const fromAccount = safeText($("txFromAccount").value);
+        const toAccount = safeText($("txToAccount").value);
+        if(!fromAccount || !toAccount){ toast("Informe as contas."); return; }
+        if(fromAccount===toAccount){ toast("Contas não podem ser iguais."); return; }
+        payload = { ...base, source:"", category:"", account:"", fromAccount, toAccount };
+      }else{
+        const source = safeText($("txSource").value);
+        const category = safeText($("txCategory").value);
+        const account = safeText($("txAccount").value);
+        if(!source || !category || !account){ toast("Preencha fonte/categoria/conta."); return; }
+        payload = { ...base, source, category, account, fromAccount:"", toAccount:"" };
+      }
+
+      const now = Date.now();
+      if(state.editing.txId){
+        const id = state.editing.txId;
+        const prev = state.tx.find(x=>x.id===id) || {};
+        payload.id = id;
+        payload.createdAt = Number(prev.createdAt || prev.ts || now);
+        payload.updatedAt = now;
+        payload.recurringKey = prev.recurringKey || "";
+        payload.installmentId = prev.installmentId || "";
+        payload.installmentNo = Number(prev.installmentNo || 0);
+        await db.ref(`${PATH.expenses}/${id}`).set(payload);
+        toast("Transação atualizada ✅");
+      }else{
+        const ref = db.ref(PATH.expenses).push();
+        const id = ref.key;
+        payload.id = id;
+        payload.createdAt = now;
+        payload.updatedAt = now;
+        payload.recurringKey = "";
+        payload.installmentId = "";
+        payload.installmentNo = 0;
+        await db.ref(`${PATH.expenses}/${id}`).set(payload);
+        toast("Transação salva ✅");
+      }
+
+      closeModal("modalTxWrap");
+    }
+
+    async function deleteTx(){
+      const id = state.editing.txId;
+      if(!id) return;
+      const ok = confirm("Excluir esta transação?");
+      if(!ok) return;
+      await db.ref(`${PATH.expenses}/${id}`).remove();
+      toast("Transação excluída.");
+      closeModal("modalTxWrap");
+    }
+
+    /************************************************************
+     * Goal Modal
+     ************************************************************/
+    function clearGoalModal(){
+      state.editing.goalId=null;
+      $("goalModalTitle").textContent="Nova meta";
+      $("btnDeleteGoal").style.display="none";
+      $("goalName").value="";
+      $("goalTarget").value="";
+      $("goalCurrent").value="";
+      $("goalDue").value="";
+      $("goalAccount").value="";
+    }
+    function openGoalModal(id){
+      rebuildAllSelects();
+      if(!id){
+        clearGoalModal();
+        openModal("modalGoalWrap");
+        return;
+      }
+      const g = state.goals.find(x=>x.id===id);
+      if(!g){ toast("Meta não encontrada."); return; }
+      state.editing.goalId=id;
+      $("goalModalTitle").textContent="Editar meta";
+      $("btnDeleteGoal").style.display="inline-flex";
+      $("goalName").value=g.name||"";
+      $("goalTarget").value=Number(g.target||0);
+      $("goalCurrent").value=Number(g.current||0);
+      $("goalDue").value=g.due||"";
+      $("goalAccount").value=g.account||"";
+      openModal("modalGoalWrap");
+    }
+    async function saveGoal(){
+      const name = safeText($("goalName").value);
+      const target = Number($("goalTarget").value);
+      const current = Number($("goalCurrent").value||0);
+      const due = safeText($("goalDue").value);
+      const account = safeText($("goalAccount").value);
+
+      if(!name || name.length<2){ toast("Nome inválido."); return; }
+      if(!Number.isFinite(target) || target<=0){ toast("Alvo inválido."); return; }
+      if(!Number.isFinite(current) || current<0){ toast("Atual inválido."); return; }
+
+      const now=Date.now();
+      const payload = { name, target, current, due, account, updatedAt: now };
+
+      if(state.editing.goalId){
+        const id = state.editing.goalId;
+        const prev = state.goals.find(x=>x.id===id) || {};
+        payload.id=id;
+        payload.createdAt = Number(prev.createdAt||now);
+        await db.ref(`${PATH.goals}/${id}`).set(payload);
+        toast("Meta atualizada ✅");
+      }else{
+        const ref = db.ref(PATH.goals).push();
+        const id = ref.key;
+        payload.id=id;
+        payload.createdAt=now;
+        await db.ref(`${PATH.goals}/${id}`).set(payload);
+        toast("Meta criada ✅");
+      }
+      closeModal("modalGoalWrap");
+    }
+    async function deleteGoal(){
+      const id = state.editing.goalId;
+      if(!id) return;
+      const ok = confirm("Excluir esta meta?");
+      if(!ok) return;
+      await db.ref(`${PATH.goals}/${id}`).remove();
+
+      const updates = {};
+      state.tx.forEach(t=>{
+        if(t.goalId===id){
+          updates[`${PATH.expenses}/${t.id}/goalId`] = "";
+          updates[`${PATH.expenses}/${t.id}/updatedAt`] = Date.now();
+        }
+      });
+      if(Object.keys(updates).length) await db.ref().update(updates);
+
+      toast("Meta excluída.");
+      closeModal("modalGoalWrap");
+    }
+
+    /************************************************************
+     * Recurring Modal
+     ************************************************************/
+    function clearRecModal(){
+      state.editing.recId=null;
+      $("recModalTitle").textContent="Nova recorrência";
+      $("btnDeleteRec").style.display="none";
+      $("recType").value="income";
+      $("recDay").value="5";
+      $("recName").value="";
+      $("recAmount").value="";
+      $("recStatus").value="paid";
+      $("recSource").value = state.settings?.sources?.[0] || "Salário";
+      $("recCategory").value = state.settings?.categories?.[0] || "Outros";
+      $("recAccount").value = state.settings?.accounts?.[0] || "Banco";
+      $("recHorizon").value="3";
+    }
+
+    function openRecModal(id){
+      rebuildAllSelects();
+      if(!id){
+        clearRecModal();
+        openModal("modalRecWrap");
+        return;
+      }
+      const r = state.recurring.find(x=>x.id===id);
+      if(!r){ toast("Recorrência não encontrada."); return; }
+
+      state.editing.recId=id;
+      $("recModalTitle").textContent="Editar recorrência";
+      $("btnDeleteRec").style.display="inline-flex";
+      $("recType").value=r.type;
+      $("recDay").value=r.day;
+      $("recName").value=r.name;
+      $("recAmount").value=r.amount;
+      $("recStatus").value=r.status;
+      $("recSource").value=r.source;
+      $("recCategory").value=r.category;
+      $("recAccount").value=r.account;
+      $("recHorizon").value=String(r.horizon||3);
+
+      openModal("modalRecWrap");
+    }
+
+    async function saveRec(){
+      const type = $("recType").value;
+      const day = clamp(Number($("recDay").value||1), 1, 28);
+      const name = safeText($("recName").value);
+      const amount = Number($("recAmount").value);
+      const status = $("recStatus").value;
+      const source = safeText($("recSource").value);
+      const category = safeText($("recCategory").value);
+      const account = safeText($("recAccount").value);
+      const horizon = clamp(Number($("recHorizon").value||3), 1, 12);
+
+      if(!name || name.length<2){ toast("Descrição inválida."); return; }
+      if(!Number.isFinite(amount) || amount<=0){ toast("Valor inválido."); return; }
+      if(!source || !category || !account){ toast("Preencha fonte/categoria/conta."); return; }
+
+      const now=Date.now();
+      const payload = { type, day, name, amount, status, source, category, account, horizon, updatedAt: now };
+
+      if(state.editing.recId){
+        const id = state.editing.recId;
+        const prev = state.recurring.find(x=>x.id===id) || {};
+        payload.id=id;
+        payload.createdAt = Number(prev.createdAt||now);
+        await db.ref(`${PATH.recurring}/${id}`).set(payload);
+        toast("Recorrência atualizada ✅");
+      }else{
+        const ref = db.ref(PATH.recurring).push();
+        const id = ref.key;
+        payload.id=id;
+        payload.createdAt=now;
+        await db.ref(`${PATH.recurring}/${id}`).set(payload);
+        toast("Recorrência criada ✅");
+      }
+
+      // gera imediatamente para dar sensação “app real”
+      await generateRecurringForRule(payload.id, payload.horizon || 3, true);
+      closeModal("modalRecWrap");
+    }
+
+    async function deleteRec(){
+      const id = state.editing.recId;
+      if(!id) return;
+      const ok = confirm("Excluir esta recorrência? (Não apaga transações já geradas)");
+      if(!ok) return;
+      await db.ref(`${PATH.recurring}/${id}`).remove();
+      toast("Recorrência excluída.");
+      closeModal("modalRecWrap");
+    }
+
+    /************************************************************
+     * Installment Modal
+     ************************************************************/
+    function clearInstModal(){
+      state.editing.instId=null;
+      $("instModalTitle").textContent="Novo parcelamento";
+      $("btnDeleteInst").style.display="none";
+      $("instName").value="";
+      $("instAmount").value="";
+      $("instCount").value="10";
+      $("instStart").value = new Date().toISOString().slice(0,10);
+      $("instStatus").value="pending";
+      $("instSource").value = state.settings?.sources?.[1] || state.settings?.sources?.[0] || "Empresa";
+      $("instCategory").value = state.settings?.categories?.[0] || "Outros";
+      $("instAccount").value = state.settings?.accounts?.[1] || state.settings?.accounts?.[0] || "Cartão";
+    }
+
+    function openInstModal(id){
+      rebuildAllSelects();
+      if(!id){
+        clearInstModal();
+        openModal("modalInstWrap");
+        return;
+      }
+      const p = state.installments.find(x=>x.id===id);
+      if(!p){ toast("Plano não encontrado."); return; }
+
+      state.editing.instId=id;
+      $("instModalTitle").textContent="Editar parcelamento";
+      $("btnDeleteInst").style.display="inline-flex";
+
+      $("instName").value=p.name;
+      $("instAmount").value=p.amount;
+      $("instCount").value=p.count;
+      $("instStart").value=p.start;
+      $("instStatus").value=p.status;
+      $("instSource").value=p.source;
+      $("instCategory").value=p.category;
+      $("instAccount").value=p.account;
+
+      openModal("modalInstWrap");
+    }
+
+    async function saveInst(){
+      const name = safeText($("instName").value);
+      const amount = Number($("instAmount").value);
+      const count = clamp(Number($("instCount").value||0), 2, 48);
+      const start = safeText($("instStart").value);
+      const status = $("instStatus").value;
+      const source = safeText($("instSource").value);
+      const category = safeText($("instCategory").value);
+      const account = safeText($("instAccount").value);
+
+      if(!name || name.length<2){ toast("Descrição inválida."); return; }
+      if(!Number.isFinite(amount) || amount<=0){ toast("Valor inválido."); return; }
+      if(!start){ toast("Informe a data inicial."); return; }
+      if(!source || !category || !account){ toast("Preencha fonte/categoria/conta."); return; }
+
+      const now = Date.now();
+      const payload = { name, amount, count, start, status, source, category, account, updatedAt: now };
+
+      let planId = state.editing.instId;
+      if(planId){
+        const prev = state.installments.find(x=>x.id===planId) || {};
+        payload.id = planId;
+        payload.createdAt = Number(prev.createdAt||now);
+        await db.ref(`${PATH.installments}/${planId}`).set(payload);
+        toast("Parcelamento atualizado ✅");
+      }else{
+        const ref = db.ref(PATH.installments).push();
+        planId = ref.key;
+        payload.id = planId;
+        payload.createdAt = now;
+        await db.ref(`${PATH.installments}/${planId}`).set(payload);
+        toast("Parcelamento criado ✅");
+      }
+
+      // cria parcelas (sem duplicar)
+      await createInstallmentTransactions({ ...payload, id: planId });
+      closeModal("modalInstWrap");
+    }
+
+    async function deleteInst(){
+      const id = state.editing.instId;
+      if(!id) return;
+      const ok = confirm("Excluir este parcelamento? (Não apaga parcelas já criadas)");
+      if(!ok) return;
+      await db.ref(`${PATH.installments}/${id}`).remove();
+      toast("Parcelamento excluído.");
+      closeModal("modalInstWrap");
+    }
+
+    /************************************************************
+     * Settings Modal
+     ************************************************************/
+    function openSettings(){
+      $("setCurrency").value = state.settings?.currency || "BRL";
+      rebuildYearSelect();
+      $("setSources").value = (state.settings?.sources||[]).join("\n");
+      $("setCategories").value = (state.settings?.categories||[]).join("\n");
+      $("setAccounts").value = (state.settings?.accounts||[]).join("\n");
+      $("setBudgets").value = budgetsToText(state.settings?.budgets||{});
+      openModal("modalSettingsWrap");
+    }
+
+    async function saveSettings(){
+      const currency = $("setCurrency").value || "BRL";
+      state.selectedYear = Number($("setYear").value || new Date().getFullYear());
+
+      const sources = parseLines($("setSources").value);
+      const categories = parseLines($("setCategories").value);
+      const accounts = parseLines($("setAccounts").value);
+      const budgets = parseBudgets($("setBudgets").value);
+
+      if(!sources.length || !categories.length || !accounts.length){
+        toast("Fontes/Categorias/Contas não podem ficar vazias.");
+        return;
+      }
+
+      const payload = { currency, sources, categories, accounts, budgets };
+      await db.ref(PATH.settings).set(payload);
+      toast("Ajustes salvos ✅");
+      closeModal("modalSettingsWrap");
+    }
+
+    /************************************************************
+     * Report (simples e útil)
+     ************************************************************/
+    function groupByMonthYear(year){
+      const out = {};
+      for(let m=1;m<=12;m++){
+        out[`${year}-${pad2(m)}`] = { income:0, expense:0, balance:0 };
+      }
+      state.tx.forEach(t=>{
+        const d = new Date(t.ts);
+        if(d.getFullYear() !== year) return;
+        if(state.filters.mode==="real" && (t.status||"paid")!=="paid") return;
+        const k = `${year}-${pad2(d.getMonth()+1)}`;
+        if(t.type==="income") out[k].income += t.amount;
+        if(t.type==="expense") out[k].expense += t.amount;
+      });
+      Object.keys(out).forEach(k=>{
+        out[k].balance = out[k].income - out[k].expense;
+      });
+      return out;
+    }
+
+    function generateReport(){
+      const year = state.selectedYear || new Date().getFullYear();
+      const data = groupByMonthYear(year);
+
+      const lines = [];
+      lines.push(`RELATÓRIO ANUAL • ${year} • modo: ${state.filters.mode==="real" ? "Realizado" : "Real + Previsto"}`);
+      lines.push("—");
+      let totI=0, totE=0;
+      Object.keys(data).sort().forEach(k=>{
+        const v=data[k];
+        totI+=v.income; totE+=v.expense;
+        lines.push(`${k}: Receitas ${toMoney(v.income)} | Despesas ${toMoney(v.expense)} | Saldo ${toMoney(v.balance)}`);
+      });
+      lines.push("—");
+      lines.push(`TOTAL: Receitas ${toMoney(totI)} | Despesas ${toMoney(totE)} | Saldo ${toMoney(totI-totE)}`);
+
+      alert(lines.join("\n"));
+    }
+
+    /************************************************************
+     * Theme + init
+     ************************************************************/
+    function applyTheme(theme){
+      state.theme = theme;
+      document.documentElement.setAttribute("data-theme", theme);
+      localStorage.setItem("finance_theme", theme);
+      // re-render charts colors
+      if(state.charts.daily || state.charts.cats){
+        // force recreate for proper colors (simple)
+        state.charts.daily?.destroy(); state.charts.cats?.destroy();
+        state.charts.daily=null; state.charts.cats=null;
+        renderCharts();
+      }
+    }
+
+    /************************************************************
+     * Events wiring
+     ************************************************************/
+    function wireEvents(){
+      // Tabs
+      document.querySelectorAll(".tab").forEach(b=>{
+        b.addEventListener("click",()=> setTab(b.dataset.tab));
+      });
+      document.querySelectorAll(".navBtn").forEach(b=>{
+        b.addEventListener("click",()=> setTab(b.dataset.tab));
+      });
+
+      // Theme
+      $("btnTheme").addEventListener("click",()=>{
+        applyTheme(state.theme==="dark" ? "light" : "dark");
+      });
+
+      // Month + mode
+      $("qMonth").addEventListener("change",(e)=>{
+        state.filters.month = e.target.value;
+        renderAll(); renderCharts();
+      });
+      $("qMode").addEventListener("change",(e)=>{
+        state.filters.mode = e.target.value;
+        renderAll(); renderCharts();
+      });
+      $("btnRefresh").addEventListener("click",()=>{
+        state.filters.drillCategory = "";
+        $("catHelp").textContent = "Dica: clique numa categoria no gráfico para ver as transações dessa categoria.";
+        renderAll(); renderCharts();
+      });
+
+      // Filters tx view
+      $("qSearch").addEventListener("input",(e)=>{ state.filters.search = e.target.value; renderTxList(); });
+      $("qType").addEventListener("change",(e)=>{ state.filters.type = e.target.value; renderTxList(); });
+      $("qStatus").addEventListener("change",(e)=>{ state.filters.status = e.target.value; renderTxList(); });
+      $("btnClearFilters").addEventListener("click",()=>{
+        state.filters.search=""; state.filters.type="all"; state.filters.status="all"; state.filters.drillCategory="";
+        $("qSearch").value=""; $("qType").value="all"; $("qStatus").value="all";
+        renderTxList();
+        toast("Filtros limpos");
+      });
+
+      // Open modals
+      $("btnAddTx").addEventListener("click",()=> openTxModal(null));
+      $("btnAddGoal").addEventListener("click",()=> openGoalModal(null));
+      $("btnAddRecurring").addEventListener("click",()=> openRecModal(null));
+      $("btnAddInstallment").addEventListener("click",()=> openInstModal(null));
+      $("btnSettings").addEventListener("click",()=> openSettings());
+
+      // Close modals
+      $("btnCloseTx").onclick = ()=> closeModal("modalTxWrap");
+      $("btnCancelTx").onclick = ()=> closeModal("modalTxWrap");
+      $("btnSaveTx").onclick = saveTx;
+      $("btnDeleteTx").onclick = deleteTx;
+
+      $("btnCloseGoal").onclick = ()=> closeModal("modalGoalWrap");
+      $("btnCancelGoal").onclick = ()=> closeModal("modalGoalWrap");
+      $("btnSaveGoal").onclick = saveGoal;
+      $("btnDeleteGoal").onclick = deleteGoal;
+
+      $("btnCloseRec").onclick = ()=> closeModal("modalRecWrap");
+      $("btnCancelRec").onclick = ()=> closeModal("modalRecWrap");
+      $("btnSaveRec").onclick = saveRec;
+      $("btnDeleteRec").onclick = deleteRec;
+
+      $("btnCloseInst").onclick = ()=> closeModal("modalInstWrap");
+      $("btnCancelInst").onclick = ()=> closeModal("modalInstWrap");
+      $("btnSaveInst").onclick = saveInst;
+      $("btnDeleteInst").onclick = deleteInst;
+
+      $("btnCloseSettings").onclick = ()=> closeModal("modalSettingsWrap");
+      $("btnCancelSettings").onclick = ()=> closeModal("modalSettingsWrap");
+      $("btnSaveSettings").onclick = saveSettings;
+
+      // DB audit/fix
+      $("btnAudit").onclick = async ()=>{
+        const r = await auditDatabase();
+        if(r.mode==="empty"){ alert("Banco vazio."); return; }
+        const msg = [
+          `Modo: ${r.mode}`,
+          `Total itens: ${r.total}`,
+          `Problemas: ${r.issues.length}`,
+          r.issues.slice(0,12).map(i=>`- ${i.id}: ${i.name} => ${i.errs.join(", ")}`).join("\n"),
+          r.issues.length>12 ? "\n(mais itens com problema…)" : ""
+        ].join("\n");
+        alert(msg);
+      };
+      $("btnFixDb").onclick = async ()=>{
+        const ok = confirm("Isso vai padronizar /expenses (por ID). Continuar?");
+        if(!ok) return;
+        await fixDatabaseToProfessionalFormat();
+      };
+
+      // Report / print / home
+      $("btnReport").onclick = ()=> generateReport();
+      $("btnPrint").onclick = ()=> window.print();
+      $("btnHome").onclick = ()=>{
+        window.location.href = "https://wilsonf1996.github.io/index.html/";
+      };
+
+      // tx type toggle
+      $("txType").addEventListener("change",(e)=> showTxBlocks(e.target.value));
+
+      // ESC closes any open modal
+      window.addEventListener("keydown",(e)=>{
+        if(e.key==="Escape"){
+          ["modalTxWrap","modalGoalWrap","modalRecWrap","modalInstWrap","modalSettingsWrap"].forEach(id=>{
+            const el=$(id);
+            if(el && el.style.display==="flex") closeModal(id);
+          });
+        }
+      });
+
+      // click outside modal closes
+      ["modalTxWrap","modalGoalWrap","modalRecWrap","modalInstWrap","modalSettingsWrap"].forEach(id=>{
+        const el=$(id);
+        el.addEventListener("click",(e)=>{
+          if(e.target===el) closeModal(id);
+        });
+      });
+    }
+
+    /************************************************************
+     * Boot
+     ************************************************************/
+    async function boot(){
+      // Theme
+      const savedTheme = localStorage.getItem("finance_theme");
+      applyTheme(savedTheme==="light" ? "light" : "dark");
+
+      // default month
+      const m = monthKeyFromTs(Date.now());
+      state.filters.month = m;
+      $("qMonth").value = m;
+      $("qMode").value = state.filters.mode;
+
+      await loadSettings();
+      rebuildAllSelects();
+      wireEvents();
+
+      listenSettings();
+      listenGoals();
+      listenRecurring();
+      listenInstallments();
+      listenExpenses();
+
+      // “auto premium”: tenta gerar recorrências quando abrir (não duplica)
+      // (roda só depois de carregar state.recurring pelo listener; dá um delay simples)
+      setTimeout(()=> autoGenerateAllRecurring().catch(()=>{}), 2000);
+
+      toast("Pronto ✅ (PC • celular • tablet)");
+    }
+
+    document.addEventListener("DOMContentLoaded", boot);
+  </script>
+</body>
+</html>
