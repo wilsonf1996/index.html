@@ -1,14 +1,13 @@
 <!-- ===================== PART 1/2 =====================
-Cole este bloco primeiro no seu GitHub.
-Na minha próxima resposta eu envio o PART 2/2 (o restante do <script>),
-e você cola ele logo abaixo deste aqui.
+Cole ESTE bloco primeiro no seu GitHub.
+Depois cole o PART 2/2 logo abaixo (ele continua o <script>).
 ====================================================== -->
 <!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Agenda Pro • Planner (Apple/Microsoft-ish)</title>
+  <title>Agenda Pro • Planner (Apple/Microsoft-ish) v3</title>
   <meta name="theme-color" content="#0b0d12" />
   <meta name="color-scheme" content="dark light" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -254,6 +253,7 @@ e você cola ele logo abaixo deste aqui.
       align-items:center;
       gap:6px;
     }
+    .badge b{color:var(--text); font-weight:950}
     .right{display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap}
     .mono{font-family:var(--mono)}
     .amount{ text-align:right; font-family: var(--mono); font-size: 12px; font-weight:900; white-space:nowrap; }
@@ -331,7 +331,7 @@ e você cola ele logo abaixo deste aqui.
       line-height:0;
     }
 
-    /* Month planner (novo: cara de Calendar/Outlook) */
+    /* Month planner */
     .monthWrap{display:grid; grid-template-columns: 1fr; gap:10px;}
     .monthTop{
       display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;
@@ -375,20 +375,34 @@ e você cola ele logo abaixo deste aqui.
       padding:10px 10px 8px;
       position:relative;
       background: rgba(255,255,255,.02);
+      cursor:pointer;
+      outline:none;
+      transition: transform .08s ease, background .12s ease, border-color .12s ease;
     }
     @media (prefers-color-scheme: light){ .dayCell{background: rgba(255,255,255,.35);} }
     .dayCell:nth-child(7n){border-right:none;}
+    .dayCell:hover{background: rgba(255,255,255,.05)}
+    .dayCell:active{transform: scale(.997)}
     .dayNum{
       font-family: var(--mono);
       font-size:12px;
       font-weight:950;
       opacity:.95;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
     }
     .dayNum.muted{color:var(--muted); opacity:.75}
     .dayCell.today{
       outline: 2px solid rgba(96,165,250,.42);
       outline-offset: -2px;
       box-shadow: 0 0 0 5px rgba(96,165,250,.10) inset;
+    }
+    .dayCell.selected{
+      box-shadow: 0 0 0 5px rgba(45,212,191,.10) inset;
+      outline: 2px solid rgba(45,212,191,.32);
+      outline-offset: -2px;
     }
     .dots{display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;}
     .dotItem{
@@ -406,6 +420,27 @@ e você cola ele logo abaixo deste aqui.
       padding:3px 8px; border-radius:999px;
     }
     @media (prefers-color-scheme: light){ .dayCell .miniCount{background: rgba(255,255,255,.65);} }
+    .dayDrawer{
+      border:1px solid var(--line);
+      border-radius: var(--r2);
+      background: rgba(0,0,0,.12);
+      padding:12px;
+    }
+    @media (prefers-color-scheme: light){ .dayDrawer{background: rgba(255,255,255,.62);} }
+    .dayDrawerTop{display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-wrap:wrap}
+    .dayDrawerTop b{font-size:13px}
+    .dayDrawerTop span{font-size:12px; color:var(--muted)}
+    .miniRow{
+      border:1px solid var(--line);
+      border-radius: 14px;
+      padding:10px;
+      background: rgba(255,255,255,.04);
+      cursor:pointer;
+      outline:none;
+    }
+    @media (prefers-color-scheme: light){ .miniRow{background: rgba(255,255,255,.75);} }
+    .miniRow b{display:block; font-size:13px; margin-bottom:4px}
+    .miniRow .mmeta{font-size:11px; color:var(--muted); display:flex; flex-wrap:wrap; gap:8px}
 
     /* Toast */
     .toast{
@@ -670,7 +705,7 @@ e você cola ele logo abaixo deste aqui.
             <div class="list" id="weekList"></div>
           </div>
 
-          <!-- MONTH (novo) -->
+          <!-- MONTH -->
           <div id="viewMonth" style="display:none;">
             <div class="monthWrap">
               <div class="monthTop">
@@ -679,9 +714,10 @@ e você cola ele logo abaixo deste aqui.
                   <span class="badge" id="monthMeta">—</span>
                 </div>
                 <div class="right">
-                  <button class="btn" id="btnMonthPrev">←</button>
-                  <button class="btn" id="btnMonthToday">Hoje</button>
-                  <button class="btn" id="btnMonthNext">→</button>
+                  <button class="btn" id="btnMonthPrev" title="Mês anterior">←</button>
+                  <button class="btn" id="btnMonthToday" title="Ir para hoje">Hoje</button>
+                  <button class="btn" id="btnMonthNext" title="Próximo mês">→</button>
+                  <button class="btn primary" id="btnMonthCreate" title="Criar item no dia selecionado">＋ Criar</button>
                 </div>
               </div>
 
@@ -692,8 +728,26 @@ e você cola ele logo abaixo deste aqui.
                 <div class="monthCells" id="monthCells"></div>
               </div>
 
+              <div class="dayDrawer" aria-label="Detalhes do dia">
+                <div class="dayDrawerTop">
+                  <div>
+                    <b id="dayDrawerTitle">Selecione um dia</b><br/>
+                    <span id="dayDrawerSub">Mostra compromissos, tarefas e notas desse dia.</span>
+                  </div>
+                  <div class="right">
+                    <button class="btn" id="btnDayNewEvent">📅</button>
+                    <button class="btn" id="btnDayNewTask">✅</button>
+                    <button class="btn" id="btnDayNewNote">📝</button>
+                  </div>
+                </div>
+                <div class="divider"></div>
+                <div class="list" id="dayDrawerList"></div>
+                <div class="divider"></div>
+                <div class="hint">Dica: arraste uma tarefa do Kanban e solte num dia para mudar o vencimento.</div>
+              </div>
+
               <div class="hint">
-                Clique em um dia para abrir a agenda daquele dia. Os pontinhos mostram itens (📅/✅/📝).
+                Clique em um dia para abrir os detalhes. Pontinhos = itens (📅/✅/📝).
               </div>
             </div>
           </div>
@@ -798,7 +852,7 @@ e você cola ele logo abaixo deste aqui.
           <!-- SETTINGS -->
           <div id="viewSettings" style="display:none;">
             <div class="hint">
-              Ajustes do app (salvo localmente). Para GPS e clima, é melhor rodar em <b>HTTPS</b>.
+              Ajustes do app (salvo localmente). Para GPS e clima, use <b>HTTPS</b>. (GitHub Pages já é HTTPS.)
             </div>
 
             <div class="divider"></div>
@@ -843,14 +897,23 @@ e você cola ele logo abaixo deste aqui.
 
             <div class="divider"></div>
 
+            <div class="filters">
+              <div class="field" style="min-width:260px;">
+                <label>&nbsp;</label>
+                <button class="btn" id="btnRestore">⤒ Importar backup</button>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
             <div class="hint">
-              Atalhos: <span class="kbd">N</span> novo • <span class="kbd">Ctrl+E</span> backup • <span class="kbd">Esc</span> fechar modal • <span class="kbd">Ctrl+K</span> focar busca (Hoje).
+              Atalhos: <span class="kbd">N</span> novo • <span class="kbd">Ctrl+E</span> backup • <span class="kbd">Esc</span> fechar • <span class="kbd">Ctrl+K</span> focar busca (Hoje) • <span class="kbd">Alt+M</span> Mês
             </div>
           </div>
         </div>
       </section>
 
-      <!-- RIGHT: Quick Panel -->
+      <!-- RIGHT -->
       <aside class="card" aria-label="Painel rápido">
         <div class="hd">
           <div class="title">
@@ -887,7 +950,7 @@ e você cola ele logo abaixo deste aqui.
             ✅ Sem login por enquanto<br/>
             ✅ Salva no navegador (localStorage + IndexedDB)<br/>
             ✅ Cada registro pode ter <b>horário</b>, <b>local</b>, <b>GPS</b> e <b>anexos</b><br/>
-            ✅ Novo: visão <b>Mês</b> estilo Calendar/Outlook
+            ✅ Visões: Hoje / Semana / Mês / Kanban / Notas / Arquivos
           </div>
         </div>
       </aside>
@@ -1075,7 +1138,7 @@ e você cola ele logo abaixo deste aqui.
         </div>
         <div class="divider"></div>
         <div class="hint">
-          Segurança: o backup é só dados do app. Se o JSON não for do seu app, não importe.
+          Segurança: importe apenas backup do seu app. Não importa anexos (eles ficam na sua IndexedDB local).
         </div>
       </div>
     </div>
@@ -1083,39 +1146,44 @@ e você cola ele logo abaixo deste aqui.
 
 <script>
 /* =========================================================
-   Agenda Pro — single-file app (v2)
-   - Mais "Calendar/Planner": inclui visão MÊS
-   - Data: localStorage + IndexedDB (files)
-   - GPS: correção (usa state.tempGeo, sem gambiarra de dataset)
+   Agenda Pro — single-file app (v3)
+   - Hoje/Semana/Mês/Tasks(Kanban)/Notas/Arquivos/Ajustes
+   - Dados: localStorage (itens+settings) + IndexedDB (arquivos)
+   - GPS: fixa no item (tempGeo) e no status do topo
+   - Clima: Open-Meteo (sem API key) se tiver GPS
+   - Backup/Restore JSON (somente itens+settings)
    ========================================================= */
 
 const $ = (id)=>document.getElementById(id);
 const $$ = (sel, root=document)=>Array.from(root.querySelectorAll(sel));
 
-const LS_KEY = "agenda_pro_v2";
-const LS_SETTINGS = "agenda_pro_settings_v2";
+const LS_KEY = "agenda_pro_v3_items";
+const LS_SETTINGS = "agenda_pro_v3_settings";
+const LS_ACTIVE_TAB = "agenda_pro_v3_active_tab";
+const LS_MONTH_CURSOR = "agenda_pro_v3_month_cursor";
 const DB_NAME = "AgendaProDB";
 const DB_VER = 1;
+const FILE_STORE = "files";
 
 const state = {
   activeTab: "today",
   items: [],
   settings: { userName: "Wilson", geo: "ask", units: "metric" },
-  geo: { ok:false, lat:null, lon:null, accuracy:null, address:"", city:"", lastFixAt:0 },
-  weather: { ok:false, temp:null, desc:"", code:null },
-  toastsTimer: null,
-  modalFocus: { active:false, lastFocus:null, handler:null },
+
+  geo: { ok:false, lat:null, lon:null, accuracy:null, lastFixAt:0 },
+  weather: { ok:false, temp:null, desc:"", code:null, lastAt:0 },
+
   renderQueued: false,
   editingId: null,
-  tempFiles: [],
-  tempGeo: null,               // <<< NOVO (corrige GPS no save)
-  monthCursor: new Date(),      // <<< NOVO (visão mês)
-  lastSearch: { today:"", week:"", notes:"", files:"", tasks:"" }
+  tempFiles: [],     // files selected in modal
+  tempGeo: null,     // gps selected in modal
+  month: { cursor: new Date(), selected: null },
+
+  db: null,
+  toastTimer: null
 };
 
-/* =========================================================
-   UX helpers
-   ========================================================= */
+/* ===================== UX ===================== */
 function showLoading(msg="Carregando…"){
   $("loadingMsg").textContent = msg;
   $("loading").classList.add("show");
@@ -1129,8 +1197,8 @@ function toast(msg){
   $("toastMsg").textContent = msg;
   $("toast").classList.add("show");
   $("toast").setAttribute("aria-hidden","false");
-  clearTimeout(state.toastsTimer);
-  state.toastsTimer = setTimeout(()=> {
+  clearTimeout(state.toastTimer);
+  state.toastTimer = setTimeout(()=> {
     $("toast").classList.remove("show");
     $("toast").setAttribute("aria-hidden","true");
   }, 2600);
@@ -1152,16 +1220,17 @@ function debounce(fn, ms){
   return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); };
 }
 
-/* =========================================================
-   Modal accessibility
-   ========================================================= */
+/* ===================== Modal A11y ===================== */
 function getFocusable(container){
   return Array.from(container.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
     .filter(el=>!el.disabled && el.offsetParent!==null);
 }
+let modalTrapHandler = null;
+let lastFocus = null;
+
 function openModal(id){
   const m = $(id);
-  state.modalFocus.lastFocus = document.activeElement;
+  lastFocus = document.activeElement;
   m.classList.add("show");
   m.setAttribute("aria-hidden","false");
   document.body.style.overflow = "hidden";
@@ -1170,7 +1239,7 @@ function openModal(id){
   const f = getFocusable(panel);
   if(f[0]) f[0].focus({preventScroll:true});
 
-  const handler = (e)=>{
+  modalTrapHandler = (e)=>{
     if(e.key !== "Tab") return;
     const items = getFocusable(panel);
     if(items.length===0) return;
@@ -1182,41 +1251,30 @@ function openModal(id){
       e.preventDefault(); first.focus();
     }
   };
-  state.modalFocus.active = true;
-  state.modalFocus.handler = handler;
-  document.addEventListener("keydown", handler);
+  document.addEventListener("keydown", modalTrapHandler);
 
-  m.addEventListener("mousedown", modalBackdropClose);
-}
-function modalBackdropClose(e){
-  const m = e.currentTarget;
-  const panel = m.querySelector(".panel");
-  if(!panel.contains(e.target)){
-    if(m.id==="itemModal") closeModal("itemModal");
-    if(m.id==="restoreModal") closeModal("restoreModal");
-  }
+  m.addEventListener("mousedown", (e)=>{
+    const panel = m.querySelector(".panel");
+    if(panel && !panel.contains(e.target)){
+      if(id==="itemModal") closeItemModal();
+      if(id==="restoreModal") closeRestore();
+    }
+  }, {once:true});
 }
 function closeModal(id){
   const m = $(id);
   m.classList.remove("show");
   m.setAttribute("aria-hidden","true");
   document.body.style.overflow = "";
-  m.removeEventListener("mousedown", modalBackdropClose);
 
-  if(state.modalFocus.active){
-    document.removeEventListener("keydown", state.modalFocus.handler);
-    state.modalFocus.active = false;
-    state.modalFocus.handler = null;
-    if(state.modalFocus.lastFocus) state.modalFocus.lastFocus.focus({preventScroll:true});
+  if(modalTrapHandler){
+    document.removeEventListener("keydown", modalTrapHandler);
+    modalTrapHandler = null;
   }
-  if(id==="itemModal"){
-    state.tempGeo = null; // <<< limpa temp geo ao fechar
-  }
+  if(lastFocus) lastFocus.focus({preventScroll:true});
 }
 
-/* =========================================================
-   Date helpers
-   ========================================================= */
+/* ===================== Date helpers ===================== */
 function pad(n){return String(n).padStart(2,"0");}
 function toISODate(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
 function toLocalDTInputValue(d){ return `${toISODate(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`; }
@@ -1224,6 +1282,15 @@ function parseDT(v){
   if(!v) return null;
   const d = new Date(v);
   return isNaN(d.getTime()) ? null : d;
+}
+function startOfDay(d){ const x=new Date(d); x.setHours(0,0,0,0); return x; }
+function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+function startOfWeekMon(d){
+  const x = startOfDay(d);
+  const day = x.getDay(); // 0 dom
+  const diff = (day===0 ? -6 : 1-day);
+  x.setDate(x.getDate()+diff);
+  return x;
 }
 function fmtNiceDT(dt){
   if(!dt) return "—";
@@ -1235,670 +1302,1478 @@ function fmtNiceDate(dt){
   const d = (dt instanceof Date) ? dt : new Date(dt);
   return d.toLocaleDateString("pt-BR", {weekday:"long", day:"2-digit", month:"long", year:"numeric"});
 }
-function startOfWeek(d){
-  const x = new Date(d);
-  const day = x.getDay();
-  const diff = (day===0 ? -6 : 1-day);
-  x.setDate(x.getDate()+diff);
-  x.setHours(0,0,0,0);
-  return x;
+function safeText(s){ return String(s||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
+function uid(){ return (crypto?.randomUUID?.() || `id_${Date.now()}_${Math.random().toString(16).slice(2)}`); }
+
+/* ===================== Domain helpers ===================== */
+function normalizeTags(v){
+  return String(v||"")
+    .split(",")
+    .map(x=>x.trim())
+    .filter(Boolean)
+    .slice(0,12);
 }
-function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
-function startOfMonth(d){ const x = new Date(d.getFullYear(), d.getMonth(), 1); x.setHours(0,0,0,0); return x; }
-function endOfMonth(d){ const x = new Date(d.getFullYear(), d.getMonth()+1, 0); x.setHours(23,59,59,999); return x; }
-
-function withinDay(item, day){
-  const s = item.start ? new Date(item.start) : null;
-  const e = item.end ? new Date(item.end) : null;
-  const due = item.due ? new Date(item.due) : null;
-
-  const day0 = new Date(day); day0.setHours(0,0,0,0);
-  const day1 = new Date(day0); day1.setDate(day0.getDate()+1);
-
-  if(item.type==="event"){
-    const a = s || due || new Date(item.createdAt);
-    const b = e || s || a;
-    return (a < day1 && b >= day0);
+function prioLabel(p){ return p==3?"Alta":p==1?"Baixa":"Normal"; }
+function typeEmoji(t){ return t==="event"?"📅":t==="task"?"✅":"📝"; }
+function statusBadge(it){
+  const s = it.status || "planned";
+  if(it.type==="task"){
+    if(it.kanban==="done" || s==="done") return "done";
+    if(it.kanban==="doing" || s==="doing") return "doing";
+    return "planned";
   }
-  if(item.type==="task"){
-    const a = due || s || new Date(item.createdAt);
-    return (a >= day0 && a < day1);
-  }
-  const a = new Date(item.createdAt);
-  return (a >= day0 && a < day1);
+  return s;
 }
-function rangeFilter(items, from, to){
-  const a = new Date(from); a.setHours(0,0,0,0);
-  const b = new Date(to); b.setHours(23,59,59,999);
-  return items.filter(it=>{
-    const key = it.start || it.due || it.createdAt;
-    const d = new Date(key);
-    return d>=a && d<=b;
+function itemWhen(it){
+  if(it.type==="event"){
+    if(it.start && it.end) return `${fmtNiceDT(it.start)} → ${fmtNiceDT(it.end)}`;
+    if(it.start) return `Início: ${fmtNiceDT(it.start)}`;
+    return `Criado: ${fmtNiceDT(it.createdAt)}`;
+  }
+  if(it.type==="task"){
+    if(it.due) return `Vence: ${fmtNiceDT(it.due)}`;
+    if(it.start) return `Início: ${fmtNiceDT(it.start)}`;
+    return `Criado: ${fmtNiceDT(it.createdAt)}`;
+  }
+  return `Criado: ${fmtNiceDT(it.createdAt)}`;
+}
+function itemKeyDate(it){
+  return new Date(it.start || it.due || it.createdAt || Date.now());
+}
+function isInDay(it, day){
+  const d0 = startOfDay(day);
+  const d1 = addDays(d0,1);
+  const created = new Date(it.createdAt||Date.now());
+  if(it.type==="event"){
+    const a = it.start ? new Date(it.start) : created;
+    const b = it.end ? new Date(it.end) : a;
+    return (a < d1 && b >= d0);
+  }
+  if(it.type==="task"){
+    const a = it.due ? new Date(it.due) : (it.start ? new Date(it.start) : created);
+    return (a >= d0 && a < d1);
+  }
+  return (created >= d0 && created < d1);
+}
+function getToday(){
+  const d = new Date();
+  d.setSeconds(0,0);
+  return d;
+}
+
+/* ===================== Navigation / tabs ===================== */
+const TAB_TITLES = {
+  today: ["Hoje","Seus compromissos, atividades e quick actions"],
+  week: ["Semana","Resumo semanal e filtro de itens"],
+  month: ["Mês","Calendário mensal + detalhes do dia"],
+  tasks: ["Tarefas","Kanban com drag & drop e prioridades"],
+  notes: ["Notas","Anotações rápidas com tags e busca"],
+  files: ["Arquivos","Biblioteca local (IndexedDB)"],
+  settings: ["Ajustes","Preferências locais, demo, backup e limpeza"]
+};
+
+function setTab(tab){
+  state.activeTab = tab;
+  try{ localStorage.setItem(LS_ACTIVE_TAB, tab); }catch(e){}
+
+  $$("[data-tab]").forEach(b=> b.classList.toggle("active", b.dataset.tab===tab));
+  const show = (id, on)=>{ const el=$(id); if(el) el.style.display = on ? "block" : "none"; };
+  show("viewToday", tab==="today");
+  show("viewWeek", tab==="week");
+  show("viewMonth", tab==="month");
+  show("viewTasks", tab==="tasks");
+  show("viewNotes", tab==="notes");
+  show("viewFiles", tab==="files");
+  show("viewSettings", tab==="settings");
+
+  $("pageTitle").textContent = TAB_TITLES[tab][0];
+  $("pageSub").textContent   = TAB_TITLES[tab][1];
+
+  rafRender();
+}
+
+/* ===================== Storage (local) ===================== */
+function loadAll(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    state.items = raw ? JSON.parse(raw) : [];
+  }catch(e){
+    state.items = [];
+  }
+  try{
+    const s = localStorage.getItem(LS_SETTINGS);
+    if(s) state.settings = {...state.settings, ...JSON.parse(s)};
+  }catch(e){}
+  try{
+    const t = localStorage.getItem(LS_ACTIVE_TAB);
+    if(t && TAB_TITLES[t]) state.activeTab = t;
+  }catch(e){}
+  try{
+    const mk = localStorage.getItem(LS_MONTH_CURSOR);
+    if(mk){
+      const [y,m] = mk.split("-").map(Number);
+      if(y && m) state.month.cursor = new Date(y, m-1, 1);
+    }else{
+      const d=new Date(); state.month.cursor=new Date(d.getFullYear(), d.getMonth(), 1);
+    }
+  }catch(e){}
+}
+
+function saveAll(){
+  localStorage.setItem(LS_KEY, JSON.stringify(state.items));
+  localStorage.setItem(LS_SETTINGS, JSON.stringify(state.settings));
+  // month cursor
+  const c = state.month.cursor;
+  localStorage.setItem(LS_MONTH_CURSOR, `${c.getFullYear()}-${pad(c.getMonth()+1)}`);
+}
+
+/* ===================== IndexedDB (files) ===================== */
+function idbOpen(){
+  return new Promise((resolve, reject)=>{
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = ()=>{
+      const db = req.result;
+      if(!db.objectStoreNames.contains(FILE_STORE)){
+        const st = db.createObjectStore(FILE_STORE, {keyPath:"id"});
+        st.createIndex("by_name","name",{unique:false});
+        st.createIndex("by_addedAt","addedAt",{unique:false});
+      }
+    };
+    req.onsuccess = ()=> resolve(req.result);
+    req.onerror = ()=> reject(req.error);
   });
 }
-</script>
+function idbTx(mode="readonly"){
+  const tx = state.db.transaction(FILE_STORE, mode);
+  return { tx, store: tx.objectStore(FILE_STORE) };
+}
+function idbPutFile(fileObj){
+  return new Promise((resolve, reject)=>{
+    const {tx, store} = idbTx("readwrite");
+    store.put(fileObj);
+    tx.oncomplete = ()=> resolve(true);
+    tx.onerror = ()=> reject(tx.error);
+  });
+}
+function idbGetFile(id){
+  return new Promise((resolve, reject)=>{
+    const {tx, store} = idbTx("readonly");
+    const req = store.get(id);
+    req.onsuccess = ()=> resolve(req.result || null);
+    req.onerror = ()=> reject(req.error);
+  });
+}
+function idbDeleteFile(id){
+  return new Promise((resolve, reject)=>{
+    const {tx, store} = idbTx("readwrite");
+    store.delete(id);
+    tx.oncomplete = ()=> resolve(true);
+    tx.onerror = ()=> reject(tx.error);
+  });
+}
+function idbListFiles(){
+  return new Promise((resolve, reject)=>{
+    const {tx, store} = idbTx("readonly");
+    const req = store.getAll();
+    req.onsuccess = ()=> resolve(req.result || []);
+    req.onerror = ()=> reject(req.error);
+  });
+}
 
-<!-- ===================== FIM PART 1/2 =====================
-Na próxima resposta eu envio o PART 2/2 com todo o restante do JS:
-- Storage + IndexedDB
-- Geo/Weather
-- CRUD
-- Render (Hoje/Semana/Mês/Tarefas/Notas/Arquivos)
-- Bindings/atalhos
-- Init
-========================================================== -->
-<!-- =========================================================
-     PARTE 2 (cole IMEDIATAMENTE abaixo do fim da PARTE 1,
-     antes de fechar </script></body></html> se no seu arquivo
-     a PARTE 1 já estiver fechando. Se a PARTE 1 já terminou
-     com </html>, apague APENAS o bloco final </script></body></html>
-     e cole esta PARTE 2 em seguida (ela completa o <script> e o HTML).
-========================================================== -->
+/* ===================== Geo + Weather ===================== */
+function setStatus(dotClass, text){
+  const d = $("statusDot");
+  d.classList.remove("good","warn","bad");
+  if(dotClass) d.classList.add(dotClass);
+  $("statusLine").textContent = text;
+}
+async function requestGeoOnce(){
+  if(state.settings.geo==="off"){
+    state.geo.ok=false;
+    return;
+  }
+  if(!("geolocation" in navigator)){
+    state.geo.ok=false;
+    setStatus("warn","Sem GPS neste navegador.");
+    return;
+  }
+  return new Promise((resolve)=>{
+    const opts = { enableHighAccuracy:true, timeout: 12000, maximumAge: 30000 };
+    navigator.geolocation.getCurrentPosition((pos)=>{
+      state.geo.ok=true;
+      state.geo.lat=pos.coords.latitude;
+      state.geo.lon=pos.coords.longitude;
+      state.geo.accuracy=pos.coords.accuracy;
+      state.geo.lastFixAt=Date.now();
+      resolve(true);
+    }, (err)=>{
+      state.geo.ok=false;
+      resolve(false);
+    }, opts);
+  });
+}
+function cToF(c){ return (c*9/5)+32; }
+async function fetchWeather(){
+  if(!state.geo.ok) return;
+  const now = Date.now();
+  if(state.weather.lastAt && now - state.weather.lastAt < 10*60*1000) return; // 10 min cache
+  try{
+    // Open-Meteo (no key)
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${state.geo.lat}&longitude=${state.geo.lon}&current=temperature_2m,weather_code&timezone=auto`;
+    const r = await fetch(url);
+    if(!r.ok) throw new Error("weather");
+    const j = await r.json();
+    const t = j?.current?.temperature_2m;
+    const code = j?.current?.weather_code;
+    state.weather.ok = typeof t === "number";
+    state.weather.temp = t;
+    state.weather.code = code;
+    state.weather.desc = weatherCodeToText(code);
+    state.weather.lastAt = Date.now();
+  }catch(e){
+    state.weather.ok=false;
+  }
+}
+function weatherCodeToText(code){
+  const map = {
+    0:"Céu limpo",1:"Principalmente limpo",2:"Parcialmente nublado",3:"Nublado",
+    45:"Neblina",48:"Neblina (geada)",51:"Garoa fraca",53:"Garoa",55:"Garoa forte",
+    61:"Chuva fraca",63:"Chuva",65:"Chuva forte",71:"Neve fraca",73:"Neve",75:"Neve forte",
+    80:"Pancadas fracas",81:"Pancadas",82:"Pancadas fortes",95:"Trovoadas"
+  };
+  return map[code] || "Tempo";
+}
 
-<!-- (A) SEMANA/MÊS: vamos inserir a nova aba "Mês" e a view via JS (não precisa mexer no HTML acima) -->
-<script>
+/* ===================== Item model ===================== */
+function newItem(type){
+  const now = Date.now();
+  return {
+    id: uid(),
+    type,
+    title: "",
+    body: "",
+    priority: 2,
+    status: "planned",
+    tags: [],
+    locationName: "",
+    start: null,
+    end: null,
+    due: null,
+    kanban: "todo",
+    files: [],     // [{id,name,type,size,addedAt}]
+    geo: null,     // {lat,lon,accuracy,at}
+    createdAt: now,
+    updatedAt: now
+  };
+}
+
+/* ===================== Modal: open new/edit ===================== */
+function resetModal(){
+  state.editingId = null;
+  state.tempFiles = [];
+  state.tempGeo = null;
+
+  $("modalTitle").textContent = "Novo";
+  $("modalSub").textContent = "Compromisso, tarefa ou nota";
+  $("btnDelete").style.display = "none";
+  $("modalFootHint").textContent = "Criado em: —";
+
+  $("mType").value = "event";
+  $("mTitle").value = "";
+  $("mPriority").value = "2";
+  $("mStart").value = "";
+  $("mEnd").value = "";
+  $("mDue").value = "";
+  $("mLocationName").value = "";
+  $("mTags").value = "";
+  $("mStatus").value = "planned";
+  $("mBody").value = "";
+  $("mKanban").value = "todo";
+  $("gpsHint").textContent = "Sem GPS anexado.";
+  $("mFiles").value = "";
+  renderModalFileChips([]);
+}
+function openNewModal(prefType="event", prefillDay=null){
+  resetModal();
+  $("mType").value = prefType;
+
+  if(prefillDay){
+    const d = startOfDay(prefillDay);
+    if(prefType==="event"){
+      const s = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 9, 0);
+      const e = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 10, 0);
+      $("mStart").value = `${toISODate(s)}T09:00`;
+      $("mEnd").value = `${toISODate(e)}T10:00`;
+    }else if(prefType==="task"){
+      const due = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 18, 0);
+      $("mDue").value = `${toISODate(due)}T18:00`;
+      $("mKanban").value = "todo";
+    }
+  }
+
+  openModal("itemModal");
+}
+function openEditModal(id){
+  const it = state.items.find(x=>x.id===id);
+  if(!it) return;
+  resetModal();
+  state.editingId = id;
+
+  $("modalTitle").textContent = "Editar";
+  $("modalSub").textContent = `${typeEmoji(it.type)} ${it.type==="event"?"Compromisso":it.type==="task"?"Tarefa":"Nota"}`;
+  $("btnDelete").style.display = "inline-flex";
+  $("modalFootHint").textContent = `Criado em: ${fmtNiceDT(it.createdAt)} • Atualizado: ${fmtNiceDT(it.updatedAt)}`;
+
+  $("mType").value = it.type;
+  $("mTitle").value = it.title || "";
+  $("mPriority").value = String(it.priority || 2);
+  $("mStart").value = it.start ? toLocalDTInputValue(new Date(it.start)) : "";
+  $("mEnd").value = it.end ? toLocalDTInputValue(new Date(it.end)) : "";
+  $("mDue").value = it.due ? toLocalDTInputValue(new Date(it.due)) : "";
+  $("mLocationName").value = it.locationName || "";
+  $("mTags").value = (it.tags||[]).join(", ");
+  $("mStatus").value = it.status || "planned";
+  $("mBody").value = it.body || "";
+  $("mKanban").value = it.kanban || "todo";
+
+  state.tempFiles = Array.isArray(it.files) ? [...it.files] : [];
+  renderModalFileChips(state.tempFiles);
+
+  state.tempGeo = it.geo ? {...it.geo} : null;
+  $("gpsHint").textContent = state.tempGeo
+    ? `GPS anexado: ${state.tempGeo.lat.toFixed(6)}, ${state.tempGeo.lon.toFixed(6)} • ±${Math.round(state.tempGeo.accuracy||0)}m`
+    : "Sem GPS anexado.";
+
+  openModal("itemModal");
+}
+function closeItemModal(){
+  closeModal("itemModal");
+  state.tempFiles = [];
+  state.tempGeo = null;
+}
+
+/* ===================== Modal: files chips ===================== */
+function fmtBytes(bytes){
+  const b = Number(bytes||0);
+  if(b<1024) return `${b} B`;
+  const kb=b/1024; if(kb<1024) return `${kb.toFixed(1)} KB`;
+  const mb=kb/1024; if(mb<1024) return `${mb.toFixed(1)} MB`;
+  const gb=mb/1024; return `${gb.toFixed(2)} GB`;
+}
+function renderModalFileChips(files){
+  const wrap = $("mFileChips");
+  wrap.innerHTML = "";
+  (files||[]).forEach(f=>{
+    const el = document.createElement("div");
+    el.className = "chip";
+    el.title = "Clique para baixar/abrir. Clique no X para remover.";
+    el.innerHTML = `📎 ${safeText(f.name)} <small>${fmtBytes(f.size)}</small> <span class="x" title="Remover">×</span>`;
+    el.addEventListener("click", async (e)=>{
+      const x = e.target?.classList?.contains?.("x");
+      if(x){
+        e.stopPropagation();
+        state.tempFiles = state.tempFiles.filter(ff=>ff.id!==f.id);
+        renderModalFileChips(state.tempFiles);
+        toast("Anexo removido do item (arquivo permanece na biblioteca).");
+        return;
+      }
+      // open file
+      const obj = await idbGetFile(f.id);
+      if(!obj){ toast("Arquivo não encontrado na biblioteca local."); return; }
+      const blob = obj.blob;
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      setTimeout(()=>URL.revokeObjectURL(url), 20_000);
+    });
+    wrap.appendChild(el);
+  });
+}
+
+/* ===================== Restore modal ===================== */
+function openRestore(){ openModal("restoreModal"); }
+function closeRestore(){ closeModal("restoreModal"); }
+
+/* ===================== Quick helpers for day selection ===================== */
+function ensureMonthSelected(){
+  if(!state.month.selected){
+    state.month.selected = startOfDay(new Date());
+  }
+}
+
 /* =========================================================
-   Agenda Pro — PARTE 2
-   Adds: Month view (grid), day drawer, quick create,
-         persist active tab + month cursor, drag/drop to day
-   ========================================================= */
+   NÃO FECHA O <script> AQUI.
+   A PARTE 2/2 continua abaixo e só fecha no final.
+========================================================= */
+<!-- ===================== PART 2/2 =====================
+Cole ESTE bloco logo abaixo do PART 1/2 (continuação do <script>).
+====================================================== -->
 
-(function(){
-  const LS_ACTIVE_TAB = "agenda_pro_active_tab_v1";
-  const LS_MONTH_CURSOR = "agenda_pro_month_cursor_v1";
-  const TAB_ORDER = ["today","week","month","tasks","notes","files","settings"];
+/* ===================== Save / Delete / Duplicate ===================== */
+async function saveFromModal(){
+  const type = $("mType").value;
+  const title = $("mTitle").value.trim();
+  const body  = $("mBody").value.trim();
+  const priority = Number($("mPriority").value||2);
+  const status = $("mStatus").value;
+  const tags = normalizeTags($("mTags").value);
+  const locationName = $("mLocationName").value.trim();
 
-  // ---------- tiny safe helpers ----------
-  const $ = (id)=>document.getElementById(id);
-  const $$ = (sel, root=document)=>Array.from(root.querySelectorAll(sel));
-  const pad = (n)=>String(n).padStart(2,"0");
-  const toISODate = (d)=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-  const escapeHtml = (s)=>String(s||"")
-    .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  const start = parseDT($("mStart").value);
+  const end   = parseDT($("mEnd").value);
+  const due   = parseDT($("mDue").value);
+  const kanban = $("mKanban").value;
 
-  function addDays(d, n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
-  function startOfDay(d){ const x=new Date(d); x.setHours(0,0,0,0); return x; }
-  function startOfWeekMon(d){
-    const x = startOfDay(d);
-    const day = x.getDay(); // 0 dom
-    const diff = (day===0 ? -6 : 1-day);
-    x.setDate(x.getDate()+diff);
-    return x;
-  }
-  function fmtWeekdayShort(i){ return ["SEG","TER","QUA","QUI","SEX","SÁB","DOM"][i]; }
-  function monthKey(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}`; }
-  function parseMonthKey(k){
-    const [y,m]=String(k||"").split("-").map(Number);
-    if(!y || !m) return null;
-    return new Date(y, m-1, 1);
-  }
-  function clampText(s, n){ return String(s||"").slice(0,n); }
-
-  // ---------- access to your existing app state ----------
-  // We reuse window.state, window.setTab, window.rafRender, etc. (from Parte 1)
-  const S = window.state;
-  if(!S){
-    console.warn("PARTE 2: state não encontrado. Cole esta parte abaixo do script da PARTE 1.");
+  if(!title){
+    toast("Coloque um título.");
+    $("mTitle").focus();
     return;
   }
 
-  // ---------- inject minimal CSS for month UI ----------
-  (function injectCSS(){
-    const css = `
-      .monthWrap{display:flex; flex-direction:column; gap:12px;}
-      .monthTop{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap}
-      .monthTitle{display:flex; flex-direction:column; gap:2px}
-      .monthTitle b{font-size:14px}
-      .monthTitle span{font-size:12px; color:var(--muted)}
-      .monthBtns{display:flex; gap:8px; flex-wrap:wrap}
-      .monthGrid{
-        border:1px solid var(--line);
-        border-radius: 18px;
-        overflow:hidden;
-        background: rgba(0,0,0,.16);
-      }
-      @media (prefers-color-scheme: light){ .monthGrid{background: rgba(255,255,255,.55);} }
-      .monthHead{
-        display:grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap:0;
-        border-bottom:1px solid var(--line);
-        background: linear-gradient(180deg, rgba(255,255,255,.06), transparent);
-      }
-      .mhCell{padding:10px 10px; font-size:11px; letter-spacing:.6px; color:var(--muted); font-weight:950}
-      .monthBody{
-        display:grid;
-        grid-template-columns: repeat(7, 1fr);
-      }
-      .dayCell{
-        min-height: 92px;
-        padding:10px;
-        border-right:1px solid var(--line);
-        border-bottom:1px solid var(--line);
-        cursor:pointer;
-        background: rgba(255,255,255,.02);
-        transition: background .12s ease, transform .08s ease;
-        outline:none;
-        position:relative;
-      }
-      .dayCell:hover{background: rgba(255,255,255,.05)}
-      .dayCell:active{transform: scale(.997)}
-      .dayCell:nth-child(7n){border-right:none;}
-      .dayNum{
-        font-size:12px; font-weight:950;
-        display:flex; align-items:center; justify-content:space-between; gap:8px;
-      }
-      .dayNum small{color:var(--muted); font-weight:800}
-      .dayBadges{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px}
-      .dotBadge{
-        display:inline-flex; align-items:center; gap:6px;
-        font-size:11px; font-weight:900;
-        border:1px solid var(--line);
-        border-radius:999px;
-        padding:4px 8px;
-        background: rgba(255,255,255,.05);
-      }
-      .dayCell.out{opacity:.48}
-      .dayCell.today{box-shadow: inset 0 0 0 2px rgba(45,212,191,.24);}
-      .dayCell.drop{outline: 2px dashed rgba(96,165,250,.55); outline-offset:-6px;}
-      .drawer{
-        border:1px solid var(--line);
-        border-radius: 18px;
-        background: rgba(0,0,0,.16);
-        padding:12px;
-      }
-      @media (prefers-color-scheme: light){ .drawer{background: rgba(255,255,255,.55);} }
-      .drawerTop{display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-wrap:wrap}
-      .drawerTop b{font-size:13px}
-      .drawerTop span{font-size:12px; color:var(--muted)}
-      .drawerList{display:flex; flex-direction:column; gap:10px; margin-top:10px}
-      .miniRow{
-        border:1px solid var(--line);
-        border-radius: 14px;
-        padding:10px;
-        background: rgba(255,255,255,.04);
-        cursor:pointer;
-      }
-      @media (prefers-color-scheme: light){ .miniRow{background: rgba(255,255,255,.75);} }
-      .miniRow b{display:block; font-size:13px; margin-bottom:4px}
-      .miniRow .mmeta{font-size:11px; color:var(--muted); display:flex; flex-wrap:wrap; gap:8px}
-    `;
-    const st = document.createElement("style");
-    st.textContent = css;
-    document.head.appendChild(st);
-  })();
-
-  // ---------- ensure Month tab buttons exist ----------
-  function ensureMonthTabButtons(){
-    const topTabs = $("tabsTop");
-    const bottomTabs = $("tabsBottom");
-    if(!topTabs || !bottomTabs) return;
-
-    // If already exists, skip
-    if($$(`.tab[data-tab="month"]`, document).length) return;
-
-    const mkBtn = (label, titleText)=>{
-      const b = document.createElement("button");
-      b.className = "tab";
-      b.setAttribute("data-tab","month");
-      b.setAttribute("role","tab");
-      b.title = titleText || "Mês";
-      b.textContent = label;
-      return b;
-    };
-
-    // Insert after Semana
-    const insertAfter = (container)=>{
-      const weekBtn = container.querySelector(`.tab[data-tab="week"]`);
-      const btn = (container.id==="tabsBottom") ? mkBtn("🗓️","Mês") : mkBtn("🗓️ Mês","Mês");
-      if(weekBtn && weekBtn.nextSibling) container.insertBefore(btn, weekBtn.nextSibling);
-      else container.appendChild(btn);
-    };
-
-    insertAfter(topTabs);
-    insertAfter(bottomTabs);
-
-    // Bind click
-    $$(`.tab[data-tab="month"]`).forEach(btn=>{
-      btn.addEventListener("click", ()=>window.setTab("month"));
-    });
+  // validate time
+  if(start && end && end < start){
+    toast("Fim não pode ser antes do início.");
+    $("mEnd").focus();
+    return;
   }
 
-  // ---------- create viewMonth container ----------
-  function ensureMonthView(){
-    if($("viewMonth")) return;
+  showLoading("Salvando…");
 
-    // We'll append as sibling of existing views inside the LEFT card .bd
-    const bd = document.querySelector('section.card[aria-label="Conteúdo"] .bd');
-    if(!bd) return;
+  const now = Date.now();
+  let it;
 
-    const wrap = document.createElement("div");
-    wrap.id = "viewMonth";
-    wrap.style.display = "none";
-    wrap.innerHTML = `
-      <div class="monthWrap">
-        <div class="monthTop">
-          <div class="monthTitle">
-            <b id="monthLabel">—</b>
-            <span id="monthSub">Calendário mensal (clique no dia para ver detalhes)</span>
-          </div>
-          <div class="monthBtns">
-            <button class="btn" id="btnMonthPrev" title="Mês anterior">←</button>
-            <button class="btn" id="btnMonthToday" title="Voltar para hoje">Hoje</button>
-            <button class="btn" id="btnMonthNext" title="Próximo mês">→</button>
-            <button class="btn primary" id="btnMonthQuickNew" title="Criar no dia selecionado">＋ Criar</button>
-          </div>
+  if(state.editingId){
+    it = state.items.find(x=>x.id===state.editingId);
+    if(!it){ hideLoading(); toast("Item não encontrado."); return; }
+    it.type = type;
+    it.title = title;
+    it.body = body;
+    it.priority = priority;
+    it.status = status;
+    it.tags = tags;
+    it.locationName = locationName;
+    it.start = start ? start.getTime() : null;
+    it.end   = end   ? end.getTime()   : null;
+    it.due   = due   ? due.getTime()   : null;
+    it.kanban = (type==="task") ? (kanban || "todo") : it.kanban;
+    it.geo = state.tempGeo ? {...state.tempGeo} : null;
+    it.files = Array.isArray(state.tempFiles) ? [...state.tempFiles] : [];
+    it.updatedAt = now;
+  }else{
+    it = newItem(type);
+    it.title = title;
+    it.body = body;
+    it.priority = priority;
+    it.status = status;
+    it.tags = tags;
+    it.locationName = locationName;
+    it.start = start ? start.getTime() : null;
+    it.end   = end   ? end.getTime()   : null;
+    it.due   = due   ? due.getTime()   : null;
+    it.kanban = (type==="task") ? (kanban || "todo") : "todo";
+    it.geo = state.tempGeo ? {...state.tempGeo} : null;
+    it.files = Array.isArray(state.tempFiles) ? [...state.tempFiles] : [];
+    it.createdAt = now;
+    it.updatedAt = now;
+    state.items.unshift(it);
+  }
+
+  // handle new file selections (input mFiles) -> store in idb and attach metadata
+  const fileList = $("mFiles").files;
+  if(fileList && fileList.length){
+    $("loadingMsg").textContent = "Guardando anexos no navegador…";
+    for(const f of Array.from(fileList)){
+      const fid = uid();
+      const fileObj = {
+        id: fid,
+        name: f.name,
+        type: f.type || "application/octet-stream",
+        size: f.size,
+        addedAt: Date.now(),
+        blob: f
+      };
+      await idbPutFile(fileObj);
+      const meta = { id: fid, name: fileObj.name, type: fileObj.type, size: fileObj.size, addedAt: fileObj.addedAt };
+      it.files = it.files || [];
+      it.files.push(meta);
+      state.tempFiles.push(meta);
+    }
+  }
+
+  saveAll();
+  hideLoading();
+  closeItemModal();
+  toast("Salvo ✅");
+  rafRender();
+}
+
+function deleteFromModal(){
+  if(!state.editingId) return;
+  const id = state.editingId;
+  const it = state.items.find(x=>x.id===id);
+  if(!it) return;
+
+  const ok = confirm(`Excluir "${it.title}"?`);
+  if(!ok) return;
+
+  state.items = state.items.filter(x=>x.id!==id);
+  saveAll();
+  closeItemModal();
+  toast("Excluído.");
+  rafRender();
+}
+
+function duplicateFromModal(){
+  // duplicate current fields (even new)
+  const type = $("mType").value;
+  const it = newItem(type);
+  it.title = ($("mTitle").value||"").trim() + " (cópia)";
+  it.body = ($("mBody").value||"").trim();
+  it.priority = Number($("mPriority").value||2);
+  it.status = $("mStatus").value;
+  it.tags = normalizeTags($("mTags").value);
+  it.locationName = ($("mLocationName").value||"").trim();
+  const start = parseDT($("mStart").value);
+  const end = parseDT($("mEnd").value);
+  const due = parseDT($("mDue").value);
+  it.start = start ? start.getTime() : null;
+  it.end = end ? end.getTime() : null;
+  it.due = due ? due.getTime() : null;
+  it.kanban = (type==="task") ? ($("mKanban").value || "todo") : "todo";
+  it.geo = state.tempGeo ? {...state.tempGeo} : null;
+  it.files = Array.isArray(state.tempFiles) ? [...state.tempFiles] : [];
+  it.createdAt = Date.now();
+  it.updatedAt = Date.now();
+
+  state.items.unshift(it);
+  saveAll();
+  toast("Duplicado.");
+  rafRender();
+}
+
+/* ===================== Library: Files view ===================== */
+async function renderFilesView(){
+  const q = ($("fileSearch").value||"").trim().toLowerCase();
+  const list = $("filesList");
+  const all = await idbListFiles();
+
+  const files = all
+    .filter(f=> !q || (f.name||"").toLowerCase().includes(q))
+    .sort((a,b)=>(b.addedAt||0)-(a.addedAt||0));
+
+  if(files.length===0){
+    list.innerHTML = `<div class="hint">Nenhum arquivo na biblioteca. Use “Importar arquivos”.</div>`;
+    return;
+  }
+
+  list.innerHTML = "";
+  for(const f of files){
+    const row = document.createElement("div");
+    row.className = "row";
+    row.tabIndex = 0;
+    row.innerHTML = `
+      <div class="main">
+        <div class="name">📎 ${safeText(f.name)}</div>
+        <div class="meta">
+          <span class="badge"><b>${fmtBytes(f.size)}</b></span>
+          <span class="badge">${safeText(f.type||"arquivo")}</span>
+          <span class="badge">Adicionado: <b class="mono">${fmtNiceDT(f.addedAt)}</b></span>
         </div>
-
-        <div class="monthGrid" aria-label="Calendário mensal">
-          <div class="monthHead" id="monthHead"></div>
-          <div class="monthBody" id="monthBody"></div>
-        </div>
-
-        <div class="drawer" aria-label="Detalhes do dia">
-          <div class="drawerTop">
-            <div>
-              <b id="drawerTitle">Selecione um dia</b><br/>
-              <span id="drawerSub">Mostra compromissos, tarefas e notas desse dia.</span>
-            </div>
-            <div class="monthBtns">
-              <button class="btn" id="btnDayNewEvent">📅 Compromisso</button>
-              <button class="btn" id="btnDayNewTask">✅ Tarefa</button>
-              <button class="btn" id="btnDayNewNote">📝 Nota</button>
-            </div>
-          </div>
-          <div class="drawerList" id="drawerList"></div>
-        </div>
-
-        <div class="hint">
-          Dica: arraste uma <b>tarefa</b> do Kanban e solte em um dia do mês para mudar o vencimento.
-        </div>
+      </div>
+      <div class="amount">—</div>
+      <div></div>
+      <div class="right">
+        <button class="btn" data-open="${f.id}">Abrir</button>
+        <button class="btn" data-dl="${f.id}">Baixar</button>
+        <button class="btn danger" data-del="${f.id}">Excluir</button>
       </div>
     `;
 
-    // Insert between Week and Tasks if possible
-    const viewWeek = $("viewWeek");
-    if(viewWeek && viewWeek.nextSibling) bd.insertBefore(wrap, viewWeek.nextSibling);
-    else bd.appendChild(wrap);
+    row.querySelector(`[data-open="${f.id}"]`).addEventListener("click", async (e)=>{
+      e.stopPropagation();
+      const obj = await idbGetFile(f.id);
+      if(!obj){ toast("Arquivo não encontrado."); return; }
+      const url = URL.createObjectURL(obj.blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      setTimeout(()=>URL.revokeObjectURL(url), 20_000);
+    });
+    row.querySelector(`[data-dl="${f.id}"]`).addEventListener("click", async (e)=>{
+      e.stopPropagation();
+      const obj = await idbGetFile(f.id);
+      if(!obj){ toast("Arquivo não encontrado."); return; }
+      const a = document.createElement("a");
+      const url = URL.createObjectURL(obj.blob);
+      a.href = url;
+      a.download = obj.name || "arquivo";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 20_000);
+    });
+    row.querySelector(`[data-del="${f.id}"]`).addEventListener("click", async (e)=>{
+      e.stopPropagation();
+      const ok = confirm(`Excluir arquivo "${f.name}" da biblioteca?\n(Os itens que referenciam este arquivo vão perder o anexo.)`);
+      if(!ok) return;
+      await idbDeleteFile(f.id);
+      // remove references in items
+      state.items.forEach(it=>{
+        it.files = (it.files||[]).filter(x=>x.id!==f.id);
+      });
+      saveAll();
+      toast("Arquivo excluído.");
+      rafRender();
+    });
 
-    // Head labels
-    const head = $("monthHead");
-    head.innerHTML = Array.from({length:7}, (_,i)=>`<div class="mhCell">${fmtWeekdayShort(i)}</div>`).join("");
+    list.appendChild(row);
+  }
+}
+
+async function importFilesToLibrary(files){
+  if(!files || !files.length) return;
+  showLoading("Importando arquivos…");
+  for(const f of Array.from(files)){
+    const fid = uid();
+    const fileObj = {
+      id: fid,
+      name: f.name,
+      type: f.type || "application/octet-stream",
+      size: f.size,
+      addedAt: Date.now(),
+      blob: f
+    };
+    await idbPutFile(fileObj);
+  }
+  hideLoading();
+  toast("Arquivos importados ✅");
+  rafRender();
+}
+
+/* ===================== Items list render helpers ===================== */
+function itemMatchesSearch(it, text){
+  const q = (text||"").trim().toLowerCase();
+  if(!q) return true;
+  const blob = [
+    it.title, it.body, it.locationName, (it.tags||[]).join(" ")
+  ].join(" ").toLowerCase();
+  return blob.includes(q);
+}
+
+function typeFilterMatch(it, t){
+  if(t==="all") return true;
+  return it.type===t;
+}
+
+function buildRow(it){
+  const when = itemWhen(it);
+  const pr = prioLabel(it.priority);
+  const hasFiles = (it.files||[]).length;
+  const hasGeo = !!it.geo;
+  const tags = (it.tags||[]).slice(0,4);
+  const more = Math.max(0, (it.tags||[]).length - tags.length);
+
+  const row = document.createElement("div");
+  row.className = "row";
+  row.tabIndex = 0;
+
+  const badgeStatus = statusBadge(it);
+  const badgeColor = badgeStatus==="done" ? "good" : badgeStatus==="doing" ? "warn" : badgeStatus==="canceled" ? "bad" : "";
+
+  row.innerHTML = `
+    <div class="main">
+      <div class="name">${typeEmoji(it.type)} ${safeText(it.title)}</div>
+      <div class="meta">
+        <span class="badge"><b class="${badgeColor}">${safeText(pr)}</b></span>
+        <span class="badge">${safeText(when)}</span>
+        ${it.locationName ? `<span class="badge">📍 <b>${safeText(it.locationName)}</b></span>` : ""}
+        ${hasGeo ? `<span class="badge">🧭 GPS</span>` : ""}
+        ${hasFiles ? `<span class="badge">📎 <b>${hasFiles}</b></span>` : ""}
+        ${tags.map(t=>`<span class="badge">#${safeText(t)}</span>`).join("")}
+        ${more?`<span class="badge">+${more}</span>`:""}
+      </div>
+    </div>
+    <div class="amount">${safeText(it.type==="task" ? (it.kanban==="done"?"Feito":it.kanban==="doing"?"Fazendo":"A fazer") : (it.status==="done"?"Feito":it.status==="doing"?"Em andamento":it.status==="canceled"?"Cancelado":"Planejado"))}</div>
+    <div></div>
+    <div class="right">
+      <button class="btn" data-open="${it.id}">Abrir</button>
+    </div>
+  `;
+
+  row.addEventListener("click", ()=>openEditModal(it.id));
+  row.addEventListener("keydown", (e)=>{
+    if(e.key==="Enter" || e.key===" "){
+      e.preventDefault();
+      openEditModal(it.id);
+    }
+  });
+  row.querySelector(`[data-open="${it.id}"]`).addEventListener("click", (e)=>{
+    e.stopPropagation();
+    openEditModal(it.id);
+  });
+
+  return row;
+}
+
+/* ===================== Today view ===================== */
+function getTodayItems(){
+  const day = new Date();
+  const search = $("todaySearch").value || "";
+  const scope = $("todayScope").value;
+  const quick = $("quickFilter").value;
+
+  const wantedType = (scope==="all") ? null : scope;
+
+  const list = state.items
+    .filter(it=>{
+      if(quick==="events" && it.type!=="event") return false;
+      if(quick==="tasks" && it.type!=="task") return false;
+      if(quick==="notes" && it.type!=="note") return false;
+
+      if(wantedType && it.type!==wantedType) return false;
+      if(!isInDay(it, day)) return false;
+      if(!itemMatchesSearch(it, search)) return false;
+      return true;
+    })
+    .sort((a,b)=> itemKeyDate(a) - itemKeyDate(b));
+
+  return list;
+}
+
+function renderToday(){
+  const items = getTodayItems();
+  const list = $("todayList");
+
+  if(items.length===0){
+    list.innerHTML = `<div class="hint">Nada para hoje. Clique em “＋ Novo” ou “Check-in rápido”.</div>`;
+    return;
   }
 
-  // ---------- month state ----------
-  S.month = S.month || {
-    cursor: parseMonthKey(localStorage.getItem(LS_MONTH_CURSOR)) || new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-    selected: startOfDay(new Date())
+  list.innerHTML = "";
+  items.forEach(it=> list.appendChild(buildRow(it)));
+}
+
+/* ===================== Week view ===================== */
+function renderWeek(){
+  const startStr = $("weekStart").value;
+  const start = startStr ? startOfDay(new Date(startStr+"T00:00")) : startOfWeekMon(new Date());
+  const search = $("weekSearch").value || "";
+  const t = $("weekType").value;
+
+  // group by day
+  const days = Array.from({length:7}, (_,i)=>addDays(start,i));
+  const container = $("weekList");
+  container.innerHTML = "";
+
+  days.forEach(d=>{
+    const dayItems = state.items
+      .filter(it=> isInDay(it,d))
+      .filter(it=> typeFilterMatch(it,t))
+      .filter(it=> itemMatchesSearch(it,search))
+      .sort((a,b)=> itemKeyDate(a)-itemKeyDate(b));
+
+    const box = document.createElement("div");
+    box.className = "card";
+    box.style.boxShadow = "var(--shadow2)";
+    box.style.borderRadius = "18px";
+
+    box.innerHTML = `
+      <div class="hd">
+        <div class="title">
+          <h2 style="margin:0; font-size:13px;">${safeText(d.toLocaleDateString("pt-BR",{weekday:"long", day:"2-digit", month:"2-digit"}))}</h2>
+          <p style="margin:0; font-size:12px; color:var(--muted)">${dayItems.length} item(ns)</p>
+        </div>
+        <div class="right">
+          <button class="btn" data-new="event">📅</button>
+          <button class="btn" data-new="task">✅</button>
+          <button class="btn" data-new="note">📝</button>
+        </div>
+      </div>
+      <div class="bd"><div class="list" data-daylist="1"></div></div>
+    `;
+    const dl = box.querySelector(`[data-daylist="1"]`);
+
+    box.querySelector(`[data-new="event"]`).addEventListener("click", ()=>openNewModal("event", d));
+    box.querySelector(`[data-new="task"]`).addEventListener("click", ()=>openNewModal("task", d));
+    box.querySelector(`[data-new="note"]`).addEventListener("click", ()=>openNewModal("note", d));
+
+    if(dayItems.length===0){
+      dl.innerHTML = `<div class="hint">Sem itens.</div>`;
+    }else{
+      dayItems.forEach(it=> dl.appendChild(buildRow(it)));
+    }
+
+    container.appendChild(box);
+  });
+}
+
+/* ===================== Month view ===================== */
+function monthName(d){
+  return d.toLocaleDateString("pt-BR",{month:"long", year:"numeric"});
+}
+function renderMonth(){
+  const c = state.month.cursor;
+  const year = c.getFullYear();
+  const month = c.getMonth(); // 0..11
+  $("monthTitle").textContent = monthName(new Date(year, month, 1));
+  $("monthMeta").innerHTML = `Itens no mês: <b>${countItemsInMonth(year,month)}</b>`;
+
+  const cells = $("monthCells");
+  cells.innerHTML = "";
+
+  const first = new Date(year, month, 1);
+  const last  = new Date(year, month+1, 0);
+
+  // monday-based
+  const start = startOfWeekMon(first);
+  const end = addDays(startOfWeekMon(addDays(last, 7)), 0);
+
+  const today = startOfDay(new Date());
+  const selected = state.month.selected ? startOfDay(state.month.selected) : null;
+
+  const totalDays = Math.round((end - start)/(24*3600*1000));
+  for(let i=0;i<totalDays;i++){
+    const d = addDays(start,i);
+    const inMonth = d.getMonth()===month;
+    const isToday = d.getTime()===today.getTime();
+    const isSel = selected && d.getTime()===selected.getTime();
+
+    const dayItems = state.items.filter(it=>isInDay(it,d));
+    const cEvents = dayItems.filter(x=>x.type==="event").length;
+    const cTasks  = dayItems.filter(x=>x.type==="task").length;
+    const cNotes  = dayItems.filter(x=>x.type==="note").length;
+
+    const cell = document.createElement("div");
+    cell.className = "dayCell";
+    if(isToday) cell.classList.add("today");
+    if(isSel) cell.classList.add("selected");
+    cell.tabIndex = 0;
+
+    const numCls = inMonth ? "" : "muted";
+    const count = dayItems.length;
+
+    cell.innerHTML = `
+      <div class="dayNum ${numCls}">
+        <span>${safeText(String(d.getDate()))}</span>
+        ${count ? `<span class="miniCount">${count}</span>` : ``}
+      </div>
+      <div class="dots">
+        ${cEvents? `<span class="dotItem" title="${cEvents} compromisso(s)"></span>`.repeat(Math.min(3,cEvents)) : ``}
+        ${cTasks?  `<span class="dotItem task" title="${cTasks} tarefa(s)"></span>`.repeat(Math.min(3,cTasks)) : ``}
+        ${cNotes?  `<span class="dotItem note" title="${cNotes} nota(s)"></span>`.repeat(Math.min(3,cNotes)) : ``}
+      </div>
+    `;
+
+    cell.addEventListener("click", ()=>{
+      state.month.selected = startOfDay(d);
+      renderMonth(); // immediate to show selection
+      renderDayDrawer();
+      saveAll();
+    });
+    cell.addEventListener("keydown",(e)=>{
+      if(e.key==="Enter" || e.key===" "){
+        e.preventDefault();
+        state.month.selected = startOfDay(d);
+        renderMonth();
+        renderDayDrawer();
+        saveAll();
+      }
+    });
+
+    cells.appendChild(cell);
+  }
+
+  renderDayDrawer();
+}
+function countItemsInMonth(y,m){
+  const a = new Date(y,m,1);
+  const b = new Date(y,m+1,1);
+  return state.items.filter(it=>{
+    const d = itemKeyDate(it);
+    return d>=a && d<b;
+  }).length;
+}
+function renderDayDrawer(){
+  ensureMonthSelected();
+  const d = state.month.selected;
+  $("dayDrawerTitle").textContent = fmtNiceDate(d);
+  $("dayDrawerSub").textContent = "Itens desse dia";
+
+  const list = $("dayDrawerList");
+  const items = state.items
+    .filter(it=>isInDay(it,d))
+    .sort((a,b)=> itemKeyDate(a)-itemKeyDate(b));
+
+  list.innerHTML = "";
+  if(items.length===0){
+    list.innerHTML = `<div class="hint">Sem itens. Use os botões 📅 ✅ 📝 para criar.</div>`;
+    return;
+  }
+
+  items.forEach(it=>{
+    const r = document.createElement("div");
+    r.className = "miniRow";
+    r.tabIndex = 0;
+    r.innerHTML = `
+      <b>${typeEmoji(it.type)} ${safeText(it.title)}</b>
+      <div class="mmeta">
+        <span class="badge">${safeText(itemWhen(it))}</span>
+        ${it.locationName ? `<span class="badge">📍 <b>${safeText(it.locationName)}</b></span>` : ""}
+        ${(it.files||[]).length ? `<span class="badge">📎 <b>${(it.files||[]).length}</b></span>` : ""}
+      </div>
+    `;
+    r.addEventListener("click", ()=>openEditModal(it.id));
+    r.addEventListener("keydown",(e)=>{
+      if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openEditModal(it.id); }
+    });
+    list.appendChild(r);
+  });
+}
+
+/* ===================== Tasks (Kanban) ===================== */
+function tasksFiltered(){
+  const q = ($("taskSearch").value||"").trim();
+  const sort = $("taskSort").value;
+
+  let tasks = state.items.filter(it=>it.type==="task").filter(it=>itemMatchesSearch(it,q));
+
+  if(sort==="priority"){
+    tasks.sort((a,b)=>(b.priority||2)-(a.priority||2));
+  }else if(sort==="due"){
+    tasks.sort((a,b)=> (a.due||9e18)-(b.due||9e18));
+  }else{
+    tasks.sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
+  }
+  return tasks;
+}
+
+function renderKanban(){
+  const tasks = tasksFiltered();
+
+  const todo = tasks.filter(t=> (t.kanban||"todo")==="todo");
+  const doing = tasks.filter(t=> (t.kanban||"todo")==="doing");
+  const done = tasks.filter(t=> (t.kanban||"todo")==="done");
+
+  $("countTodo").innerHTML = `<b>${todo.length}</b>`;
+  $("countDoing").innerHTML = `<b>${doing.length}</b>`;
+  $("countDone").innerHTML = `<b>${done.length}</b>`;
+
+  const zones = {
+    todo: $("zoneTodo"),
+    doing: $("zoneDoing"),
+    done: $("zoneDone")
+  };
+  Object.values(zones).forEach(z=>z.innerHTML="");
+
+  const makeTaskCard = (t)=>{
+    const el = document.createElement("div");
+    el.className = "task";
+    el.draggable = true;
+    el.dataset.id = t.id;
+    el.innerHTML = `
+      <b>${safeText(t.title)}</b>
+      <div class="tmeta">
+        <span class="badge"><b>${safeText(prioLabel(t.priority))}</b></span>
+        ${t.due ? `<span class="badge">⏰ <b>${safeText(fmtNiceDT(t.due))}</b></span>` : `<span class="badge">Sem vencimento</span>`}
+        ${(t.files||[]).length ? `<span class="badge">📎 <b>${(t.files||[]).length}</b></span>`:""}
+      </div>
+    `;
+    el.addEventListener("click", ()=>openEditModal(t.id));
+    el.addEventListener("dragstart",(e)=>{
+      e.dataTransfer.setData("text/plain", t.id);
+      e.dataTransfer.effectAllowed = "move";
+    });
+    return el;
   };
 
-  function persistMonth(){
-    localStorage.setItem(LS_MONTH_CURSOR, monthKey(S.month.cursor));
-  }
+  todo.forEach(t=> zones.todo.appendChild(makeTaskCard(t)));
+  doing.forEach(t=> zones.doing.appendChild(makeTaskCard(t)));
+  done.forEach(t=> zones.done.appendChild(makeTaskCard(t)));
 
-  // ---------- patch setTab to include month + persistence ----------
-  const _setTab = window.setTab;
-  window.setTab = function(tab){
-    // persist
-    try{ localStorage.setItem(LS_ACTIVE_TAB, tab); }catch(e){}
+  // drop handlers
+  $$(".col").forEach(col=>{
+    const zone = col.querySelector(".dropzone");
+    const colName = col.dataset.col;
 
-    // toggle viewMonth if present
-    if($("viewMonth")){
-      $("viewMonth").style.display = (tab==="month") ? "block" : "none";
-    }
-
-    // update titles for month
-    if(tab==="month"){
-      S.activeTab = "month";
-      // make other views hidden (reuse original to keep UI consistent):
-      // call original setTab to manage buttons/labels for known tabs,
-      // but it doesn't know "month". We'll fake by setting week then swap.
-      try{ _setTab("week"); }catch(e){}
-      // fix active classes
-      TAB_ORDER.forEach(t=>{
-        $$(`.tab[data-tab="${t}"]`).forEach(btn=>btn.classList.toggle("active", t===tab));
-      });
-
-      // hide all views except month
-      ["today","week","tasks","notes","files","settings"].forEach(id=>{
-        const v = document.getElementById("view"+id.charAt(0).toUpperCase()+id.slice(1));
-        if(v) v.style.display = "none";
-      });
-      if($("viewMonth")) $("viewMonth").style.display = "block";
-
-      // page title/sub
-      if($("pageTitle")) $("pageTitle").textContent = "Mês";
-      if($("pageSub")) $("pageSub").textContent = "Calendário mensal (visão geral + detalhes do dia)";
-      if($("rightSub")) $("rightSub").textContent = "Calendário mensal (visão geral + detalhes do dia)";
-
-      // render month
-      rafMonth();
-      return;
-    }
-
-    // normal path
-    return _setTab(tab);
-  };
-
-  // ---------- render month ----------
-  let monthQueued = false;
-  function rafMonth(){
-    if(monthQueued) return;
-    monthQueued = true;
-    requestAnimationFrame(()=>{
-      monthQueued = false;
-      renderMonth();
-    });
-  }
-
-  function itemsForDay(day){
-    const d0 = startOfDay(day);
-    const d1 = addDays(d0, 1);
-    return S.items.filter(it=>{
-      const key = it.start || it.due || it.createdAt;
-      const dt = new Date(key);
-      if(isNaN(dt.getTime())) return false;
-
-      // event overlaps day
-      if(it.type==="event"){
-        const a = it.start ? new Date(it.start) : dt;
-        const b = it.end ? new Date(it.end) : a;
-        return (a < d1 && b >= d0);
-      }
-
-      // task due (or start)
-      if(it.type==="task"){
-        const a = it.due ? new Date(it.due) : (it.start ? new Date(it.start) : dt);
-        return (a >= d0 && a < d1);
-      }
-
-      // note created
-      return (dt >= d0 && dt < d1);
-    });
-  }
-
-  function renderDrawer(){
-    const title = $("drawerTitle");
-    const sub = $("drawerSub");
-    const list = $("drawerList");
-    if(!title || !list) return;
-
-    const day = startOfDay(S.month.selected || new Date());
-    const nice = day.toLocaleDateString("pt-BR",{weekday:"long", day:"2-digit", month:"long", year:"numeric"});
-    title.textContent = nice;
-    sub.textContent = "Clique em um item para editar.";
-
-    const items = itemsForDay(day).sort((a,b)=> new Date(a.start||a.due||a.createdAt) - new Date(b.start||b.due||b.createdAt));
-
-    if(!items.length){
-      list.innerHTML = `<div class="hint">Sem registros nesse dia. Use os botões acima para criar.</div>`;
-      return;
-    }
-
-    const typeEmoji = (t)=> t==="event"?"📅":t==="task"?"✅":"📝";
-    const fmtNiceDT = (x)=>{
-      const d = new Date(x);
-      if(isNaN(d.getTime())) return "—";
-      return d.toLocaleString("pt-BR",{day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"});
+    const onDragOver = (e)=>{ e.preventDefault(); zone.classList.add("drop-hover"); };
+    const onDragLeave = ()=> zone.classList.remove("drop-hover");
+    const onDrop = (e)=>{
+      e.preventDefault();
+      zone.classList.remove("drop-hover");
+      const id = e.dataTransfer.getData("text/plain");
+      const t = state.items.find(x=>x.id===id);
+      if(!t || t.type!=="task") return;
+      t.kanban = colName;
+      t.status = colName==="done" ? "done" : (colName==="doing" ? "doing" : "planned");
+      t.updatedAt = Date.now();
+      saveAll();
+      toast("Movido ✅");
+      rafRender();
     };
 
-    list.innerHTML = items.map(it=>{
-      const when = it.type==="event"
-        ? (it.start ? `Início: ${fmtNiceDT(it.start)}` : "Sem horário")
-        : it.type==="task"
-          ? (it.due ? `Vence: ${fmtNiceDT(it.due)}` : "Sem vencimento")
-          : `Criado: ${fmtNiceDT(it.createdAt)}`;
-      const tags = (it.tags||[]).slice(0,3).map(t=>`<span class="badge">#${escapeHtml(t)}</span>`).join(" ");
-      const files = (it.files||[]).length ? `<span class="badge">📎 ${it.files.length}</span>` : "";
-      return `
-        <div class="miniRow" tabindex="0" data-open="${it.id}">
-          <b>${typeEmoji(it.type)} ${escapeHtml(it.title||"(sem título)")}</b>
-          <div class="mmeta">
-            <span class="badge">${escapeHtml(when)}</span>
-            ${it.locationName ? `<span class="badge">📍 ${escapeHtml(it.locationName)}</span>` : ""}
-            ${files}
-            ${tags}
-          </div>
-        </div>
-      `;
-    }).join("");
+    zone.addEventListener("dragover", onDragOver);
+    zone.addEventListener("dragleave", onDragLeave);
+    zone.addEventListener("drop", onDrop);
+  });
+}
 
-    $$("[data-open]", list).forEach(el=>{
-      const id = el.getAttribute("data-open");
-      el.addEventListener("click", ()=>window.openEditModal(id));
-      el.addEventListener("keydown",(e)=>{
-        if(e.key==="Enter" || e.key===" "){ e.preventDefault(); window.openEditModal(id); }
-      });
-    });
+/* ===================== Notes view ===================== */
+function renderNotes(){
+  const q = ($("noteSearch").value||"").trim();
+  const tag = ($("noteTag").value||"").trim().toLowerCase();
+  const list = $("notesList");
+
+  const notes = state.items
+    .filter(it=>it.type==="note")
+    .filter(it=> itemMatchesSearch(it,q))
+    .filter(it=> !tag || (it.tags||[]).some(t=>t.toLowerCase().includes(tag)))
+    .sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+
+  if(notes.length===0){
+    list.innerHTML = `<div class="hint">Sem notas. Crie uma nota para registrar ideias e reuniões.</div>`;
+    return;
   }
 
-  function renderMonth(){
-    ensureMonthTabButtons();
-    ensureMonthView();
+  list.innerHTML = "";
+  notes.forEach(n=> list.appendChild(buildRow(n)));
+}
 
-    const body = $("monthBody");
-    const label = $("monthLabel");
-    if(!body || !label) return;
+/* ===================== Next list (right panel) ===================== */
+function renderNext(){
+  const now = Date.now();
+  const candidates = state.items
+    .filter(it=> it.type==="event" || it.type==="task")
+    .map(it=>{
+      const t = it.type==="event" ? (it.start||it.createdAt) : (it.due||it.start||it.createdAt);
+      return { it, t: t||0 };
+    })
+    .filter(x=> x.t >= now - 60*60*1000) // from last hour
+    .sort((a,b)=> a.t - b.t)
+    .slice(0,3)
+    .map(x=>x.it);
 
-    const cur = new Date(S.month.cursor.getFullYear(), S.month.cursor.getMonth(), 1);
-    const monthName = cur.toLocaleDateString("pt-BR",{month:"long", year:"numeric"});
-    label.textContent = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+  const list = $("nextList");
+  list.innerHTML = "";
+  if(candidates.length===0){
+    list.innerHTML = `<div class="hint">Sem próximos itens. Você está livre 😄</div>`;
+    return;
+  }
+  candidates.forEach(it=> list.appendChild(buildRow(it)));
+}
 
-    // month range in grid: start Monday before 1st, end Sunday after last
-    const first = new Date(cur.getFullYear(), cur.getMonth(), 1);
-    const last  = new Date(cur.getFullYear(), cur.getMonth()+1, 0);
-    const gridStart = startOfWeekMon(first);
-    const gridEnd = addDays(startOfWeekMon(addDays(last, 7)), 6); // ensures cover last week
-    const totalDays = Math.round((startOfDay(gridEnd) - startOfDay(gridStart)) / (24*3600*1000)) + 1;
+/* ===================== KPIs + Clock ===================== */
+function renderHeaderClock(){
+  const now = new Date();
+  $("kpiUser").textContent = state.settings.userName || "—";
+  $("kpiDate").textContent = now.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"});
+  $("kpiClock").textContent = now.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
 
-    const today = startOfDay(new Date());
-    body.innerHTML = "";
+  $("nowTime").textContent = now.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  $("nowMeta").textContent = now.toLocaleDateString("pt-BR",{weekday:"long", day:"2-digit", month:"long"});
 
-    for(let i=0;i<totalDays;i++){
-      const day = addDays(gridStart, i);
-      const inMonth = day.getMonth()===cur.getMonth();
-      const isToday = +startOfDay(day)===+today;
-      const sel = +startOfDay(day)===+startOfDay(S.month.selected||today);
+  // day counters
+  const day = new Date();
+  const ev = state.items.filter(it=>it.type==="event" && isInDay(it,day)).length;
+  const tk = state.items.filter(it=>it.type==="task" && isInDay(it,day) && (it.kanban!=="done")).length;
+  $("kpiEvents").textContent = String(ev);
+  $("kpiTasks").textContent = String(tk);
+}
 
-      const items = itemsForDay(day);
-      const cEvent = items.filter(x=>x.type==="event").length;
-      const cTask  = items.filter(x=>x.type==="task" && x.status!=="done" && x.status!=="canceled").length;
-      const cNote  = items.filter(x=>x.type==="note").length;
+/* ===================== Top status line ===================== */
+function updateStatusLine(){
+  const user = state.settings.userName || "Usuário";
+  const now = new Date();
+  const time = now.toLocaleTimeString("pt-BR",{hour:"2-digit", minute:"2-digit"});
 
-      const cell = document.createElement("div");
-      cell.className = `dayCell ${inMonth?"":"out"} ${isToday?"today":""}`;
-      cell.setAttribute("tabindex","0");
-      cell.dataset.date = toISODate(day);
-      cell.innerHTML = `
-        <div class="dayNum">
-          <span>${day.getDate()}</span>
-          <small>${sel ? "•" : ""}</small>
-        </div>
-        <div class="dayBadges">
-          ${cEvent?`<span class="dotBadge">📅 ${cEvent}</span>`:""}
-          ${cTask?`<span class="dotBadge">✅ ${cTask}</span>`:""}
-          ${cNote?`<span class="dotBadge">📝 ${cNote}</span>`:""}
-        </div>
-      `;
+  let loc = "Sem localização";
+  let dot = "warn";
 
-      // click select day
-      cell.addEventListener("click", ()=>{
-        S.month.selected = startOfDay(day);
-        renderMonth(); // re-render to update selection dot
-        renderDrawer();
-      });
-      cell.addEventListener("keydown",(e)=>{
-        if(e.key==="Enter" || e.key===" "){
-          e.preventDefault();
-          S.month.selected = startOfDay(day);
-          renderMonth();
-          renderDrawer();
-        }
-      });
-
-      // drag/drop tasks -> set due date
-      cell.addEventListener("dragover",(e)=>{ e.preventDefault(); cell.classList.add("drop"); });
-      cell.addEventListener("dragleave",()=> cell.classList.remove("drop"));
-      cell.addEventListener("drop",(e)=>{
-        e.preventDefault();
-        cell.classList.remove("drop");
-        const id = e.dataTransfer.getData("text/plain");
-        const it = S.items.find(x=>x.id===id);
-        if(!it || it.type!=="task") return window.toast("Só tarefas podem ser soltas no mês.");
-        const d = startOfDay(day);
-        // keep time if existed, else set 18:00 default local
-        let due = it.due ? new Date(it.due) : new Date();
-        due = new Date(d.getFullYear(), d.getMonth(), d.getDate(), due.getHours()||18, due.getMinutes()||0);
-        it.due = due.toISOString();
-        it.status = (it.kanban==="done") ? "done" : (it.kanban==="doing" ? "doing" : it.status);
-        it.updatedAt = Date.now();
-        window.saveAll();
-        window.toast("Vencimento atualizado.");
-        window.rafRender();
-        rafMonth();
-        renderDrawer();
-      });
-
-      body.appendChild(cell);
-    }
-
-    renderDrawer();
-    bindMonthButtonsOnce();
+  if(state.settings.geo==="off"){
+    loc = "GPS desligado";
+    dot = "warn";
+  } else if(state.geo.ok){
+    const acc = state.geo.accuracy ? `±${Math.round(state.geo.accuracy)}m` : "";
+    loc = `GPS ok ${acc}`.trim();
+    dot = "good";
+  } else {
+    loc = "GPS não autorizado/indisponível";
+    dot = "warn";
   }
 
-  // ---------- month buttons bindings (once) ----------
-  let monthBound = false;
-  function bindMonthButtonsOnce(){
-    if(monthBound) return;
-    monthBound = true;
-
-    $("btnMonthPrev")?.addEventListener("click", ()=>{
-      S.month.cursor = new Date(S.month.cursor.getFullYear(), S.month.cursor.getMonth()-1, 1);
-      persistMonth();
-      rafMonth();
-    });
-    $("btnMonthNext")?.addEventListener("click", ()=>{
-      S.month.cursor = new Date(S.month.cursor.getFullYear(), S.month.cursor.getMonth()+1, 1);
-      persistMonth();
-      rafMonth();
-    });
-    $("btnMonthToday")?.addEventListener("click", ()=>{
-      const t = new Date();
-      S.month.cursor = new Date(t.getFullYear(), t.getMonth(), 1);
-      S.month.selected = startOfDay(t);
-      persistMonth();
-      rafMonth();
-    });
-    $("btnMonthQuickNew")?.addEventListener("click", ()=>{
-      // quick open modal and prefill date
-      const d = startOfDay(S.month.selected || new Date());
-      window.openNewModal("event");
-      // best effort prefill fields if exist
-      const mStart = $("mStart");
-      if(mStart){
-        const dt = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 9, 0);
-        mStart.value = `${toISODate(dt)}T09:00`;
-      }
-      const mEnd = $("mEnd");
-      if(mEnd){
-        const dt2 = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 10, 0);
-        mEnd.value = `${toISODate(dt2)}T10:00`;
-      }
-    });
-
-    // Create at selected day
-    $("btnDayNewEvent")?.addEventListener("click", ()=>createOnSelected("event"));
-    $("btnDayNewTask")?.addEventListener("click", ()=>createOnSelected("task"));
-    $("btnDayNewNote")?.addEventListener("click", ()=>createOnSelected("note"));
+  let weather = "";
+  if(state.weather.ok){
+    const tempC = state.weather.temp;
+    const temp = (state.settings.units==="imperial") ? `${Math.round(cToF(tempC))}°F` : `${Math.round(tempC)}°C`;
+    weather = ` • ${temp} • ${state.weather.desc}`;
+    dot = state.geo.ok ? "good" : dot;
   }
 
-  function createOnSelected(type){
-    const d = startOfDay(S.month.selected || new Date());
-    window.openNewModal(type);
+  setStatus(dot, `${user} • ${time} • ${loc}${weather}`);
+}
 
-    // Prefill based on type
-    if(type==="event"){
-      $("mStart").value = `${toISODate(d)}T09:00`;
-      $("mEnd").value = `${toISODate(d)}T10:00`;
-    }else if(type==="task"){
-      $("mDue").value = `${toISODate(d)}T18:00`;
-      $("mKanban").value = "todo";
-    }else{
-      // note: nothing required
-    }
+/* ===================== Check-in rápido ===================== */
+function quickAdd(){
+  const now = new Date();
+  const title = prompt("Check-in rápido: o que você fez/agendou agora?\n(ex: 'Ligar pro cliente', 'Orçamento obra', 'Academia')");
+  if(!title) return;
 
-    // title hint
-    $("mTitle").value = $("mTitle").value || `(${type==="event"?"Compromisso":type==="task"?"Tarefa":"Nota"}) ${toISODate(d)}`;
-    $("mBody").value = $("mBody").value || "";
-    window.toast("Preenchido com a data do dia selecionado.");
+  const it = newItem("note");
+  it.title = title.trim();
+  it.body = "";
+  it.priority = 2;
+  it.status = "planned";
+  it.tags = ["quick"];
+  it.createdAt = Date.now();
+  it.updatedAt = Date.now();
+
+  // attach GPS if available
+  if(state.geo.ok){
+    it.geo = {lat:state.geo.lat, lon:state.geo.lon, accuracy:state.geo.accuracy, at:Date.now()};
   }
 
-  // ---------- persist active tab on load ----------
-  function restoreActiveTab(){
-    const t = localStorage.getItem(LS_ACTIVE_TAB);
-    if(t && TAB_ORDER.includes(t)){
-      window.setTab(t);
-      return;
-    }
-  }
+  state.items.unshift(it);
+  saveAll();
+  toast("Check-in salvo 📝");
+  rafRender();
+}
 
-  // ---------- keyboard shortcuts for month ----------
+/* ===================== GPS attach in modal ===================== */
+async function attachGPSNowToModal(){
+  showLoading("Pegando GPS…");
+  const ok = await requestGeoOnce();
+  await fetchWeather().catch(()=>{});
+  hideLoading();
+
+  if(!ok){
+    toast("Não consegui obter GPS. Verifique permissão.");
+    return;
+  }
+  state.tempGeo = { lat: state.geo.lat, lon: state.geo.lon, accuracy: state.geo.accuracy, at: Date.now() };
+  $("gpsHint").textContent = `GPS anexado: ${state.tempGeo.lat.toFixed(6)}, ${state.tempGeo.lon.toFixed(6)} • ±${Math.round(state.tempGeo.accuracy||0)}m`;
+  updateStatusLine();
+}
+
+/* ===================== Backup / Restore ===================== */
+function exportBackup(){
+  const data = {
+    version: 3,
+    exportedAt: Date.now(),
+    settings: state.settings,
+    items: state.items
+  };
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:"application/json"});
+  const a = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  a.href = url;
+  a.download = `agenda_pro_backup_${toISODate(new Date())}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 20_000);
+  toast("Backup exportado.");
+}
+async function importBackup(file){
+  if(!file) return;
+  showLoading("Importando backup…");
+  try{
+    const text = await file.text();
+    const j = JSON.parse(text);
+    if(!j || !Array.isArray(j.items)) throw new Error("invalid");
+    state.items = j.items;
+    if(j.settings) state.settings = {...state.settings, ...j.settings};
+    saveAll();
+    hideLoading();
+    toast("Backup importado ✅");
+    closeRestore();
+    applySettingsToUI();
+    rafRender();
+  }catch(e){
+    hideLoading();
+    toast("Backup inválido.");
+  }
+}
+
+/* ===================== Settings UI ===================== */
+function applySettingsToUI(){
+  $("setUserName").value = state.settings.userName || "Wilson";
+  $("setGeo").value = state.settings.geo || "ask";
+  $("setUnits").value = state.settings.units || "metric";
+  $("kpiUser").textContent = state.settings.userName || "—";
+}
+
+/* ===================== Demo data ===================== */
+function addDemo(){
+  const now = new Date();
+  const day = startOfDay(now);
+
+  const e1 = newItem("event");
+  e1.title="Reunião • Cliente (Projeto)";
+  e1.locationName="Escritório";
+  e1.start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 10, 0).getTime();
+  e1.end   = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 11, 0).getTime();
+  e1.tags=["cliente","projeto"];
+  e1.priority=3;
+  e1.createdAt=Date.now()-3e6; e1.updatedAt=e1.createdAt;
+
+  const t1 = newItem("task");
+  t1.title="Enviar relatório semanal";
+  t1.due = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 17, 0).getTime();
+  t1.kanban="doing";
+  t1.status="doing";
+  t1.tags=["trabalho"];
+  t1.priority=3;
+
+  const n1 = newItem("note");
+  n1.title="Ideias: melhorias no app";
+  n1.body="• Tela mensal com detalhes do dia\n• Backup/restore\n• Anexos local (IndexedDB)";
+  n1.tags=["ideias","quick"];
+  n1.priority=2;
+
+  const t2 = newItem("task");
+  t2.title="Treino: cardio + musculação";
+  t2.due = new Date(day.getFullYear(), day.getMonth(), day.getDate()+1, 7, 30).getTime();
+  t2.kanban="todo";
+  t2.status="planned";
+  t2.tags=["saúde"];
+  t2.priority=2;
+
+  state.items.unshift(t2,n1,t1,e1);
+  saveAll();
+  toast("Dados demo criados.");
+  rafRender();
+}
+
+/* ===================== Wipe ===================== */
+function wipeItems(){
+  const ok = confirm("Apagar TODOS os itens? (não apaga arquivos da biblioteca)");
+  if(!ok) return;
+  state.items = [];
+  saveAll();
+  toast("Itens apagados.");
+  rafRender();
+}
+
+/* ===================== Month controls ===================== */
+function monthPrev(){
+  const c = state.month.cursor;
+  state.month.cursor = new Date(c.getFullYear(), c.getMonth()-1, 1);
+  saveAll();
+  rafRender();
+}
+function monthNext(){
+  const c = state.month.cursor;
+  state.month.cursor = new Date(c.getFullYear(), c.getMonth()+1, 1);
+  saveAll();
+  rafRender();
+}
+function monthToday(){
+  const d=new Date();
+  state.month.cursor = new Date(d.getFullYear(), d.getMonth(), 1);
+  state.month.selected = startOfDay(d);
+  saveAll();
+  rafRender();
+}
+
+/* ===================== Global renderAll ===================== */
+async function renderAll(){
+  renderHeaderClock();
+  updateStatusLine();
+
+  if(state.activeTab==="today") renderToday();
+  if(state.activeTab==="week") renderWeek();
+  if(state.activeTab==="month") renderMonth();
+  if(state.activeTab==="tasks") renderKanban();
+  if(state.activeTab==="notes") renderNotes();
+  if(state.activeTab==="files") await renderFilesView();
+
+  renderNext();
+}
+
+/* ===================== Events wiring ===================== */
+function wireTabs(){
+  const onTabClick = (e)=>{
+    const b = e.target.closest("[data-tab]");
+    if(!b) return;
+    setTab(b.dataset.tab);
+  };
+  $("tabsTop").addEventListener("click", onTabClick);
+  $("tabsBottom").addEventListener("click", onTabClick);
+}
+
+function wireButtons(){
+  $("btnNew").addEventListener("click", ()=>openNewModal(state.activeTab==="tasks"?"task":state.activeTab==="notes"?"note":"event"));
+  $("btnCloseModal").addEventListener("click", closeItemModal);
   document.addEventListener("keydown",(e)=>{
-    if(e.altKey && e.key.toLowerCase()==="m"){
-      e.preventDefault();
-      window.setTab("month");
+    if(e.key==="Escape"){
+      if($("itemModal").classList.contains("show")) closeItemModal();
+      if($("restoreModal").classList.contains("show")) closeRestore();
     }
-    // month nav (when on month)
-    if(S.activeTab==="month"){
-      if(e.key==="ArrowLeft"){
-        S.month.selected = addDays(startOfDay(S.month.selected||new Date()), -1);
-        // auto change month if needed
-        if(S.month.selected.getMonth()!==S.month.cursor.getMonth() || S.month.selected.getFullYear()!==S.month.cursor.getFullYear()){
-          S.month.cursor = new Date(S.month.selected.getFullYear(), S.month.selected.getMonth(), 1);
-          persistMonth();
-        }
-        rafMonth(); renderDrawer();
+    if(e.key.toLowerCase()==="n" && !e.ctrlKey && !e.metaKey && !e.altKey){
+      const activeEl = document.activeElement;
+      const typing = activeEl && (activeEl.tagName==="INPUT" || activeEl.tagName==="TEXTAREA" || activeEl.isContentEditable);
+      if(!typing){
+        openNewModal(state.activeTab==="tasks"?"task":state.activeTab==="notes"?"note":"event", state.activeTab==="month"?state.month.selected:null);
       }
-      if(e.key==="ArrowRight"){
-        S.month.selected = addDays(startOfDay(S.month.selected||new Date()), +1);
-        if(S.month.selected.getMonth()!==S.month.cursor.getMonth() || S.month.selected.getFullYear()!==S.month.cursor.getFullYear()){
-          S.month.cursor = new Date(S.month.selected.getFullYear(), S.month.selected.getMonth(), 1);
-          persistMonth();
-        }
-        rafMonth(); renderDrawer();
-      }
+    }
+    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="e"){
+      e.preventDefault();
+      exportBackup();
+    }
+    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="k"){
+      e.preventDefault();
+      $("todaySearch").focus();
+      setTab("today");
+    }
+    if(e.altKey && e.key.toLowerCase()==="m"){
+      setTab("month");
     }
   });
 
-  // ---------- hook into existing renderAll ----------
-  // Whenever your app renders, if month active, ensure month is also up-to-date
-  const _renderAll = window.renderAll;
-  if(typeof _renderAll === "function"){
-    window.renderAll = async function(){
-      const r = await _renderAll();
-      if(S.activeTab==="month"){
-        rafMonth();
-      }
-      return r;
-    };
+  $("btnSave").addEventListener("click", saveFromModal);
+  $("btnDelete").addEventListener("click", deleteFromModal);
+  $("btnDuplicate").addEventListener("click", duplicateFromModal);
+
+  $("btnQuickAdd").addEventListener("click", quickAdd);
+  $("btnNow").addEventListener("click", ()=>rafRender());
+
+  $("btnAttachGPS").addEventListener("click", attachGPSNowToModal);
+
+  $("btnBackup").addEventListener("click", exportBackup);
+  $("btnRestore").addEventListener("click", openRestore);
+  $("btnCloseRestore").addEventListener("click", closeRestore);
+  $("btnDoRestore").addEventListener("click", ()=>{
+    const f = $("restoreFile").files?.[0];
+    if(!f){ toast("Selecione um arquivo JSON."); return; }
+    importBackup(f);
+  });
+
+  $("btnSaveSettings").addEventListener("click", async ()=>{
+    state.settings.userName = ($("setUserName").value||"Wilson").trim() || "Wilson";
+    state.settings.geo = $("setGeo").value || "ask";
+    state.settings.units = $("setUnits").value || "metric";
+    saveAll();
+    applySettingsToUI();
+    toast("Ajustes salvos.");
+    // refresh status and optionally weather
+    if(state.settings.geo==="ask"){
+      await requestGeoOnce();
+      await fetchWeather().catch(()=>{});
+    }else{
+      state.geo.ok=false;
+      state.weather.ok=false;
+    }
+    rafRender();
+  });
+
+  $("btnDemo").addEventListener("click", addDemo);
+  $("btnWipe").addEventListener("click", wipeItems);
+
+  // Month controls
+  $("btnMonthPrev").addEventListener("click", monthPrev);
+  $("btnMonthNext").addEventListener("click", monthNext);
+  $("btnMonthToday").addEventListener("click", monthToday);
+  $("btnMonthCreate").addEventListener("click", ()=>openNewModal("event", state.month.selected));
+  $("btnDayNewEvent").addEventListener("click", ()=>openNewModal("event", state.month.selected));
+  $("btnDayNewTask").addEventListener("click", ()=>openNewModal("task", state.month.selected));
+  $("btnDayNewNote").addEventListener("click", ()=>openNewModal("note", state.month.selected));
+
+  // New task/note quick buttons
+  $("btnNewTask").addEventListener("click", ()=>openNewModal("task"));
+  $("btnNewNote").addEventListener("click", ()=>openNewModal("note"));
+
+  // Files import
+  $("btnAddFiles").addEventListener("click", ()=> $("filesInput").click());
+  $("filesInput").addEventListener("change", (e)=> importFilesToLibrary(e.target.files));
+
+  // Search reactive
+  const re = debounce(()=>rafRender(), 120);
+  ["todaySearch","weekSearch","taskSearch","noteSearch","fileSearch"].forEach(id=> $(id).addEventListener("input", re));
+  ["todayScope","weekType","taskSort","quickFilter"].forEach(id=> $(id).addEventListener("change", ()=>rafRender()));
+
+  // weekStart default
+  const ws = startOfWeekMon(new Date());
+  $("weekStart").value = toISODate(ws);
+}
+
+function wireModalTypeLogic(){
+  function applyTypeVisibility(){
+    const type = $("mType").value;
+    const isEvent = type==="event";
+    const isTask  = type==="task";
+    // toggle fields by disabling/hiding (simple approach: keep visible but hints rely on user)
+    $("mEnd").disabled = !isEvent;
+    $("mStart").disabled = (type==="note"); // note doesn't need start
+    $("mDue").disabled = !isTask;
+    $("mKanban").disabled = !isTask;
+
+    // default status/kanban sync
+    if(isTask){
+      const k = $("mKanban").value;
+      $("mStatus").value = k==="done" ? "done" : (k==="doing" ? "doing" : "planned");
+    }
+  }
+  $("mType").addEventListener("change", applyTypeVisibility);
+  $("mKanban").addEventListener("change", ()=>{
+    const k = $("mKanban").value;
+    $("mStatus").value = k==="done" ? "done" : (k==="doing" ? "doing" : "planned");
+  });
+  applyTypeVisibility();
+}
+
+/* ===================== Bootstrap ===================== */
+async function init(){
+  showLoading("Inicializando…");
+  loadAll();
+
+  // init db
+  try{
+    state.db = await idbOpen();
+  }catch(e){
+    // IndexedDB blocked
+    toast("IndexedDB indisponível. Anexos podem não funcionar.");
   }
 
-  // ---------- boot month feature ----------
-  ensureMonthTabButtons();
-  ensureMonthView();
-  // restore tab after initial init
-  setTimeout(()=>{ restoreActiveTab(); }, 0);
-  // if already on month, render
-  if(S.activeTab==="month") rafMonth();
+  applySettingsToUI();
+  wireTabs();
+  wireButtons();
+  wireModalTypeLogic();
 
-})();
+  // initial tab
+  setTab(state.activeTab);
+
+  // initial month selected
+  if(!state.month.selected){
+    state.month.selected = startOfDay(new Date());
+  }
+
+  // initial geo + weather (best effort)
+  if(state.settings.geo==="ask"){
+    await requestGeoOnce();
+    await fetchWeather().catch(()=>{});
+  }
+
+  // initial render
+  hideLoading();
+  rafRender();
+
+  // clock tick
+  setInterval(async ()=>{
+    renderHeaderClock();
+    updateStatusLine();
+    // refresh weather every ~10min if geo ok
+    await fetchWeather().catch(()=>{});
+  }, 1000);
+
+  // better GPS stability: refresh fix every 2 minutes if enabled
+  setInterval(async ()=>{
+    if(state.settings.geo!=="off"){
+      await requestGeoOnce();
+      await fetchWeather().catch(()=>{});
+      updateStatusLine();
+    }
+  }, 120000);
+}
+
+init();
+
+/* ===================== CLOSE SCRIPT / HTML ===================== */
 </script>
-
-<!-- =========================================================
-     FECHAMENTO FINAL (se a PARTE 1 já fechou o arquivo, ignore isto.
-     Se você removeu o fechamento para colar a PARTE 2, então mantenha.)
-========================================================== -->
 </body>
 </html>
-
