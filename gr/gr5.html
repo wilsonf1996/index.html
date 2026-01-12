@@ -1,0 +1,1810 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Charts Studio — Planilha → Gráfico (1 arquivo)</title>
+  <meta name="color-scheme" content="dark light"/>
+
+  <style>
+    /* ===========================
+       Apple/Microsoft-like UI
+    ============================ */
+    :root{
+      --bg: #0b0f14;
+      --bg2:#0e1420;
+      --panel: rgba(255,255,255,.06);
+      --panel2: rgba(255,255,255,.035);
+      --stroke: rgba(255,255,255,.12);
+      --stroke2: rgba(255,255,255,.18);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.62);
+      --muted2: rgba(255,255,255,.45);
+      --shadow: 0 22px 70px rgba(0,0,0,.55);
+      --shadow2: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 18px;
+      --radius2: 14px;
+
+      --primary: 108 168 255; /* rgb */
+      --success: 118 242 180;
+      --danger: 255 92 92;
+
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+
+      --focus: 0 0 0 4px rgba(108,168,255,.25);
+    }
+
+    [data-theme="light"]{
+      --bg: #f6f7fb;
+      --bg2:#eef2f7;
+      --panel: rgba(255,255,255,.92);
+      --panel2: rgba(255,255,255,.72);
+      --stroke: rgba(14,18,28,.12);
+      --stroke2: rgba(14,18,28,.18);
+      --text: rgba(14,18,28,.92);
+      --muted: rgba(14,18,28,.62);
+      --muted2: rgba(14,18,28,.45);
+      --shadow: 0 22px 70px rgba(2,6,23,.12);
+      --shadow2: 0 10px 30px rgba(2,6,23,.10);
+      --focus: 0 0 0 4px rgba(33,112,255,.18);
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color: var(--text);
+      background:
+        radial-gradient(900px 600px at 15% 0%, rgba(108,168,255,.28) 0%, rgba(108,168,255,0) 55%),
+        radial-gradient(900px 600px at 90% 20%, rgba(118,242,180,.18) 0%, rgba(118,242,180,0) 60%),
+        linear-gradient(180deg, var(--bg2), var(--bg));
+      overflow-x:hidden;
+    }
+
+    /* Topbar */
+    .topbar{
+      position:sticky; top:0; z-index:50;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      background: linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,0));
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    [data-theme="light"] .topbar{
+      background: linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.35));
+      border-bottom:1px solid rgba(14,18,28,.08);
+    }
+    .topbar-inner{
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 14px 16px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px;
+      min-width: 240px;
+    }
+    .logo{
+      width:34px; height:34px; border-radius:12px;
+      background:
+        radial-gradient(16px 16px at 30% 30%, rgba(255,255,255,.35), rgba(255,255,255,0)),
+        linear-gradient(180deg, rgba(108,168,255,.95), rgba(108,168,255,.25));
+      box-shadow: 0 14px 40px rgba(108,168,255,.22);
+      border:1px solid rgba(255,255,255,.18);
+    }
+    [data-theme="light"] .logo{
+      border:1px solid rgba(14,18,28,.10);
+      box-shadow: 0 14px 40px rgba(33,112,255,.15);
+    }
+    .brand h1{
+      font-size: 14px; margin:0; letter-spacing:.2px;
+    }
+    .brand p{
+      margin:0; font-size:12px; color: var(--muted); line-height:1.25;
+    }
+    .actions{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    /* Layout */
+    .wrap{
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 14px 16px 26px;
+      display:grid;
+      grid-template-columns: 1.08fr .92fr;
+      gap: 14px;
+      align-items:start;
+    }
+    @media (max-width: 1080px){
+      .wrap{grid-template-columns:1fr}
+      .brand{min-width:auto}
+    }
+
+    /* Cards */
+    .card{
+      border-radius: var(--radius);
+      border: 1px solid var(--stroke);
+      background: linear-gradient(180deg, var(--panel), var(--panel2));
+      box-shadow: var(--shadow2);
+      overflow:hidden;
+      position:relative;
+    }
+    .card::before{
+      content:"";
+      position:absolute; inset:-1px;
+      background: radial-gradient(800px 260px at 10% 0%, rgba(108,168,255,.10), transparent 60%);
+      pointer-events:none;
+    }
+    [data-theme="light"] .card::before{
+      background: radial-gradient(800px 260px at 10% 0%, rgba(33,112,255,.10), transparent 60%);
+    }
+
+    .card-hd{
+      padding: 12px 12px 10px;
+      display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+      border-bottom: 1px solid var(--stroke);
+      background: rgba(0,0,0,.04);
+    }
+    [data-theme="light"] .card-hd{ background: rgba(255,255,255,.55); }
+    .card-title{
+      display:flex; align-items:center; gap:10px;
+      min-width: 240px;
+    }
+    .badge{
+      font-size:12px; color: var(--muted);
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--stroke);
+      background: rgba(0,0,0,.10);
+    }
+    [data-theme="light"] .badge{ background: rgba(255,255,255,.55); }
+
+    .card-bd{ padding: 12px; }
+
+    /* Controls */
+    .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .row + .row{ margin-top: 10px; }
+    .sp{ flex:1; }
+
+    .field{
+      display:flex; flex-direction:column; gap:6px;
+      flex:1; min-width: 220px;
+    }
+    .label{ font-size:12px; color: var(--muted); }
+    .hint{ font-size:12px; color: var(--muted2); line-height:1.35; }
+
+    input[type="text"], input[type="number"], select{
+      width:100%;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--stroke);
+      background: rgba(0,0,0,.10);
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      transition: .16s border-color, .16s transform, .16s background;
+    }
+    [data-theme="light"] input[type="text"],
+    [data-theme="light"] input[type="number"],
+    [data-theme="light"] select{
+      background: rgba(255,255,255,.85);
+    }
+    input:focus, select:focus{
+      border-color: rgba(var(--primary), .55);
+      box-shadow: var(--focus);
+    }
+
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--stroke);
+      background: rgba(0,0,0,.12);
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+      user-select:none;
+      transition: .16s transform, .16s background, .16s border-color, .16s box-shadow;
+      white-space:nowrap;
+    }
+    [data-theme="light"] .btn{ background: rgba(255,255,255,.85); }
+    .btn:hover{ transform: translateY(-1px); border-color: var(--stroke2); background: rgba(255,255,255,.06); }
+    [data-theme="light"] .btn:hover{ background: rgba(255,255,255,1); }
+    .btn:active{ transform: translateY(0px); }
+    .btn:focus{ outline:none; box-shadow: var(--focus); border-color: rgba(var(--primary), .55); }
+
+    .btn.primary{
+      border-color: rgba(var(--primary), .45);
+      background: rgba(var(--primary), .18);
+    }
+    .btn.success{
+      border-color: rgba(var(--success), .35);
+      background: rgba(var(--success), .14);
+    }
+    .btn.danger{
+      border-color: rgba(var(--danger), .35);
+      background: rgba(var(--danger), .12);
+    }
+    .btn.ghost{ background: transparent; }
+    .btn.small{ padding: 8px 10px; border-radius: 12px; font-size:12px; }
+    .seg{
+      display:flex; gap:8px; flex-wrap:wrap;
+      align-items:center;
+      padding: 10px;
+      border-radius: 16px;
+      border: 1px solid var(--stroke);
+      background: rgba(0,0,0,.08);
+    }
+    [data-theme="light"] .seg{ background: rgba(255,255,255,.65); }
+    .check{
+      display:flex; gap:8px; align-items:center;
+      font-size: 12px; color: var(--muted);
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--stroke);
+      background: rgba(0,0,0,.10);
+    }
+    [data-theme="light"] .check{ background: rgba(255,255,255,.80); }
+
+    .kbd{
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 9px;
+      border: 1px solid var(--stroke);
+      background: rgba(0,0,0,.12);
+      color: var(--text);
+    }
+    [data-theme="light"] .kbd{ background: rgba(255,255,255,.9); }
+
+    /* Table */
+    .table-wrap{
+      border-radius: 16px;
+      border: 1px solid var(--stroke);
+      overflow:hidden;
+      background: rgba(0,0,0,.10);
+    }
+    [data-theme="light"] .table-wrap{ background: rgba(255,255,255,.78); }
+    table{
+      width:100%;
+      border-collapse: separate;
+      border-spacing:0;
+    }
+    thead th{
+      text-align:left;
+      font-size:12px;
+      color: var(--muted);
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--stroke);
+      background: rgba(0,0,0,.05);
+      white-space:nowrap;
+    }
+    [data-theme="light"] thead th{ background: rgba(255,255,255,.9); }
+    tbody td{
+      padding:0;
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    [data-theme="light"] tbody td{ border-bottom:1px solid rgba(14,18,28,.07); }
+    tbody tr:last-child td{ border-bottom:none; }
+    input.cell{
+      width:100%;
+      border:none;
+      outline:none;
+      padding: 11px 12px;
+      font-size:13px;
+      color: var(--text);
+      background: transparent;
+    }
+    input.cell::placeholder{ color: var(--muted2); }
+
+    td.action{ width: 74px; text-align:center; }
+
+    /* Canvas */
+    .canvas-wrap{
+      padding: 12px;
+    }
+    canvas{
+      width:100%;
+      height: 640px;
+      display:block;
+      border-radius: 18px;
+      border: 1px solid var(--stroke);
+      background: rgba(0,0,0,.10);
+      cursor: crosshair;
+    }
+    [data-theme="light"] canvas{ background: rgba(255,255,255,.92); }
+
+    /* Legend */
+    .legend{
+      display:flex; flex-wrap:wrap; gap:10px;
+      margin-top: 10px;
+    }
+    .legend .item{
+      display:flex; align-items:center; gap:10px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--stroke);
+      background: rgba(0,0,0,.10);
+      color: var(--muted);
+      cursor:pointer;
+      user-select:none;
+      transition:.15s transform, .15s background, .15s border-color;
+    }
+    [data-theme="light"] .legend .item{ background: rgba(255,255,255,.85); }
+    .legend .item:hover{ transform: translateY(-1px); border-color: var(--stroke2); }
+    .legend .item.off{ opacity:.45; filter:saturate(.65); }
+    .dot{ width:10px; height:10px; border-radius:999px; display:inline-block; }
+
+    /* Tooltip */
+    .tooltip{
+      position: fixed; z-index: 80;
+      pointer-events:none;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--stroke);
+      background: rgba(10,14,22,.92);
+      color: rgba(255,255,255,.92);
+      box-shadow: var(--shadow2);
+      display:none;
+      max-width: 360px;
+    }
+    [data-theme="light"] .tooltip{
+      background: rgba(255,255,255,.96);
+      color: rgba(14,18,28,.92);
+    }
+    .tooltip .t{ font-weight: 650; margin-bottom: 8px; display:flex; align-items:center; gap:10px;}
+    .tooltip .kv{ display:flex; justify-content:space-between; gap:12px; font-size:12px; color: rgba(255,255,255,.78); }
+    [data-theme="light"] .tooltip .kv{ color: rgba(14,18,28,.72); }
+    .tooltip .v{ font-family: var(--mono); color: inherit; }
+
+    /* Toasts */
+    .toasts{
+      position: fixed;
+      right: 14px;
+      bottom: 14px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      z-index: 90;
+      width: min(420px, calc(100vw - 28px));
+    }
+    .toast{
+      border-radius: 16px;
+      border: 1px solid var(--stroke);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.05));
+      box-shadow: var(--shadow2);
+      padding: 10px 12px;
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      animation: pop .18s ease-out;
+    }
+    [data-theme="light"] .toast{
+      background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.82));
+    }
+    @keyframes pop{
+      from{ transform: translateY(6px); opacity:0; }
+      to{ transform: translateY(0); opacity:1; }
+    }
+    .toast .title{ font-size:13px; font-weight:650; margin:0; }
+    .toast .msg{ margin:2px 0 0; font-size:12px; color: var(--muted); line-height:1.35; }
+    .toast .icon{
+      width: 26px; height:26px; border-radius: 10px;
+      display:flex; align-items:center; justify-content:center;
+      border:1px solid var(--stroke);
+      background: rgba(0,0,0,.10);
+      flex:none;
+    }
+    [data-theme="light"] .toast .icon{ background: rgba(255,255,255,.92); }
+    .toast.ok .icon{ border-color: rgba(var(--success),.35); }
+    .toast.err .icon{ border-color: rgba(var(--danger),.35); }
+    .toast .x{
+      margin-left:auto;
+      border:none;
+      background: transparent;
+      color: var(--muted);
+      cursor:pointer;
+      font-size: 18px;
+      line-height: 1;
+      padding: 2px 6px;
+      border-radius: 10px;
+    }
+    .toast .x:hover{ background: rgba(255,255,255,.08); color: var(--text); }
+    [data-theme="light"] .toast .x:hover{ background: rgba(14,18,28,.06); }
+
+    /* Panels in left */
+    .mini{
+      border-radius: 16px;
+      border: 1px solid var(--stroke);
+      background: rgba(0,0,0,.08);
+      padding: 10px;
+    }
+    [data-theme="light"] .mini{ background: rgba(255,255,255,.72); }
+
+    .stats-grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    @media (max-width: 520px){ .stats-grid{ grid-template-columns:1fr; } }
+    .stat{
+      border-radius: 16px;
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,.03);
+      padding: 10px;
+    }
+    [data-theme="light"] .stat{ background: rgba(255,255,255,.92); }
+    .stat .head{
+      display:flex; align-items:center; gap:10px;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .stat .kvline{
+      display:flex; justify-content:space-between; gap:12px;
+      color: var(--muted);
+      font-size: 12px;
+      padding: 2px 0;
+    }
+    .stat .kvline .v{ font-family: var(--mono); color: var(--text); }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce){
+      *{ animation: none !important; transition: none !important; scroll-behavior:auto !important; }
+    }
+  </style>
+</head>
+
+<body data-theme="dark">
+  <div class="topbar" role="banner">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Charts Studio</h1>
+          <p>Planilha → gráfico com pontos • 1 arquivo • <span class="kbd">Ctrl</span>+<span class="kbd">V</span> (colar) • <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> (gerar)</p>
+        </div>
+      </div>
+
+      <div class="actions" role="toolbar" aria-label="Ações">
+        <button class="btn small ghost" id="btnTheme" aria-label="Alternar tema">Tema</button>
+        <button class="btn small" id="btnSaveJSON">Salvar Projeto</button>
+        <input id="fileJSON" type="file" accept=".json,application/json" hidden>
+        <button class="btn small" id="btnLoadJSON">Carregar</button>
+        <button class="btn small" id="btnSVG">Exportar SVG</button>
+        <button class="btn small" id="btnPNG">Exportar PNG</button>
+      </div>
+    </div>
+  </div>
+
+  <main class="wrap" role="main">
+    <!-- LEFT: Data/Config -->
+    <section class="card" aria-label="Dados e Configurações">
+      <div class="card-hd">
+        <div class="card-title">
+          <strong>Dados</strong>
+          <span class="badge">Cole Excel/Sheets • Suporta múltiplas séries</span>
+        </div>
+        <div class="row" style="margin:0">
+          <button class="btn" id="btnAddRow">+ Linha</button>
+          <button class="btn" id="btnAddSeries">+ Série</button>
+          <button class="btn success" id="btnExample">Exemplo</button>
+          <button class="btn danger" id="btnClear">Limpar</button>
+        </div>
+      </div>
+
+      <div class="card-bd">
+        <div class="row">
+          <div class="field">
+            <div class="label">Título</div>
+            <input id="title" type="text" value="Gráfico: Y por X" />
+          </div>
+          <div class="field" style="min-width:200px">
+            <div class="label">Tipo de X</div>
+            <select id="xMode">
+              <option value="auto">Auto</option>
+              <option value="numeric">Numérico</option>
+              <option value="category">Texto (categorias)</option>
+              <option value="datetime">Data/Hora</option>
+            </select>
+          </div>
+          <div class="field" style="min-width:200px">
+            <div class="label">Ordenar X</div>
+            <select id="sortX">
+              <option value="auto">Auto</option>
+              <option value="no">Não</option>
+              <option value="yes">Sim</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <div class="label">Eixo X</div>
+            <input id="xLabel" type="text" value="X"/>
+          </div>
+          <div class="field">
+            <div class="label">Eixo Y</div>
+            <input id="yLabel" type="text" value="Y"/>
+          </div>
+        </div>
+
+        <div class="seg" aria-label="Opções">
+          <label class="check"><input id="chkLogY" type="checkbox"/> Y em escala log10</label>
+          <label class="check"><input id="chkMA" type="checkbox"/> Suavizar (Moving Average)</label>
+          <div class="field" style="min-width:140px; flex:0">
+            <div class="label">Janela</div>
+            <input id="maWindow" type="number" min="2" max="99" step="1" value="5"/>
+          </div>
+          <span class="sp"></span>
+          <button class="btn primary" id="btnPlot">Gerar gráfico</button>
+          <button class="btn" id="btnReset">Reset zoom/pan</button>
+        </div>
+
+        <div class="hint" style="margin-top:10px">
+          Dicas: <span class="kbd">Ctrl</span>+<span class="kbd">V</span> cole direto na tabela.
+          Zoom: roda do mouse (<span class="kbd">Shift</span> = eixo Y). Pan: arrastar no gráfico.
+          Data/Hora: <span style="font-family:var(--mono)">12/01/2026 14:30</span> ou <span style="font-family:var(--mono)">2026-01-12T14:30</span>.
+        </div>
+
+        <div style="height:12px"></div>
+
+        <div class="table-wrap" id="gridWrap">
+          <table id="grid" aria-label="Tabela de dados (X e Y)">
+            <thead><tr id="theadRow">
+              <th style="width:30%">X</th>
+              <th style="width:25%">Y1</th>
+              <th style="width:74px; text-align:center">Rem</th>
+            </tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+
+        <div style="height:12px"></div>
+
+        <section class="mini" aria-label="Estatísticas e Estilos">
+          <div class="row" style="justify-content:space-between">
+            <strong style="font-size:13px">Estatísticas</strong>
+            <span class="hint">Atualiza ao gerar o gráfico</span>
+          </div>
+          <div id="statsPanel" class="stats-grid" style="margin-top:10px"></div>
+
+          <div style="height:10px"></div>
+
+          <div class="row" style="justify-content:space-between">
+            <strong style="font-size:13px">Estilo das séries</strong>
+            <span class="hint">Clique na legenda para ocultar/mostrar</span>
+          </div>
+          <div id="seriesPanel" class="hint" style="margin-top:10px">Gere um gráfico para editar estilos.</div>
+        </section>
+      </div>
+    </section>
+
+    <!-- RIGHT: Chart -->
+    <section class="card" aria-label="Gráfico">
+      <div class="card-hd">
+        <div class="card-title">
+          <strong>Gráfico</strong>
+          <span class="badge">Tooltip • Snap em X (numérico/data) • Export PNG/SVG</span>
+        </div>
+        <div class="row" style="margin:0">
+          <span class="badge">Atalho: <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span></span>
+        </div>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="cv"></canvas>
+        <div id="legend" class="legend" aria-label="Legenda"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="tooltip" class="tooltip" role="status" aria-live="polite"></div>
+  <div class="toasts" id="toasts" aria-live="polite" aria-atomic="true"></div>
+
+<script>
+/* =========================================================
+   Charts Studio (Single-file)
+   - Apple/Microsoft-like UX
+   - Paste Excel (TSV), multi-series
+   - X modes: auto/numeric/category/datetime
+   - logY, moving average
+   - zoom/pan, snap tooltip, exports
+   - project JSON + autosave
+========================================================= */
+
+const palette = [
+  "rgba(108,168,255,1)",
+  "rgba(118,242,180,1)",
+  "rgba(255,204,102,1)",
+  "rgba(255,92,92,1)",
+  "rgba(186,143,255,1)",
+  "rgba(94,234,212,1)",
+  "rgba(255,120,200,1)",
+  "rgba(180,255,120,1)",
+];
+
+const $ = (s)=>document.querySelector(s);
+const tbody = $("#tbody");
+const theadRow = $("#theadRow");
+const legendBox = $("#legend");
+const seriesPanel = $("#seriesPanel");
+const statsPanel = $("#statsPanel");
+const tooltip = $("#tooltip");
+const toasts = $("#toasts");
+const cv = $("#cv");
+const ctx = cv.getContext("2d");
+
+const LS_KEY = "charts_studio_apple_level_autosave_v1";
+
+const state = {
+  seriesCount: 1,
+  rows: 14,
+  styles: [],
+  visible: [],
+  selectedSeries: 0,
+  view: { zoomX: 1, zoomY: 1, panX: 0, panY: 0 },
+  lastPlot: null,
+};
+
+function toast(type, title, msg){
+  const el = document.createElement("div");
+  el.className = `toast ${type}`;
+  const icon = type==="ok" ? "✓" : type==="err" ? "!" : "i";
+  el.innerHTML = `
+    <div class="icon" aria-hidden="true">${icon}</div>
+    <div>
+      <p class="title">${title}</p>
+      <p class="msg">${msg}</p>
+    </div>
+    <button class="x" aria-label="Fechar">×</button>
+  `;
+  el.querySelector(".x").onclick = ()=> el.remove();
+  toasts.appendChild(el);
+  setTimeout(()=>{ if (el.isConnected) el.remove(); }, 5200);
+}
+
+function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
+
+function parseNumberBR(v){
+  if (v == null) return NaN;
+  v = String(v).trim();
+  if (!v) return NaN;
+  v = v.replace(/\s+/g,"");
+  if (v.includes(",")) v = v.replace(/\./g,"").replace(",",".");
+  const n = Number(v);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+function fmt(n, d=6){
+  if (!Number.isFinite(n)) return "NaN";
+  const s = n.toFixed(d);
+  return s.replace(/\.?0+$/,"");
+}
+
+/* Date/time */
+function parseDateTimeToMs(s){
+  if (s == null) return NaN;
+  const v = String(s).trim();
+  if (!v) return NaN;
+
+  // ISO-ish
+  let iso = v.replace(" ", "T");
+  let d = new Date(iso);
+  if (!isNaN(d.getTime())) return d.getTime();
+
+  // BR dd/mm/yyyy [hh:mm[:ss]]
+  const m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (m){
+    const dd = Number(m[1]), mm = Number(m[2]), yyyy = Number(m[3]);
+    const hh = Number(m[4] || 0), mi = Number(m[5] || 0), ss = Number(m[6] || 0);
+    const dt = new Date(yyyy, mm-1, dd, hh, mi, ss);
+    return dt.getTime();
+  }
+  return NaN;
+}
+
+function formatMsToLabel(ms){
+  const d = new Date(ms);
+  const dd = String(d.getDate()).padStart(2,"0");
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const yyyy = d.getFullYear();
+  const hh = String(d.getHours()).padStart(2,"0");
+  const mi = String(d.getMinutes()).padStart(2,"0");
+  if (hh !== "00" || mi !== "00") return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+/* Styles */
+function ensureStyleArrays(){
+  while(state.styles.length < state.seriesCount){
+    const i = state.styles.length;
+    state.styles.push({
+      name: "Y"+(i+1),
+      color: palette[i % palette.length],
+      width: 2,
+      point: 4.3,
+      dashed: false,
+    });
+  }
+  while(state.visible.length < state.seriesCount) state.visible.push(true);
+}
+
+/* Table build */
+function rebuildHeader(){
+  theadRow.innerHTML = "";
+  const thX = document.createElement("th");
+  thX.textContent = "X";
+  thX.style.width = "30%";
+  theadRow.appendChild(thX);
+
+  for(let s=1;s<=state.seriesCount;s++){
+    const th = document.createElement("th");
+    th.textContent = "Y" + s;
+    theadRow.appendChild(th);
+  }
+
+  const thRem = document.createElement("th");
+  thRem.textContent = "Rem";
+  thRem.style.width = "74px";
+  thRem.style.textAlign = "center";
+  theadRow.appendChild(thRem);
+}
+
+function addRow(values=null){
+  const tr = document.createElement("tr");
+
+  const tdX = document.createElement("td");
+  const inX = document.createElement("input");
+  inX.className="cell";
+  inX.placeholder = "Ex: 1 ou 12/01/2026 14:30";
+  inX.value = values?.x ?? "";
+  tdX.appendChild(inX);
+  tr.appendChild(tdX);
+
+  for(let s=1;s<=state.seriesCount;s++){
+    const tdY = document.createElement("td");
+    const inY = document.createElement("input");
+    inY.className="cell";
+    inY.placeholder = "Ex: 10,5";
+    inY.value = values?.ys?.[s-1] ?? "";
+    tdY.appendChild(inY);
+    tr.appendChild(tdY);
+  }
+
+  const tdA = document.createElement("td");
+  tdA.className="action";
+  const btn = document.createElement("button");
+  btn.className="btn small danger";
+  btn.textContent="×";
+  btn.title="Remover linha";
+  btn.onclick = ()=>{ tr.remove(); autosave(); };
+  tdA.appendChild(btn);
+  tr.appendChild(tdA);
+
+  tbody.appendChild(tr);
+}
+
+function clearGrid(){
+  tbody.innerHTML = "";
+  for(let i=0;i<state.rows;i++) addRow();
+}
+
+function addSeries(){
+  state.seriesCount += 1;
+  rebuildHeader();
+  const rows = [...tbody.querySelectorAll("tr")];
+  rows.forEach(tr=>{
+    const tdY = document.createElement("td");
+    const inY = document.createElement("input");
+    inY.className="cell";
+    inY.placeholder="Ex: 10,5";
+    tdY.appendChild(inY);
+    tr.insertBefore(tdY, tr.lastElementChild);
+  });
+  ensureStyleArrays();
+  autosave();
+  toast("ok","Série adicionada",`Agora você tem ${state.seriesCount} séries Y.`);
+}
+
+function getGridMatrix(){
+  const rows = [...tbody.querySelectorAll("tr")];
+  return rows.map(tr => [...tr.querySelectorAll("input")].map(i => i.value.trim()));
+}
+
+function setGridFromMatrix(mat){
+  if (!mat.length) return;
+  const needCols = Math.max(2, ...mat.map(r=>r.length));
+  const needSeries = Math.max(1, needCols-1);
+  while(state.seriesCount < needSeries) addSeries();
+
+  const currentRows = tbody.querySelectorAll("tr").length;
+  if (currentRows < mat.length){
+    for(let i=0;i<mat.length-currentRows;i++) addRow();
+  }
+
+  const rows = [...tbody.querySelectorAll("tr")];
+  for(let r=0;r<mat.length;r++){
+    const inputs = [...rows[r].querySelectorAll("input")];
+    for(let c=0;c<Math.min(inputs.length, mat[r].length);c++){
+      inputs[c].value = mat[r][c];
+    }
+  }
+  autosave();
+}
+
+/* Paste Excel/Sheets (TSV) */
+function parseClipboardTSV(text){
+  const lines = text.replace(/\r/g,"").split("\n").filter(l=>l.length>0);
+  return lines.map(l => l.split("\t"));
+}
+
+$("#grid").addEventListener("paste", (e)=>{
+  const text = (e.clipboardData || window.clipboardData).getData("text");
+  if (!text) return;
+  const mat = parseClipboardTSV(text);
+  if (mat.length && mat[0].length >= 2){
+    e.preventDefault();
+    setGridFromMatrix(mat);
+    toast("ok","Dados colados","Conteúdo colado da área de transferência.");
+  }
+});
+
+/* Autosave + Project */
+function getProject(){
+  return {
+    version: 1,
+    meta: {
+      title: $("#title").value,
+      xLabel: $("#xLabel").value,
+      yLabel: $("#yLabel").value,
+      xMode: $("#xMode").value,
+      sortX: $("#sortX").value,
+      logY: $("#chkLogY").checked,
+      ma: $("#chkMA").checked,
+      maWindow: Number($("#maWindow").value || 5),
+      theme: document.body.getAttribute("data-theme") || "dark",
+    },
+    seriesCount: state.seriesCount,
+    styles: state.styles,
+    visible: state.visible,
+    data: getGridMatrix(),
+  };
+}
+
+function autosave(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(getProject())); }catch{}
+}
+
+function loadProject(proj){
+  if (!proj || typeof proj !== "object") return toast("err","Projeto inválido","Não foi possível carregar este JSON.");
+
+  state.seriesCount = Math.max(1, Number(proj.seriesCount || 1));
+  state.styles = Array.isArray(proj.styles) ? proj.styles : [];
+  state.visible = Array.isArray(proj.visible) ? proj.visible : [];
+  ensureStyleArrays();
+
+  rebuildHeader();
+  clearGrid();
+
+  $("#title").value = proj.meta?.title ?? "Gráfico: Y por X";
+  $("#xLabel").value = proj.meta?.xLabel ?? "X";
+  $("#yLabel").value = proj.meta?.yLabel ?? "Y";
+  $("#xMode").value = proj.meta?.xMode ?? "auto";
+  $("#sortX").value = proj.meta?.sortX ?? "auto";
+  $("#chkLogY").checked = !!proj.meta?.logY;
+  $("#chkMA").checked = !!proj.meta?.ma;
+  $("#maWindow").value = String(proj.meta?.maWindow ?? 5);
+
+  const theme = proj.meta?.theme;
+  if (theme === "light" || theme === "dark") setTheme(theme);
+
+  if (Array.isArray(proj.data)) setGridFromMatrix(proj.data);
+
+  state.view = { zoomX:1, zoomY:1, panX:0, panY:0 };
+  state.lastPlot = null;
+  tooltip.style.display="none";
+  legendBox.innerHTML="";
+  seriesPanel.innerHTML="Gere um gráfico para editar estilos.";
+  statsPanel.innerHTML="";
+  drawEmpty();
+
+  toast("ok","Projeto carregado","Tudo certo. Você pode gerar o gráfico.");
+  autosave();
+}
+
+function tryLoadAutosave(){
+  try{
+    const s = localStorage.getItem(LS_KEY);
+    if (!s) return;
+    loadProject(JSON.parse(s));
+  }catch{}
+}
+
+/* Theme */
+function setTheme(t){
+  document.body.setAttribute("data-theme", t);
+  autosave();
+}
+$("#btnTheme").addEventListener("click", ()=>{
+  const cur = document.body.getAttribute("data-theme") || "dark";
+  setTheme(cur==="dark" ? "light" : "dark");
+  toast("ok","Tema atualizado",`Tema atual: ${document.body.getAttribute("data-theme")}.`);
+});
+
+/* Data read */
+function movingAverage(points, window){
+  const w = Math.max(2, Math.floor(window));
+  if (points.length < w) return points.slice();
+  const out = [];
+  let sum = 0;
+  for(let i=0;i<points.length;i++){
+    sum += points[i].y;
+    if (i >= w) sum -= points[i-w].y;
+    if (i >= w-1){
+      out.push({...points[i], y: sum/w, _ma:true});
+    }
+  }
+  const prefix = points.slice(0, w-1).map(p => ({...p, y: p.y, _ma:true}));
+  return prefix.concat(out);
+}
+
+function readDataFromGrid(){
+  ensureStyleArrays();
+
+  const mat = getGridMatrix();
+  const rows = mat.filter(r => r.some(v => v !== ""));
+  if (rows.length < 2) return { ok:false, msg:"Insira pelo menos 2 linhas com dados." };
+
+  let mode = $("#xMode").value; // auto|numeric|category|datetime
+  const xsRaw = rows.map(r => r[0]);
+
+  if (mode === "auto"){
+    const numCount = xsRaw.map(parseNumberBR).filter(Number.isFinite).length;
+    const dtCount  = xsRaw.map(parseDateTimeToMs).filter(Number.isFinite).length;
+    if (dtCount >= Math.ceil(xsRaw.length*0.7)) mode="datetime";
+    else if (numCount >= Math.ceil(xsRaw.length*0.7)) mode="numeric";
+    else mode="category";
+  }
+
+  const logY = $("#chkLogY").checked;
+
+  const series = [];
+  for(let s=0;s<state.seriesCount;s++){
+    series.push({ idx:s, name: state.styles[s]?.name ?? ("Y"+(s+1)), points: [] });
+  }
+
+  for(let i=0;i<rows.length;i++){
+    const r = rows[i];
+    const xLabel = r[0] || String(i+1);
+    const xNum = parseNumberBR(r[0]);
+    const xMs  = parseDateTimeToMs(r[0]);
+
+    if (mode==="numeric" && !Number.isFinite(xNum)){
+      return { ok:false, msg:`Linha ${i+1}: X precisa ser numérico. Você colocou “${r[0]}”.` };
+    }
+    if (mode==="datetime" && !Number.isFinite(xMs)){
+      return { ok:false, msg:`Linha ${i+1}: X precisa ser Data/Hora. Você colocou “${r[0]}”.` };
+    }
+
+    for(let s=0;s<state.seriesCount;s++){
+      const yStr = r[1+s] ?? "";
+      if (yStr==="") continue;
+      const yNum = parseNumberBR(yStr);
+      if (!Number.isFinite(yNum)){
+        return { ok:false, msg:`Linha ${i+1}: Y${s+1} inválido (“${yStr}”).` };
+      }
+      if (logY && yNum <= 0){
+        return { ok:false, msg:`LogY ligado: Linha ${i+1} em Y${s+1} precisa ser > 0.` };
+      }
+      series[s].points.push({ xLabel, xNum, xMs, y: yNum, idx:i });
+    }
+  }
+
+  const anyGood = series.some(s => s.points.length >= 2);
+  if (!anyGood) return { ok:false, msg:"Você precisa de pelo menos 2 pontos em alguma série." };
+
+  const sortUI = $("#sortX").value;
+  const doSort = (mode!=="category") && (sortUI==="yes" || sortUI==="auto");
+  if (doSort){
+    series.forEach(s=>{
+      s.points.sort((a,b)=>{
+        const ax = mode==="numeric" ? a.xNum : a.xMs;
+        const bx = mode==="numeric" ? b.xNum : b.xMs;
+        return ax-bx;
+      });
+    });
+  }
+
+  const doMA = $("#chkMA").checked;
+  const win = Number($("#maWindow").value || 5);
+  if (doMA){
+    series.forEach(s=>{
+      if (s.points.length>=2) s.points = movingAverage(s.points, win);
+    });
+  }
+
+  let baseCategories = [];
+  if (mode==="category"){
+    const big = series.reduce((a,b)=> (b.points.length>a.points.length?b:a), series[0]);
+    baseCategories = big.points.map(p=>p.xLabel);
+  }
+
+  return { ok:true, mode, logY, series, baseCategories };
+}
+
+/* Stats */
+function computeStats(points){
+  const ys = points.map(p=>p.y).filter(Number.isFinite);
+  const n = ys.length;
+  if (!n) return null;
+  const min = Math.min(...ys);
+  const max = Math.max(...ys);
+  const mean = ys.reduce((a,b)=>a+b,0)/n;
+  const varr = ys.reduce((a,b)=>a+(b-mean)*(b-mean),0)/Math.max(1,n-1);
+  const std = Math.sqrt(varr);
+  return {n,min,max,mean,std};
+}
+function renderStats(plot){
+  statsPanel.innerHTML="";
+  plot.series.forEach(s=>{
+    const idx = s.idx;
+    const st = state.styles[idx];
+    const stat = computeStats(s.points);
+    if (!stat) return;
+
+    const el = document.createElement("div");
+    el.className="stat";
+    el.innerHTML = `
+      <div class="head">
+        <span class="dot" style="background:${st.color}"></span>
+        <strong style="color:var(--text)">${st.name}</strong>
+        <span style="margin-left:auto">${state.visible[idx] ? "" : "oculta"}</span>
+      </div>
+      <div class="kvline"><span>n</span><span class="v">${stat.n}</span></div>
+      <div class="kvline"><span>min</span><span class="v">${fmt(stat.min,6)}</span></div>
+      <div class="kvline"><span>max</span><span class="v">${fmt(stat.max,6)}</span></div>
+      <div class="kvline"><span>média</span><span class="v">${fmt(stat.mean,6)}</span></div>
+      <div class="kvline"><span>desvio</span><span class="v">${fmt(stat.std,6)}</span></div>
+    `;
+    statsPanel.appendChild(el);
+  });
+}
+
+/* Series style editor */
+function renderSeriesPanel(){
+  if (!state.lastPlot){
+    seriesPanel.innerHTML = "Gere um gráfico para editar estilos.";
+    return;
+  }
+  ensureStyleArrays();
+  const buttons = state.lastPlot.series.map(si=>{
+    const st = state.styles[si.idx];
+    const active = state.selectedSeries === si.idx;
+    return `<button class="btn small ${active?'primary':''}" data-s="${si.idx}">${st.name}</button>`;
+  }).join("");
+
+  const st = state.styles[state.selectedSeries] || state.styles[0];
+
+  seriesPanel.innerHTML = `
+    <div class="row">${buttons}</div>
+    <div class="row" style="margin-top:10px">
+      <div class="field" style="min-width:220px">
+        <div class="label">Nome</div>
+        <input id="styName" type="text" value="${st.name}"/>
+      </div>
+      <div class="field" style="min-width:260px">
+        <div class="label">Cor</div>
+        <input id="styColor" type="text" value="${st.color}"/>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field" style="min-width:150px; flex:0">
+        <div class="label">Espessura</div>
+        <input id="styWidth" type="number" min="1" max="10" step="1" value="${st.width}"/>
+      </div>
+      <div class="field" style="min-width:150px; flex:0">
+        <div class="label">Ponto</div>
+        <input id="styPoint" type="number" min="0" max="12" step="0.5" value="${st.point}"/>
+      </div>
+      <label class="check"><input id="styDash" type="checkbox" ${st.dashed?"checked":""}/> Tracejado</label>
+      <span class="sp"></span>
+      <span class="hint">Cor pode ser <span style="font-family:var(--mono)">rgba()</span> ou <span style="font-family:var(--mono)">#RRGGBB</span></span>
+    </div>
+  `;
+
+  seriesPanel.querySelectorAll("button[data-s]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      state.selectedSeries = Number(b.getAttribute("data-s"));
+      renderSeriesPanel();
+    });
+  });
+
+  const bind = (id, fn)=>{
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener("input", fn);
+    el.addEventListener("change", fn);
+  };
+
+  bind("styName", ()=>{
+    state.styles[state.selectedSeries].name = ($("#styName").value.trim() || ("Y"+(state.selectedSeries+1)));
+    autosave(); render();
+  });
+  bind("styColor", ()=>{
+    state.styles[state.selectedSeries].color = ($("#styColor").value.trim() || palette[state.selectedSeries % palette.length]);
+    autosave(); render();
+  });
+  bind("styWidth", ()=>{
+    state.styles[state.selectedSeries].width = clamp(Number($("#styWidth").value)||2, 1, 10);
+    autosave(); render();
+  });
+  bind("styPoint", ()=>{
+    state.styles[state.selectedSeries].point = clamp(Number($("#styPoint").value)||0, 0, 12);
+    autosave(); render();
+  });
+  bind("styDash", ()=>{
+    state.styles[state.selectedSeries].dashed = $("#styDash").checked;
+    autosave(); render();
+  });
+}
+
+/* Chart rendering */
+function resizeCanvasToCSS(){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = cv.getBoundingClientRect();
+  const w = Math.max(320, Math.round(rect.width));
+  const h = Math.max(360, Math.round(rect.height));
+  cv.width = Math.round(w * dpr);
+  cv.height = Math.round(h * dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {W:w, H:h};
+}
+function niceStep(range, targetTicks){
+  const raw = range / Math.max(1, targetTicks);
+  const pow = Math.pow(10, Math.floor(Math.log10(raw)));
+  const r = raw / pow;
+  let step;
+  if (r < 1.5) step = 1;
+  else if (r < 3.5) step = 2;
+  else if (r < 7.5) step = 5;
+  else step = 10;
+  return step * pow;
+}
+
+function computeBounds(mode, series, logY){
+  const ys=[], xs=[];
+  series.forEach(s=>{
+    if (!state.visible[s.idx]) return;
+    s.points.forEach(p=>{
+      ys.push(p.y);
+      if (mode==="numeric") xs.push(p.xNum);
+      else if (mode==="datetime") xs.push(p.xMs);
+    });
+  });
+
+  let yMin = Math.min(...ys), yMax = Math.max(...ys);
+  if (!Number.isFinite(yMin) || !Number.isFinite(yMax)){ yMin=0; yMax=1; }
+
+  if (logY){ yMin = Math.log10(yMin); yMax = Math.log10(yMax); }
+  if (yMin === yMax){ yMin -= 1; yMax += 1; }
+  const yPad = (yMax-yMin)*0.08;
+  yMin -= yPad; yMax += yPad;
+
+  let xMin=0, xMax=1;
+  if (mode==="numeric" || mode==="datetime"){
+    xMin = Math.min(...xs); xMax = Math.max(...xs);
+    if (xMin === xMax){ xMin -= 1; xMax += 1; }
+    const xPad = (xMax-xMin)*0.06;
+    xMin -= xPad; xMax += xPad;
+  }else{
+    const maxN = Math.max(...series.map(s=>s.points.length));
+    xMin=0; xMax=Math.max(1, maxN-1);
+  }
+  return {xMin,xMax,yMin,yMax};
+}
+
+function computeViewWindow(bounds, plotW, plotH){
+  const zoomX = clamp(state.view.zoomX, 0.3, 80);
+  const zoomY = clamp(state.view.zoomY, 0.3, 80);
+  const baseXSpan = bounds.xMax - bounds.xMin;
+  const baseYSpan = bounds.yMax - bounds.yMin;
+
+  const xSpan = baseXSpan / zoomX;
+  const ySpan = baseYSpan / zoomY;
+
+  const panXUnit = (state.view.panX / plotW) * xSpan;
+  const panYUnit = (state.view.panY / plotH) * ySpan;
+
+  const xCenter = (bounds.xMin + bounds.xMax)/2 - panXUnit;
+  const yCenter = (bounds.yMin + bounds.yMax)/2 + panYUnit;
+
+  return {
+    xMin: xCenter - xSpan/2, xMax: xCenter + xSpan/2,
+    yMin: yCenter - ySpan/2, yMax: yCenter + ySpan/2
+  };
+}
+
+function drawEmpty(){
+  const {W,H} = resizeCanvasToCSS();
+  ctx.clearRect(0,0,W,H);
+
+  // subtle grid
+  ctx.fillStyle = "rgba(0,0,0,.03)";
+  ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle = "rgba(255,255,255,.62)";
+  if (document.body.getAttribute("data-theme")==="light") ctx.fillStyle = "rgba(14,18,28,.62)";
+  ctx.font = "14px " + getComputedStyle(document.body).fontFamily;
+  ctx.fillText("Cole dados na tabela e clique em “Gerar gráfico”.", 18, 30);
+
+  ctx.fillStyle = "rgba(255,255,255,.42)";
+  if (document.body.getAttribute("data-theme")==="light") ctx.fillStyle = "rgba(14,18,28,.42)";
+  ctx.font = "12px " + getComputedStyle(document.body).fontFamily;
+  ctx.fillText("Dica: Ctrl+V para colar do Excel/Sheets • Ctrl+Enter para gerar", 18, 52);
+}
+
+function buildLegend(plot){
+  legendBox.innerHTML="";
+  plot.series.forEach(s=>{
+    const idx = s.idx;
+    const st = state.styles[idx];
+    const item = document.createElement("div");
+    item.className = "item" + (state.visible[idx] ? "" : " off");
+    item.innerHTML = `<span class="dot" style="background:${st.color}"></span><span>${st.name}</span>`;
+    item.addEventListener("click", ()=>{
+      state.visible[idx] = !state.visible[idx];
+      autosave();
+      render();
+    });
+    legendBox.appendChild(item);
+  });
+}
+
+function drawChart(plot){
+  const {W,H} = resizeCanvasToCSS();
+  ctx.clearRect(0,0,W,H);
+
+  const padL=78, padR=18, padT=34, padB=64;
+  const plotW = W-padL-padR;
+  const plotH = H-padT-padB;
+
+  const theme = document.body.getAttribute("data-theme") || "dark";
+  const isLight = theme==="light";
+
+  // background
+  ctx.fillStyle = isLight ? "rgba(255,255,255,.92)" : "rgba(0,0,0,.03)";
+  ctx.fillRect(0,0,W,H);
+
+  const view = computeViewWindow(plot.bounds, plotW, plotH);
+  const xToPx = (x)=> padL + ((x-view.xMin)/(view.xMax-view.xMin))*plotW;
+  const yToPx = (y)=> padT + (1 - (y-view.yMin)/(view.yMax-view.yMin))*plotH;
+
+  // grid
+  const yRange = view.yMax - view.yMin;
+  const xRange = view.xMax - view.xMin;
+  const yMajor = niceStep(yRange, 6), yMinor = yMajor/5;
+
+  ctx.lineWidth=1;
+
+  ctx.strokeStyle = isLight ? "rgba(14,18,28,.06)" : "rgba(255,255,255,.05)";
+  for(let v=Math.floor(view.yMin/yMinor)*yMinor; v<=view.yMax; v+=yMinor){
+    const py=yToPx(v);
+    ctx.beginPath(); ctx.moveTo(padL,py); ctx.lineTo(padL+plotW,py); ctx.stroke();
+  }
+
+  ctx.strokeStyle = isLight ? "rgba(14,18,28,.10)" : "rgba(255,255,255,.10)";
+  for(let v=Math.floor(view.yMin/yMajor)*yMajor; v<=view.yMax; v+=yMajor){
+    const py=yToPx(v);
+    ctx.beginPath(); ctx.moveTo(padL,py); ctx.lineTo(padL+plotW,py); ctx.stroke();
+  }
+
+  // axis
+  ctx.strokeStyle = isLight ? "rgba(14,18,28,.22)" : "rgba(255,255,255,.22)";
+  ctx.beginPath(); ctx.moveTo(padL,padT); ctx.lineTo(padL,padT+plotH); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(padL,padT+plotH); ctx.lineTo(padL+plotW,padT+plotH); ctx.stroke();
+
+  // title + labels
+  const title = $("#title").value.trim() || "Gráfico";
+  const xLabel = $("#xLabel").value.trim() || "X";
+  const yLabel = $("#yLabel").value.trim() || "Y";
+
+  ctx.fillStyle = isLight ? "rgba(14,18,28,.92)" : "rgba(255,255,255,.92)";
+  ctx.font = "13px " + getComputedStyle(document.body).fontFamily;
+  ctx.fillText(title, padL, 18);
+
+  ctx.fillStyle = isLight ? "rgba(14,18,28,.65)" : "rgba(255,255,255,.65)";
+  ctx.font = "12px " + getComputedStyle(document.body).fontFamily;
+  ctx.fillText(xLabel, padL+plotW-ctx.measureText(xLabel).width, padT+plotH+46);
+
+  ctx.save();
+  ctx.translate(18, padT + plotH/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText(yLabel, 0, 0);
+  ctx.restore();
+
+  // y labels (major)
+  ctx.fillStyle = isLight ? "rgba(14,18,28,.62)" : "rgba(255,255,255,.62)";
+  for(let v=Math.floor(view.yMin/yMajor)*yMajor; v<=view.yMax; v+=yMajor){
+    const py=yToPx(v);
+    let label = v.toFixed(2);
+    if (plot.logY) label = fmt(Math.pow(10, v), 6);
+    ctx.fillText(label, 10, py+4);
+  }
+
+  // x labels
+  ctx.fillStyle = isLight ? "rgba(14,18,28,.62)" : "rgba(255,255,255,.62)";
+  if (plot.mode==="numeric" || plot.mode==="datetime"){
+    const xMajor = niceStep(xRange, 7), xMinor = xMajor/5;
+
+    ctx.strokeStyle = isLight ? "rgba(14,18,28,.05)" : "rgba(255,255,255,.04)";
+    for(let v=Math.floor(view.xMin/xMinor)*xMinor; v<=view.xMax; v+=xMinor){
+      const px=xToPx(v);
+      ctx.beginPath(); ctx.moveTo(px,padT); ctx.lineTo(px,padT+plotH); ctx.stroke();
+    }
+
+    ctx.strokeStyle = isLight ? "rgba(14,18,28,.08)" : "rgba(255,255,255,.08)";
+    for(let v=Math.floor(view.xMin/xMajor)*xMajor; v<=view.xMax; v+=xMajor){
+      const px=xToPx(v);
+      ctx.beginPath(); ctx.moveTo(px,padT); ctx.lineTo(px,padT+plotH); ctx.stroke();
+
+      let label = v.toFixed(2);
+      if (plot.mode==="datetime") label = formatMsToLabel(v);
+
+      ctx.save();
+      ctx.translate(px, padT+plotH+18);
+      ctx.rotate(-0.25);
+      ctx.fillText(label.length>16 ? label.slice(0,16)+"…" : label, -10, 0);
+      ctx.restore();
+    }
+  }else{
+    const base = plot.baseCategories;
+    const maxLabels = 7;
+    const step = Math.max(1, Math.ceil(base.length/maxLabels));
+    for(let i=0;i<base.length;i+=step){
+      const px=xToPx(i);
+      const label = base[i] ?? String(i+1);
+      const text = label.length>12 ? label.slice(0,12)+"…" : label;
+      ctx.save();
+      ctx.translate(px, padT+plotH+18);
+      ctx.rotate(-0.35);
+      ctx.fillText(text, -10, 0);
+      ctx.restore();
+    }
+  }
+
+  // series draw
+  plot.series.forEach(s=>{
+    const idx = s.idx;
+    if (!state.visible[idx]) return;
+    const st = state.styles[idx];
+
+    ctx.strokeStyle = st.color;
+    ctx.lineWidth = st.width;
+    ctx.setLineDash(st.dashed ? [8,6] : []);
+
+    ctx.beginPath();
+    s.points.forEach((p,i)=>{
+      const xVal = plot.mode==="numeric" ? p.xNum : plot.mode==="datetime" ? p.xMs : p.idx;
+      const yVal = plot.logY ? Math.log10(p.y) : p.y;
+      const px=xToPx(xVal), py=yToPx(yVal);
+      if (i===0) ctx.moveTo(px,py);
+      else ctx.lineTo(px,py);
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const pr = st.point;
+    if (pr > 0){
+      s.points.forEach(p=>{
+        const xVal = plot.mode==="numeric" ? p.xNum : plot.mode==="datetime" ? p.xMs : p.idx;
+        const yVal = plot.logY ? Math.log10(p.y) : p.y;
+        const px=xToPx(xVal), py=yToPx(yVal);
+        ctx.beginPath();
+        ctx.fillStyle = st.color;
+        ctx.arc(px, py, pr, 0, Math.PI*2);
+        ctx.fill();
+        ctx.strokeStyle = isLight ? "rgba(14,18,28,.18)" : "rgba(0,0,0,.35)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+    }
+  });
+
+  // hover crosshair
+  if (plot._hover){
+    const {xPx,yPx} = plot._hover;
+    ctx.strokeStyle = isLight ? "rgba(14,18,28,.18)" : "rgba(255,255,255,.18)";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(xPx, padT); ctx.lineTo(xPx, padT+plotH); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(padL, yPx); ctx.lineTo(padL+plotW, yPx); ctx.stroke();
+
+    ctx.beginPath();
+    ctx.fillStyle = isLight ? "rgba(14,18,28,.92)" : "rgba(255,255,255,.92)";
+    ctx.arc(xPx, yPx, 5.2, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  plot._render = {W,H,padL,padT,padR,padB,plotW,plotH,view,xToPx,yToPx};
+}
+
+/* Tooltip / snap */
+function nearestX(plot, mx){
+  const r = plot._render;
+  if (!r) return null;
+  const xVal = r.view.xMin + (mx - r.padL)/r.plotW * (r.view.xMax - r.view.xMin);
+  let bestX=null, bestDx=Infinity;
+
+  for(const s of plot.series){
+    if (!state.visible[s.idx]) continue;
+    for(const p of s.points){
+      const px = plot.mode==="numeric" ? p.xNum : p.xMs;
+      const dx = Math.abs(px - xVal);
+      if (dx < bestDx){ bestDx=dx; bestX=px; }
+    }
+  }
+  return bestX;
+}
+
+function findNearestPoint(plot, mx, my){
+  const r = plot._render;
+  if (!r) return null;
+
+  const inside = (mx>=r.padL && mx<=r.padL+r.plotW && my>=r.padT && my<=r.padT+r.plotH);
+  if (!inside) return null;
+
+  let snap = null;
+  if (plot.mode==="numeric" || plot.mode==="datetime"){
+    snap = nearestX(plot, mx);
+  }
+
+  let best=null, bestD=Infinity;
+  for(const s of plot.series){
+    if (!state.visible[s.idx]) continue;
+    const st = state.styles[s.idx];
+
+    for(const p of s.points){
+      const xVal = plot.mode==="numeric" ? p.xNum : plot.mode==="datetime" ? p.xMs : p.idx;
+
+      if ((plot.mode==="numeric" || plot.mode==="datetime") && Number.isFinite(snap)){
+        if (Math.abs(xVal - snap) > 1e-9) continue;
+      }
+
+      const useX = Number.isFinite(snap) ? snap : xVal;
+      const yVal = plot.logY ? Math.log10(p.y) : p.y;
+
+      const xPx = r.xToPx(useX);
+      const yPx = r.yToPx(yVal);
+
+      const dx=xPx-mx, dy=yPx-my;
+      const d=Math.sqrt(dx*dx+dy*dy);
+
+      if (d < bestD){
+        bestD=d;
+        best={seriesIdx:s.idx, seriesName: st.name, color: st.color, point:p, xPx, yPx, dist:d};
+      }
+    }
+  }
+  return (best && bestD<=24) ? best : null;
+}
+
+function showTooltip(nearest, clientX, clientY, plot){
+  if (!nearest){ tooltip.style.display="none"; return; }
+  const p = nearest.point;
+  let xText = p.xLabel;
+  if (plot.mode==="numeric") xText = fmt(p.xNum, 6);
+  if (plot.mode==="datetime") xText = formatMsToLabel(p.xMs);
+
+  tooltip.innerHTML = `
+    <div class="t"><span class="dot" style="background:${nearest.color}"></span>${nearest.seriesName}</div>
+    <div class="kv"><span>X</span><span class="v">${xText}</span></div>
+    <div class="kv"><span>Y</span><span class="v">${fmt(p.y,6)}</span></div>
+    <div class="kv"><span>Linha</span><span class="v">${p.idx+1}</span></div>
+  `;
+  tooltip.style.display="block";
+
+  const pad=14;
+  const w=tooltip.offsetWidth, h=tooltip.offsetHeight;
+  let left=clientX+pad, top=clientY+pad;
+  if (left+w > window.innerWidth-8) left=clientX-w-pad;
+  if (top+h > window.innerHeight-8) top=clientY-h-pad;
+
+  tooltip.style.left = left+"px";
+  tooltip.style.top = top+"px";
+}
+
+/* Render pipeline */
+function render(){
+  if (!state.lastPlot) return drawEmpty();
+
+  state.lastPlot.bounds = computeBounds(state.lastPlot.mode, state.lastPlot.series, state.lastPlot.logY);
+  buildLegend(state.lastPlot);
+  renderSeriesPanel();
+  renderStats(state.lastPlot);
+  drawChart(state.lastPlot);
+}
+
+/* Plot */
+function plotNow(){
+  const res = readDataFromGrid();
+  if (!res.ok){
+    toast("err","Verifique os dados", res.msg);
+    return;
+  }
+
+  state.lastPlot = {
+    mode: res.mode,
+    logY: res.logY,
+    series: res.series,
+    baseCategories: res.baseCategories,
+    bounds: computeBounds(res.mode, res.series, res.logY),
+    _hover: null,
+    _render: null,
+  };
+
+  tooltip.style.display="none";
+  render();
+  autosave();
+  toast("ok","Gráfico gerado","Tudo certo — use a legenda para ocultar séries.");
+}
+
+/* Export */
+function downloadText(filename, text, type="application/octet-stream"){
+  const blob = new Blob([text], {type});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function exportPNG(){
+  if (!state.lastPlot) return toast("err","Nada para exportar","Gere um gráfico primeiro.");
+  const url = cv.toDataURL("image/png");
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "grafico.png";
+  a.click();
+  toast("ok","PNG exportado","Arquivo grafico.png gerado.");
+}
+
+function svgEscape(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function exportSVG(){
+  if (!state.lastPlot || !state.lastPlot._render) return toast("err","Nada para exportar","Gere o gráfico primeiro.");
+
+  const plot = state.lastPlot;
+  const r = plot._render;
+  const W=r.W, H=r.H;
+  const padL=r.padL, padT=r.padT, plotW=r.plotW, plotH=r.plotH;
+  const view = r.view;
+
+  const xToPx = (x)=> padL + ((x-view.xMin)/(view.xMax-view.xMin))*plotW;
+  const yToPx = (y)=> padT + (1 - (y-view.yMin)/(view.yMax-view.yMin))*plotH;
+
+  const title = svgEscape($("#title").value || "Gráfico");
+  const xLabel = svgEscape($("#xLabel").value || "X");
+  const yLabel = svgEscape($("#yLabel").value || "Y");
+
+  let svg = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+  svg += `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">\n`;
+  svg += `<rect x="0" y="0" width="${W}" height="${H}" fill="white"/>\n`;
+  svg += `<text x="${padL}" y="18" font-size="13" font-family="Arial" fill="#111">${title}</text>\n`;
+  svg += `<text x="${padL+plotW-5}" y="${padT+plotH+46}" font-size="12" text-anchor="end" font-family="Arial" fill="#444">${xLabel}</text>\n`;
+  svg += `<text x="18" y="${padT + plotH/2}" font-size="12" font-family="Arial" fill="#444" transform="rotate(-90 18 ${padT + plotH/2})">${yLabel}</text>\n`;
+  svg += `<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT+plotH}" stroke="#666" stroke-width="1"/>\n`;
+  svg += `<line x1="${padL}" y1="${padT+plotH}" x2="${padL+plotW}" y2="${padT+plotH}" stroke="#666" stroke-width="1"/>\n`;
+
+  plot.series.forEach(s=>{
+    if (!state.visible[s.idx]) return;
+    const st = state.styles[s.idx];
+    const pts = s.points.map(p=>{
+      const xVal = plot.mode==="numeric" ? p.xNum : plot.mode==="datetime" ? p.xMs : p.idx;
+      const yVal = plot.logY ? Math.log10(p.y) : p.y;
+      return [xToPx(xVal), yToPx(yVal)];
+    });
+    if (pts.length < 2) return;
+
+    const d = pts.map((p,i)=> (i===0?`M ${p[0].toFixed(2)} ${p[1].toFixed(2)}`:`L ${p[0].toFixed(2)} ${p[1].toFixed(2)}`)).join(" ");
+    const dash = st.dashed ? ` stroke-dasharray="8 6"` : "";
+    svg += `<path d="${d}" fill="none" stroke="${st.color}" stroke-width="${st.width}"${dash}/>\n`;
+
+    if (st.point > 0){
+      pts.forEach(p=>{
+        svg += `<circle cx="${p[0].toFixed(2)}" cy="${p[1].toFixed(2)}" r="${st.point}" fill="${st.color}" stroke="rgba(0,0,0,.25)" stroke-width="1"/>\n`;
+      });
+    }
+  });
+
+  svg += `</svg>`;
+  downloadText("grafico.svg", svg, "image/svg+xml;charset=utf-8");
+  toast("ok","SVG exportado","Arquivo grafico.svg gerado.");
+}
+
+/* Save/load JSON */
+$("#btnSaveJSON").addEventListener("click", ()=>{
+  downloadText("projeto_grafico.json", JSON.stringify(getProject(), null, 2), "application/json;charset=utf-8");
+  toast("ok","Projeto salvo","Arquivo projeto_grafico.json gerado.");
+});
+$("#btnLoadJSON").addEventListener("click", ()=> $("#fileJSON").click());
+$("#fileJSON").addEventListener("change", async (e)=>{
+  const file = e.target.files?.[0];
+  if (!file) return;
+  try{
+    const text = await file.text();
+    loadProject(JSON.parse(text));
+  }catch{
+    toast("err","Falha ao carregar","JSON inválido ou corrompido.");
+  }
+  e.target.value="";
+});
+
+/* Buttons */
+$("#btnAddRow").addEventListener("click", ()=>{ addRow(); autosave(); });
+$("#btnAddSeries").addEventListener("click", ()=> addSeries());
+$("#btnPlot").addEventListener("click", ()=> plotNow());
+$("#btnReset").addEventListener("click", ()=>{
+  state.view = { zoomX:1, zoomY:1, panX:0, panY:0 };
+  tooltip.style.display="none";
+  if (state.lastPlot){ state.lastPlot._hover=null; render(); }
+  toast("ok","Visual resetado","Zoom e pan voltaram ao padrão.");
+});
+$("#btnPNG").addEventListener("click", exportPNG);
+$("#btnSVG").addEventListener("click", exportSVG);
+
+$("#btnClear").addEventListener("click", ()=>{
+  state.seriesCount = 1;
+  state.styles = [];
+  state.visible = [];
+  state.selectedSeries = 0;
+  ensureStyleArrays();
+  rebuildHeader();
+  clearGrid();
+
+  state.view = { zoomX:1, zoomY:1, panX:0, panY:0 };
+  state.lastPlot = null;
+
+  tooltip.style.display="none";
+  legendBox.innerHTML="";
+  seriesPanel.innerHTML="Gere um gráfico para editar estilos.";
+  statsPanel.innerHTML="";
+  drawEmpty();
+  autosave();
+  toast("ok","Limpo","Tabela e gráfico foram resetados.");
+});
+
+$("#btnExample").addEventListener("click", ()=>{
+  // add 2 séries
+  while(state.seriesCount < 2) addSeries();
+  tbody.innerHTML = "";
+  const ex = [
+    {x:"12/01/2026 08:00", ys:["1","1.2"]},
+    {x:"12/01/2026 09:00", ys:["1.4","1.7"]},
+    {x:"12/01/2026 10:00", ys:["1.9","2.2"]},
+    {x:"12/01/2026 11:00", ys:["2.5","2.9"]},
+    {x:"12/01/2026 12:00", ys:["3.2","3.5"]},
+    {x:"12/01/2026 13:00", ys:["4.1","4.4"]},
+    {x:"12/01/2026 14:00", ys:["5.0","5.3"]},
+    {x:"12/01/2026 15:00", ys:["6.1","6.2"]},
+    {x:"12/01/2026 16:00", ys:["7.0","7.4"]},
+    {x:"12/01/2026 17:00", ys:["8.2","8.7"]},
+  ];
+  ex.forEach(r=>addRow(r));
+  addRow();
+
+  $("#title").value = "Exemplo: Data/Hora (monitoramento)";
+  $("#xLabel").value = "Tempo";
+  $("#yLabel").value = "Resposta";
+  $("#xMode").value = "datetime";
+  $("#sortX").value = "yes";
+  $("#chkMA").checked = true;
+  $("#maWindow").value = "3";
+  $("#chkLogY").checked = false;
+
+  autosave();
+  plotNow();
+});
+
+/* Keyboard shortcuts */
+document.addEventListener("keydown", (e)=>{
+  const meta = e.ctrlKey || e.metaKey;
+  if (meta && e.key === "Enter"){
+    e.preventDefault();
+    plotNow();
+  }
+});
+
+/* Canvas interactions: pan/zoom + hover */
+let dragging=false;
+let last={x:0,y:0};
+
+cv.addEventListener("mousedown", (e)=>{
+  if (!state.lastPlot) return;
+  dragging=true;
+  last={x:e.clientX,y:e.clientY};
+  cv.style.cursor="grabbing";
+});
+window.addEventListener("mouseup", ()=>{
+  dragging=false;
+  cv.style.cursor="crosshair";
+});
+window.addEventListener("mousemove", (e)=>{
+  if (!state.lastPlot) return;
+
+  if (dragging){
+    const dx=e.clientX-last.x;
+    const dy=e.clientY-last.y;
+    last={x:e.clientX,y:e.clientY};
+    state.view.panX += dx;
+    state.view.panY += dy;
+    tooltip.style.display="none";
+    state.lastPlot._hover=null;
+    render();
+    return;
+  }
+});
+
+cv.addEventListener("wheel", (e)=>{
+  if (!state.lastPlot) return;
+  e.preventDefault();
+
+  const delta = Math.sign(e.deltaY);
+  const factor = (delta > 0) ? 0.9 : 1.1;
+
+  if (e.shiftKey) state.view.zoomY *= factor;
+  else state.view.zoomX *= factor;
+
+  state.view.zoomX = clamp(state.view.zoomX, 0.3, 80);
+  state.view.zoomY = clamp(state.view.zoomY, 0.3, 80);
+
+  tooltip.style.display="none";
+  state.lastPlot._hover=null;
+  render();
+},{passive:false});
+
+cv.addEventListener("mousemove", (e)=>{
+  if (!state.lastPlot || dragging) return;
+  const rect = cv.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  const nearest = findNearestPoint(state.lastPlot, mx, my);
+  if (nearest){
+    state.lastPlot._hover = {xPx: nearest.xPx, yPx: nearest.yPx, nearest};
+    showTooltip(nearest, e.clientX, e.clientY, state.lastPlot);
+  }else{
+    state.lastPlot._hover=null;
+    tooltip.style.display="none";
+  }
+  render();
+});
+cv.addEventListener("mouseleave", ()=>{
+  tooltip.style.display="none";
+  if (state.lastPlot){
+    state.lastPlot._hover=null;
+    render();
+  }
+});
+
+/* Autosave on input */
+document.addEventListener("input", (e)=>{
+  const t=e.target;
+  if (!t) return;
+  if (t.matches("input") || t.matches("select")) autosave();
+});
+
+/* Start */
+rebuildHeader();
+clearGrid();
+ensureStyleArrays();
+drawEmpty();
+tryLoadAutosave();
+window.addEventListener("resize", ()=>{ state.lastPlot ? render() : drawEmpty(); });
+
+</script>
+</body>
+</html>
