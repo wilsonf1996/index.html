@@ -1,0 +1,2092 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0A84FF" />
+  <title>Registro de Localização — Pro</title>
+  <link rel="icon" href="favicon.ico" />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+  <style>
+    :root{
+      --bg:#F2F2F7;
+      --card:rgba(255,255,255,.78);
+      --card2:rgba(255,255,255,.62);
+      --text:#0B0B0F;
+      --muted:rgba(60,60,67,.60);
+      --hair:rgba(60,60,67,.18);
+      --shadow:0 18px 55px rgba(0,0,0,.10);
+      --shadow2:0 14px 40px rgba(0,0,0,.12);
+      --blur:saturate(180%) blur(18px);
+
+      --r14:14px; --r18:18px; --r22:22px; --r26:26px;
+      --accent:#007AFF;
+      --accent2:#0A84FF;
+      --success:#34C759;
+      --warn:#FFCC00;
+      --danger:#FF3B30;
+
+      --safeTop:env(safe-area-inset-top,0px);
+      --safeBottom:env(safe-area-inset-bottom,0px);
+      --safeLeft:env(safe-area-inset-left,0px);
+      --safeRight:env(safe-area-inset-right,0px);
+
+      --tap:.965;
+      --sheetPeek:32%;
+      --maxW:1100px;
+    }
+    @media (prefers-color-scheme: dark){
+      :root{
+        --bg:#000;
+        --card:rgba(28,28,30,.80);
+        --card2:rgba(28,28,30,.64);
+        --text:#fff;
+        --muted:rgba(235,235,245,.60);
+        --hair:rgba(235,235,245,.18);
+        --shadow:0 18px 60px rgba(0,0,0,.55);
+        --shadow2:0 14px 44px rgba(0,0,0,.45);
+        --accent:#0A84FF;
+        --accent2:#64D2FF;
+      }
+    }
+    *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+    html,body{height:100%;}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, "SF Pro Text","SF Pro Display","Segoe UI", Roboto, Helvetica, Arial;
+      overflow:hidden;
+    }
+    .app{position:relative; height:100%; width:100%;}
+    #map{position:absolute; inset:0; z-index:1;}
+
+    .glass{
+      background:var(--card);
+      -webkit-backdrop-filter:var(--blur);
+      backdrop-filter:var(--blur);
+      border:1px solid var(--hair);
+      box-shadow:var(--shadow);
+      border-radius:var(--r26);
+    }
+
+    /* Topbar */
+    .topbar{
+      position:absolute; top:0; left:0; right:0;
+      z-index:10; pointer-events:none;
+      padding:calc(10px + var(--safeTop)) calc(12px + var(--safeRight)) 10px calc(12px + var(--safeLeft));
+    }
+    .topbar .row{
+      pointer-events:auto;
+      max-width:var(--maxW);
+      margin:0 auto;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px;
+      min-height:44px;
+      user-select:none;
+    }
+    .appicon{
+      width:34px; height:34px; border-radius:12px;
+      display:grid; place-items:center;
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      color:#fff; font-weight:900;
+      box-shadow:0 16px 32px rgba(10,132,255,.28);
+    }
+    .title{display:flex; flex-direction:column; line-height:1.1;}
+    .title b{font-size:14px; letter-spacing:.2px;}
+    .title span{font-size:12px; color:var(--muted);}
+
+    .status{
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px;
+      min-height:44px;
+      user-select:none;
+    }
+    .dot{width:10px; height:10px; border-radius:50%; background:#8E8E93; box-shadow:0 0 0 6px rgba(142,142,147,.18);}
+    .dot.online{background:var(--success); box-shadow:0 0 0 6px rgba(52,199,89,.18);}
+    .dot.offline{background:var(--warn); box-shadow:0 0 0 6px rgba(255,204,0,.18);}
+    .meta{display:flex; flex-direction:column; line-height:1.1; gap:2px;}
+    .meta b{font-size:12px;}
+    .meta span{font-size:12px; color:var(--muted);}
+
+    .iconbtn{
+      border:none;
+      cursor:pointer;
+      min-width:44px; min-height:44px;
+      padding:10px;
+      border-radius:16px;
+      background:var(--card);
+      -webkit-backdrop-filter:var(--blur);
+      backdrop-filter:var(--blur);
+      border:1px solid var(--hair);
+      box-shadow:var(--shadow2);
+      color:var(--text);
+      display:grid; place-items:center;
+      transition:transform .12s ease;
+      user-select:none;
+    }
+    .iconbtn:active{transform:scale(var(--tap));}
+    .iconbtn svg{width:20px; height:20px;}
+
+    /* Floating buttons */
+    .fabcol{
+      position:absolute;
+      right:calc(12px + var(--safeRight));
+      top:calc(88px + var(--safeTop));
+      z-index:10;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      pointer-events:auto;
+    }
+    .fab{
+      width:54px; height:54px;
+      border-radius:20px;
+      display:grid; place-items:center;
+      background:var(--card);
+      -webkit-backdrop-filter:var(--blur);
+      backdrop-filter:var(--blur);
+      border:1px solid var(--hair);
+      box-shadow:var(--shadow2);
+      color:var(--text);
+      cursor:pointer;
+      transition:transform .12s ease, filter .12s ease;
+      user-select:none;
+    }
+    .fab:active{transform:scale(var(--tap));}
+    .fab.primary{
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      border:none; color:#fff;
+      box-shadow:0 18px 40px rgba(10,132,255,.30);
+    }
+    .fab.active{outline:3px solid rgba(10,132,255,.28); filter:saturate(1.1);}
+    .fab svg{width:22px; height:22px;}
+
+    /* Bottom sheet */
+    .sheet{
+      position:absolute;
+      inset:auto 0 0 0;
+      z-index:12;
+      pointer-events:none;
+      padding:0 calc(10px + var(--safeRight)) calc(10px + var(--safeBottom)) calc(10px + var(--safeLeft));
+    }
+    .panel{
+      max-width:var(--maxW);
+      margin:0 auto;
+      pointer-events:auto;
+      background:var(--card);
+      -webkit-backdrop-filter:var(--blur);
+      backdrop-filter:var(--blur);
+      border:1px solid var(--hair);
+      border-radius:26px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      transform:translateY(var(--sheetPeek));
+      transition:transform .20s ease;
+    }
+    .sheet.expanded .panel{transform:translateY(0%);}
+    .grab{height:32px; display:flex; align-items:center; justify-content:center; cursor:grab; user-select:none;}
+    .grab:active{cursor:grabbing;}
+    .bar{width:42px; height:5px; border-radius:99px; background:rgba(120,120,128,.35);}
+
+    .tabs{
+      display:flex; gap:8px;
+      padding:0 14px 10px;
+      border-bottom:1px solid var(--hair);
+    }
+    .tab{
+      border:none; cursor:pointer;
+      border-radius:999px;
+      padding:8px 12px;
+      background:rgba(118,118,128,.12);
+      border:1px solid rgba(118,118,128,.10);
+      color:var(--text);
+      font-weight:900;
+      font-size:12px;
+      user-select:none;
+      transition:transform .12s ease;
+    }
+    .tab:active{transform:scale(var(--tap));}
+    .tab.active{
+      background:rgba(10,132,255,.16);
+      border-color:rgba(10,132,255,.22);
+      color:var(--accent);
+    }
+
+    .sheethead{
+      padding:0 14px 10px;
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .sheethead .left{display:flex; flex-direction:column; gap:2px; line-height:1.1;}
+    .sheethead .left b{font-size:14px; letter-spacing:.2px;}
+    .sheethead .left span{font-size:12px; color:var(--muted);}
+    .sheethead .right{display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;}
+
+    .btn{
+      border:none; cursor:pointer;
+      border-radius:14px;
+      padding:10px 12px;
+      font-size:12.5px;
+      font-weight:900;
+      color:var(--text);
+      background:rgba(118,118,128,.12);
+      border:1px solid rgba(118,118,128,.10);
+      transition:transform .12s ease;
+      user-select:none;
+    }
+    .btn:active{transform:scale(var(--tap));}
+    .btn.primary{
+      background:rgba(10,132,255,.16);
+      border-color:rgba(10,132,255,.22);
+      color:var(--accent);
+    }
+    .btn.danger{
+      background:rgba(255,59,48,.14);
+      border-color:rgba(255,59,48,.22);
+      color:var(--danger);
+    }
+
+    .filters{
+      padding:0 14px 12px;
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap:10px;
+    }
+    .filters2{
+      padding:0 14px 12px;
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap:10px;
+      padding-top:0;
+    }
+    .field{
+      background:rgba(118,118,128,.12);
+      border:1px solid rgba(118,118,128,.10);
+      border-radius:14px;
+      padding:10px 12px;
+      color:var(--text);
+      outline:none;
+      font-size:13px;
+      min-height:42px;
+      transition:box-shadow .16s ease, transform .16s ease;
+    }
+    .field:focus{
+      box-shadow:0 0 0 4px rgba(10,132,255,.18);
+      transform:translateY(-1px);
+      border-color:rgba(10,132,255,.35);
+    }
+
+    .sheetbody{
+      max-height:min(64vh,600px);
+      overflow:auto;
+      padding:0 10px 12px;
+    }
+    .list{display:flex; flex-direction:column; gap:10px; padding:0 4px;}
+
+    .item{
+      background:rgba(255,255,255,.70);
+      border:1px solid var(--hair);
+      border-radius:18px;
+      box-shadow:0 10px 25px rgba(0,0,0,.08);
+      padding:12px;
+    }
+    @media (prefers-color-scheme: dark){
+      .item{background:rgba(28,28,30,.72); box-shadow:0 12px 32px rgba(0,0,0,.35);}
+    }
+    .itemtop{display:flex; align-items:flex-start; justify-content:space-between; gap:10px;}
+    .itemtop b{font-size:14px; letter-spacing:.2px; line-height:1.2;}
+    .badge{
+      font-size:11px;
+      padding:6px 10px;
+      border-radius:999px;
+      background:rgba(10,132,255,.15);
+      border:1px solid rgba(10,132,255,.20);
+      color:var(--accent);
+      white-space:nowrap;
+    }
+    .sub{margin-top:6px; font-size:12px; color:var(--muted); line-height:1.35;}
+    .actions{margin-top:10px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;}
+    .files{margin-top:10px; display:flex; flex-wrap:wrap; gap:8px;}
+    .chiplink{
+      text-decoration:none;
+      font-size:12px;
+      font-weight:900;
+      padding:8px 10px;
+      border-radius:999px;
+      color:var(--accent);
+      background:rgba(10,132,255,.12);
+      border:1px solid rgba(10,132,255,.18);
+      transition:transform .12s ease;
+      user-select:none;
+    }
+    .chiplink:active{transform:scale(var(--tap));}
+    .smallhint{font-size:12px; color:var(--muted); line-height:1.35;}
+
+    /* Modals */
+    .modal{
+      position:absolute; inset:0;
+      z-index:20;
+      display:none;
+      align-items:flex-end;
+      justify-content:center;
+      padding:14px calc(12px + var(--safeRight)) calc(12px + var(--safeBottom)) calc(12px + var(--safeLeft));
+      background:rgba(0,0,0,.25);
+    }
+    .modal.open{display:flex;}
+    .modal .card{
+      width:min(var(--maxW),100%);
+      border-radius:26px;
+      background:var(--card);
+      -webkit-backdrop-filter:var(--blur);
+      backdrop-filter:var(--blur);
+      border:1px solid var(--hair);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .modalhead{
+      padding:12px 14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      border-bottom:1px solid var(--hair);
+    }
+    .modalhead b{font-size:14px; letter-spacing:.2px;}
+    .modalbody{
+      padding:14px;
+      display:grid;
+      grid-template-columns:1fr;
+      gap:12px;
+    }
+    .textarea{min-height:110px; resize:vertical;}
+    .row2{display:grid; grid-template-columns: 1fr 1fr; gap:10px;}
+    .modalfoot{
+      padding:12px 14px;
+      display:flex;
+      gap:10px;
+      justify-content:space-between;
+      align-items:center;
+      border-top:1px solid var(--hair);
+      flex-wrap:wrap;
+    }
+    .cta{
+      border:none;
+      cursor:pointer;
+      border-radius:16px;
+      padding:12px 14px;
+      font-weight:950;
+      font-size:13px;
+      color:#fff;
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      box-shadow:0 14px 30px rgba(10,132,255,.25);
+      user-select:none;
+      min-width:190px;
+      transition:transform .12s ease;
+    }
+    .cta:active{transform:scale(var(--tap));}
+    .ghost{
+      border:none;
+      cursor:pointer;
+      border-radius:16px;
+      padding:12px 14px;
+      font-weight:950;
+      font-size:13px;
+      background:rgba(118,118,128,.12);
+      border:1px solid rgba(118,118,128,.10);
+      color:var(--text);
+      user-select:none;
+      transition:transform .12s ease;
+    }
+    .ghost:active{transform:scale(var(--tap));}
+
+    /* Progress */
+    .progresswrap{display:none; gap:10px; align-items:center;}
+    .progresswrap.show{display:flex;}
+    .progress{flex:1; height:8px; border-radius:999px; background:rgba(118,118,128,.16); overflow:hidden; border:1px solid rgba(118,118,128,.12);}
+    .progress > div{height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:999px; transition:width .15s ease;}
+    .progtext{font-size:12px; color:var(--muted); min-width:62px; text-align:right;}
+
+    /* Toasts */
+    .toasts{
+      position:absolute;
+      left:12px;
+      bottom:calc(86px + var(--safeBottom));
+      z-index:30;
+      pointer-events:none;
+      width:min(420px, calc(100% - 24px));
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .toast{
+      pointer-events:auto;
+      background:rgba(28,28,30,.88);
+      -webkit-backdrop-filter:var(--blur);
+      backdrop-filter:var(--blur);
+      border:1px solid rgba(235,235,245,.16);
+      border-radius:18px;
+      padding:12px 12px;
+      box-shadow:0 18px 50px rgba(0,0,0,.35);
+      color:#fff;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      animation:pop .18s ease-out;
+    }
+    .toast p{margin:0; font-size:13px; line-height:1.35;}
+    .toast button{border:none; cursor:pointer; border-radius:14px; padding:8px 10px; background:rgba(255,255,255,.12); color:#fff; font-weight:950;}
+    @keyframes pop{from{transform:translateY(8px); opacity:.65} to{transform:none; opacity:1}}
+
+    @media (max-width: 900px){
+      .filters, .filters2{grid-template-columns:1fr;}
+      .row2{grid-template-columns:1fr;}
+      .topbar .row{gap:8px;}
+      .title b{font-size:13px;}
+    }
+    @media (prefers-reduced-motion: reduce){
+      *{transition:none !important; animation:none !important;}
+    }
+    .leaflet-control-attribution{font-size:11px; opacity:.85;}
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <div id="map"></div>
+
+    <!-- Top bar -->
+    <div class="topbar">
+      <div class="row">
+        <div class="brand glass">
+          <div class="appicon">L</div>
+          <div class="title">
+            <b>Registro de Localização</b>
+            <span id="subtitle">Inicializando…</span>
+          </div>
+        </div>
+
+        <div class="status glass">
+          <div id="netDot" class="dot"></div>
+          <div class="meta">
+            <b id="netText">—</b>
+            <span id="gpsText">GPS: —</span>
+          </div>
+        </div>
+
+        <button class="iconbtn" id="btnExpand" title="Abrir/fechar painel">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M6 7h12M6 12h12M6 17h12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Floating buttons -->
+    <div class="fabcol">
+      <button class="fab" id="btnLocate" title="Centralizar no meu GPS">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M12 7a5 5 0 1 0 0 10a5 5 0 0 0 0-10Z" stroke="currentColor" stroke-width="2"/>
+        </svg>
+      </button>
+
+      <button class="fab" id="btnFollow" title="Seguir minha posição (live)">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M12 21s7-5.2 7-11A7 7 0 1 0 5 10c0 5.8 7 11 7 11Z" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 11.5a1.5 1.5 0 1 0 0-3a1.5 1.5 0 0 0 0 3Z" fill="currentColor"/>
+        </svg>
+      </button>
+
+      <button class="fab" id="btnTrack" title="Iniciar/Parar trilha (tracking)">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M4 18c4-10 6 10 10 0s6 10 6 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+      <button class="fab primary" id="btnAdd" title="Adicionar registro">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M12 5v14M5 12h14" stroke="white" stroke-width="2.4" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Bottom sheet -->
+    <div class="sheet expanded" id="sheet">
+      <div class="panel">
+        <div class="grab" id="grabber"><div class="bar"></div></div>
+
+        <div class="tabs">
+          <button class="tab active" id="tabRecords">Registros</button>
+          <button class="tab" id="tabPlaces">Lugares</button>
+          <button class="tab" id="tabTools">Ferramentas</button>
+        </div>
+
+        <div class="sheethead">
+          <div class="left">
+            <b id="panelTitle">Registros</b>
+            <span id="countText">Carregando…</span>
+          </div>
+          <div class="right">
+            <button class="btn" id="btnReload">Recarregar</button>
+            <button class="btn" id="btnQuickCheck">Check-in rápido</button>
+            <button class="btn" id="btnExport">Exportar</button>
+            <button class="btn" id="btnPrivacy">Privacidade</button>
+          </div>
+        </div>
+
+        <div id="recordsFilters">
+          <div class="filters">
+            <input class="field" id="filterNote" placeholder="Nota…" />
+            <input class="field" id="filterDate" placeholder="Data (AAAA-MM-DD)…" />
+            <input class="field" id="filterLocation" placeholder="Localização…" />
+          </div>
+          <div class="filters2">
+            <input class="field" id="filterTags" placeholder="Tags (ex.: obra, vistoria)..." />
+            <input class="field" id="filterRange" placeholder="Período (ex.: 7d, hoje, 2026-01-01..2026-01-31)" />
+            <input class="field" id="filterRadius" placeholder="Raio (ex.: 500m) - usa seu GPS" />
+          </div>
+        </div>
+
+        <div class="sheetbody">
+          <div class="list" id="list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Add/Edit -->
+    <div class="modal" id="modal">
+      <div class="card">
+        <div class="modalhead">
+          <b id="modalTitle">Novo registro</b>
+          <button class="ghost" id="btnCloseModal">Fechar</button>
+        </div>
+
+        <div class="modalbody">
+          <textarea class="field textarea" id="note" placeholder="Digite uma nota (ex.: vistoria, reunião, visita técnica…)" required></textarea>
+          <input class="field" id="tags" placeholder="Tags separadas por vírgula (ex.: obra, vistoria, cliente)" />
+
+          <div class="row2">
+            <input class="field" type="file" id="fileUpload" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt" />
+            <div>
+              <div class="progresswrap" id="progressWrap">
+                <div class="progress"><div id="progressBar"></div></div>
+                <div class="progtext" id="progressText">0%</div>
+              </div>
+              <div class="smallhint" id="uploadHint">Imagens são comprimidas automaticamente (mais rápido e leve).</div>
+            </div>
+          </div>
+
+          <div id="previews" class="files"></div>
+
+          <div class="row2">
+            <button class="btn" id="btnPin">Fixar</button>
+            <button class="btn" id="btnSavePlaceFromRecord">Salvar como “Lugar”</button>
+          </div>
+
+          <div class="smallhint" id="saveHint">Vou registrar com o GPS atual + endereço.</div>
+          <div class="smallhint" id="httpsHint" style="display:none;">
+            ⚠️ Para GPS funcionar bem, use HTTPS (GitHub Pages/Vercel) e permita localização no navegador.
+          </div>
+        </div>
+
+        <div class="modalfoot">
+          <span class="smallhint" id="queueHint">Fila offline: 0 pendente(s)</span>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
+            <button class="ghost" id="btnCancelEdit">Cancelar</button>
+            <button class="cta" id="btnSave">Salvar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div class="modal" id="modalExport">
+      <div class="card">
+        <div class="modalhead">
+          <b>Exportar</b>
+          <button class="ghost" id="btnCloseExport">Fechar</button>
+        </div>
+        <div class="modalbody">
+          <div class="smallhint">Exporta os registros filtrados (o que você está vendo).</div>
+          <div class="row2">
+            <button class="btn primary" id="btnExportCSV">CSV (Excel)</button>
+            <button class="btn primary" id="btnExportKML">KML (Google Earth)</button>
+          </div>
+          <div class="row2">
+            <button class="btn primary" id="btnExportGPX">GPX (Garmin)</button>
+            <button class="btn" id="btnExportJSON">JSON</button>
+          </div>
+        </div>
+        <div class="modalfoot">
+          <span class="smallhint">KML/GPX ficam excelentes para trilhas (tracking).</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Privacy Modal -->
+    <div class="modal" id="modalPrivacy">
+      <div class="card">
+        <div class="modalhead">
+          <b>Privacidade</b>
+          <button class="ghost" id="btnClosePrivacy">Fechar</button>
+        </div>
+        <div class="modalbody">
+          <label class="smallhint"><input type="checkbox" id="privacyRoundCoords" /> Arredondar coordenadas (menos precisão na lista/export)</label>
+          <label class="smallhint"><input type="checkbox" id="privacyHideExactAddress" /> Mostrar só bairro/cidade (quando possível)</label>
+          <label class="smallhint"><input type="checkbox" id="privacyNoAutoCenter" /> Não ajustar mapa automaticamente</label>
+          <div class="row2">
+            <button class="btn" id="btnClearCache">Limpar cache de endereços</button>
+            <button class="btn danger" id="btnClearOffline">Limpar fila offline</button>
+          </div>
+        </div>
+        <div class="modalfoot">
+          <span class="smallhint">Nada aqui altera seu Firebase — é só no navegador.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toasts -->
+    <div class="toasts" id="toasts"></div>
+  </div>
+
+  <!-- Firebase (mantido) -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+
+  <!-- Leaflet -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <script>
+    /* =========================================================
+       Firebase (SEM MEXER)
+       ========================================================= */
+    const firebaseConfig = {
+      apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+      authDomain: "agenda-6accc.firebaseapp.com",
+      databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+      projectId: "agenda-6accc",
+      storageBucket: "agenda-6accc.appspot.com",
+      messagingSenderId: "794262176773",
+      appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+      measurementId: "G-CVBQ54PERH"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    const storage = firebase.storage();
+
+    /* =========================================================
+       Helpers
+       ========================================================= */
+    const $ = (id)=>document.getElementById(id);
+    function escapeHtml(str){
+      return String(str ?? "").replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+    }
+    function setSubtitle(t){ $('subtitle').textContent = t; }
+    function toast(msg, ms=3200){
+      const wrap = $('toasts');
+      const el = document.createElement('div');
+      el.className = 'toast';
+      el.innerHTML = `<p>${escapeHtml(msg)}</p><button>OK</button>`;
+      el.querySelector('button').onclick = ()=>el.remove();
+      wrap.appendChild(el);
+      setTimeout(()=>{ if(el.isConnected) el.remove(); }, ms);
+    }
+    function nowISODate(){ return new Date().toISOString().slice(0,10); }
+    function nowTimeBR(){
+      return new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    }
+    function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
+    function uniqueName(original){
+      const safe = String(original || "file").replace(/[^\w.\-]+/g, "_");
+      return `${Date.now()}_${Math.random().toString(16).slice(2)}_${safe}`;
+    }
+    function parseCoords(str){
+      if(!str) return null;
+      const p = String(str).split(',').map(s=>parseFloat(s.trim()));
+      if(p.length!==2 || !Number.isFinite(p[0]) || !Number.isFinite(p[1])) return null;
+      return {lat:p[0], lon:p[1]};
+    }
+    function roundCoord(val, decimals){
+      const p = Math.pow(10, decimals);
+      return Math.round(val*p)/p;
+    }
+    function parseTags(text){
+      return String(text||"")
+        .split(',')
+        .map(t=>t.trim().toLowerCase())
+        .filter(Boolean)
+        .slice(0, 25);
+    }
+    function distM(a,b){
+      const R=6371000;
+      const toRad=(d)=>d*Math.PI/180;
+      const dLat=toRad(b.lat-a.lat), dLon=toRad(b.lon-a.lon);
+      const lat1=toRad(a.lat), lat2=toRad(b.lat);
+      const s=Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+      return 2*R*Math.asin(Math.sqrt(s));
+    }
+    function formatMeters(m){
+      if(!Number.isFinite(m)) return "—";
+      if(m<1000) return `${Math.round(m)} m`;
+      return `${(m/1000).toFixed(2)} km`;
+    }
+    function polygonAreaM2(points){
+      if(points.length < 3) return 0;
+      const lat0 = points[0].lat * Math.PI/180;
+      const R = 6371000;
+      const proj = (p)=>{
+        const x = R * (p.lon*Math.PI/180) * Math.cos(lat0);
+        const y = R * (p.lat*Math.PI/180);
+        return {x,y};
+      }
+      const pts = points.map(proj);
+      let area=0;
+      for(let i=0;i<pts.length;i++){
+        const j=(i+1)%pts.length;
+        area += pts[i].x*pts[j].y - pts[j].x*pts[i].y;
+      }
+      return Math.abs(area/2);
+    }
+    function formatArea(m2){
+      if(m2 < 10000) return `${Math.round(m2)} m²`;
+      return `${(m2/10000).toFixed(3)} ha`;
+    }
+    function downloadText(filename, text, mime="text/plain"){
+      const blob = new Blob([text], {type:mime});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href=url; a.download=filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 1500);
+    }
+    function normalizeRange(str){
+      const s = (str||"").trim().toLowerCase();
+      if(!s) return null;
+      if(s==="hoje") return {type:"days", days:0};
+      const mDays = s.match(/^(\d+)\s*d$/);
+      if(mDays) return {type:"days", days: parseInt(mDays[1],10)};
+      const mBetween = s.match(/^(\d{4}-\d{2}-\d{2})\s*\.\.\s*(\d{4}-\d{2}-\d{2})$/);
+      if(mBetween) return {type:"between", a:mBetween[1], b:mBetween[2]};
+      const mYM = s.match(/^(\d{4}-\d{2})$/);
+      if(mYM) return {type:"month", ym:mYM[1]};
+      return {type:"text", raw:s};
+    }
+    function formatDayHeader(dateISO){
+      const d = new Date(dateISO + "T00:00:00");
+      const today = new Date(); today.setHours(0,0,0,0);
+      const that = new Date(d); that.setHours(0,0,0,0);
+      const diffDays = Math.round((today - that) / 86400000);
+      if(diffDays===0) return "Hoje";
+      if(diffDays===1) return "Ontem";
+      if(diffDays<=7) return "Últimos 7 dias";
+      return dateISO;
+    }
+
+    /* =========================================================
+       Preferences (privacy)
+       ========================================================= */
+    const PREF_KEY = "geo_prefs_v2";
+    const prefs = JSON.parse(localStorage.getItem(PREF_KEY) || "{}");
+    function savePrefs(){ localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); }
+    function applyPrefsToUI(){
+      $('privacyRoundCoords').checked = !!prefs.roundCoords;
+      $('privacyHideExactAddress').checked = !!prefs.hideExactAddress;
+      $('privacyNoAutoCenter').checked = !!prefs.noAutoCenter;
+    }
+    function privacyCoords(c){
+      if(!c) return null;
+      if(!prefs.roundCoords) return c;
+      return {lat: roundCoord(c.lat, 4), lon: roundCoord(c.lon, 4)}; // ~11m
+    }
+    function privacyLocation(locObj, fallbackText){
+      if(!locObj) return fallbackText || "—";
+      if(prefs.hideExactAddress) return locObj.short || locObj.full || fallbackText || "—";
+      return locObj.full || locObj.short || fallbackText || "—";
+    }
+
+    /* =========================================================
+       Network status
+       ========================================================= */
+    function updateNetUI(){
+      const online = navigator.onLine;
+      $('netDot').classList.toggle('online', online);
+      $('netDot').classList.toggle('offline', !online);
+      $('netText').textContent = online ? 'Online' : 'Offline';
+    }
+    window.addEventListener('online', ()=>{ updateNetUI(); flushOfflineQueue(); });
+    window.addEventListener('offline', updateNetUI);
+
+    /* =========================================================
+       Offline queue (writes/deletes)
+       ========================================================= */
+    const OFFLINE_QUEUE_KEY = "offlineQueue_v2";
+    function getOfflineQueue(){ return JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || "[]"); }
+    function setOfflineQueue(q){ localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(q)); updateQueueHint(); }
+    function enqueue(action){
+      const q = getOfflineQueue();
+      q.push({...action, ts: Date.now()});
+      setOfflineQueue(q);
+    }
+    function updateQueueHint(){
+      const q = getOfflineQueue();
+      $('queueHint').textContent = `Fila offline: ${q.length} pendente(s)`;
+    }
+    async function flushOfflineQueue(){
+      if(!navigator.onLine) return;
+      const q = getOfflineQueue();
+      if(!q.length) return;
+
+      setSubtitle("Sincronizando…");
+      try{
+        for(const a of q){
+          if(a.type==="set"){
+            await database.ref(a.path).set(a.data);
+          } else if(a.type==="remove"){
+            await database.ref(a.path).remove();
+          }
+        }
+        setOfflineQueue([]);
+        toast("Sincronização offline concluída.");
+        setSubtitle("Pronto");
+        await loadAll();
+      } catch(e){
+        console.error(e);
+        toast("Falha ao sincronizar offline. Vou tentar de novo quando ficar online.");
+        setSubtitle("Offline pendente");
+      }
+    }
+
+    /* =========================================================
+       Reverse geocode cache (Nominatim)
+       ========================================================= */
+    const GEO_CACHE_KEY = "geo_cache_v2";
+    function getGeoCache(){ return JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || "{}"); }
+    function setGeoCache(cache){ localStorage.setItem(GEO_CACHE_KEY, JSON.stringify(cache)); }
+
+    async function getPreciseLocation(lat, lon){
+      const key = `${lat.toFixed(5)}_${lon.toFixed(5)}`;
+      const cache = getGeoCache();
+      if(cache[key]) return cache[key];
+
+      const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1&accept-language=pt-BR`;
+      const res = await fetch(url, {headers:{'Accept':'application/json'}});
+      if(!res.ok) throw new Error("Falha no reverse geocode");
+      const data = await res.json();
+
+      const full = data.display_name || "Localização desconhecida";
+      const addr = data.address || {};
+      const short = [addr.road, addr.suburb, addr.city || addr.town || addr.village, addr.state]
+        .filter(Boolean).join(", ") || full;
+
+      cache[key] = {full, short};
+      setGeoCache(cache);
+      return cache[key];
+    }
+
+    /* =========================================================
+       Image compression (client-side) + upload progress
+       ========================================================= */
+    async function compressImageFile(file){
+      if(!file?.type?.startsWith("image/")) return file;
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      try{
+        await new Promise((res,rej)=>{ img.onload=res; img.onerror=rej; img.src=url; });
+        const maxSide = 1600;
+        const w = img.naturalWidth, h = img.naturalHeight;
+        const scale = Math.min(1, maxSide / Math.max(w,h));
+        const cw = Math.round(w*scale), ch = Math.round(h*scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = cw; canvas.height = ch;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, cw, ch);
+        const blob = await new Promise(res=> canvas.toBlob(res, "image/jpeg", 0.78));
+        return new File([blob], file.name.replace(/\.(png|webp|jpeg|jpg)$/i, ".jpg"), {type:"image/jpeg"});
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
+    function showProgress(show){ $('progressWrap').classList.toggle('show', show); }
+    function setProgress(pct){
+      const c = clamp(Math.round(pct),0,100);
+      $('progressBar').style.width = `${c}%`;
+      $('progressText').textContent = `${c}%`;
+    }
+    async function uploadFilesWithProgress(files, recordId){
+      const maxMB = 15;
+      const arr = Array.from(files || []);
+      const accepted = [];
+      for(const f of arr){
+        if(f.size > maxMB*1024*1024){
+          toast(`Arquivo muito grande: ${f.name} (máx ${maxMB}MB). Ignorado.`);
+        } else {
+          accepted.push(await compressImageFile(f));
+        }
+      }
+      const results = [];
+      if(!accepted.length) return results;
+
+      showProgress(true); setProgress(0);
+      const totalBytes = accepted.reduce((s,f)=>s+f.size, 0) || 1;
+      let sentBytes = 0;
+
+      for(const file of accepted){
+        const path = `files/${recordId}/${uniqueName(file.name)}`;
+        const ref = storage.ref().child(path);
+        const task = ref.put(file);
+
+        await new Promise((resolve,reject)=>{
+          task.on('state_changed', (snap)=>{
+            const current = snap.bytesTransferred;
+            const pct = ((sentBytes + current)/totalBytes) * 100;
+            setProgress(pct);
+          }, reject, resolve);
+        });
+
+        sentBytes += file.size;
+        const url = await ref.getDownloadURL();
+        results.push({name:file.name, url, path});
+      }
+
+      setProgress(100);
+      setTimeout(()=>showProgress(false), 450);
+      return results;
+    }
+
+    /* =========================================================
+       Map init
+       ========================================================= */
+    const map = L.map('map', { zoomControl:false }).setView([-23.5505,-46.6333], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+      maxZoom:19,
+      attribution:'© OpenStreetMap'
+    }).addTo(map);
+    L.control.zoom({position:'bottomleft'}).addTo(map);
+
+    const markersLayer = L.layerGroup().addTo(map);
+    const overlaysLayer = L.layerGroup().addTo(map);
+
+    let userMarker=null, accuracyCircle=null, lastFix=null;
+    let followMode=false;
+
+    function setGpsText(text){ $('gpsText').textContent = text; }
+    function updateUserOnMap(lat, lon, acc){
+      if(!userMarker){
+        userMarker = L.circleMarker([lat,lon], {
+          radius:7, weight:2, color:'#fff',
+          fillColor:'#0A84FF', fillOpacity:1
+        }).addTo(map).bindPopup('Você está aqui');
+      } else userMarker.setLatLng([lat,lon]);
+
+      if(!accuracyCircle){
+        accuracyCircle = L.circle([lat,lon], {
+          radius:acc||0, weight:1,
+          color:'#0A84FF',
+          fillColor:'#0A84FF',
+          fillOpacity:0.10
+        }).addTo(map);
+      } else {
+        accuracyCircle.setLatLng([lat,lon]);
+        accuracyCircle.setRadius(acc||0);
+      }
+    }
+
+    /* =========================================================
+       GPS robusto: watch + retries + stale refresh + HTTPS hint
+       ========================================================= */
+    let watchId = null;
+    let lastGpsUpdateTs = 0;
+
+    function showHttpsHintIfNeeded(){
+      const isLocalhost = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+      const isHttps = location.protocol === "https:";
+      if(!isHttps && !isLocalhost){
+        $('httpsHint').style.display = "block";
+      }
+    }
+
+    function startWatch(){
+      if(!navigator.geolocation){
+        setGpsText("GPS: indisponível");
+        toast("Geolocalização não é suportada neste navegador.");
+        return;
+      }
+      if(watchId !== null) return;
+
+      watchId = navigator.geolocation.watchPosition((pos)=>{
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        const acc = Math.round(pos.coords.accuracy || 0);
+
+        lastFix = { lat, lon, acc, alt: pos.coords.altitude ?? null, ts: Date.now() };
+        lastGpsUpdateTs = Date.now();
+
+        setGpsText(`GPS: ±${acc}m`);
+        setSubtitle("Atualizado agora");
+        updateUserOnMap(lat, lon, acc);
+
+        if(followMode) map.setView([lat,lon], Math.max(map.getZoom(), 16), {animate:true});
+
+        // geofence suggestion while app open
+        if(Date.now() - (geoFenceLastTs||0) > 8000){
+          geoFenceLastTs = Date.now();
+          checkGeoFenceSuggestions();
+        }
+      }, (err)=>{
+        const msg =
+          err.code===1 ? 'Permissão de localização negada.' :
+          err.code===2 ? 'Não foi possível obter sua localização.' :
+          err.code===3 ? 'Tempo esgotado no GPS.' : 'Erro no GPS.';
+        setGpsText("GPS: —");
+        setSubtitle("Sem GPS");
+        toast(msg);
+
+        try{ if(watchId!==null){ navigator.geolocation.clearWatch(watchId); watchId=null; } }catch{}
+        setTimeout(()=>startWatch(), 2500);
+      }, {
+        enableHighAccuracy:true,
+        timeout:15000,
+        maximumAge:10000
+      });
+    }
+
+    async function refreshGpsIfStale(){
+      if(!navigator.geolocation) return;
+      const age = Date.now() - lastGpsUpdateTs;
+      if(age < 20000) return;
+      try{
+        const pos = await new Promise((resolve,reject)=>{
+          navigator.geolocation.getCurrentPosition(resolve,reject,{
+            enableHighAccuracy:true, timeout:12000, maximumAge:0
+          });
+        });
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        const acc = Math.round(pos.coords.accuracy || 0);
+        lastFix = {lat, lon, acc, alt: pos.coords.altitude ?? null, ts: Date.now()};
+        lastGpsUpdateTs = Date.now();
+        setGpsText(`GPS: ±${acc}m`);
+        updateUserOnMap(lat, lon, acc);
+      }catch{
+        // ignore
+      }
+    }
+    setInterval(refreshGpsIfStale, 7000);
+
+    /* =========================================================
+       Sheet expand/collapse
+       ========================================================= */
+    const sheet = $('sheet');
+    let sheetExpanded = true;
+    function setSheetExpanded(v){
+      sheetExpanded = v;
+      sheet.classList.toggle('expanded', sheetExpanded);
+    }
+    $('btnExpand').onclick = ()=> setSheetExpanded(!sheetExpanded);
+    $('grabber').onclick = ()=> setSheetExpanded(!sheetExpanded);
+
+    let dragStartY=null;
+    $('grabber').addEventListener('pointerdown', (e)=>{ dragStartY=e.clientY; $('grabber').setPointerCapture(e.pointerId); });
+    $('grabber').addEventListener('pointermove', (e)=>{
+      if(dragStartY===null) return;
+      const dy = e.clientY - dragStartY;
+      if(dy > 35) setSheetExpanded(false);
+      if(dy < -35) setSheetExpanded(true);
+    });
+    $('grabber').addEventListener('pointerup', ()=>{ dragStartY=null; });
+
+    /* =========================================================
+       Modals
+       ========================================================= */
+    const modal = $('modal');
+    const modalExport = $('modalExport');
+    const modalPrivacy = $('modalPrivacy');
+    function openModal(el){ el.classList.add('open'); }
+    function closeModal(el){ el.classList.remove('open'); }
+
+    $('btnCloseModal').onclick = ()=>closeModal(modal);
+    $('btnCancelEdit').onclick = ()=>closeModal(modal);
+    modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(modal); });
+
+    $('btnCloseExport').onclick = ()=>closeModal(modalExport);
+    modalExport.addEventListener('click', (e)=>{ if(e.target===modalExport) closeModal(modalExport); });
+
+    $('btnClosePrivacy').onclick = ()=>closeModal(modalPrivacy);
+    modalPrivacy.addEventListener('click', (e)=>{ if(e.target===modalPrivacy) closeModal(modalPrivacy); });
+
+    /* =========================================================
+       Tabs
+       ========================================================= */
+    const tabs = { records:$('tabRecords'), places:$('tabPlaces'), tools:$('tabTools') };
+    let activeTab = "records";
+    function setTab(name){
+      activeTab = name;
+      tabs.records.classList.toggle('active', name==="records");
+      tabs.places.classList.toggle('active', name==="places");
+      tabs.tools.classList.toggle('active', name==="tools");
+
+      $('recordsFilters').style.display = (name==="records") ? 'block' : 'none';
+      $('panelTitle').textContent = name==="records" ? "Registros" : name==="places" ? "Lugares" : "Ferramentas";
+      $('btnQuickCheck').style.display = (name==="records") ? 'inline-block' : 'none';
+      $('btnExport').style.display = (name==="records") ? 'inline-block' : 'none';
+
+      renderActiveTab();
+    }
+    tabs.records.onclick = ()=>setTab("records");
+    tabs.places.onclick  = ()=>setTab("places");
+    tabs.tools.onclick   = ()=>setTab("tools");
+
+    /* =========================================================
+       Locate / Follow
+       ========================================================= */
+    $('btnLocate').onclick = ()=>{
+      if(!lastFix){ toast("Ainda não tenho seu GPS. Aguarde alguns segundos…"); return; }
+      followMode = false;
+      $('btnFollow').classList.remove('active');
+      map.setView([lastFix.lat,lastFix.lon], Math.max(map.getZoom(),16), {animate:true});
+    };
+    $('btnFollow').onclick = ()=>{
+      followMode = !followMode;
+      $('btnFollow').classList.toggle('active', followMode);
+      toast(followMode ? "Seguindo sua posição." : "Follow desativado.");
+      if(followMode && lastFix) map.setView([lastFix.lat,lastFix.lon], Math.max(map.getZoom(),16), {animate:true});
+    };
+
+    /* =========================================================
+       Data
+       ========================================================= */
+    let allRecords = [];
+    let filteredRecords = [];
+    let allPlaces = [];
+
+    const recordMarkers = new Map();
+    const placeMarkers  = new Map();
+
+    function sanitizeForSave(obj){
+      const out = {...obj};
+      out.note = String(out.note||"").slice(0, 2000);
+      out.tags = Array.isArray(out.tags) ? out.tags.slice(0,25) : [];
+      out.pinned = !!out.pinned;
+      out.kind = out.kind || "point";
+      if(out.locationObj && typeof out.locationObj === "object"){
+        out.locationObj = {full: out.locationObj.full || out.location || "", short: out.locationObj.short || out.location || ""};
+      }
+      return out;
+    }
+
+    async function savePath(path, data){
+      if(navigator.onLine){
+        await database.ref(path).set(data);
+      } else {
+        enqueue({type:"set", path, data});
+        toast("Sem internet: salvo na fila offline.");
+      }
+      updateQueueHint();
+    }
+    async function removePath(path){
+      if(navigator.onLine){
+        await database.ref(path).remove();
+      } else {
+        enqueue({type:"remove", path});
+        toast("Sem internet: ação foi para a fila offline.");
+      }
+      updateQueueHint();
+    }
+
+    async function saveRecord(record, {silent=false}={}){
+      const path = `locations/${record.id}`;
+      const data = sanitizeForSave(record);
+      if(navigator.onLine){
+        await database.ref(path).set(data);
+      } else {
+        enqueue({type:"set", path, data});
+        if(!silent) toast("Sem internet: registro entrou na fila offline.");
+      }
+      updateQueueHint();
+    }
+
+    async function deleteRecord(record){
+      if(!confirm("Excluir este registro?")) return;
+      setSubtitle("Excluindo…");
+      try{
+        await removePath(`locations/${record.id}`);
+
+        if(navigator.onLine && record.files?.length){
+          for(const f of record.files){
+            if(f.path){
+              try{ await storage.ref().child(f.path).delete(); }catch{}
+            }
+          }
+        }
+
+        toast("Registro excluído.");
+        await loadAll();
+      } catch(e){
+        console.error(e);
+        toast("Falha ao excluir.");
+      } finally {
+        setSubtitle("Pronto");
+      }
+    }
+
+    async function savePlace(place){
+      const id = place.id;
+      const data = {
+        name: String(place.name||"Lugar").slice(0,120),
+        desc: String(place.desc||"").slice(0,500),
+        coordinates: place.coordinates || "",
+        radiusM: clamp(parseInt(place.radiusM||200,10), 50, 5000),
+        createdAt: place.createdAt || Date.now()
+      };
+      await savePath(`places/${id}`, data);
+    }
+    async function deletePlace(place){
+      await removePath(`places/${place.id}`);
+    }
+
+    function addMarker(id, lat, lon, popupHtml, kind="record"){
+      const marker = L.marker([lat,lon]).addTo(markersLayer).bindPopup(popupHtml);
+      if(kind==="record") recordMarkers.set(id, marker);
+      else placeMarkers.set(id, marker);
+      return marker;
+    }
+    function focusLatLng(lat, lon, openPopupMarker=null){
+      setSheetExpanded(false);
+      followMode = false;
+      $('btnFollow').classList.remove('active');
+      map.setView([lat,lon], Math.max(map.getZoom(), 16), {animate:true});
+      if(openPopupMarker) openPopupMarker.openPopup();
+    }
+
+    function renderMarkers(records){
+      markersLayer.clearLayers();
+      recordMarkers.clear();
+      placeMarkers.clear();
+
+      const bounds = [];
+
+      for(const r of records){
+        if(r.kind==="track" && r.track?.points?.length){
+          const latlngs = r.track.points.map(p=>[p.lat,p.lon]);
+          const poly = L.polyline(latlngs, {weight:5, opacity:0.95}).addTo(markersLayer);
+          poly.on('click', ()=> {
+            if(!prefs.noAutoCenter) map.fitBounds(latlngs, {padding:[40,40]});
+            setSheetExpanded(false);
+          });
+          latlngs.forEach(ll=>bounds.push(ll));
+          continue;
+        }
+
+        const coords = parseCoords(r.coordinates);
+        if(!coords) continue;
+
+        const loc = privacyLocation(r.locationObj, r.location) || "—";
+        const popup = `<b>${escapeHtml(r.note || "")}</b><br>${escapeHtml(loc)}<br><small>${escapeHtml(r.date||"")} ${escapeHtml(r.time||"")}</small>`;
+        addMarker(r.id, coords.lat, coords.lon, popup, "record");
+        bounds.push([coords.lat, coords.lon]);
+      }
+
+      for(const p of allPlaces){
+        const c = parseCoords(p.coordinates);
+        if(!c) continue;
+        const popup = `<b>📌 ${escapeHtml(p.name||"Lugar")}</b><br><small>${escapeHtml(p.desc||"")}</small>`;
+        addMarker(p.id, c.lat, c.lon, popup, "place");
+        bounds.push([c.lat, c.lon]);
+      }
+
+      if(bounds.length && !followMode && !prefs.noAutoCenter){
+        map.fitBounds(bounds, {padding:[40,40]});
+      }
+    }
+
+    function renderRecords(records){
+      const list = $('list');
+      list.innerHTML = '';
+      $('countText').textContent = `${records.length} registro(s)`;
+
+      if(!records.length){
+        list.innerHTML = `<div class="item"><b>Nenhum registro</b><div class="sub">Use “+” ou “Check-in rápido”.</div></div>`;
+        return;
+      }
+
+      let lastDate = null;
+      for(const r of records){
+        const date = r.date || "—";
+        if(date !== lastDate){
+          lastDate = date;
+          const head = document.createElement('div');
+          head.className = 'item';
+          head.style.padding = "10px 12px";
+          head.style.boxShadow = "none";
+          head.innerHTML = `<b>${escapeHtml(formatDayHeader(date))}</b><div class="sub">${escapeHtml(date)}</div>`;
+          list.appendChild(head);
+        }
+
+        const coords = parseCoords(r.coordinates);
+        const pcoords = prefs.roundCoords ? (coords ? {lat:roundCoord(coords.lat,4), lon:roundCoord(coords.lon,4)} : null) : coords;
+
+        const locText = privacyLocation(r.locationObj, r.location);
+        const tags = Array.isArray(r.tags) ? r.tags : [];
+        const pinned = !!r.pinned;
+        const isTrack = (r.kind === "track");
+        const dist = isTrack ? (r.track?.distanceM || 0) : null;
+        const dur  = isTrack ? (r.track?.durationSec || 0) : null;
+
+        const el = document.createElement('div');
+        el.className = 'item';
+        el.innerHTML = `
+          <div class="itemtop">
+            <b>${pinned ? "📌 " : ""}${escapeHtml(r.note || (isTrack ? "Trilha" : "(sem nota)"))}</b>
+            <span class="badge">${escapeHtml(r.date || '—')}</span>
+          </div>
+          <div class="sub">
+            🕒 ${escapeHtml((r.date||"") + " " + (r.time||"")).trim()}<br>
+            📍 ${escapeHtml(locText || "—")}
+            ${pcoords ? `<br>🧭 ${pcoords.lat.toFixed(6)}, ${pcoords.lon.toFixed(6)}` : ""}
+            ${tags.length ? `<br>🏷️ ${tags.map(t=>escapeHtml(t)).join(", ")}` : ""}
+            ${isTrack ? `<br>🧵 Trilha: ${formatMeters(dist)} • ${Math.round(dur/60)} min` : ""}
+          </div>
+
+          ${r.files?.length ? `
+            <div class="files">
+              ${r.files.map(f => `<a class="chiplink" href="${f.url}" target="_blank" rel="noopener">${escapeHtml(f.name)}</a>`).join('')}
+            </div>
+          ` : ''}
+
+          <div class="actions">
+            <button class="btn primary" data-act="focus">Ver no mapa</button>
+            <button class="btn" data-act="edit">Editar</button>
+            <button class="btn" data-act="pin">${pinned ? "Desafixar" : "Fixar"}</button>
+            ${coords ? `<button class="btn" data-act="maps">Abrir no Maps</button>` : ""}
+            ${coords ? `<button class="btn" data-act="copy">Copiar coords</button>` : ""}
+            <button class="btn danger" data-act="delete">Excluir</button>
+          </div>
+        `;
+
+        el.querySelector('[data-act="focus"]').onclick = ()=>{
+          if(isTrack && r.track?.points?.length){
+            const latlngs = r.track.points.map(p=>[p.lat,p.lon]);
+            if(!prefs.noAutoCenter) map.fitBounds(latlngs, {padding:[40,40]});
+            setSheetExpanded(false);
+          } else if(coords){
+            const mk = recordMarkers.get(r.id);
+            focusLatLng(coords.lat, coords.lon, mk);
+          } else toast("Registro sem coordenadas válidas.");
+        };
+
+        el.querySelector('[data-act="edit"]').onclick = ()=> openRecordModal({mode:"edit", record:r});
+        el.querySelector('[data-act="pin"]').onclick = async ()=>{
+          r.pinned = !r.pinned;
+          await saveRecord(r, {silent:true});
+          await loadAll();
+        };
+
+        if(coords){
+          el.querySelector('[data-act="maps"]').onclick = ()=> window.open(`https://www.google.com/maps?q=${coords.lat},${coords.lon}`, "_blank", "noopener");
+          el.querySelector('[data-act="copy"]').onclick = async ()=>{
+            try{ await navigator.clipboard.writeText(`${coords.lat}, ${coords.lon}`); toast("Coordenadas copiadas."); }
+            catch{ toast("Não consegui copiar (permissão do navegador)."); }
+          };
+        }
+
+        el.querySelector('[data-act="delete"]').onclick = ()=> deleteRecord(r);
+        list.appendChild(el);
+      }
+    }
+
+    /* =========================================================
+       Places tab
+       ========================================================= */
+    function renderPlaces(){
+      const list = $('list');
+      list.innerHTML = '';
+      $('countText').textContent = `${allPlaces.length} lugar(es)`;
+
+      const header = document.createElement('div');
+      header.className='item';
+      header.innerHTML = `
+        <div class="itemtop"><b>Meus lugares</b><span class="badge">Pins</span></div>
+        <div class="sub">Crie lugares fixos (obra, cliente, casa). O app sugere check-in quando você estiver perto (com o app aberto).</div>
+        <div class="actions">
+          <button class="btn primary" id="btnNewPlace">Novo lugar (no meu GPS)</button>
+        </div>
+      `;
+      list.appendChild(header);
+
+      header.querySelector('#btnNewPlace').onclick = async ()=>{
+        if(!lastFix){ toast("Ainda sem GPS."); return; }
+        const name = prompt("Nome do lugar (ex.: Obra X, Cliente Y):");
+        if(!name) return;
+        const desc = prompt("Descrição (opcional):") || "";
+        const id = database.ref('places').push().key;
+        const place = { id, name, desc, coordinates: `${lastFix.lat}, ${lastFix.lon}`, radiusM: 200, createdAt: Date.now() };
+        await savePlace(place);
+        toast("Lugar salvo.");
+        await loadAll();
+      };
+
+      if(!allPlaces.length){
+        const empty = document.createElement('div');
+        empty.className='item';
+        empty.innerHTML = `<b>Nenhum lugar ainda</b><div class="sub">Crie um lugar para receber sugestões de check-in por proximidade.</div>`;
+        list.appendChild(empty);
+        renderMarkers(filteredRecords);
+        return;
+      }
+
+      for(const p of allPlaces){
+        const c = parseCoords(p.coordinates);
+        const el = document.createElement('div');
+        el.className='item';
+        el.innerHTML = `
+          <div class="itemtop"><b>📌 ${escapeHtml(p.name || "Lugar")}</b><span class="badge">${escapeHtml((p.radiusM||200) + "m")}</span></div>
+          <div class="sub">${escapeHtml(p.desc||"")}${c ? `<br>🧭 ${c.lat.toFixed(6)}, ${c.lon.toFixed(6)}` : ""}</div>
+          <div class="actions">
+            <button class="btn primary" data-act="focus">Ver no mapa</button>
+            <button class="btn" data-act="radius">Raio</button>
+            <button class="btn" data-act="checkin">Check-in aqui</button>
+            <button class="btn danger" data-act="delete">Excluir</button>
+          </div>
+        `;
+
+        el.querySelector('[data-act="focus"]').onclick = ()=>{
+          if(!c){ toast("Sem coordenadas."); return; }
+          const mk = placeMarkers.get(p.id);
+          focusLatLng(c.lat, c.lon, mk);
+        };
+        el.querySelector('[data-act="radius"]').onclick = async ()=>{
+          const v = prompt("Raio do geofence (metros):", String(p.radiusM||200));
+          if(!v) return;
+          p.radiusM = clamp(parseInt(v,10) || 200, 50, 5000);
+          await savePlace(p);
+          await loadAll();
+          toast("Raio atualizado.");
+        };
+        el.querySelector('[data-act="checkin"]').onclick = ()=>{
+          if(!c){ toast("Sem coordenadas."); return; }
+          quickCheckIn({lat:c.lat, lon:c.lon, forceName:p.name});
+        };
+        el.querySelector('[data-act="delete"]').onclick = async ()=>{
+          if(!confirm("Excluir este lugar?")) return;
+          await deletePlace(p);
+          await loadAll();
+          toast("Lugar excluído.");
+        };
+
+        list.appendChild(el);
+      }
+
+      renderMarkers(filteredRecords);
+    }
+
+    /* =========================================================
+       Tools tab: distance/area
+       ========================================================= */
+    let toolMode = "none"; // none | measureLine | measureArea
+    let toolPoints = [];
+    function clearTools(){ overlaysLayer.clearLayers(); toolPoints = []; }
+    function renderTools(){
+      const list = $('list');
+      list.innerHTML = '';
+      $('countText').textContent = "Ferramentas no mapa";
+
+      const el = document.createElement('div');
+      el.className='item';
+      el.innerHTML = `
+        <div class="itemtop"><b>Ferramentas</b><span class="badge">Mapa</span></div>
+        <div class="sub">Medição de distância/área (toque no mapa para marcar pontos).</div>
+        <div class="actions">
+          <button class="btn primary" id="btnMeasureLine">Medir distância</button>
+          <button class="btn primary" id="btnMeasureArea">Medir área</button>
+          <button class="btn" id="btnStopTool">Parar ferramenta</button>
+        </div>
+        <div class="sub" id="toolStatus">Toque no mapa para adicionar pontos.</div>
+      `;
+      list.appendChild(el);
+
+      const status = el.querySelector('#toolStatus');
+      function setMode(m){
+        toolMode = m;
+        clearTools();
+        status.textContent = (m==="none") ? "Ferramenta desativada."
+          : (m==="measureLine") ? "Modo distância: toque para adicionar pontos."
+          : "Modo área: toque para criar o polígono (3+ pontos).";
+        toast(m==="none" ? "Ferramenta desligada." : "Ferramenta ligada. Toque no mapa.");
+      }
+      el.querySelector('#btnMeasureLine').onclick = ()=>setMode("measureLine");
+      el.querySelector('#btnMeasureArea').onclick = ()=>setMode("measureArea");
+      el.querySelector('#btnStopTool').onclick = ()=>setMode("none");
+    }
+
+    map.on('click', (e)=>{
+      if(activeTab!=="tools") return;
+      if(toolMode==="none") return;
+
+      const p = {lat:e.latlng.lat, lon:e.latlng.lng};
+      toolPoints.push(p);
+
+      L.circleMarker([p.lat,p.lon], {radius:6, weight:2, color:'#fff', fillColor:'#0A84FF', fillOpacity:1})
+        .addTo(overlaysLayer);
+
+      const latlngs = toolPoints.map(t=>[t.lat,t.lon]);
+
+      overlaysLayer.eachLayer((layer)=>{
+        // keep points; remove lines/polys
+      });
+
+      if(toolMode==="measureLine"){
+        L.polyline(latlngs, {weight:4, opacity:0.9}).addTo(overlaysLayer);
+        let d=0;
+        for(let i=1;i<toolPoints.length;i++) d += distM(toolPoints[i-1], toolPoints[i]);
+        toast(`Distância: ${formatMeters(d)}`);
+      } else if(toolMode==="measureArea"){
+        L.polygon(latlngs, {weight:3, opacity:0.9, fillOpacity:0.10}).addTo(overlaysLayer);
+        toast(`Área: ${formatArea(polygonAreaM2(toolPoints))}`);
+      }
+    });
+
+    /* =========================================================
+       Tracking (trilha)
+       ========================================================= */
+    let tracking = false;
+    let trackPoints = [];
+    let trackStartTs = null;
+    function setTrackUI(){ $('btnTrack').classList.toggle('active', tracking); }
+
+    function startTracking(){
+      if(!lastFix){ toast("Sem GPS ainda."); return; }
+      tracking = true;
+      trackPoints = [];
+      trackStartTs = Date.now();
+      toast("Tracking iniciado.");
+      setTrackUI();
+    }
+    async function stopTracking(){
+      tracking = false;
+      setTrackUI();
+      toast("Tracking parado. Salvando…");
+      await saveTrackAsRecord();
+    }
+    $('btnTrack').onclick = ()=> tracking ? stopTracking() : startTracking();
+
+    function maybeAddTrackPoint(){
+      if(!tracking || !lastFix) return;
+      const p = {lat:lastFix.lat, lon:lastFix.lon, ts: Date.now(), acc:lastFix.acc};
+      if(trackPoints.length){
+        const prev = trackPoints[trackPoints.length-1];
+        if(distM({lat:prev.lat, lon:prev.lon},{lat:p.lat, lon:p.lon}) < 8) return;
+      }
+      trackPoints.push(p);
+    }
+    setInterval(maybeAddTrackPoint, 2500);
+
+    async function saveTrackAsRecord(){
+      if(!trackPoints.length){
+        toast("Trilha vazia (pouco movimento).");
+        return;
+      }
+      let distance = 0;
+      for(let i=1;i<trackPoints.length;i++){
+        distance += distM({lat:trackPoints[i-1].lat, lon:trackPoints[i-1].lon},{lat:trackPoints[i].lat, lon:trackPoints[i].lon});
+      }
+      const durationSec = Math.max(1, Math.round((Date.now() - trackStartTs)/1000));
+      const end = trackPoints[trackPoints.length-1];
+      const locObj = await getPreciseLocation(end.lat, end.lon);
+      const id = database.ref('locations').push().key;
+
+      const record = {
+        id,
+        note: "Trilha (tracking)",
+        date: nowISODate(),
+        time: nowTimeBR(),
+        kind: "track",
+        tags: ["trilha"],
+        pinned: false,
+        locationObj: locObj,
+        location: locObj.full,
+        coordinates: `${end.lat}, ${end.lon}`,
+        track: {
+          points: trackPoints.map(p=>({lat:p.lat, lon:p.lon, ts:p.ts})),
+          distanceM: Math.round(distance),
+          durationSec
+        },
+        files: []
+      };
+
+      await saveRecord(record, {silent:true});
+      toast("Trilha salva.");
+      await loadAll();
+    }
+
+    /* =========================================================
+       Geofence suggestions (when app open)
+       ========================================================= */
+    let geoFenceLastTs = 0;
+    function checkGeoFenceSuggestions(){
+      if(!lastFix || !allPlaces.length) return;
+      const pos = {lat:lastFix.lat, lon:lastFix.lon};
+      for(const pl of allPlaces){
+        const c = parseCoords(pl.coordinates);
+        if(!c) continue;
+        const d = distM(pos, c);
+        const radiusM = Number(pl.radiusM||200);
+        if(d <= radiusM){
+          toast(`Você está perto de “${pl.name}”. Quer fazer check-in rápido?`);
+          break;
+        }
+      }
+    }
+
+    /* =========================================================
+       Export
+       ========================================================= */
+    function getExportData(){
+      return filteredRecords.map(r=>{
+        const coords = parseCoords(r.coordinates);
+        const c = prefs.roundCoords && coords ? {lat:roundCoord(coords.lat,4), lon:roundCoord(coords.lon,4)} : coords;
+        const loc = privacyLocation(r.locationObj, r.location);
+        return {
+          id: r.id,
+          note: r.note || "",
+          tags: (r.tags||[]).join(", "),
+          date: r.date || "",
+          time: r.time || "",
+          location: loc || "",
+          lat: c ? c.lat : "",
+          lon: c ? c.lon : "",
+          kind: r.kind || "point",
+          distanceM: r.track?.distanceM || "",
+          durationSec: r.track?.durationSec || ""
+        };
+      });
+    }
+    function exportCSV(){
+      const rows = getExportData();
+      const header = Object.keys(rows[0]||{id:""});
+      const csv = [
+        header.join(";"),
+        ...rows.map(o=> header.map(k=> String(o[k]??"").replaceAll(";", ",")).join(";"))
+      ].join("\n");
+      downloadText(`registros_${nowISODate()}.csv`, csv, "text/csv");
+    }
+    function exportJSON(){
+      downloadText(`registros_${nowISODate()}.json`, JSON.stringify(getExportData(), null, 2), "application/json");
+    }
+    function exportKML(){
+      const items = filteredRecords
+        .filter(r=>r.kind!=="track")
+        .map(r=>{
+          const c = parseCoords(r.coordinates);
+          if(!c) return "";
+          const cc = prefs.roundCoords ? {lat:roundCoord(c.lat,4), lon:roundCoord(c.lon,4)} : c;
+          const name = escapeHtml(r.note||"Registro");
+          const desc = escapeHtml(privacyLocation(r.locationObj, r.location)||"");
+          return `
+            <Placemark>
+              <name>${name}</name>
+              <description>${desc}</description>
+              <Point><coordinates>${cc.lon},${cc.lat},0</coordinates></Point>
+            </Placemark>`;
+        }).join("\n");
+
+      const kml = `<?xml version="1.0" encoding="UTF-8"?>
+        <kml xmlns="http://www.opengis.net/kml/2.2">
+          <Document>
+            <name>Registros</name>
+            ${items}
+          </Document>
+        </kml>`;
+      downloadText(`registros_${nowISODate()}.kml`, kml, "application/vnd.google-earth.kml+xml");
+    }
+    function exportGPX(){
+      const trackRecs = filteredRecords.filter(r=>r.kind==="track" && r.track?.points?.length);
+      if(!trackRecs.length){
+        toast("Sem trilhas para exportar em GPX (use Tracking).");
+        return;
+      }
+      const trks = trackRecs.map(r=>{
+        const pts = r.track.points.map(p=>`<trkpt lat="${p.lat}" lon="${p.lon}"><time>${new Date(p.ts).toISOString()}</time></trkpt>`).join("");
+        const name = escapeHtml(r.note||"Trilha");
+        return `<trk><name>${name}</name><trkseg>${pts}</trkseg></trk>`;
+      }).join("\n");
+
+      const gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Registro de Localização" xmlns="http://www.topografix.com/GPX/1/1">
+${trks}
+</gpx>`;
+      downloadText(`trilhas_${nowISODate()}.gpx`, gpx, "application/gpx+xml");
+    }
+
+    /* =========================================================
+       Record modal add/edit
+       ========================================================= */
+    let modalState = { mode:"add", record:null, pinned:false };
+
+    function updatePreviews(files){
+      const wrap = $('previews');
+      wrap.innerHTML = '';
+      const arr = Array.from(files||[]);
+      if(!arr.length) return;
+
+      for(const f of arr){
+        const a = document.createElement('div');
+        a.className = 'chiplink';
+        a.style.display = "inline-flex";
+        a.style.alignItems = "center";
+        a.style.gap = "8px";
+        a.textContent = f.name;
+        wrap.appendChild(a);
+      }
+    }
+
+    function openRecordModal({mode, record}){
+      modalState.mode = mode;
+      modalState.record = record || null;
+      modalState.pinned = record?.pinned || false;
+
+      $('modalTitle').textContent = mode==="edit" ? "Editar registro" : "Novo registro";
+      $('note').value = record?.note || "";
+      $('tags').value = (record?.tags || []).join(", ");
+      $('fileUpload').value = "";
+      $('previews').innerHTML = "";
+      $('btnPin').textContent = modalState.pinned ? "Desafixar" : "Fixar";
+      $('saveHint').textContent = mode==="edit" ? "Você pode atualizar nota/tags e adicionar arquivos." : "Vou registrar com o GPS atual + endereço.";
+      openModal(modal);
+      showHttpsHintIfNeeded();
+    }
+
+    $('btnPin').onclick = ()=>{
+      modalState.pinned = !modalState.pinned;
+      $('btnPin').textContent = modalState.pinned ? "Desafixar" : "Fixar";
+    };
+
+    $('fileUpload').addEventListener('change', (e)=>{
+      updatePreviews(e.target.files);
+    });
+
+    $('btnSavePlaceFromRecord').onclick = async ()=>{
+      if(!lastFix){ toast("Sem GPS ainda."); return; }
+      const name = prompt("Nome do lugar:", $('note').value.slice(0,60) || "Lugar");
+      if(!name) return;
+      const desc = prompt("Descrição (opcional):") || "";
+      const id = database.ref('places').push().key;
+      const place = { id, name, desc, coordinates: `${lastFix.lat}, ${lastFix.lon}`, radiusM: 200, createdAt: Date.now() };
+      await savePlace(place);
+      toast("Lugar salvo.");
+      await loadAll();
+    };
+
+    async function quickCheckIn({lat=null, lon=null, forceName=null}={}){
+      if(!lastFix && (lat===null || lon===null)){
+        toast("Ainda sem GPS."); return;
+      }
+      const useLat = (lat!==null ? lat : lastFix.lat);
+      const useLon = (lon!==null ? lon : lastFix.lon);
+
+      setSubtitle("Check-in…");
+      try{
+        const locObj = await getPreciseLocation(useLat, useLon);
+        const id = database.ref('locations').push().key;
+
+        const record = {
+          id,
+          note: forceName ? `Check-in: ${forceName}` : "Check-in rápido",
+          date: nowISODate(),
+          time: nowTimeBR(),
+          kind: "point",
+          tags: ["checkin"],
+          pinned: false,
+          locationObj: locObj,
+          location: locObj.full,
+          coordinates: `${useLat}, ${useLon}`,
+          files: []
+        };
+
+        await saveRecord(record, {silent:true});
+        toast("Check-in salvo.");
+        await loadAll();
+      } catch(e){
+        console.error(e);
+        toast("Falha no check-in.");
+      } finally {
+        setSubtitle("Pronto");
+      }
+    }
+
+    $('btnSave').onclick = async ()=>{
+      const note = $('note').value.trim();
+      const tags = parseTags($('tags').value);
+      const files = $('fileUpload').files;
+
+      if(!note){
+        toast("Digite uma nota.");
+        return;
+      }
+      if(!lastFix && modalState.mode==="add"){
+        toast("Ainda sem GPS. Aguarde alguns segundos…");
+        return;
+      }
+
+      setSubtitle("Salvando…");
+      try{
+        const isEdit = modalState.mode==="edit";
+        let record = isEdit ? {...modalState.record} : null;
+
+        // Coordinates source
+        const lat = isEdit
+          ? (parseCoords(record.coordinates)?.lat ?? lastFix?.lat)
+          : lastFix.lat;
+        const lon = isEdit
+          ? (parseCoords(record.coordinates)?.lon ?? lastFix?.lon)
+          : lastFix.lon;
+
+        const locObj = await getPreciseLocation(lat, lon);
+
+        if(!record){
+          const id = database.ref('locations').push().key;
+          record = {
+            id,
+            note,
+            date: nowISODate(),
+            time: nowTimeBR(),
+            kind: "point",
+            tags,
+            pinned: modalState.pinned,
+            locationObj: locObj,
+            location: locObj.full,
+            coordinates: `${lat}, ${lon}`,
+            files: []
+          };
+        } else {
+          record.note = note;
+          record.tags = tags;
+          record.pinned = modalState.pinned;
+          record.locationObj = locObj;
+          record.location = locObj.full;
+          record.time = nowTimeBR(); // update time on edit (optional)
+        }
+
+        // Upload files (if any)
+        let newFiles = [];
+        if(files && files.length){
+          if(!navigator.onLine){
+            toast("Você está offline: arquivos não podem subir agora. Salve e envie depois quando estiver online.");
+          } else {
+            newFiles = await uploadFilesWithProgress(files, record.id);
+          }
+        }
+        record.files = [...(record.files||[]), ...newFiles];
+
+        await saveRecord(record);
+        closeModal(modal);
+        toast(isEdit ? "Registro atualizado." : "Registro salvo.");
+        await loadAll();
+      } catch(e){
+        console.error(e);
+        toast("Falha ao salvar. Veja permissões do GPS e conexão.");
+      } finally {
+        setSubtitle("Pronto");
+      }
+    };
+
+    /* =========================================================
+       Filters
+       ========================================================= */
+    function applyFilters(){
+      const fNote = $('filterNote').value.trim().toLowerCase();
+      const fDate = $('filterDate').value.trim().toLowerCase();
+      const fLoc  = $('filterLocation').value.trim().toLowerCase();
+      const fTags = $('filterTags').value.trim().toLowerCase();
+      const fRange = normalizeRange($('filterRange').value);
+      const fRadiusRaw = $('filterRadius').value.trim().toLowerCase();
+
+      let radiusM = null;
+      if(fRadiusRaw){
+        const m = fRadiusRaw.match(/^(\d+(?:\.\d+)?)\s*(m|km)?$/);
+        if(m){
+          const val = parseFloat(m[1]);
+          radiusM = (m[2]==="km") ? (val*1000) : val;
+        }
+      }
+
+      const today = new Date(); today.setHours(0,0,0,0);
+      filteredRecords = allRecords.filter(r=>{
+        const note = (r.note||"").toLowerCase();
+        const date = (r.date||"").toLowerCase();
+        const loc  = (privacyLocation(r.locationObj, r.location)||"").toLowerCase();
+        const tags = (r.tags||[]).join(",").toLowerCase();
+
+        if(fNote && !note.includes(fNote)) return false;
+        if(fDate && !date.includes(fDate)) return false;
+        if(fLoc  && !loc.includes(fLoc)) return false;
+        if(fTags && !tags.includes(fTags)) return false;
+
+        if(fRange){
+          if(fRange.type==="days"){
+            const d = new Date((r.date||"") + "T00:00:00");
+            d.setHours(0,0,0,0);
+            const diff = Math.round((today - d)/86400000);
+            if(fRange.days===0 && diff!==0) return false;
+            if(fRange.days>0 && (diff<0 || diff>fRange.days)) return false;
+          } else if(fRange.type==="between"){
+            const d = (r.date||"");
+            if(d < fRange.a || d > fRange.b) return false;
+          } else if(fRange.type==="month"){
+            const d = (r.date||"");
+            if(!d.startsWith(fRange.ym)) return false;
+          }
+        }
+
+        if(radiusM !== null){
+          if(!lastFix) return false;
+          const c = parseCoords(r.coordinates);
+          if(!c) return false;
+          const d = distM({lat:lastFix.lat, lon:lastFix.lon},{lat:c.lat, lon:c.lon});
+          if(d > radiusM) return false;
+        }
+
+        return true;
+      });
+
+      // sort: pinned desc, date desc, time desc
+      filteredRecords.sort((a,b)=>{
+        const pa = a.pinned ? 1 : 0;
+        const pb = b.pinned ? 1 : 0;
+        if(pa!==pb) return pb-pa;
+        const da = a.date || "";
+        const db = b.date || "";
+        if(da!==db) return db.localeCompare(da);
+        const ta = a.time || "";
+        const tb = b.time || "";
+        return tb.localeCompare(ta);
+      });
+
+      renderActiveTab();
+    }
+
+    ['filterNote','filterDate','filterLocation','filterTags','filterRange','filterRadius'].forEach(id=>{
+      $(id).addEventListener('input', ()=>applyFilters());
+    });
+
+    /* =========================================================
+       Buttons: reload / add / export / privacy / quick check
+       ========================================================= */
+    $('btnReload').onclick = ()=>loadAll(true);
+    $('btnAdd').onclick = ()=>openRecordModal({mode:"add"});
+    $('btnQuickCheck').onclick = ()=>quickCheckIn();
+
+    $('btnExport').onclick = ()=>openModal(modalExport);
+    $('btnExportCSV').onclick = ()=>exportCSV();
+    $('btnExportKML').onclick = ()=>exportKML();
+    $('btnExportGPX').onclick = ()=>exportGPX();
+    $('btnExportJSON').onclick = ()=>exportJSON();
+
+    $('btnPrivacy').onclick = ()=>{
+      applyPrefsToUI();
+      openModal(modalPrivacy);
+    };
+    $('privacyRoundCoords').onchange = (e)=>{ prefs.roundCoords = e.target.checked; savePrefs(); applyFilters(); };
+    $('privacyHideExactAddress').onchange = (e)=>{ prefs.hideExactAddress = e.target.checked; savePrefs(); applyFilters(); };
+    $('privacyNoAutoCenter').onchange = (e)=>{ prefs.noAutoCenter = e.target.checked; savePrefs(); applyFilters(); };
+
+    $('btnClearCache').onclick = ()=>{
+      localStorage.removeItem(GEO_CACHE_KEY);
+      toast("Cache de endereços limpo.");
+    };
+    $('btnClearOffline').onclick = ()=>{
+      if(!confirm("Limpar fila offline?")) return;
+      localStorage.removeItem(OFFLINE_QUEUE_KEY);
+      updateQueueHint();
+      toast("Fila offline limpa.");
+    };
+
+    /* =========================================================
+       Render by tab
+       ========================================================= */
+    function renderActiveTab(){
+      if(activeTab==="records"){
+        renderRecords(filteredRecords);
+      } else if(activeTab==="places"){
+        renderPlaces();
+      } else {
+        renderTools();
+      }
+      renderMarkers(filteredRecords);
+    }
+
+    /* =========================================================
+       Load data (RTDB)
+       ========================================================= */
+    async function loadAll(showToast=false){
+      setSubtitle("Carregando…");
+      try{
+        const locSnap = await database.ref('locations').once('value');
+        const records = [];
+        locSnap.forEach(child=>{
+          const r = child.val() || {};
+          // compat: if older records didn't store id
+          r.id = r.id || child.key;
+          records.push(r);
+        });
+        allRecords = records;
+
+        const plSnap = await database.ref('places').once('value');
+        const places = [];
+        plSnap.forEach(child=>{
+          const p = child.val() || {};
+          p.id = p.id || child.key;
+          places.push(p);
+        });
+        allPlaces = places;
+
+        applyFilters();
+        if(showToast) toast("Atualizado.");
+      } catch(e){
+        console.error(e);
+        toast("Falha ao carregar dados.");
+      } finally {
+        setSubtitle("Pronto");
+      }
+    }
+
+    /* =========================================================
+       Init
+       ========================================================= */
+    function init(){
+      updateNetUI();
+      updateQueueHint();
+      applyPrefsToUI();
+      showHttpsHintIfNeeded();
+
+      // Start GPS watch
+      startWatch();
+
+      // Load data
+      loadAll();
+
+      // flush offline on start if online
+      if(navigator.onLine) flushOfflineQueue();
+
+      toast("Pronto. Permita o GPS para registrar localizações.");
+    }
+
+    window.addEventListener('load', init);
+  </script>
+</body>
+</html>
