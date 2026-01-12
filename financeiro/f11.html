@@ -1,0 +1,2163 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Financeiro • Apple-level (Realtime DB)</title>
+  <meta name="theme-color" content="#0b0d12" />
+  <style>
+    :root{
+      --bg0:#07080b; --bg1:#0b0d12;
+      --cardA: rgba(255,255,255,.07);
+      --cardB: rgba(255,255,255,.03);
+      --text:#e9eefc; --muted:#9aa6c3; --line:rgba(255,255,255,.085);
+      --good:#2dd4bf; --bad:#fb7185; --warn:#fbbf24; --brand:#60a5fa;
+      --shadow: 0 18px 60px rgba(0,0,0,.45);
+      --r:18px; --r2:26px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display","SF Pro Text", "Segoe UI", Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      color:var(--text);
+      background:
+        radial-gradient(1200px 700px at 20% -10%, rgba(96,165,250,.22), transparent 60%),
+        radial-gradient(1000px 700px at 90% 0%, rgba(45,212,191,.14), transparent 55%),
+        radial-gradient(900px 600px at 80% 110%, rgba(251,113,133,.12), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1) 45%, #07090f 100%);
+      overflow-x:hidden;
+    }
+    .safe{padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
+    .wrap{max-width:1240px; margin:0 auto; padding:22px 18px 92px;}
+    .topbar{
+      position:sticky; top:0; z-index:50;
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding:14px 18px;
+      margin:-22px -18px 18px;
+      backdrop-filter: blur(16px);
+      background: linear-gradient(180deg, rgba(7,8,11,.86), rgba(7,8,11,.42));
+      border-bottom:1px solid var(--line);
+    }
+    .brand{display:flex; align-items:center; gap:12px; min-width:260px;}
+    .logo{
+      width:40px; height:40px; border-radius:14px;
+      background:
+        radial-gradient(14px 14px at 30% 30%, rgba(255,255,255,.35), transparent 60%),
+        radial-gradient(20px 20px at 70% 30%, rgba(255,255,255,.15), transparent 60%),
+        linear-gradient(135deg, rgba(96,165,250,.95), rgba(45,212,191,.75));
+      box-shadow: 0 12px 34px rgba(96,165,250,.2);
+      border: 1px solid rgba(255,255,255,.12);
+    }
+    .brand h1{font-size:14px; margin:0; letter-spacing:.2px; line-height:1.1;}
+    .brand p{margin:0; font-size:12px; color:var(--muted); line-height:1.2;}
+    .actions{display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end;}
+    .pill{
+      display:flex; align-items:center; gap:8px;
+      border:1px solid var(--line); background:rgba(255,255,255,.04);
+      border-radius:999px; padding:8px 10px;
+      box-shadow: 0 6px 24px rgba(0,0,0,.25) inset;
+    }
+    .pill span{font-size:12px; color:var(--muted); max-width:320px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+
+    .btn{
+      appearance:none; border:none; cursor:pointer;
+      border-radius:12px; padding:10px 12px;
+      color:var(--text);
+      background:rgba(255,255,255,.06);
+      border:1px solid var(--line);
+      transition: transform .08s ease, background .15s ease, border-color .15s ease;
+      font-size:13px;
+      display:inline-flex; align-items:center; gap:9px;
+      user-select:none;
+    }
+    .btn:hover{background:rgba(255,255,255,.09); border-color:rgba(255,255,255,.14)}
+    .btn:active{transform:scale(.985)}
+    .btn.primary{
+      background: linear-gradient(135deg, rgba(96,165,250,.95), rgba(45,212,191,.72));
+      border-color: rgba(255,255,255,.18);
+      color:#071017;
+      font-weight:650;
+    }
+    .btn.danger{background:rgba(251,113,133,.14); border-color:rgba(251,113,133,.28)}
+    .btn.ghost{background:transparent}
+
+    .grid{display:grid; grid-template-columns:1.28fr .72fr; gap:14px;}
+    @media (max-width: 980px){ .grid{grid-template-columns:1fr;} .brand{min-width:unset} }
+
+    .card{
+      background: linear-gradient(180deg, var(--cardA), var(--cardB));
+      border:1px solid var(--line);
+      border-radius: var(--r2);
+      box-shadow: 0 18px 60px rgba(0,0,0,.45);
+      overflow:hidden;
+    }
+    .card .hd{
+      padding:16px 16px 12px;
+      border-bottom:1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), transparent);
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+    }
+    .title{display:flex; flex-direction:column; gap:4px;}
+    .title h2{margin:0; font-size:14px; letter-spacing:.2px}
+    .title p{margin:0; font-size:12px; color:var(--muted)}
+    .card .bd{padding:14px 16px 16px;}
+
+    .kpis{display:grid; grid-template-columns: repeat(4, 1fr); gap:10px;}
+    @media (max-width:980px){ .kpis{grid-template-columns: repeat(2, 1fr);} }
+
+    .kpi{
+      background: rgba(0,0,0,.18);
+      border:1px solid var(--line);
+      border-radius: var(--r);
+      padding:12px;
+      display:flex; flex-direction:column; gap:6px;
+      min-height:76px;
+    }
+    .kpi .label{font-size:12px; color:var(--muted)}
+    .kpi .value{font-size:18px; font-weight:800; letter-spacing:.2px}
+    .kpi .sub{font-size:11px; color:var(--muted)}
+    .good{color:var(--good)}
+    .bad{color:var(--bad)}
+    .muted{color:var(--muted)}
+
+    .toolbar{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; justify-content:space-between;
+      margin:12px 0 0;
+    }
+    .filters{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;}
+    .field{display:flex; flex-direction:column; gap:6px; min-width:160px;}
+    .field label{font-size:11px; color:var(--muted)}
+    input, select, textarea{
+      width:100%;
+      background: rgba(0,0,0,.22);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding:10px 10px;
+      color: var(--text);
+      outline:none;
+      font-family: var(--sans);
+      font-size: 13px;
+    }
+    textarea{min-height:84px; resize: vertical;}
+    input::placeholder, textarea::placeholder{color:rgba(154,166,195,.7)}
+    input:focus, select:focus, textarea:focus{border-color: rgba(96,165,250,.5); box-shadow: 0 0 0 4px rgba(96,165,250,.12);}
+
+    .split{display:grid; grid-template-columns: 1fr 1fr; gap:10px;}
+    @media (max-width:680px){ .split{grid-template-columns:1fr;} }
+
+    .divider{height:1px; background:var(--line); margin:12px 0;}
+    .hint{font-size:12px; color:var(--muted); line-height:1.4}
+    .footer-note{margin-top:12px; font-size:11px; color:rgba(154,166,195,.8);}
+    .kbd{
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      color: rgba(233,238,252,.9);
+    }
+
+    canvas{width:100%; height:220px; border-radius: 18px; border:1px solid var(--line); background: rgba(0,0,0,.18)}
+
+    .list{display:flex; flex-direction:column; gap:10px;}
+    .tx{
+      display:grid;
+      grid-template-columns: 1.25fr .65fr .6fr .75fr;
+      gap:10px;
+      align-items:center;
+      padding:12px;
+      border-radius: var(--r);
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.18);
+      transition: transform .08s ease, border-color .15s ease, background .15s ease;
+      cursor:pointer;
+    }
+    .tx:hover{border-color:rgba(255,255,255,.14); background: rgba(0,0,0,.22)}
+    .tx:active{transform:scale(.995)}
+    @media (max-width:820px){ .tx{grid-template-columns: 1fr; gap:8px;} }
+
+    .tx .main{display:flex; flex-direction:column; gap:3px;}
+    .tx .main .name{font-size:13px; font-weight:800}
+    .tx .main .meta{font-size:11px; color:var(--muted); display:flex; flex-wrap:wrap; gap:8px}
+    .badge{
+      font-size:11px;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      color: var(--muted);
+    }
+    .amount{
+      text-align:right;
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight:900;
+    }
+    .right{display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap}
+
+    .toast{
+      position:fixed; left:50%; transform:translateX(-50%);
+      bottom: 18px;
+      z-index:999;
+      background: rgba(15,18,26,.88);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius: 999px;
+      padding:10px 14px;
+      backdrop-filter: blur(14px);
+      box-shadow: var(--shadow);
+      max-width:min(920px, calc(100% - 22px));
+      display:none;
+      font-size:13px;
+      color: var(--text);
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .toast.show{display:flex}
+
+    .skeleton{
+      background: linear-gradient(90deg, rgba(255,255,255,.04), rgba(255,255,255,.09), rgba(255,255,255,.04));
+      background-size: 200% 100%;
+      animation: shimmer 1.2s infinite;
+      border-radius: 12px;
+      height: 44px;
+      border: 1px solid var(--line);
+    }
+    @keyframes shimmer{0%{background-position:0% 0}100%{background-position:200% 0}}
+
+    .modal{
+      position:fixed; inset:0; display:none; place-items:center; z-index:1000;
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(8px);
+      padding: 18px;
+    }
+    .modal.show{display:grid}
+    .modal .panel{
+      width:min(920px, 100%);
+      border-radius: 24px;
+      border:1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .panel .phd{
+      padding:14px 16px;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      border-bottom:1px solid var(--line);
+    }
+    .panel .phd .ttl{display:flex; flex-direction:column; gap:3px}
+    .panel .phd h3{margin:0; font-size:14px}
+    .panel .phd p{margin:0; font-size:12px; color:var(--muted)}
+    .panel .pbd{padding:14px 16px 16px}
+
+    .noteBox{
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+      border-radius: 14px;
+      padding:10px 12px;
+      font-size:12px;
+      color: rgba(233,238,252,.92);
+      line-height:1.35;
+    }
+
+    /* Goals */
+    .goal{
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.18);
+      border-radius: 18px;
+      padding:12px;
+      display:flex; flex-direction:column; gap:10px;
+      cursor:pointer;
+      transition: background .15s ease, border-color .15s ease;
+    }
+    .goal:hover{background: rgba(0,0,0,.22); border-color: rgba(255,255,255,.14)}
+    .goalTop{display:flex; justify-content:space-between; gap:10px; align-items:flex-start;}
+    .goalName{font-weight:850; font-size:13px;}
+    .goalMeta{font-size:11px; color:var(--muted); display:flex; gap:8px; flex-wrap:wrap; margin-top:4px;}
+    .bar{
+      height:10px; border-radius:999px; overflow:hidden;
+      background: rgba(255,255,255,.07);
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .fill{
+      height:100%;
+      width:0%;
+      background: linear-gradient(90deg, rgba(96,165,250,.95), rgba(45,212,191,.72));
+      border-radius:999px;
+    }
+  </style>
+
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+</head>
+
+<body class="safe">
+  <div class="wrap">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Financeiro</h1>
+          <p id="subtitle">Apple-level • RTDB • Metas • Fontes (Salário/Empresa/etc)</p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <div class="pill" title="Usuário atual">
+          <span id="userPill">Conectando…</span>
+        </div>
+
+        <button class="btn ghost" id="btnImport" title="Importar dados antigos (/expenses)">
+          ⤒ Importar antigo
+        </button>
+
+        <button class="btn ghost" id="btnExport" title="Exportar CSV (Ctrl+E)">
+          ⤓ Exportar
+        </button>
+
+        <button class="btn" id="btnGoals" title="Metas (Ctrl+G)">
+          🎯 Metas
+        </button>
+
+        <button class="btn" id="btnRecurring" title="Gerar recorrências do mês atual">
+          🔁 Recorrências
+        </button>
+
+        <button class="btn" id="btnSettings" title="Configurações / Orçamentos (Ctrl+,)" >
+          ⚙️ Ajustes
+        </button>
+
+        <button class="btn primary" id="btnNew" title="Novo lançamento (N)">
+          ＋ Lançamento
+        </button>
+
+        <button class="btn" id="btnGoogle" title="Entrar com Google">
+          🔐 Google
+        </button>
+
+        <button class="btn danger" id="btnSignOut" title="Sair" style="display:none;">
+          ⎋ Sair
+        </button>
+      </div>
+    </header>
+
+    <main class="grid">
+      <!-- LEFT -->
+      <section class="card" aria-label="Dashboard">
+        <div class="hd">
+          <div class="title">
+            <h2>Resumo do período</h2>
+            <p>KPIs reais + filtros + gráfico de saldo acumulado</p>
+          </div>
+          <div class="right" style="align-items:flex-end;">
+            <div class="field" style="min-width:170px;">
+              <label for="period">Período</label>
+              <select id="period">
+                <option value="thisMonth">Este mês</option>
+                <option value="lastMonth">Mês passado</option>
+                <option value="thisYear">Este ano</option>
+                <option value="custom">Personalizado</option>
+              </select>
+            </div>
+            <div class="field" id="customRange" style="min-width:290px; display:none;">
+              <label>Intervalo</label>
+              <div class="split">
+                <input id="dateFrom" type="date" />
+                <input id="dateTo" type="date" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bd">
+          <div class="kpis">
+            <div class="kpi">
+              <div class="label">Saldo</div>
+              <div class="value" id="kpiBalance">—</div>
+              <div class="sub">Receitas − Despesas (pagas)</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Receitas</div>
+              <div class="value good" id="kpiIncome">—</div>
+              <div class="sub">No período</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Despesas</div>
+              <div class="value bad" id="kpiExpense">—</div>
+              <div class="sub">No período</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Orçamento</div>
+              <div class="value" id="kpiBudget">—</div>
+              <div class="sub" id="kpiBudgetSub">Gasto / Limite (mês)</div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="toolbar">
+            <div class="filters">
+              <div class="field">
+                <label for="fType">Tipo</label>
+                <select id="fType">
+                  <option value="all">Tudo</option>
+                  <option value="expense">Despesas</option>
+                  <option value="income">Receitas</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="fStatus">Status</label>
+                <select id="fStatus">
+                  <option value="all">Todos</option>
+                  <option value="paid">Pago/Recebido</option>
+                  <option value="pending">Pendente</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="fSource">Fonte</label>
+                <select id="fSource"></select>
+              </div>
+              <div class="field">
+                <label for="fAccount">Conta</label>
+                <select id="fAccount"></select>
+              </div>
+              <div class="field">
+                <label for="fCategory">Categoria</label>
+                <select id="fCategory"></select>
+              </div>
+              <div class="field" style="min-width:240px;">
+                <label for="fSearch">Buscar</label>
+                <input id="fSearch" placeholder="Ex: mercado, aluguel, obra, cliente…" />
+              </div>
+            </div>
+
+            <div class="right">
+              <button class="btn" id="btnDemo" title="Criar dados de exemplo (somente você)">
+                ✨ Demo
+              </button>
+              <button class="btn" id="btnRefresh" title="Atualizar (R)">
+                ⟳ Atualizar
+              </button>
+            </div>
+          </div>
+
+          <div style="margin-top:12px;">
+            <canvas id="chart"></canvas>
+            <div class="footer-note">
+              Atalhos: <span class="kbd">N</span> novo • <span class="kbd">Ctrl+E</span> exportar • <span class="kbd">R</span> atualizar • <span class="kbd">Ctrl+,</span> ajustes • <span class="kbd">Ctrl+G</span> metas
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="title" style="margin-bottom:10px;">
+            <h2 style="margin:0; font-size:13px;">Lançamentos</h2>
+            <p style="margin:0; font-size:12px; color:var(--muted)">Clique em um item para editar.</p>
+          </div>
+
+          <div class="list" id="txList">
+            <div class="skeleton"></div>
+            <div class="skeleton"></div>
+            <div class="skeleton"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT -->
+      <aside class="card" aria-label="Metas e Ações">
+        <div class="hd">
+          <div class="title">
+            <h2>Metas</h2>
+            <p>Progresso real (com aportes e histórico)</p>
+          </div>
+          <button class="btn primary" id="btnGoalQuick">＋ Meta</button>
+        </div>
+        <div class="bd">
+          <div class="noteBox" id="goalsSummary">
+            Carregando metas…
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="list" id="goalsList">
+            <div class="skeleton"></div>
+            <div class="skeleton"></div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="noteBox">
+            ✅ “Empresa” é uma <b>Fonte</b> (serve para entrada e saída).<br>
+            ✅ Você também tem “Salário”, “Freela”, “Investimentos”… tudo ajustável em <b>Ajustes</b>.
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="right">
+            <button class="btn ghost" id="btnHome">↩ Página principal</button>
+            <button class="btn ghost" id="btnPrint">🖨️ PDF/Imprimir</button>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <!-- MODAL: TRANSACTION -->
+  <div class="modal" id="txModal" aria-hidden="true">
+    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="txTitle">
+      <div class="phd">
+        <div class="ttl">
+          <h3 id="txTitle">Novo lançamento</h3>
+          <p>Receita ou despesa com Fonte (Salário/Empresa/etc)</p>
+        </div>
+        <div class="right">
+          <button class="btn ghost" id="btnCloseTx">✕ Fechar</button>
+          <button class="btn danger" id="btnDeleteTx" style="display:none;">🗑️ Excluir</button>
+          <button class="btn primary" id="btnSaveTx">✔ Salvar</button>
+        </div>
+      </div>
+      <div class="pbd">
+        <div class="split">
+          <div class="field">
+            <label for="txType">Tipo</label>
+            <select id="txType">
+              <option value="expense">Despesa</option>
+              <option value="income">Receita</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="txStatus">Status</label>
+            <select id="txStatus">
+              <option value="paid">Pago / Recebido</option>
+              <option value="pending">Pendente</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="split">
+          <div class="field">
+            <label for="txDate">Data</label>
+            <input id="txDate" type="date" />
+          </div>
+          <div class="field">
+            <label for="txTime">Hora</label>
+            <input id="txTime" type="time" />
+          </div>
+        </div>
+
+        <div class="split" style="margin-top:10px;">
+          <div class="field">
+            <label for="txName">Descrição</label>
+            <input id="txName" placeholder="Ex: Mercado, Aluguel, Cliente X…" maxlength="80"/>
+          </div>
+          <div class="field">
+            <label for="txAmount">Valor</label>
+            <input id="txAmount" inputmode="decimal" placeholder="Ex: 123,45" />
+          </div>
+        </div>
+
+        <div class="split" style="margin-top:10px;">
+          <div class="field">
+            <label for="txSource">Fonte</label>
+            <select id="txSource"></select>
+          </div>
+          <div class="field">
+            <label for="txAccount">Conta</label>
+            <select id="txAccount"></select>
+          </div>
+        </div>
+
+        <div class="split" style="margin-top:10px;">
+          <div class="field">
+            <label for="txCategory">Categoria</label>
+            <select id="txCategory"></select>
+          </div>
+          <div class="field">
+            <label for="txGoalLink">Vincular a meta (opcional)</label>
+            <select id="txGoalLink"></select>
+          </div>
+        </div>
+
+        <div class="split" style="margin-top:10px;">
+          <div class="field">
+            <label for="txTags">Tags (vírgula)</label>
+            <input id="txTags" placeholder="Ex: fixo, obra, viagem" />
+          </div>
+          <div class="field">
+            <label for="txAttachment">Anexo (link)</label>
+            <input id="txAttachment" placeholder="Ex: recibo no Drive" />
+          </div>
+        </div>
+
+        <div class="split" style="margin-top:10px;">
+          <div class="field">
+            <label for="txRecurring">Recorrência</label>
+            <select id="txRecurring">
+              <option value="none">Não recorrente</option>
+              <option value="monthly">Mensal</option>
+              <option value="weekly">Semanal</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="txRecurringDay">Dia fixo (mensal)</label>
+            <input id="txRecurringDay" type="number" min="1" max="31" placeholder="Ex: 5" />
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:10px;">
+          <label for="txNote">Observações</label>
+          <textarea id="txNote" placeholder="Detalhes adicionais…" maxlength="800"></textarea>
+        </div>
+
+        <div class="footer-note" id="txFoot"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SETTINGS -->
+  <div class="modal" id="settingsModal" aria-hidden="true">
+    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="stTitle">
+      <div class="phd">
+        <div class="ttl">
+          <h3 id="stTitle">Ajustes • Orçamentos • Fontes</h3>
+          <p>Personalize seu sistema (igual app de banco)</p>
+        </div>
+        <div class="right">
+          <button class="btn ghost" id="btnCloseSettings">✕ Fechar</button>
+          <button class="btn primary" id="btnSaveSettings">✔ Salvar</button>
+        </div>
+      </div>
+      <div class="pbd">
+        <div class="split">
+          <div class="field">
+            <label for="stCurrency">Moeda</label>
+            <select id="stCurrency">
+              <option value="BRL">BRL (R$)</option>
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
+            </select>
+          </div>
+          <div class="noteBox">
+            <b>Fontes</b> = “de onde veio / para onde foi”.<br>
+            Ex: Salário, Empresa, Cliente, Freela, Investimentos…
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="title">
+          <h2 style="margin:0; font-size:13px;">Fontes (entrada/saída)</h2>
+          <p style="margin:0; font-size:12px; color:var(--muted)">Uma por linha (use “Empresa” aqui)</p>
+        </div>
+        <div class="split" style="margin-top:10px;">
+          <div class="field">
+            <label for="stSources">Lista</label>
+            <textarea id="stSources" placeholder="Salário&#10;Empresa&#10;Freela&#10;Investimentos&#10;Outros"></textarea>
+          </div>
+          <div class="noteBox">
+            Dica: “Empresa” pode ser entrada (pagamento de cliente) e saída (custo de projeto).
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="title">
+          <h2 style="margin:0; font-size:13px;">Contas</h2>
+          <p style="margin:0; font-size:12px; color:var(--muted)">Uma por linha</p>
+        </div>
+        <div class="split" style="margin-top:10px;">
+          <div class="field">
+            <label for="stAccounts">Lista</label>
+            <textarea id="stAccounts" placeholder="Banco&#10;Carteira&#10;Cartão&#10;Investimentos"></textarea>
+          </div>
+          <div class="noteBox">Contas = onde o dinheiro “passa”. Ex: Cartão vs Banco.</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="title">
+          <h2 style="margin:0; font-size:13px;">Categorias</h2>
+          <p style="margin:0; font-size:12px; color:var(--muted)">Uma por linha</p>
+        </div>
+        <div class="split" style="margin-top:10px;">
+          <div class="field">
+            <label for="stCategories">Lista</label>
+            <textarea id="stCategories" placeholder="Moradia&#10;Alimentação&#10;Transporte&#10;Lazer&#10;Saúde&#10;Educação&#10;Impostos&#10;Outros"></textarea>
+          </div>
+          <div class="noteBox">Poucas categorias = controle fácil (igual banco de verdade).</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="title">
+          <h2 style="margin:0; font-size:13px;">Orçamento por categoria (mensal)</h2>
+          <p style="margin:0; font-size:12px; color:var(--muted)">Formato: Categoria=valor</p>
+        </div>
+        <div class="split" style="margin-top:10px;">
+          <div class="field">
+            <label for="stBudgets">Budgets</label>
+            <textarea id="stBudgets" placeholder="Moradia=2500&#10;Alimentação=1200&#10;Transporte=600&#10;Lazer=400"></textarea>
+          </div>
+          <div class="noteBox">O KPI de orçamento usa despesas <b>pagas</b> do mês atual.</div>
+        </div>
+
+        <div class="divider"></div>
+        <div class="hint">Salvo em: <span class="kbd">/users/{uid}/settings</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: RECURRING -->
+  <div class="modal" id="recModal" aria-hidden="true">
+    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="recTitle">
+      <div class="phd">
+        <div class="ttl">
+          <h3 id="recTitle">Recorrências</h3>
+          <p>Gere automaticamente os fixos do mês (sem duplicar)</p>
+        </div>
+        <div class="right">
+          <button class="btn ghost" id="btnCloseRec">✕ Fechar</button>
+          <button class="btn primary" id="btnGenerateRec">✔ Gerar mês</button>
+        </div>
+      </div>
+      <div class="pbd">
+        <div class="noteBox">
+          Marque um lançamento como <b>Mensal</b> e defina <b>dia fixo</b>. Depois clique em <b>Gerar mês</b>.
+        </div>
+        <div class="divider"></div>
+        <div class="field">
+          <label for="recMode">Gerar como</label>
+          <select id="recMode">
+            <option value="pending">Pendente</option>
+            <option value="paid">Pago/Recebido</option>
+          </select>
+        </div>
+        <div class="footer-note" id="recInfo"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: GOALS -->
+  <div class="modal" id="goalsModal" aria-hidden="true">
+    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="goTitle">
+      <div class="phd">
+        <div class="ttl">
+          <h3 id="goTitle">Metas</h3>
+          <p>Crie metas, faça aportes e acompanhe o progresso</p>
+        </div>
+        <div class="right">
+          <button class="btn ghost" id="btnCloseGoals">✕ Fechar</button>
+          <button class="btn primary" id="btnNewGoal">＋ Nova meta</button>
+        </div>
+      </div>
+      <div class="pbd">
+        <div class="split">
+          <div class="noteBox">
+            Ex: <b>Reserva</b>, <b>Viagem</b>, <b>iPhone</b>, <b>Carro</b>…<br>
+            Cada aporte fica registrado (histórico).
+          </div>
+          <div class="noteBox">
+            Você pode também <b>vincular um lançamento</b> a uma meta (opcional) no formulário do lançamento.
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="list" id="goalsListModal">
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: GOAL EDIT -->
+  <div class="modal" id="goalEditModal" aria-hidden="true">
+    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="geTitle">
+      <div class="phd">
+        <div class="ttl">
+          <h3 id="geTitle">Meta</h3>
+          <p id="geSub">Criar/Editar meta</p>
+        </div>
+        <div class="right">
+          <button class="btn ghost" id="btnCloseGoalEdit">✕ Fechar</button>
+          <button class="btn danger" id="btnDeleteGoal" style="display:none;">🗑️ Excluir</button>
+          <button class="btn primary" id="btnSaveGoal">✔ Salvar</button>
+        </div>
+      </div>
+      <div class="pbd">
+        <div class="split">
+          <div class="field">
+            <label for="geName">Nome</label>
+            <input id="geName" placeholder="Ex: Reserva de emergência" maxlength="60" />
+          </div>
+          <div class="field">
+            <label for="geTarget">Valor alvo</label>
+            <input id="geTarget" inputmode="decimal" placeholder="Ex: 10000,00" />
+          </div>
+        </div>
+
+        <div class="split" style="margin-top:10px;">
+          <div class="field">
+            <label for="geDue">Data limite (opcional)</label>
+            <input id="geDue" type="date" />
+          </div>
+          <div class="field">
+            <label for="gePriority">Prioridade</label>
+            <select id="gePriority">
+              <option value="high">Alta</option>
+              <option value="med">Média</option>
+              <option value="low">Baixa</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="split">
+          <div class="field">
+            <label for="geAdd">Aporte (adicionar agora)</label>
+            <input id="geAdd" inputmode="decimal" placeholder="Ex: 200,00" />
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button class="btn" id="btnAddContribution">＋ Adicionar aporte</button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="title">
+          <h2 style="margin:0; font-size:13px;">Histórico de aportes</h2>
+          <p style="margin:0; font-size:12px; color:var(--muted)">Últimos 20</p>
+        </div>
+        <div class="list" id="geHistory" style="margin-top:10px;"></div>
+
+        <div class="footer-note" id="geFoot"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite">
+    <div class="msg" id="toastMsg">—</div>
+    <button class="btn ghost" id="toastClose">OK</button>
+  </div>
+
+  <script>
+    /************************************************************
+     * 1) FirebaseConfig (o MESMO do seu app)
+     ************************************************************/
+    const firebaseConfig = {
+      apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+      authDomain: "agenda-6accc.firebaseapp.com",
+      databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+      projectId: "agenda-6accc",
+      storageBucket: "agenda-6accc.appspot.com",
+      messagingSenderId: "794262176773",
+      appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+      measurementId: "G-CVBQ54PERH"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    const $ = (id) => document.getElementById(id);
+
+    const state = {
+      uid: null,
+      email: null,
+      settings: null,
+      tx: [],
+      goals: [],
+      period: "thisMonth",
+      range: { from: null, to: null },
+      filters: { type:"all", status:"all", source:"all", account:"all", category:"all", search:"" },
+      editingTxId: null,
+      editingGoalId: null,
+      listeners: [],
+    };
+
+    const defaults = {
+      currency: "BRL",
+      sources: ["Salário","Empresa","Freela","Investimentos","Outros"],
+      accounts: ["Banco","Carteira","Cartão","Investimentos"],
+      categories: ["Moradia","Alimentação","Transporte","Lazer","Saúde","Educação","Impostos","Outros"],
+      budgets: { "Moradia": 2500, "Alimentação": 1200, "Transporte": 600, "Lazer": 400 },
+      recMeta: {}
+    };
+
+    function toast(msg){
+      $("toastMsg").textContent = msg;
+      $("toast").classList.add("show");
+    }
+    $("toastClose").addEventListener("click", ()=> $("toast").classList.remove("show"));
+
+    function nowISODate(){
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    }
+    function nowISOTime(){
+      const d = new Date();
+      return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+    }
+
+    function startOfMonth(d=new Date()){ return new Date(d.getFullYear(), d.getMonth(), 1, 0,0,0,0); }
+    function endOfMonth(d=new Date()){ return new Date(d.getFullYear(), d.getMonth()+1, 0, 23,59,59,999); }
+    function startOfYear(d=new Date()){ return new Date(d.getFullYear(), 0, 1, 0,0,0,0); }
+    function endOfYear(d=new Date()){ return new Date(d.getFullYear(), 11, 31, 23,59,59,999); }
+
+    function clampRange(){
+      const now = new Date();
+      if(state.period === "thisMonth"){
+        state.range.from = startOfMonth(now);
+        state.range.to = endOfMonth(now);
+      } else if(state.period === "lastMonth"){
+        const prev = new Date(now.getFullYear(), now.getMonth()-1, 15);
+        state.range.from = startOfMonth(prev);
+        state.range.to = endOfMonth(prev);
+      } else if(state.period === "thisYear"){
+        state.range.from = startOfYear(now);
+        state.range.to = endOfYear(now);
+      } else {
+        const f = $("dateFrom").value ? new Date($("dateFrom").value + "T00:00:00") : startOfMonth(now);
+        const t = $("dateTo").value ? new Date($("dateTo").value + "T23:59:59") : endOfMonth(now);
+        state.range.from = f;
+        state.range.to = t;
+      }
+    }
+
+    function fmtMoney(v){
+      const cur = (state.settings?.currency || defaults.currency);
+      try{
+        return new Intl.NumberFormat("pt-BR", { style:"currency", currency: cur }).format(v || 0);
+      }catch{
+        return `R$ ${(v||0).toFixed(2)}`;
+      }
+    }
+
+    function toNumberCurrency(str){
+      if(typeof str !== "string") return Number(str||0);
+      const s = str.trim().replace(/\./g,"").replace(",",".").replace(/[^\d.-]/g,"");
+      const n = Number(s);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function safeText(s){
+      return String(s ?? "").replace(/[<>]/g,"").trim();
+    }
+
+    function txPath(){ return `/users/${state.uid}/transactions`; }
+    function settingsPath(){ return `/users/${state.uid}/settings`; }
+    function goalsPath(){ return `/users/${state.uid}/goals`; }
+    function legacyPath(){ return `/expenses`; }
+
+    function parseBudgets(text){
+      const out = {};
+      (text || "").split("\n").map(l=>l.trim()).filter(Boolean).forEach(line=>{
+        const [k,v] = line.split("=");
+        const key = (k||"").trim();
+        if(!key) return;
+        out[key] = toNumberCurrency((v||"").trim());
+      });
+      return out;
+    }
+    function budgetsToText(obj){
+      const keys = Object.keys(obj||{}).sort((a,b)=>a.localeCompare(b));
+      return keys.map(k=>`${k}=${Number(obj[k]||0)}`).join("\n");
+    }
+
+    function setSelectOptions(select, items, includeAll=true, allLabel="Todas"){
+      select.innerHTML = "";
+      if(includeAll){
+        const opt = document.createElement("option");
+        opt.value = "all";
+        opt.textContent = allLabel;
+        select.appendChild(opt);
+      }
+      (items||[]).forEach(v=>{
+        const o = document.createElement("option");
+        o.value = v;
+        o.textContent = v;
+        select.appendChild(o);
+      });
+    }
+
+    function syncFiltersUI(){
+      const s = state.settings || defaults;
+      setSelectOptions($("fSource"), s.sources, true, "Todas");
+      setSelectOptions($("fAccount"), s.accounts, true, "Todas");
+      setSelectOptions($("fCategory"), s.categories, true, "Todas");
+
+      $("fSource").value = state.filters.source;
+      $("fAccount").value = state.filters.account;
+      $("fCategory").value = state.filters.category;
+    }
+
+    function syncTxFormSelects(){
+      const s = state.settings || defaults;
+
+      // fonte
+      $("txSource").innerHTML = "";
+      s.sources.forEach(v=>{
+        const o=document.createElement("option"); o.value=v; o.textContent=v; $("txSource").appendChild(o);
+      });
+
+      // conta
+      $("txAccount").innerHTML = "";
+      s.accounts.forEach(v=>{
+        const o=document.createElement("option"); o.value=v; o.textContent=v; $("txAccount").appendChild(o);
+      });
+
+      // categoria
+      $("txCategory").innerHTML = "";
+      s.categories.forEach(v=>{
+        const o=document.createElement("option"); o.value=v; o.textContent=v; $("txCategory").appendChild(o);
+      });
+
+      // metas
+      $("txGoalLink").innerHTML = "";
+      const none = document.createElement("option");
+      none.value = "";
+      none.textContent = "Nenhuma";
+      $("txGoalLink").appendChild(none);
+      (state.goals||[]).forEach(g=>{
+        const o=document.createElement("option"); o.value=g.id; o.textContent=g.name; $("txGoalLink").appendChild(o);
+      });
+    }
+
+    function drawChart(txList){
+      const canvas = $("chart");
+      const ctx = canvas.getContext("2d");
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const W = rect.width;
+      const H = 220;
+
+      canvas.width = Math.floor(W * dpr);
+      canvas.height = Math.floor(H * dpr);
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+
+      ctx.clearRect(0,0,W,H);
+
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "rgba(255,255,255,.07)";
+      for(let i=0;i<=4;i++){
+        const y = 18 + i*((H-36)/4);
+        ctx.beginPath(); ctx.moveTo(12,y); ctx.lineTo(W-12,y); ctx.stroke();
+      }
+
+      const map = new Map();
+      for(const t of txList){
+        const d = new Date(t.ts);
+        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+        if(!map.has(key)) map.set(key,{inc:0, exp:0});
+        const o = map.get(key);
+        if(t.type === "income") o.inc += (t.amount||0);
+        else o.exp += (t.amount||0);
+      }
+
+      const keys = Array.from(map.keys()).sort();
+      if(keys.length === 0){
+        ctx.fillStyle="rgba(154,166,195,.75)";
+        ctx.font="12px " + getComputedStyle(document.body).fontFamily;
+        ctx.fillText("Sem dados no período para gerar gráfico.", 16, 34);
+        return;
+      }
+
+      let cum = 0;
+      const series = keys.map(k=>{
+        const o = map.get(k);
+        cum += (o.inc - o.exp);
+        return {k, cum};
+      });
+
+      const maxAbs = Math.max(...series.map(s=>Math.abs(s.cum)), 1);
+      const pad = 18;
+      const x0 = 12, x1 = W-12;
+      const y0 = pad, y1 = H-pad;
+
+      const toX = (i)=> x0 + ( (x1-x0) * (i/(series.length-1 || 1)) );
+      const toY = (v)=> (y0 + (y1-y0) * (0.5 - (v/(2*maxAbs))) );
+
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "rgba(96,165,250,.85)";
+      ctx.beginPath();
+      series.forEach((s,i)=>{
+        const x = toX(i), y = toY(s.cum);
+        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      });
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(255,255,255,.85)";
+      series.forEach((s,i)=>{
+        const x=toX(i), y=toY(s.cum);
+        ctx.beginPath(); ctx.arc(x,y,2.4,0,Math.PI*2); ctx.fill();
+      });
+
+      const last = series[series.length-1];
+      ctx.fillStyle = "rgba(233,238,252,.92)";
+      ctx.font = "12px " + getComputedStyle(document.body).fontFamily;
+      ctx.fillText(`Saldo acumulado: ${fmtMoney(last.cum)}`, 16, H-14);
+    }
+
+    function inRange(ts){
+      return ts >= state.range.from.getTime() && ts <= state.range.to.getTime();
+    }
+
+    function applyFilters(list){
+      const f = state.filters;
+      return list.filter(t=>{
+        if(!inRange(t.ts)) return false;
+        if(f.type !== "all" && t.type !== f.type) return false;
+        if(f.status !== "all" && (t.status||"paid") !== f.status) return false;
+        if(f.source !== "all" && (t.source||"") !== f.source) return false;
+        if(f.account !== "all" && (t.account||"") !== f.account) return false;
+        if(f.category !== "all" && (t.category||"") !== f.category) return false;
+        if(f.search.trim()){
+          const q = f.search.trim().toLowerCase();
+          const bag = `${t.name||""} ${t.note||""} ${(t.tags||[]).join(" ")} ${(t.category||"")} ${(t.account||"")} ${(t.source||"")}`.toLowerCase();
+          if(!bag.includes(q)) return false;
+        }
+        return true;
+      }).sort((a,b)=>b.ts-a.ts);
+    }
+
+    function computeKPIs(filtered){
+      let income=0, expense=0;
+      for(const t of filtered){
+        if((t.status||"paid") !== "paid") continue;
+        if(t.type === "income") income += (t.amount||0);
+        else expense += (t.amount||0);
+      }
+      const balance = income - expense;
+
+      // Budget do mês atual (pago)
+      const s = state.settings || defaults;
+      const budgets = s.budgets || {};
+      const now = new Date();
+      const mFrom = startOfMonth(now).getTime();
+      const mTo = endOfMonth(now).getTime();
+      let spentThisMonth = 0;
+      for(const t of state.tx){
+        if(t.type !== "expense") continue;
+        if((t.status||"paid") !== "paid") continue;
+        if(t.ts < mFrom || t.ts > mTo) continue;
+        spentThisMonth += (t.amount||0);
+      }
+      const limit = Object.values(budgets).reduce((a,b)=>a+(Number(b)||0),0);
+
+      $("kpiIncome").textContent = fmtMoney(income);
+      $("kpiExpense").textContent = fmtMoney(expense);
+      $("kpiBalance").textContent = fmtMoney(balance);
+      $("kpiBalance").className = "value " + (balance>=0 ? "good":"bad");
+      $("kpiBudget").textContent = `${fmtMoney(spentThisMonth)} / ${fmtMoney(limit)}`;
+      $("kpiBudgetSub").textContent = limit>0 ? `Uso: ${Math.min(999, Math.round((spentThisMonth/limit)*100))}% (mês atual)` : "Defina budgets nos Ajustes";
+    }
+
+    function renderList(){
+      clampRange();
+      const filtered = applyFilters(state.tx);
+      computeKPIs(filtered);
+      drawChart(filtered);
+
+      const el = $("txList");
+      el.innerHTML = "";
+      if(filtered.length === 0){
+        const div = document.createElement("div");
+        div.className = "hint";
+        div.innerHTML = "Sem lançamentos neste filtro. Clique em <b>＋ Lançamento</b> para começar.";
+        el.appendChild(div);
+        return;
+      }
+
+      filtered.slice(0, 250).forEach(t=>{
+        const row = document.createElement("div");
+        row.className = "tx";
+        row.onclick = ()=> openTxModal(t);
+
+        const d = new Date(t.ts);
+        const dt = d.toLocaleString("pt-BR");
+
+        const main = document.createElement("div");
+        main.className = "main";
+
+        const name = document.createElement("div");
+        name.className = "name";
+        name.textContent = t.name || "(sem descrição)";
+
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        meta.innerHTML = `
+          <span class="badge">${dt}</span>
+          <span class="badge">${t.type === "income" ? "Receita" : "Despesa"}</span>
+          <span class="badge">${(t.status||"paid")==="paid" ? "Pago" : "Pendente"}</span>
+          ${t.source ? `<span class="badge">Fonte: ${t.source}</span>` : ""}
+          ${t.account ? `<span class="badge">${t.account}</span>` : ""}
+          ${t.category ? `<span class="badge">${t.category}</span>` : ""}
+          ${t.goalId ? `<span class="badge">🎯 Meta</span>` : ""}
+        `;
+        main.appendChild(name);
+        main.appendChild(meta);
+
+        const amount = document.createElement("div");
+        amount.className = "amount " + (t.type==="income" ? "good":"bad");
+        amount.textContent = (t.type==="income" ? "+" : "-") + " " + fmtMoney(t.amount||0);
+
+        const note = document.createElement("div");
+        note.className = "hint";
+        const tags = (t.tags||[]).slice(0,5).join(", ");
+        note.textContent = (t.note ? t.note.slice(0,90) : "") + (tags ? `  •  Tags: ${tags}` : "");
+
+        const actions = document.createElement("div");
+        actions.className = "right";
+        actions.innerHTML = `
+          <button class="btn ghost" data-act="toggle">${(t.status||"paid")==="paid" ? "⏳ Pendente" : "✅ Pagar"}</button>
+          <button class="btn danger" data-act="del">🗑️</button>
+        `;
+        actions.querySelector('[data-act="toggle"]').onclick = (e)=>{ e.stopPropagation(); toggleStatus(t); };
+        actions.querySelector('[data-act="del"]').onclick = (e)=>{ e.stopPropagation(); deleteTx(t); };
+
+        if(window.matchMedia("(min-width: 821px)").matches){
+          row.innerHTML = "";
+          row.appendChild(main);
+          row.appendChild(note);
+          row.appendChild(amount);
+          row.appendChild(actions);
+        } else {
+          row.appendChild(amount);
+          row.appendChild(note);
+          row.appendChild(actions);
+        }
+
+        el.appendChild(row);
+      });
+    }
+
+    async function ensureSettings(){
+      const ref = db.ref(settingsPath());
+      const snap = await ref.get();
+      if(!snap.exists()){
+        await ref.set(defaults);
+        state.settings = {...defaults};
+      } else {
+        const v = snap.val();
+        state.settings = {
+          currency: v.currency || defaults.currency,
+          sources: Array.isArray(v.sources) && v.sources.length ? v.sources : defaults.sources,
+          accounts: Array.isArray(v.accounts) && v.accounts.length ? v.accounts : defaults.accounts,
+          categories: Array.isArray(v.categories) && v.categories.length ? v.categories : defaults.categories,
+          budgets: v.budgets && typeof v.budgets === "object" ? v.budgets : defaults.budgets,
+          recMeta: v.recMeta && typeof v.recMeta === "object" ? v.recMeta : {}
+        };
+      }
+
+      $("stCurrency").value = state.settings.currency;
+      $("stSources").value = (state.settings.sources||[]).join("\n");
+      $("stAccounts").value = (state.settings.accounts||[]).join("\n");
+      $("stCategories").value = (state.settings.categories||[]).join("\n");
+      $("stBudgets").value = budgetsToText(state.settings.budgets||{});
+
+      syncFiltersUI();
+    }
+
+    async function saveSettings(){
+      const currency = $("stCurrency").value || "BRL";
+      const sources = $("stSources").value.split("\n").map(s=>s.trim()).filter(Boolean);
+      const accounts = $("stAccounts").value.split("\n").map(s=>s.trim()).filter(Boolean);
+      const categories = $("stCategories").value.split("\n").map(s=>s.trim()).filter(Boolean);
+      const budgets = parseBudgets($("stBudgets").value);
+
+      const next = {
+        currency,
+        sources: sources.length ? sources : defaults.sources,
+        accounts: accounts.length ? accounts : defaults.accounts,
+        categories: categories.length ? categories : defaults.categories,
+        budgets,
+        recMeta: state.settings?.recMeta || {}
+      };
+
+      await db.ref(settingsPath()).set(next);
+      state.settings = next;
+
+      // reset filters if selected item no longer exists
+      if(state.filters.source !== "all" && !next.sources.includes(state.filters.source)) state.filters.source = "all";
+      if(state.filters.account !== "all" && !next.accounts.includes(state.filters.account)) state.filters.account = "all";
+      if(state.filters.category !== "all" && !next.categories.includes(state.filters.category)) state.filters.category = "all";
+
+      syncFiltersUI();
+      syncTxFormSelects();
+      toast("Ajustes salvos.");
+      closeModal("settingsModal");
+      renderList();
+      renderGoals();
+    }
+
+    function txFromForm(){
+      const type = $("txType").value;
+      const status = $("txStatus").value;
+      const date = $("txDate").value || nowISODate();
+      const time = $("txTime").value || "12:00";
+      const ts = new Date(`${date}T${time}:00`).getTime();
+
+      const name = safeText($("txName").value);
+      const amount = toNumberCurrency($("txAmount").value);
+      const source = $("txSource").value || "";
+      const account = $("txAccount").value || "";
+      const category = $("txCategory").value || "";
+      const goalId = $("txGoalLink").value || "";
+
+      const tags = $("txTags").value.split(",").map(s=>s.trim()).filter(Boolean).slice(0,12);
+      const attachment = safeText($("txAttachment").value);
+      const note = safeText($("txNote").value);
+
+      const recurring = $("txRecurring").value || "none";
+      const recurringDay = Number($("txRecurringDay").value || 0);
+
+      if(!name || !Number.isFinite(amount) || amount <= 0){
+        throw new Error("Preencha descrição e valor (>0).");
+      }
+      if(recurring === "monthly" && (recurringDay < 1 || recurringDay > 31)){
+        throw new Error("Para mensal, informe um dia fixo (1–31).");
+      }
+
+      return {
+        type, status,
+        ts,
+        name, amount,
+        source, account, category,
+        goalId,
+        tags,
+        attachment,
+        note,
+        recurring,
+        recurringDay: recurring === "monthly" ? recurringDay : 0,
+        updatedAt: Date.now(),
+      };
+    }
+
+    async function createTx(data){
+      const ref = db.ref(txPath()).push();
+      const id = ref.key;
+      await ref.set({ id, ...data, createdAt: Date.now() });
+      toast("Lançamento criado.");
+      if(data.goalId) await autoAddGoalContributionFromTx(id, data);
+    }
+
+    async function updateTx(id, data, oldData=null){
+      await db.ref(`${txPath()}/${id}`).update(data);
+      toast("Lançamento atualizado.");
+      // Se está vinculado a meta, atualiza contribuição automática pelo id da tx
+      if(data.goalId){
+        await autoUpsertGoalContributionFromTx(id, data);
+      } else {
+        // se antes tinha meta, remove contribuição automática
+        if(oldData?.goalId) await removeAutoContribution(oldData.goalId, id);
+      }
+    }
+
+    async function deleteTx(t){
+      const ok = confirm("Excluir este lançamento?");
+      if(!ok) return;
+      await db.ref(`${txPath()}/${t.id}`).remove();
+      if(t.goalId) await removeAutoContribution(t.goalId, t.id);
+      toast("Excluído.");
+    }
+
+    async function toggleStatus(t){
+      const next = (t.status||"paid")==="paid" ? "pending" : "paid";
+      await db.ref(`${txPath()}/${t.id}/status`).set(next);
+      toast(next==="paid" ? "Marcado como pago." : "Marcado como pendente.");
+    }
+
+    function openTxModal(t=null){
+      state.editingTxId = t ? t.id : null;
+
+      syncTxFormSelects();
+
+      $("txTitle").textContent = t ? "Editar lançamento" : "Novo lançamento";
+      $("btnDeleteTx").style.display = t ? "inline-flex" : "none";
+
+      const d = t ? new Date(t.ts) : new Date();
+      $("txDate").value = t ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}` : nowISODate();
+      $("txTime").value = t ? `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}` : nowISOTime();
+
+      $("txType").value = t?.type || "expense";
+      $("txStatus").value = t?.status || "paid";
+      $("txName").value = t?.name || "";
+      $("txAmount").value = t?.amount != null ? String(t.amount).replace(".",",") : "";
+
+      const s = state.settings || defaults;
+      $("txSource").value = t?.source || (t?.type==="income" ? "Salário" : "Empresa");
+      if(!s.sources.includes($("txSource").value)) $("txSource").value = s.sources[0] || "";
+
+      $("txAccount").value = t?.account || (s.accounts?.[0] || "");
+      $("txCategory").value = t?.category || (s.categories?.[0] || "");
+      $("txGoalLink").value = t?.goalId || "";
+
+      $("txTags").value = (t?.tags || []).join(", ");
+      $("txAttachment").value = t?.attachment || "";
+      $("txNote").value = t?.note || "";
+      $("txRecurring").value = t?.recurring || "none";
+      $("txRecurringDay").value = t?.recurringDay || "";
+
+      $("txFoot").textContent = t ? `ID: ${t.id}` : "Dica: use Fonte=Empresa para entradas/saídas do seu dia a dia.";
+      openModal("txModal");
+    }
+
+    async function saveTx(){
+      try{
+        const data = txFromForm();
+        if(state.editingTxId){
+          const old = state.tx.find(x=>x.id===state.editingTxId) || null;
+          await updateTx(state.editingTxId, data, old);
+        } else {
+          await createTx(data);
+        }
+        closeModal("txModal");
+      }catch(err){
+        alert(err.message || "Erro ao salvar.");
+      }
+    }
+
+    // ========= GOALS =========
+    function goalPath(id){ return `${goalsPath()}/${id}`; }
+    function goalContribPath(goalId){ return `${goalPath(goalId)}/contributions`; }
+
+    function calcGoalProgress(g){
+      const target = Number(g.target||0);
+      const current = Number(g.current||0);
+      const pct = target>0 ? Math.max(0, Math.min(100, (current/target)*100)) : 0;
+      return {target, current, pct};
+    }
+
+    function formatDue(due){
+      if(!due) return "Sem prazo";
+      const dt = new Date(due + "T00:00:00");
+      return dt.toLocaleDateString("pt-BR");
+    }
+
+    function renderGoals(){
+      const list = (state.goals||[]).slice().sort((a,b)=>{
+        const p = {high:0, med:1, low:2};
+        return (p[a.priority]??9) - (p[b.priority]??9) || (a.createdAt||0)-(b.createdAt||0);
+      });
+
+      const totalTarget = list.reduce((s,g)=>s+(Number(g.target||0)),0);
+      const totalCurrent = list.reduce((s,g)=>s+(Number(g.current||0)),0);
+      const totalPct = totalTarget>0 ? Math.round((totalCurrent/totalTarget)*100) : 0;
+
+      $("goalsSummary").innerHTML = `
+        <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+          <div>
+            <b>Metas ativas:</b> ${list.length}<br>
+            <span class="muted">Total: ${fmtMoney(totalCurrent)} / ${fmtMoney(totalTarget)} (${totalPct}%)</span>
+          </div>
+          <div class="kbd">🎯</div>
+        </div>
+      `;
+
+      const renderInto = (containerId)=>{
+        const el = $(containerId);
+        el.innerHTML = "";
+        if(list.length===0){
+          const d = document.createElement("div");
+          d.className = "hint";
+          d.innerHTML = "Sem metas ainda. Clique em <b>＋ Meta</b> para criar.";
+          el.appendChild(d);
+          return;
+        }
+        list.forEach(g=>{
+          const {target,current,pct} = calcGoalProgress(g);
+          const card = document.createElement("div");
+          card.className = "goal";
+          card.onclick = ()=> openGoalEdit(g);
+
+          const pri = g.priority==="high" ? "Alta" : (g.priority==="med" ? "Média" : "Baixa");
+
+          card.innerHTML = `
+            <div class="goalTop">
+              <div>
+                <div class="goalName">${safeText(g.name||"Meta")}</div>
+                <div class="goalMeta">
+                  <span class="badge">Prioridade: ${pri}</span>
+                  <span class="badge">Prazo: ${formatDue(g.due||"")}</span>
+                </div>
+              </div>
+              <div class="amount">${fmtMoney(current)} / ${fmtMoney(target)}</div>
+            </div>
+            <div class="bar"><div class="fill" style="width:${pct}%;"></div></div>
+            <div class="hint">${pct.toFixed(0)}% • Falta: <b>${fmtMoney(Math.max(0,target-current))}</b></div>
+          `;
+          el.appendChild(card);
+        });
+      };
+
+      renderInto("goalsList");
+      renderInto("goalsListModal");
+      syncTxFormSelects();
+    }
+
+    async function createGoal(data){
+      const ref = db.ref(goalsPath()).push();
+      const id = ref.key;
+      await ref.set({ id, ...data, current: Number(data.current||0), createdAt: Date.now(), updatedAt: Date.now() });
+      toast("Meta criada.");
+    }
+
+    async function updateGoal(id, data){
+      await db.ref(goalPath(id)).update({ ...data, updatedAt: Date.now() });
+      toast("Meta atualizada.");
+    }
+
+    async function deleteGoal(goal){
+      const ok = confirm("Excluir esta meta? (o histórico também será removido)");
+      if(!ok) return;
+      await db.ref(goalPath(goal.id)).remove();
+      toast("Meta excluída.");
+      closeModal("goalEditModal");
+    }
+
+    async function addContribution(goalId, amount, note=""){
+      const a = Number(amount||0);
+      if(!Number.isFinite(a) || a<=0) throw new Error("Aporte inválido.");
+
+      const contribRef = db.ref(goalContribPath(goalId)).push();
+      const cid = contribRef.key;
+
+      await contribRef.set({
+        id: cid,
+        amount: a,
+        note: safeText(note||""),
+        ts: Date.now(),
+        kind: "manual"
+      });
+
+      // atualiza current
+      const goalSnap = await db.ref(goalPath(goalId)).get();
+      const g = goalSnap.val();
+      const cur = Number(g?.current||0) + a;
+      await db.ref(`${goalPath(goalId)}/current`).set(cur);
+      toast("Aporte registrado.");
+    }
+
+    async function removeAutoContribution(goalId, txId){
+      const ref = db.ref(goalContribPath(goalId));
+      const snap = await ref.orderByChild("txId").equalTo(txId).get().catch(()=>null);
+      if(!snap || !snap.exists()) return;
+      const obj = snap.val();
+      const entries = Object.values(obj);
+      for(const c of entries){
+        // subtrai do current e remove
+        const goalSnap = await db.ref(goalPath(goalId)).get();
+        const g = goalSnap.val();
+        const cur = Math.max(0, Number(g?.current||0) - Number(c.amount||0));
+        await db.ref(`${goalPath(goalId)}/current`).set(cur);
+        await db.ref(`${goalContribPath(goalId)}/${c.id}`).remove();
+      }
+    }
+
+    async function autoAddGoalContributionFromTx(txId, tx){
+      // regra: se tx vinculada a meta, e for expense OU income, conta como "aporte" (você escolhe o sentido)
+      // Aqui: sempre soma o valor como progresso (você está “movendo” dinheiro para a meta).
+      const goalId = tx.goalId;
+      if(!goalId) return;
+
+      const ref = db.ref(goalContribPath(goalId)).push();
+      const id = ref.key;
+
+      await ref.set({
+        id,
+        amount: Number(tx.amount||0),
+        ts: tx.ts || Date.now(),
+        note: `Auto: ${tx.type==="income" ? "Receita" : "Despesa"} • ${safeText(tx.name||"")}`,
+        kind: "auto",
+        txId
+      });
+
+      const goalSnap = await db.ref(goalPath(goalId)).get();
+      const g = goalSnap.val();
+      const cur = Number(g?.current||0) + Number(tx.amount||0);
+      await db.ref(`${goalPath(goalId)}/current`).set(cur);
+    }
+
+    async function autoUpsertGoalContributionFromTx(txId, tx){
+      const goalId = tx.goalId;
+      if(!goalId) return;
+
+      // procura contribuição auto da tx
+      const ref = db.ref(goalContribPath(goalId));
+      const snap = await ref.orderByChild("txId").equalTo(txId).get().catch(()=>null);
+
+      if(!snap || !snap.exists()){
+        await autoAddGoalContributionFromTx(txId, tx);
+        return;
+      }
+
+      const obj = snap.val();
+      const entries = Object.values(obj);
+      // assume 1
+      const c = entries[0];
+
+      // ajusta diferença
+      const oldAmount = Number(c.amount||0);
+      const newAmount = Number(tx.amount||0);
+      const diff = newAmount - oldAmount;
+
+      await db.ref(`${goalContribPath(goalId)}/${c.id}`).update({
+        amount: newAmount,
+        ts: tx.ts || Date.now(),
+        note: `Auto: ${tx.type==="income" ? "Receita" : "Despesa"} • ${safeText(tx.name||"")}`
+      });
+
+      const goalSnap = await db.ref(goalPath(goalId)).get();
+      const g = goalSnap.val();
+      const cur = Math.max(0, Number(g?.current||0) + diff);
+      await db.ref(`${goalPath(goalId)}/current`).set(cur);
+    }
+
+    function openGoalsModal(){ openModal("goalsModal"); }
+    function openGoalEdit(goal=null){
+      state.editingGoalId = goal ? goal.id : null;
+
+      $("geTitle").textContent = goal ? "Editar meta" : "Nova meta";
+      $("geSub").textContent = goal ? "Atualize alvo, prazo e prioridade" : "Defina alvo e comece com aportes";
+      $("btnDeleteGoal").style.display = goal ? "inline-flex" : "none";
+
+      $("geName").value = goal?.name || "";
+      $("geTarget").value = goal?.target != null ? String(goal.target).replace(".",",") : "";
+      $("geDue").value = goal?.due || "";
+      $("gePriority").value = goal?.priority || "high";
+      $("geAdd").value = "";
+      $("geFoot").textContent = goal ? `ID: ${goal.id}` : "";
+
+      renderGoalHistory(goal?.id || null);
+      openModal("goalEditModal");
+    }
+
+    async function renderGoalHistory(goalId){
+      const el = $("geHistory");
+      el.innerHTML = "";
+      if(!goalId){
+        el.innerHTML = `<div class="hint">Crie a meta para começar a registrar aportes.</div>`;
+        return;
+      }
+
+      const snap = await db.ref(goalContribPath(goalId)).get().catch(()=>null);
+      const list = snap && snap.exists() ? Object.values(snap.val()).map(x=>({
+        id:x.id, amount:Number(x.amount||0), ts:Number(x.ts||0), note:x.note||"", kind:x.kind||"manual", txId:x.txId||""
+      })) : [];
+
+      list.sort((a,b)=>b.ts-a.ts);
+      const top = list.slice(0, 20);
+
+      if(top.length===0){
+        el.innerHTML = `<div class="hint">Sem aportes ainda. Adicione um aporte acima.</div>`;
+        return;
+      }
+
+      top.forEach(c=>{
+        const row = document.createElement("div");
+        row.className = "tx";
+        row.style.cursor = "default";
+
+        const dt = new Date(c.ts).toLocaleString("pt-BR");
+        row.innerHTML = `
+          <div class="main">
+            <div class="name">${c.kind==="auto" ? "Aporte automático (lançamento)" : "Aporte manual"}</div>
+            <div class="meta">
+              <span class="badge">${dt}</span>
+              ${c.txId ? `<span class="badge">TX: ${c.txId.slice(0,8)}</span>` : ""}
+            </div>
+          </div>
+          <div class="hint">${safeText(c.note||"")}</div>
+          <div class="amount good">+ ${fmtMoney(c.amount)}</div>
+          <div class="right">
+            <button class="btn danger" data-act="del">🗑️</button>
+          </div>
+        `;
+        row.querySelector('[data-act="del"]').onclick = async ()=>{
+          const ok = confirm("Remover este aporte?");
+          if(!ok) return;
+
+          // subtrai do current
+          const goalSnap = await db.ref(goalPath(goalId)).get();
+          const g = goalSnap.val();
+          const cur = Math.max(0, Number(g?.current||0) - Number(c.amount||0));
+          await db.ref(`${goalPath(goalId)}/current`).set(cur);
+
+          await db.ref(`${goalContribPath(goalId)}/${c.id}`).remove();
+          toast("Aporte removido.");
+          renderGoalHistory(goalId);
+        };
+        el.appendChild(row);
+      });
+    }
+
+    async function saveGoal(){
+      const name = safeText($("geName").value);
+      const target = toNumberCurrency($("geTarget").value);
+      const due = $("geDue").value || "";
+      const priority = $("gePriority").value || "high";
+
+      if(!name) return alert("Informe o nome da meta.");
+      if(!Number.isFinite(target) || target<=0) return alert("Informe um valor alvo (>0).");
+
+      if(state.editingGoalId){
+        await updateGoal(state.editingGoalId, { name, target, due, priority });
+      } else {
+        await createGoal({ name, target, due, priority, current: 0 });
+      }
+      closeModal("goalEditModal");
+    }
+
+    async function addGoalContributionFromUI(){
+      const goalId = state.editingGoalId;
+      if(!goalId) return alert("Crie a meta primeiro.");
+      const amount = toNumberCurrency($("geAdd").value);
+      if(!Number.isFinite(amount) || amount<=0) return alert("Informe um aporte válido.");
+
+      await addContribution(goalId, amount, "Manual (via metas)");
+      $("geAdd").value = "";
+      renderGoalHistory(goalId);
+    }
+
+    // ========= Recorrências =========
+    function ymKey(d=new Date()){
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+    }
+
+    async function generateRecurrencesForCurrentMonth(mode){
+      const models = state.tx.filter(t=>t.recurring && t.recurring !== "none");
+      if(models.length === 0){
+        toast("Nenhuma recorrência definida. Marque algum lançamento como Mensal/Semanal.");
+        return;
+      }
+
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = now.getMonth();
+      const monthKey = ymKey(now);
+
+      const recMeta = state.settings?.recMeta || {};
+      let created = 0;
+
+      for(const model of models){
+        const metaKey = `${model.id}:${monthKey}`;
+        if(recMeta[metaKey]) continue;
+
+        if(model.recurring === "monthly"){
+          const day = Math.min(Math.max(Number(model.recurringDay||1),1),31);
+          const dt = new Date(y, m, day, 9, 0, 0, 0);
+          if(dt.getMonth() !== m){
+            const last = endOfMonth(new Date(y,m,1));
+            dt.setTime(last.getTime());
+          }
+
+          const data = {
+            type: model.type,
+            status: mode,
+            ts: dt.getTime(),
+            name: model.name,
+            amount: model.amount,
+            source: model.source || (model.type==="income" ? "Salário" : "Empresa"),
+            account: model.account || "",
+            category: model.category || "",
+            goalId: model.goalId || "",
+            tags: (model.tags||[]),
+            attachment: model.attachment || "",
+            note: (model.note ? model.note + "  • (gerado por recorrência)" : "(gerado por recorrência)"),
+            recurring: "none",
+            recurringDay: 0,
+            updatedAt: Date.now(),
+          };
+
+          await createTx(data);
+          created++;
+          recMeta[metaKey] = true;
+        }
+
+        if(model.recurring === "weekly"){
+          const base = new Date(model.ts);
+          const weekday = base.getDay();
+          const first = new Date(y, m, 1, 9, 0, 0, 0);
+          const delta = (weekday - first.getDay() + 7) % 7;
+          const firstOcc = new Date(first.getTime() + delta*86400000);
+          for(let k=0;k<5;k++){
+            const occ = new Date(firstOcc.getTime() + k*7*86400000);
+            if(occ.getMonth() !== m) break;
+
+            const metaKeyW = `${model.id}:${monthKey}:w${k}`;
+            if(recMeta[metaKeyW]) continue;
+
+            const data = {
+              type: model.type,
+              status: mode,
+              ts: occ.getTime(),
+              name: model.name,
+              amount: model.amount,
+              source: model.source || (model.type==="income" ? "Salário" : "Empresa"),
+              account: model.account || "",
+              category: model.category || "",
+              goalId: model.goalId || "",
+              tags: (model.tags||[]),
+              attachment: model.attachment || "",
+              note: (model.note ? model.note + "  • (gerado por recorrência)" : "(gerado por recorrência)"),
+              recurring: "none",
+              recurringDay: 0,
+              updatedAt: Date.now(),
+            };
+            await createTx(data);
+            created++;
+            recMeta[metaKeyW] = true;
+          }
+        }
+      }
+
+      state.settings.recMeta = recMeta;
+      await db.ref(settingsPath()).set(state.settings);
+
+      toast(created ? `Recorrências geradas: ${created}` : "Nada a gerar (já estava gerado).");
+      closeModal("recModal");
+    }
+
+    // ========= Export CSV =========
+    function exportCSV(){
+      const filtered = applyFilters(state.tx);
+      const rows = [["data_hora","tipo","status","fonte","conta","categoria","meta_id","valor","descricao","tags","anexo","obs","id"]];
+      filtered.forEach(t=>{
+        const d = new Date(t.ts).toLocaleString("pt-BR");
+        rows.push([
+          d,
+          t.type,
+          t.status||"paid",
+          t.source||"",
+          t.account||"",
+          t.category||"",
+          t.goalId||"",
+          String(t.amount||0).replace(".",","),
+          (t.name||"").replaceAll('"','""'),
+          (t.tags||[]).join("|"),
+          t.attachment||"",
+          (t.note||"").replaceAll('"','""'),
+          t.id
+        ]);
+      });
+
+      const csv = rows.map(r => r.map(v=> `"${String(v ?? "")}"`).join(";")).join("\n");
+      const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `financeiro_${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast("CSV exportado.");
+    }
+
+    // ========= Demo + Import =========
+    async function seedDemo(){
+      const ok = confirm("Criar dados de exemplo (Salário + Empresa + metas) só para você?");
+      if(!ok) return;
+
+      // cria metas
+      await createGoal({ name:"Reserva de emergência", target: 20000, due:"", priority:"high", current:0 });
+      await createGoal({ name:"Viagem", target: 6000, due:"", priority:"med", current:0 });
+
+      // pequenos delay para listener pegar ids
+      await new Promise(r=>setTimeout(r, 600));
+
+      const reserve = state.goals.find(g=>g.name==="Reserva de emergência")?.id || "";
+      const viagem = state.goals.find(g=>g.name==="Viagem")?.id || "";
+
+      const base = new Date();
+      const items = [
+        {type:"income", status:"paid", name:"Salário", amount:9000, source:"Salário", category:"Outros", account:"Banco", tags:["fixo"], note:"Entrada mensal", recurring:"monthly", recurringDay:5},
+        {type:"income", status:"paid", name:"Cliente (Empresa)", amount:3500, source:"Empresa", category:"Outros", account:"Banco", tags:["empresa"], note:"Recebimento", recurring:"none"},
+        {type:"expense", status:"paid", name:"Aluguel", amount:2500, source:"Empresa", category:"Moradia", account:"Banco", tags:["fixo"], note:"", recurring:"monthly", recurringDay:3},
+        {type:"expense", status:"paid", name:"Mercado", amount:420, source:"Empresa", category:"Alimentação", account:"Cartão", tags:["variável"], note:"", recurring:"none"},
+        {type:"expense", status:"pending", name:"Internet", amount:120, source:"Empresa", category:"Moradia", account:"Banco", tags:["fixo"], note:"Vence dia 10", recurring:"monthly", recurringDay:10},
+        {type:"expense", status:"paid", name:"Aporte Reserva", amount:600, source:"Salário", category:"Outros", account:"Banco", tags:["meta"], note:"", recurring:"monthly", recurringDay:6, goalId: reserve},
+        {type:"expense", status:"paid", name:"Aporte Viagem", amount:200, source:"Salário", category:"Lazer", account:"Banco", tags:["meta"], note:"", recurring:"monthly", recurringDay:8, goalId: viagem},
+      ];
+
+      for(let i=0;i<items.length;i++){
+        const dt = new Date(base.getTime() - i*3*86400000);
+        const data = {
+          ...items[i],
+          ts: dt.getTime(),
+          attachment:"",
+          tags: items[i].tags||[],
+          updatedAt: Date.now()
+        };
+        await createTx(data);
+      }
+      toast("Demo completa criada (com metas).");
+    }
+
+    async function importLegacy(){
+      const ok = confirm("Importar dados do app antigo em /expenses? (não apaga nada)");
+      if(!ok) return;
+
+      const snap = await db.ref(legacyPath()).get();
+      if(!snap.exists()){
+        alert("Nenhum dado encontrado em /expenses.");
+        return;
+      }
+
+      const val = snap.val();
+      let arr = [];
+      if(Array.isArray(val)) arr = val;
+      else if(typeof val === "object") arr = Object.values(val);
+
+      if(!arr.length){
+        alert("Não há itens para importar.");
+        return;
+      }
+
+      let imported = 0;
+      for(const e of arr){
+        const dt = e.dateTime ? new Date(e.dateTime) : new Date();
+        const ts = dt.getTime();
+        const type = e.type === "income" ? "income" : "expense";
+        const amount = Number(e.amount||0);
+        const name = safeText(e.description || "Importado");
+        const data = {
+          type,
+          status: "paid",
+          ts,
+          name,
+          amount: Number.isFinite(amount) ? amount : 0,
+          source: type==="income" ? "Salário" : "Empresa",
+          account: "Banco",
+          category: "Outros",
+          goalId: "",
+          tags: ["importado"],
+          attachment: "",
+          note: "Importado do app antigo (/expenses).",
+          recurring: "none",
+          recurringDay: 0,
+          updatedAt: Date.now(),
+        };
+        await createTx(data);
+        imported++;
+      }
+
+      toast(`Importação concluída: ${imported} itens.`);
+    }
+
+    // ========= listeners =========
+    function clearListeners(){
+      state.listeners.forEach(fn=>fn && fn());
+      state.listeners = [];
+    }
+
+    function listenTransactions(){
+      const ref = db.ref(txPath());
+      const cb = ref.on("value", (snap)=>{
+        const v = snap.val() || {};
+        const list = Object.values(v);
+        state.tx = list.filter(x=>x && x.id).map(x=>({
+          id: x.id,
+          type: x.type || "expense",
+          status: x.status || "paid",
+          ts: Number(x.ts || x.createdAt || Date.now()),
+          name: x.name || "",
+          amount: Number(x.amount || 0),
+          source: x.source || "",
+          account: x.account || "",
+          category: x.category || "",
+          goalId: x.goalId || "",
+          tags: Array.isArray(x.tags) ? x.tags : [],
+          attachment: x.attachment || "",
+          note: x.note || "",
+          recurring: x.recurring || "none",
+          recurringDay: Number(x.recurringDay || 0),
+          createdAt: Number(x.createdAt || 0),
+          updatedAt: Number(x.updatedAt || 0),
+        }));
+        renderList();
+      });
+      state.listeners.push(()=>ref.off("value", cb));
+    }
+
+    function listenGoals(){
+      const ref = db.ref(goalsPath());
+      const cb = ref.on("value", (snap)=>{
+        const v = snap.val() || {};
+        const list = Object.values(v);
+        state.goals = list.filter(g=>g && g.id).map(g=>({
+          id: g.id,
+          name: g.name || "Meta",
+          target: Number(g.target||0),
+          current: Number(g.current||0),
+          due: g.due || "",
+          priority: g.priority || "med",
+          createdAt: Number(g.createdAt||0),
+          updatedAt: Number(g.updatedAt||0),
+        }));
+        renderGoals();
+      });
+      state.listeners.push(()=>ref.off("value", cb));
+    }
+
+    // ========= modals =========
+    function openModal(id){ $(id).classList.add("show"); }
+    function closeModal(id){ $(id).classList.remove("show"); }
+
+    // ========= UI wiring =========
+    $("btnNew").addEventListener("click", ()=> openTxModal(null));
+    $("btnCloseTx").addEventListener("click", ()=> closeModal("txModal"));
+    $("btnSaveTx").addEventListener("click", saveTx);
+    $("btnDeleteTx").addEventListener("click", async ()=>{
+      const id = state.editingTxId;
+      if(!id) return;
+      const t = state.tx.find(x=>x.id===id);
+      if(t) await deleteTx(t);
+      closeModal("txModal");
+    });
+
+    $("btnSettings").addEventListener("click", ()=> openModal("settingsModal"));
+    $("btnCloseSettings").addEventListener("click", ()=> closeModal("settingsModal"));
+    $("btnSaveSettings").addEventListener("click", saveSettings);
+
+    $("btnRecurring").addEventListener("click", ()=>{
+      const count = state.tx.filter(t=>t.recurring && t.recurring !== "none").length;
+      $("recInfo").textContent = `Modelos recorrentes encontrados: ${count}.`;
+      openModal("recModal");
+    });
+    $("btnCloseRec").addEventListener("click", ()=> closeModal("recModal"));
+    $("btnGenerateRec").addEventListener("click", async ()=>{
+      const mode = $("recMode").value || "pending";
+      await generateRecurrencesForCurrentMonth(mode);
+    });
+
+    $("btnExport").addEventListener("click", exportCSV);
+    $("btnDemo").addEventListener("click", seedDemo);
+    $("btnRefresh").addEventListener("click", ()=>{ renderList(); renderGoals(); toast("Atualizado."); });
+    $("btnImport").addEventListener("click", importLegacy);
+
+    $("btnHome").addEventListener("click", ()=>{ window.location.href = "https://wilsonf1996.github.io/index.html/"; });
+    $("btnPrint").addEventListener("click", ()=> window.print());
+
+    $("btnGoals").addEventListener("click", openGoalsModal);
+    $("btnCloseGoals").addEventListener("click", ()=> closeModal("goalsModal"));
+    $("btnNewGoal").addEventListener("click", ()=> openGoalEdit(null));
+    $("btnGoalQuick").addEventListener("click", ()=> openGoalEdit(null));
+
+    $("btnCloseGoalEdit").addEventListener("click", ()=> closeModal("goalEditModal"));
+    $("btnSaveGoal").addEventListener("click", saveGoal);
+    $("btnDeleteGoal").addEventListener("click", async ()=>{
+      const g = state.goals.find(x=>x.id===state.editingGoalId);
+      if(g) await deleteGoal(g);
+    });
+    $("btnAddContribution").addEventListener("click", addGoalContributionFromUI);
+
+    $("period").addEventListener("change", ()=>{
+      state.period = $("period").value;
+      $("customRange").style.display = (state.period==="custom") ? "block" : "none";
+      renderList();
+    });
+    $("dateFrom").addEventListener("change", renderList);
+    $("dateTo").addEventListener("change", renderList);
+
+    $("fType").addEventListener("change", ()=>{ state.filters.type=$("fType").value; renderList(); });
+    $("fStatus").addEventListener("change", ()=>{ state.filters.status=$("fStatus").value; renderList(); });
+    $("fSource").addEventListener("change", ()=>{ state.filters.source=$("fSource").value; renderList(); });
+    $("fAccount").addEventListener("change", ()=>{ state.filters.account=$("fAccount").value; renderList(); });
+    $("fCategory").addEventListener("change", ()=>{ state.filters.category=$("fCategory").value; renderList(); });
+    $("fSearch").addEventListener("input", ()=>{
+      state.filters.search = $("fSearch").value;
+      renderList();
+    });
+
+    window.addEventListener("resize", ()=> renderList());
+
+    document.addEventListener("keydown", (e)=>{
+      const k = e.key.toLowerCase();
+      if(k==="n" && !e.ctrlKey && !e.metaKey){ openTxModal(null); }
+      if(k==="r" && !e.ctrlKey && !e.metaKey){ renderList(); renderGoals(); toast("Atualizado."); }
+      if((e.ctrlKey||e.metaKey) && k==="e"){ e.preventDefault(); exportCSV(); }
+      if((e.ctrlKey||e.metaKey) && k===","){ e.preventDefault(); openModal("settingsModal"); }
+      if((e.ctrlKey||e.metaKey) && k==="g"){ e.preventDefault(); openGoalsModal(); }
+      if(k==="escape"){
+        closeModal("txModal"); closeModal("settingsModal"); closeModal("recModal"); closeModal("goalsModal"); closeModal("goalEditModal");
+      }
+    });
+
+    // ========= Auth =========
+    async function ensureAuth(){
+      return new Promise((resolve)=>{
+        auth.onAuthStateChanged(async (user)=>{
+          if(user){
+            state.uid = user.uid;
+            state.email = user.email || null;
+            $("btnSignOut").style.display = "inline-flex";
+            $("userPill").textContent = state.email ? `Google: ${state.email}` : `Anônimo: ${state.uid.slice(0,8)}…`;
+            resolve(user);
+          } else {
+            try{
+              const cred = await auth.signInAnonymously();
+              resolve(cred.user);
+            }catch(err){
+              alert("Falha no login anônimo: " + (err.message||err));
+            }
+          }
+        });
+      });
+    }
+
+    $("btnGoogle").addEventListener("click", async ()=>{
+      try{
+        const provider = new firebase.auth.GoogleAuthProvider();
+        await auth.signInWithPopup(provider);
+        toast("Logado com Google.");
+      }catch(err){
+        alert("Erro Google: " + (err.message||err));
+      }
+    });
+
+    $("btnSignOut").addEventListener("click", async ()=>{
+      const ok = confirm("Sair?");
+      if(!ok) return;
+      await auth.signOut();
+      location.reload();
+    });
+
+    // ========= Boot =========
+    async function boot(){
+      $("period").value = state.period;
+      $("customRange").style.display = "none";
+      $("dateFrom").value = nowISODate();
+      $("dateTo").value = nowISODate();
+
+      $("fType").value = "all";
+      $("fStatus").value = "all";
+      $("fSearch").value = "";
+
+      await ensureAuth();
+      await ensureSettings();
+
+      // default filters
+      state.filters.source = "all";
+      state.filters.account = "all";
+      state.filters.category = "all";
+      syncFiltersUI();
+
+      clearListeners();
+      listenTransactions();
+      listenGoals();
+
+      toast("Pronto. Financeiro Apple-level com Metas e Fontes.");
+    }
+
+    boot();
+  </script>
+</body>
+</html>
