@@ -1,0 +1,1628 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Planilha → Gráfico PRO (Tech) — 1 arquivo</title>
+
+  <style>
+    :root{
+      --bg:#0b0f14; --panel:#121824; --text:#e8eef6; --muted:#a8b3c2;
+      --line:#243049; --ok:#77f2b4; --warn:#ffcc66; --danger:#ff5c5c;
+      --radius:14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:var(--sans); color:var(--text);
+      background: radial-gradient(1200px 800px at 20% 0%, #12203a 0%, var(--bg) 45%) fixed;
+    }
+    header{max-width:1280px;margin:0 auto;padding:18px 16px 10px}
+    h1{margin:0 0 6px;font-size:18px}
+    .sub{margin:0;color:var(--muted);font-size:13px;line-height:1.35}
+
+    .wrap{
+      max-width:1280px;margin:0 auto;padding:12px 16px 22px;
+      display:grid; gap:12px;
+      grid-template-columns: 1.1fr .9fr;
+    }
+    @media (max-width: 1040px){ .wrap{grid-template-columns:1fr} }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:var(--radius);
+      box-shadow: 0 12px 35px rgba(0,0,0,.35);
+      overflow:hidden;
+    }
+    .hd{
+      padding:12px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+      background: rgba(255,255,255,.03);
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    .hd b{font-size:13px}
+    .bd{padding:12px}
+
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .row + .row{margin-top:10px}
+    .sp{flex:1}
+
+    button, select, input[type="text"], input[type="number"]{
+      appearance:none;
+      border:1px solid rgba(255,255,255,.12);
+      color:var(--text);
+      background: rgba(255,255,255,.06);
+      padding:9px 10px;
+      border-radius:12px;
+      font-size:13px;
+      transition:.15s transform, .15s background, .15s border-color;
+    }
+    button{cursor:pointer}
+    button:hover{transform: translateY(-1px); background: rgba(255,255,255,.09); border-color: rgba(255,255,255,.18)}
+    button.primary{background: rgba(106,166,255,.18); border-color: rgba(106,166,255,.35)}
+    button.ok{background: rgba(119,242,180,.12); border-color: rgba(119,242,180,.28)}
+    button.danger{background: rgba(255,92,92,.12); border-color: rgba(255,92,92,.28)}
+    button.ghost{background: transparent}
+
+    .hint{color:var(--muted); font-size:12px; line-height:1.35}
+    .mono{font-family:var(--mono)}
+    .kbd{
+      font-family:var(--mono); font-size:11px;
+      padding:2px 6px; border-radius:8px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.05);
+      color:rgba(232,238,246,.9);
+    }
+    .pill{
+      padding:6px 10px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      color:var(--muted); font-size:12px;
+    }
+
+    .err, .okbox{
+      margin-top:10px; padding:10px;
+      border-radius:12px; font-size:12px; display:none;
+    }
+    .err{border:1px solid rgba(255,92,92,.35); background: rgba(255,92,92,.10); color:#ffd1d1;}
+    .okbox{border:1px solid rgba(119,242,180,.30); background: rgba(119,242,180,.08); color:#d9ffef;}
+
+    table{
+      width:100%;
+      border-collapse:separate; border-spacing:0;
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:12px; overflow:hidden;
+      background: rgba(0,0,0,.15);
+    }
+    thead th{
+      text-align:left; padding:10px; font-size:12px; color:var(--muted);
+      border-bottom:1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
+      white-space:nowrap;
+    }
+    tbody td{padding:0; border-bottom:1px solid rgba(255,255,255,.06)}
+    tbody tr:last-child td{border-bottom:none}
+    input.cell{
+      width:100%; border:none; outline:none;
+      padding:10px; font-size:13px; color:var(--text);
+      background: transparent;
+    }
+    input.cell::placeholder{color: rgba(168,179,194,.55)}
+    td.action{width:60px; text-align:center}
+
+    .grid2{display:grid; grid-template-columns: 1fr 1fr; gap:10px}
+    @media (max-width: 1040px){ .grid2{grid-template-columns:1fr} }
+
+    canvas{
+      width:100%; height:600px;
+      background: rgba(0,0,0,.18);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:12px;
+      display:block;
+      cursor: crosshair;
+    }
+
+    .legend{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+      color:var(--muted); font-size:12px; margin-top:8px;
+    }
+    .legend .item{
+      display:flex; gap:8px; align-items:center;
+      padding:6px 10px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.14);
+      cursor:pointer;
+      user-select:none;
+    }
+    .legend .item.off{opacity:.45; filter:saturate(.6)}
+    .dot{width:10px;height:10px;border-radius:999px;display:inline-block}
+
+    .tooltip{
+      position: fixed;
+      z-index: 10;
+      pointer-events:none;
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(10,14,22,.92);
+      color: rgba(232,238,246,.95);
+      font-size:12px;
+      box-shadow: 0 18px 40px rgba(0,0,0,.45);
+      display:none;
+      max-width: 360px;
+    }
+    .tooltip .t{font-weight:600;margin-bottom:6px}
+    .tooltip .kv{display:flex; gap:8px; justify-content:space-between}
+    .tooltip .k{color: rgba(168,179,194,.9)}
+    .tooltip .v{font-family:var(--mono)}
+    .small{font-size:11px;color:rgba(168,179,194,.9)}
+
+    .seriesEditor{
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:12px;
+      background: rgba(0,0,0,.14);
+      padding:10px;
+    }
+
+    /* Print/PDF (Ctrl+P) */
+    @media print{
+      body{ background:#fff !important; color:#000 !important; }
+      header, .card{ box-shadow:none !important; }
+      .wrap{ grid-template-columns:1fr !important; }
+      .card{ border:1px solid #ddd !important; background:#fff !important; }
+      .hd{ background:#f7f7f7 !important; border-bottom:1px solid #e6e6e6 !important; color:#000 !important; }
+      .hint,.sub{ color:#222 !important; }
+      button, select, input, .pill, .kbd{ display:none !important; }
+      canvas{ border:1px solid #ddd !important; background:#fff !important; }
+      #grid{ display:none !important; } /* PDF focado no gráfico */
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Planilha → Gráfico PRO (Tech) — 1 arquivo</h1>
+  <p class="sub">
+    • Colar Excel/Sheets: <span class="kbd">Ctrl</span>+<span class="kbd">V</span> na tabela • Pan: arrastar • Zoom: roda (<span class="kbd">Shift</span>=Y)<br/>
+    • Zoom por seleção: segure <span class="kbd">Alt</span> e arraste • PDF: <span class="kbd">Ctrl</span>+<span class="kbd">P</span>
+  </p>
+</header>
+
+<div class="wrap">
+
+  <!-- DADOS/CONFIG -->
+  <section class="card">
+    <div class="hd">
+      <b>1) Dados e Config</b>
+      <div class="row" style="margin:0">
+        <button id="btnAddRow">+ Linha</button>
+        <button id="btnAddSeries">+ Série Y</button>
+        <button class="ok" id="btnExample">Exemplo</button>
+        <button class="danger" id="btnClear">Limpar</button>
+      </div>
+    </div>
+
+    <div class="bd">
+      <div class="grid2">
+        <div class="row">
+          <span class="pill">Snap X: <span class="kbd">ON</span> (modo numérico)</span>
+          <span class="pill">Alt+arrastar: zoom retângulo</span>
+        </div>
+        <div class="row" style="justify-content:flex-end">
+          <label class="hint">Tipo de X</label>
+          <select id="xMode">
+            <option value="auto">Auto</option>
+            <option value="numeric">Numérico (escala)</option>
+            <option value="category">Texto (categorias)</option>
+          </select>
+          <label class="hint">Ordenar X</label>
+          <select id="sortX">
+            <option value="auto">Auto</option>
+            <option value="no">Não</option>
+            <option value="yes">Sim</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-top:10px">
+        <div class="row">
+          <label class="hint">Título</label>
+          <input id="title" type="text" value="Gráfico: Y por X" style="min-width:260px; flex:1" />
+        </div>
+        <div class="row">
+          <label class="hint">Eixo X</label>
+          <input id="xLabel" type="text" value="X" style="min-width:160px; flex:1" />
+          <label class="hint">Eixo Y</label>
+          <input id="yLabel" type="text" value="Y" style="min-width:160px; flex:1" />
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-top:10px">
+        <div class="row">
+          <label class="hint"><input id="chkFit" type="checkbox" /> Ajuste (fit)</label>
+          <label class="hint">Grau</label>
+          <select id="fitDegree">
+            <option value="1">Linear (1)</option>
+            <option value="2">Polinomial (2)</option>
+            <option value="3">Polinomial (3)</option>
+          </select>
+          <label class="hint"><input id="chkR2" type="checkbox" checked /> Mostrar equação e R²</label>
+        </div>
+        <div class="row" style="justify-content:flex-end">
+          <button id="btnPlot" class="primary">Gerar gráfico</button>
+          <button id="btnResetView">Reset zoom/pan</button>
+        </div>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <table id="grid">
+        <thead>
+          <tr id="theadRow">
+            <th style="width:28%">X</th>
+            <th style="width:22%">Y1</th>
+            <th style="width:60px; text-align:center">Rem</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+
+      <div class="row" style="margin-top:12px">
+        <button id="btnImportCSV">Importar CSV</button>
+        <input id="fileCSV" type="file" accept=".csv,text/csv" style="display:none">
+        <button id="btnExportCSV">Exportar CSV</button>
+
+        <span class="sp"></span>
+
+        <button id="btnSaveProject">Salvar Projeto (JSON)</button>
+        <input id="fileProject" type="file" accept=".json,application/json" style="display:none">
+        <button id="btnLoadProject">Carregar Projeto</button>
+        <button class="ghost" id="btnPrint">Imprimir / PDF</button>
+      </div>
+
+      <div id="msgOk" class="okbox"></div>
+      <div id="msgErr" class="err"></div>
+
+      <div class="hint" style="margin-top:10px">
+        • Y aceita <span class="mono">10,5</span> ou <span class="mono">10.5</span>. • Linhas vazias são ignoradas.
+      </div>
+
+      <div class="seriesEditor" style="margin-top:12px">
+        <div class="row" style="justify-content:space-between">
+          <b style="font-size:13px">Estilo das Séries</b>
+          <span class="hint">Clique na legenda do gráfico para ocultar/mostrar</span>
+        </div>
+        <div id="seriesPanel" class="hint" style="margin-top:10px">Gere um gráfico para editar estilos.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GRAFICO -->
+  <section class="card">
+    <div class="hd">
+      <b>2) Gráfico</b>
+      <div class="row" style="margin:0">
+        <button id="btnPNG">Salvar PNG</button>
+      </div>
+    </div>
+    <div class="bd">
+      <canvas id="cv"></canvas>
+      <div id="legend" class="legend"></div>
+      <div class="hint" style="margin-top:10px">
+        • Tooltip com snap em X (numérico). • <span class="kbd">Alt</span>+arrastar: zoom por seleção.
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div id="tooltip" class="tooltip"></div>
+
+<script>
+/* ============================
+   Estado / Constantes
+============================ */
+const palette = [
+  "rgba(106,166,255,1)",
+  "rgba(119,242,180,1)",
+  "rgba(255,204,102,1)",
+  "rgba(255,92,92,1)",
+  "rgba(186,143,255,1)",
+  "rgba(94,234,212,1)",
+  "rgba(255,120,200,1)",
+  "rgba(180,255,120,1)",
+];
+
+const state = {
+  seriesCount: 1,
+  rows: 14,
+  view: { zoomX: 1, zoomY: 1, panX: 0, panY: 0 },
+  lastPlot: null,
+  styles: [],
+  visible: [],
+  selectedSeries: 0,
+};
+
+const LS_KEY = "app_grafico_pro_tech_autosave_v1";
+
+/* ============================
+   DOM
+============================ */
+const $ = (s) => document.querySelector(s);
+const tbody = $("#tbody");
+const theadRow = $("#theadRow");
+const legendBox = $("#legend");
+const seriesPanel = $("#seriesPanel");
+const msgErr = $("#msgErr");
+const msgOk = $("#msgOk");
+const tooltip = $("#tooltip");
+const cv = $("#cv");
+const ctx = cv.getContext("2d");
+
+/* ============================
+   Helpers
+============================ */
+function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
+function parseNumberBR(v){
+  if (v == null) return NaN;
+  v = String(v).trim();
+  if (!v) return NaN;
+  v = v.replace(/\s+/g,"");
+  if (v.includes(",")) v = v.replace(/\./g,"").replace(",",".");
+  const n = Number(v);
+  return Number.isFinite(n) ? n : NaN;
+}
+function fmt(n, d=6){
+  if (!Number.isFinite(n)) return "NaN";
+  const s = n.toFixed(d);
+  return s.replace(/\.?0+$/,"");
+}
+function showErr(msg){
+  msgOk.style.display="none"; msgOk.textContent="";
+  msgErr.style.display="block"; msgErr.textContent=msg;
+}
+function showOk(msg){
+  msgErr.style.display="none"; msgErr.textContent="";
+  msgOk.style.display="block"; msgOk.textContent=msg;
+}
+function clearMsgs(){
+  msgErr.style.display="none"; msgErr.textContent="";
+  msgOk.style.display="none"; msgOk.textContent="";
+}
+function downloadText(filename, text, type="application/octet-stream"){
+  const blob = new Blob([text], {type});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ============================
+   Styles / Visible arrays
+============================ */
+function ensureStyleArrays(){
+  while(state.styles.length < state.seriesCount){
+    const i = state.styles.length;
+    state.styles.push({
+      name: "Y"+(i+1),
+      color: palette[i % palette.length],
+      width: 2,
+      point: 4.2,
+      dashed: false,
+    });
+  }
+  while(state.visible.length < state.seriesCount) state.visible.push(true);
+}
+
+/* ============================
+   Grid (Tabela)
+============================ */
+function rebuildHeader(){
+  theadRow.innerHTML = "";
+  const thX = document.createElement("th");
+  thX.textContent = "X";
+  thX.style.width = "28%";
+  theadRow.appendChild(thX);
+
+  for(let s=1;s<=state.seriesCount;s++){
+    const th = document.createElement("th");
+    th.textContent = "Y" + s;
+    th.style.width = (Math.max(14, Math.floor(62/state.seriesCount))) + "%";
+    theadRow.appendChild(th);
+  }
+
+  const thRem = document.createElement("th");
+  thRem.textContent = "Rem";
+  thRem.style.width = "60px";
+  thRem.style.textAlign = "center";
+  theadRow.appendChild(thRem);
+}
+function addRow(values=null){
+  const tr = document.createElement("tr");
+
+  const tdX = document.createElement("td");
+  const inX = document.createElement("input");
+  inX.className = "cell";
+  inX.placeholder = "Ex: 1  ou  Jan";
+  inX.value = values?.x ?? "";
+  tdX.appendChild(inX);
+  tr.appendChild(tdX);
+
+  for(let s=1;s<=state.seriesCount;s++){
+    const tdY = document.createElement("td");
+    const inY = document.createElement("input");
+    inY.className = "cell";
+    inY.placeholder = "Ex: 10,5";
+    inY.value = values?.ys?.[s-1] ?? "";
+    tdY.appendChild(inY);
+    tr.appendChild(tdY);
+  }
+
+  const tdA = document.createElement("td");
+  tdA.className = "action";
+  const btn = document.createElement("button");
+  btn.className = "danger";
+  btn.textContent = "X";
+  btn.title = "Remover linha";
+  btn.onclick = () => { tr.remove(); autosave(); };
+  tdA.appendChild(btn);
+  tr.appendChild(tdA);
+
+  tbody.appendChild(tr);
+}
+function clearGrid(){
+  tbody.innerHTML = "";
+  for(let i=0;i<state.rows;i++) addRow();
+}
+function addSeries(){
+  state.seriesCount += 1;
+  rebuildHeader();
+  const rows = [...tbody.querySelectorAll("tr")];
+  rows.forEach(tr => {
+    const tdY = document.createElement("td");
+    const inY = document.createElement("input");
+    inY.className = "cell";
+    inY.placeholder = "Ex: 10,5";
+    tdY.appendChild(inY);
+    tr.insertBefore(tdY, tr.lastElementChild);
+  });
+  ensureStyleArrays();
+  autosave();
+}
+function getGridMatrix(){
+  const rows = [...tbody.querySelectorAll("tr")];
+  return rows.map(tr => [...tr.querySelectorAll("input")].map(i => i.value.trim()));
+}
+function setGridFromMatrix(mat){
+  if (!mat.length) return;
+  const needCols = Math.max(2, ...mat.map(r => r.length));
+  const needSeries = Math.max(1, needCols - 1);
+  while(state.seriesCount < needSeries) addSeries();
+
+  const currentRows = tbody.querySelectorAll("tr").length;
+  if (currentRows < mat.length){
+    for(let i=0;i<mat.length-currentRows;i++) addRow();
+  }
+
+  const rows = [...tbody.querySelectorAll("tr")];
+  for(let r=0;r<mat.length;r++){
+    const inputs = [...rows[r].querySelectorAll("input")];
+    for(let c=0;c<Math.min(inputs.length, mat[r].length);c++){
+      inputs[c].value = mat[r][c];
+    }
+  }
+  autosave();
+}
+
+/* ============================
+   Paste Excel/Sheets (TSV)
+============================ */
+function parseClipboardTSV(text){
+  const lines = text.replace(/\r/g,"").split("\n").filter(l => l.length>0);
+  return lines.map(l => l.split("\t"));
+}
+$("#grid").addEventListener("paste", (e) => {
+  const text = (e.clipboardData || window.clipboardData).getData("text");
+  if (!text) return;
+  const mat = parseClipboardTSV(text);
+  if (mat.length && mat[0].length >= 2){
+    e.preventDefault();
+    setGridFromMatrix(mat);
+    showOk("Dados colados com sucesso.");
+  }
+});
+
+/* ============================
+   CSV Import/Export
+============================ */
+function matrixToCSV(mat){
+  const escape = (v) => {
+    const s = String(v ?? "");
+    if (/[",\n;]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
+    return s;
+  };
+  return mat.map(row => row.map(escape).join(";")).join("\n");
+}
+function csvToMatrix(csvText){
+  const text = csvText.replace(/\r/g,"").trim();
+  if (!text) return [];
+  const lines = text.split("\n");
+  const sample = lines[0];
+  const sep = sample.includes(";") ? ";" : (sample.includes(",") ? "," : ";");
+  const parseLine = (line) => {
+    const out = [];
+    let cur = "", inQ=false;
+    for(let i=0;i<line.length;i++){
+      const ch=line[i];
+      if (ch === '"'){
+        if (inQ && line[i+1] === '"'){ cur += '"'; i++; }
+        else inQ = !inQ;
+      } else if (!inQ && ch === sep){
+        out.push(cur); cur="";
+      } else cur += ch;
+    }
+    out.push(cur);
+    return out;
+  };
+  return lines.map(parseLine);
+}
+$("#btnImportCSV").addEventListener("click", () => $("#fileCSV").click());
+$("#fileCSV").addEventListener("change", async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const text = await file.text();
+  const mat = csvToMatrix(text);
+  if (!mat.length || mat[0].length < 2) return showErr("CSV inválido. Precisa ter 2+ colunas.");
+  setGridFromMatrix(mat);
+  showOk("CSV importado.");
+  e.target.value = "";
+});
+$("#btnExportCSV").addEventListener("click", () => {
+  downloadText("dados_xy.csv", matrixToCSV(getGridMatrix()), "text/csv;charset=utf-8");
+});
+
+/* ============================
+   Projeto JSON + Autosave
+============================ */
+function getProject(){
+  return {
+    version: 1,
+    meta: {
+      title: $("#title").value,
+      xLabel: $("#xLabel").value,
+      yLabel: $("#yLabel").value,
+      xMode: $("#xMode").value,
+      sortX: $("#sortX").value,
+      fit: $("#chkFit").checked,
+      fitDegree: Number($("#fitDegree").value),
+      showR2: $("#chkR2").checked,
+    },
+    seriesCount: state.seriesCount,
+    styles: state.styles,
+    visible: state.visible,
+    data: getGridMatrix(),
+  };
+}
+function loadProject(proj){
+  if (!proj || typeof proj !== "object") return showErr("Projeto inválido.");
+  state.seriesCount = Math.max(1, Number(proj.seriesCount || 1));
+  rebuildHeader();
+  clearGrid();
+
+  ensureStyleArrays();
+  if (Array.isArray(proj.styles)) state.styles = proj.styles;
+  if (Array.isArray(proj.visible)) state.visible = proj.visible;
+
+  $("#title").value = proj.meta?.title ?? "Gráfico: Y por X";
+  $("#xLabel").value = proj.meta?.xLabel ?? "X";
+  $("#yLabel").value = proj.meta?.yLabel ?? "Y";
+  $("#xMode").value = proj.meta?.xMode ?? "auto";
+  $("#sortX").value = proj.meta?.sortX ?? "auto";
+  $("#chkFit").checked = !!proj.meta?.fit;
+  $("#fitDegree").value = String(proj.meta?.fitDegree ?? 1);
+  $("#chkR2").checked = (proj.meta?.showR2 ?? true);
+
+  if (Array.isArray(proj.data)) setGridFromMatrix(proj.data);
+  ensureStyleArrays();
+
+  state.view = { zoomX: 1, zoomY: 1, panX: 0, panY: 0 };
+  state.lastPlot = null;
+  legendBox.innerHTML = "";
+  seriesPanel.innerHTML = "Gere um gráfico para editar estilos.";
+  tooltip.style.display="none";
+  drawEmpty();
+  showOk("Projeto carregado.");
+}
+function autosave(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(getProject())); }catch{}
+}
+function tryLoadAutosave(){
+  try{
+    const s = localStorage.getItem(LS_KEY);
+    if (!s) return;
+    loadProject(JSON.parse(s));
+    showOk("Autosave carregado.");
+  }catch{}
+}
+$("#btnSaveProject").addEventListener("click", () => {
+  downloadText("projeto_grafico.json", JSON.stringify(getProject(), null, 2), "application/json;charset=utf-8");
+  showOk("Projeto salvo (JSON).");
+});
+$("#btnLoadProject").addEventListener("click", () => $("#fileProject").click());
+$("#fileProject").addEventListener("change", async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const text = await file.text();
+  try{ loadProject(JSON.parse(text)); }
+  catch{ showErr("Não foi possível ler o JSON."); }
+  e.target.value = "";
+});
+$("#btnPrint").addEventListener("click", () => window.print());
+
+// autosave em inputs
+document.addEventListener("input", (e) => {
+  const t = e.target;
+  if (t && (t.matches("input") || t.matches("select"))) autosave();
+});
+
+/* ============================
+   Dados/Validação
+============================ */
+function readDataFromGrid(){
+  clearMsgs();
+  ensureStyleArrays();
+
+  const mat = getGridMatrix();
+  const rows = mat.filter(r => r.some(v => v !== ""));
+  if (rows.length < 2) return { ok:false, msg:"Insira pelo menos 2 linhas com dados." };
+
+  let mode = $("#xMode").value; // auto|numeric|category
+  const xsRaw = rows.map(r => r[0]);
+  const xsNumCount = xsRaw.map(parseNumberBR).filter(n => Number.isFinite(n)).length;
+  if (mode === "auto"){
+    mode = (xsNumCount >= Math.ceil(xsRaw.length*0.7)) ? "numeric" : "category";
+  }
+
+  const series = [];
+  for(let s=0;s<state.seriesCount;s++){
+    series.push({ name: state.styles[s]?.name ?? ("Y"+(s+1)), points: [] , idx:s});
+  }
+
+  for(let i=0;i<rows.length;i++){
+    const r = rows[i];
+    const xLabel = r[0] || String(i+1);
+    const xNum = parseNumberBR(r[0]);
+
+    if (mode === "numeric" && !Number.isFinite(xNum)){
+      return { ok:false, msg:`Linha ${i+1}: X precisa ser numérico. Você colocou “${r[0]}”.` };
+    }
+
+    for(let s=0;s<state.seriesCount;s++){
+      const yStr = r[1+s] ?? "";
+      if (yStr === "") continue;
+      const yNum = parseNumberBR(yStr);
+      if (!Number.isFinite(yNum)){
+        return { ok:false, msg:`Linha ${i+1}: ${"Y"+(s+1)} inválido (“${yStr}”). Use número.` };
+      }
+      series[s].points.push({ xLabel, xNum, y: yNum, idx: i });
+    }
+  }
+
+  const anyGood = series.some(s => s.points.length >= 2);
+  if (!anyGood) return { ok:false, msg:"Você precisa de pelo menos 2 pontos em alguma série Y." };
+
+  const sortUI = $("#sortX").value;
+  const doSort = (mode === "numeric") && (sortUI === "yes" || sortUI === "auto");
+  if (doSort){
+    series.forEach(s => s.points.sort((a,b)=>a.xNum-b.xNum));
+  }
+
+  return { ok:true, mode, series };
+}
+
+/* ============================
+   Math: Fit polinomial (LS) + R²
+============================ */
+function solveLinearSystem(A, b){
+  // Gauss (A nxn)
+  const n = A.length;
+  const M = A.map((row,i)=>row.slice().concat([b[i]]));
+
+  for(let col=0; col<n; col++){
+    // pivot
+    let pivot = col;
+    for(let r=col+1;r<n;r++){
+      if (Math.abs(M[r][col]) > Math.abs(M[pivot][col])) pivot = r;
+    }
+    if (Math.abs(M[pivot][col]) < 1e-12) return null;
+    [M[col], M[pivot]] = [M[pivot], M[col]];
+
+    // normalize
+    const div = M[col][col];
+    for(let c=col;c<=n;c++) M[col][c] /= div;
+
+    // eliminate
+    for(let r=0;r<n;r++){
+      if (r===col) continue;
+      const factor = M[r][col];
+      for(let c=col;c<=n;c++){
+        M[r][c] -= factor * M[col][c];
+      }
+    }
+  }
+  return M.map(row => row[n]);
+}
+
+function polyFit(points, degree, mode){
+  // y ~ c0 + c1 x + c2 x^2 ...
+  const pts = points
+    .map(p => ({x: mode==="numeric" ? p.xNum : p.idx, y: p.y}))
+    .filter(p => Number.isFinite(p.x) && Number.isFinite(p.y));
+
+  const n = pts.length;
+  const m = degree + 1;
+  if (n < m) return null;
+
+  // normal equations: (X^T X) c = X^T y
+  const XT_X = Array.from({length:m}, ()=>Array(m).fill(0));
+  const XT_y = Array(m).fill(0);
+
+  for(const p of pts){
+    const xp = Array(m).fill(1);
+    for(let k=1;k<m;k++) xp[k] = xp[k-1] * p.x;
+
+    for(let i=0;i<m;i++){
+      XT_y[i] += xp[i]*p.y;
+      for(let j=0;j<m;j++){
+        XT_X[i][j] += xp[i]*xp[j];
+      }
+    }
+  }
+
+  const coeff = solveLinearSystem(XT_X, XT_y);
+  if (!coeff) return null;
+
+  const yMean = pts.reduce((s,p)=>s+p.y,0)/n;
+  let ssTot=0, ssRes=0;
+  for(const p of pts){
+    const yHat = coeff.reduce((acc,c,i)=>acc + c*Math.pow(p.x,i), 0);
+    ssTot += (p.y - yMean)**2;
+    ssRes += (p.y - yHat)**2;
+  }
+  const r2 = ssTot === 0 ? 1 : (1 - ssRes/ssTot);
+  return { coeff, r2 };
+}
+
+function polyToString(coeff){
+  // c0 + c1 x + c2 x^2...
+  const parts = [];
+  for(let i=0;i<coeff.length;i++){
+    const c = coeff[i];
+    if (!Number.isFinite(c)) continue;
+    const abs = Math.abs(c);
+    const sign = (c>=0) ? "+" : "-";
+    const num = fmt(abs, 6);
+    if (abs < 1e-12) continue;
+
+    let term = "";
+    if (i===0) term = `${num}`;
+    else if (i===1) term = `${num}x`;
+    else term = `${num}x^${i}`;
+
+    parts.push({sign, term});
+  }
+  if (!parts.length) return "0";
+
+  let s = "";
+  for(let i=0;i<parts.length;i++){
+    const p = parts[i];
+    if (i===0){
+      s += (p.sign === "-" ? "-" : "") + p.term;
+    }else{
+      s += ` ${p.sign} ${p.term}`;
+    }
+  }
+  return s;
+}
+
+/* ============================
+   Chart: resize & ticks (major/minor)
+============================ */
+function resizeCanvasToCSS(){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = cv.getBoundingClientRect();
+  const w = Math.max(320, Math.round(rect.width));
+  const h = Math.max(320, Math.round(rect.height));
+  cv.width = Math.round(w * dpr);
+  cv.height = Math.round(h * dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {W:w, H:h};
+}
+
+function niceStep(range, targetTicks){
+  // step ~ 1,2,5 * 10^k
+  const raw = range / Math.max(1, targetTicks);
+  const pow = Math.pow(10, Math.floor(Math.log10(raw)));
+  const r = raw / pow;
+  let step;
+  if (r < 1.5) step = 1;
+  else if (r < 3.5) step = 2;
+  else if (r < 7.5) step = 5;
+  else step = 10;
+  return step * pow;
+}
+
+function drawEmpty(){
+  const {W,H} = resizeCanvasToCSS();
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = "rgba(0,0,0,.10)";
+  ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = "rgba(168,179,194,.85)";
+  ctx.font = "14px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  ctx.fillText("Insira dados e clique em “Gerar gráfico”.", 16, 28);
+}
+
+/* ============================
+   Bounds & View window
+============================ */
+function computeBounds(mode, series){
+  const ys=[];
+  series.forEach(s => {
+    if (!state.visible[s.idx]) return;
+    s.points.forEach(p => ys.push(p.y));
+  });
+  let yMin = Math.min(...ys), yMax = Math.max(...ys);
+  if (!Number.isFinite(yMin) || !Number.isFinite(yMax)){ yMin=0; yMax=1; }
+  if (yMin === yMax){ yMin -= 1; yMax += 1; }
+  const yPad = (yMax-yMin)*0.08;
+  yMin -= yPad; yMax += yPad;
+
+  let xMin=0, xMax=1;
+  if (mode === "numeric"){
+    const xs=[];
+    series.forEach(s => {
+      if (!state.visible[s.idx]) return;
+      s.points.forEach(p => xs.push(p.xNum));
+    });
+    xMin = Math.min(...xs); xMax = Math.max(...xs);
+    if (xMin === xMax){ xMin -= 1; xMax += 1; }
+    const xPad = (xMax-xMin)*0.06;
+    xMin -= xPad; xMax += xPad;
+  } else {
+    const maxN = Math.max(...series.map(s => s.points.length));
+    xMin = 0; xMax = Math.max(1, maxN-1);
+  }
+  return {xMin,xMax,yMin,yMax};
+}
+
+function computeViewWindow(bounds, plotW, plotH){
+  const zoomX = clamp(state.view.zoomX, 0.3, 60);
+  const zoomY = clamp(state.view.zoomY, 0.3, 60);
+
+  const baseXSpan = bounds.xMax - bounds.xMin;
+  const baseYSpan = bounds.yMax - bounds.yMin;
+
+  const xSpan = baseXSpan / zoomX;
+  const ySpan = baseYSpan / zoomY;
+
+  const panXUnit = (state.view.panX / plotW) * xSpan;
+  const panYUnit = (state.view.panY / plotH) * ySpan;
+
+  const xCenter = (bounds.xMin + bounds.xMax)/2 - panXUnit;
+  const yCenter = (bounds.yMin + bounds.yMax)/2 + panYUnit;
+
+  return {
+    xMin: xCenter - xSpan/2,
+    xMax: xCenter + xSpan/2,
+    yMin: yCenter - ySpan/2,
+    yMax: yCenter + ySpan/2
+  };
+}
+
+/* ============================
+   Legend & Series panel
+============================ */
+function buildLegend(plot){
+  legendBox.innerHTML = "";
+  plot.series.forEach(s => {
+    const idx = s.idx;
+    const st = state.styles[idx];
+    const item = document.createElement("div");
+    item.className = "item" + (state.visible[idx] ? "" : " off");
+    item.innerHTML = `<span class="dot" style="background:${st.color}"></span><span>${st.name}</span>`;
+    item.addEventListener("click", () => {
+      state.visible[idx] = !state.visible[idx];
+      autosave();
+      if (state.lastPlot) render();
+    });
+    legendBox.appendChild(item);
+  });
+}
+
+function renderSeriesPanel(){
+  if (!state.lastPlot){
+    seriesPanel.innerHTML = "Gere um gráfico para editar estilos.";
+    return;
+  }
+  ensureStyleArrays();
+
+  const buttons = state.lastPlot.series.map(si => {
+    const st = state.styles[si.idx];
+    const active = (state.selectedSeries === si.idx);
+    return `<button class="${active ? "primary" : ""}" data-s="${si.idx}">${st.name}</button>`;
+  }).join("");
+
+  const st = state.styles[state.selectedSeries] || state.styles[0];
+  seriesPanel.innerHTML = `
+    <div class="row">${buttons}</div>
+    <div class="row" style="margin-top:12px">
+      <label class="hint">Nome</label>
+      <input id="styName" type="text" value="${st.name}" style="min-width:160px;flex:1" />
+      <label class="hint">Cor</label>
+      <input id="styColor" type="text" value="${st.color}" style="min-width:220px;flex:1" />
+    </div>
+    <div class="row">
+      <label class="hint">Espessura</label>
+      <input id="styWidth" type="number" min="1" max="10" step="1" value="${st.width}" style="width:120px" />
+      <label class="hint">Ponto</label>
+      <input id="styPoint" type="number" min="0" max="12" step="0.5" value="${st.point}" style="width:120px" />
+      <label class="hint"><input id="styDash" type="checkbox" ${st.dashed ? "checked":""}/> Tracejado</label>
+      <span class="sp"></span>
+      <span class="hint">Dica: cor pode ser <span class="mono">rgba(...)</span> ou <span class="mono">#RRGGBB</span></span>
+    </div>
+  `;
+
+  seriesPanel.querySelectorAll("button[data-s]").forEach(b => {
+    b.addEventListener("click", () => {
+      state.selectedSeries = Number(b.getAttribute("data-s"));
+      renderSeriesPanel();
+    });
+  });
+
+  const bind = (id, fn) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener("input", fn);
+    el.addEventListener("change", fn);
+  };
+
+  bind("styName", () => {
+    state.styles[state.selectedSeries].name = $("#styName").value.trim() || ("Y"+(state.selectedSeries+1));
+    autosave(); render();
+  });
+  bind("styColor", () => {
+    state.styles[state.selectedSeries].color = $("#styColor").value.trim() || palette[state.selectedSeries % palette.length];
+    autosave(); render();
+  });
+  bind("styWidth", () => {
+    state.styles[state.selectedSeries].width = clamp(Number($("#styWidth").value)||2, 1, 10);
+    autosave(); render();
+  });
+  bind("styPoint", () => {
+    state.styles[state.selectedSeries].point = clamp(Number($("#styPoint").value)||0, 0, 12);
+    autosave(); render();
+  });
+  bind("styDash", () => {
+    state.styles[state.selectedSeries].dashed = $("#styDash").checked;
+    autosave(); render();
+  });
+}
+
+/* ============================
+   Drawing
+============================ */
+function drawChart(plot){
+  const {W,H} = resizeCanvasToCSS();
+  ctx.clearRect(0,0,W,H);
+
+  const padL=72, padR=18, padT=34, padB=62;
+  const plotW = W-padL-padR;
+  const plotH = H-padT-padB;
+
+  ctx.fillStyle="rgba(0,0,0,.10)";
+  ctx.fillRect(0,0,W,H);
+
+  const baseBounds = plot.bounds;
+  const view = computeViewWindow(baseBounds, plotW, plotH);
+
+  const xToPx = (x) => padL + ((x - view.xMin)/(view.xMax-view.xMin))*plotW;
+  const yToPx = (y) => padT + (1 - (y - view.yMin)/(view.yMax-view.yMin))*plotH;
+
+  // Major/minor ticks
+  const yRange = view.yMax - view.yMin;
+  const xRange = view.xMax - view.xMin;
+
+  const yMajor = niceStep(yRange, 6);
+  const yMinor = yMajor / 5;
+
+  // grid Y minor
+  ctx.lineWidth=1;
+  ctx.strokeStyle="rgba(255,255,255,.05)";
+  for(let v = Math.floor(view.yMin/yMinor)*yMinor; v<=view.yMax; v+=yMinor){
+    const py = yToPx(v);
+    ctx.beginPath(); ctx.moveTo(padL,py); ctx.lineTo(padL+plotW,py); ctx.stroke();
+  }
+  // grid Y major
+  ctx.strokeStyle="rgba(255,255,255,.10)";
+  for(let v = Math.floor(view.yMin/yMajor)*yMajor; v<=view.yMax; v+=yMajor){
+    const py = yToPx(v);
+    ctx.beginPath(); ctx.moveTo(padL,py); ctx.lineTo(padL+plotW,py); ctx.stroke();
+  }
+
+  // axis
+  ctx.strokeStyle="rgba(255,255,255,.22)";
+  ctx.beginPath(); ctx.moveTo(padL,padT); ctx.lineTo(padL,padT+plotH); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(padL,padT+plotH); ctx.lineTo(padL+plotW,padT+plotH); ctx.stroke();
+
+  // title and axis labels
+  const title = $("#title").value.trim() || "Gráfico";
+  const xLabel = $("#xLabel").value.trim() || "X";
+  const yLabel = $("#yLabel").value.trim() || "Y";
+
+  ctx.fillStyle="rgba(232,238,246,.92)";
+  ctx.font="13px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  ctx.fillText(title, padL, 18);
+
+  ctx.fillStyle="rgba(168,179,194,.9)";
+  ctx.font="12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  ctx.fillText(xLabel, padL+plotW-ctx.measureText(xLabel).width, padT+plotH+44);
+
+  ctx.save();
+  ctx.translate(18, padT + plotH/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText(yLabel, 0, 0);
+  ctx.restore();
+
+  // y labels (major)
+  ctx.fillStyle="rgba(168,179,194,.85)";
+  ctx.font="12px " + getComputedStyle(document.body).fontFamily;
+  for(let v = Math.floor(view.yMin/yMajor)*yMajor; v<=view.yMax; v+=yMajor){
+    const py = yToPx(v);
+    ctx.fillText(v.toFixed(2), 10, py+4);
+  }
+
+  // x labels
+  ctx.fillStyle="rgba(168,179,194,.85)";
+  ctx.font="12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial";
+
+  if (plot.mode === "numeric"){
+    const xMajor = niceStep(xRange, 7);
+    const xMinor = xMajor / 5;
+
+    // minor vertical
+    ctx.strokeStyle="rgba(255,255,255,.04)";
+    for(let v = Math.floor(view.xMin/xMinor)*xMinor; v<=view.xMax; v+=xMinor){
+      const px = xToPx(v);
+      ctx.beginPath(); ctx.moveTo(px,padT); ctx.lineTo(px,padT+plotH); ctx.stroke();
+    }
+    // major vertical + labels
+    ctx.strokeStyle="rgba(255,255,255,.08)";
+    for(let v = Math.floor(view.xMin/xMajor)*xMajor; v<=view.xMax; v+=xMajor){
+      const px = xToPx(v);
+      ctx.beginPath(); ctx.moveTo(px,padT); ctx.lineTo(px,padT+plotH); ctx.stroke();
+      ctx.fillText(v.toFixed(2), px-12, padT+plotH+18);
+    }
+  } else {
+    const base = plot.baseCategories;
+    const maxLabels = 7;
+    const step = Math.max(1, Math.ceil(base.length/maxLabels));
+    for(let i=0;i<base.length;i+=step){
+      const px = xToPx(i);
+      const label = base[i] ?? String(i+1);
+      const text = label.length>12 ? label.slice(0,12)+"…" : label;
+      ctx.save();
+      ctx.translate(px, padT+plotH+18);
+      ctx.rotate(-0.35);
+      ctx.fillText(text, -10, 0);
+      ctx.restore();
+    }
+  }
+
+  // Fit config
+  const doFit = $("#chkFit").checked;
+  const degree = clamp(Number($("#fitDegree").value)||1, 1, 3);
+  const showR2 = $("#chkR2").checked;
+
+  // series draw
+  plot.series.forEach(s => {
+    const idx = s.idx;
+    if (!state.visible[idx]) return;
+
+    const st = state.styles[idx];
+    const color = st.color;
+    const width = st.width;
+    const pr = st.point;
+
+    // poly fit (optional)
+    let fit = null;
+    if (doFit){
+      fit = polyFit(s.points, degree, plot.mode);
+    }
+
+    // line
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.setLineDash(st.dashed ? [8,6] : []);
+    ctx.beginPath();
+    s.points.forEach((p, i) => {
+      const xVal = (plot.mode === "numeric") ? p.xNum : p.idx;
+      const px = xToPx(xVal);
+      const py = yToPx(p.y);
+      if (i===0) ctx.moveTo(px,py);
+      else ctx.lineTo(px,py);
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // points
+    if (pr > 0){
+      s.points.forEach((p) => {
+        const xVal = (plot.mode === "numeric") ? p.xNum : p.idx;
+        const px = xToPx(xVal);
+        const py = yToPx(p.y);
+        ctx.beginPath();
+        ctx.fillStyle = color;
+        ctx.arc(px, py, pr, 0, Math.PI*2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(0,0,0,.35)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+    }
+
+    // fitted curve
+    if (doFit && fit){
+      ctx.globalAlpha = 0.65;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = Math.max(1, width-0.5);
+      ctx.setLineDash([4,5]);
+
+      const samples = 140;
+      ctx.beginPath();
+      for(let i=0;i<=samples;i++){
+        const x = view.xMin + (view.xMax-view.xMin)*i/samples;
+        const y = fit.coeff.reduce((acc,c,k)=>acc + c*Math.pow(x,k), 0);
+        const px = xToPx(x);
+        const py = yToPx(y);
+        if (i===0) ctx.moveTo(px,py);
+        else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+
+      if (showR2){
+        const eq = `y = ${polyToString(fit.coeff)}  |  R² = ${fmt(fit.r2,4)}`;
+        ctx.fillStyle = "rgba(168,179,194,.85)";
+        ctx.font = "11px var(--mono)";
+        const yPos = padT + 16 + (idx*14);
+        ctx.fillText(`${st.name}: ${eq}`, padL, yPos);
+      }
+    }
+  });
+
+  // selection rectangle
+  if (plot._sel && plot._sel.active){
+    const r = plot._sel;
+    const x = Math.min(r.x0, r.x1);
+    const y = Math.min(r.y0, r.y1);
+    const w = Math.abs(r.x1 - r.x0);
+    const h = Math.abs(r.y1 - r.y0);
+    ctx.fillStyle = "rgba(106,166,255,.12)";
+    ctx.strokeStyle = "rgba(106,166,255,.45)";
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(x,y,w,h);
+    ctx.strokeRect(x,y,w,h);
+  }
+
+  // crosshair hover
+  if (plot._hover){
+    const {xPx, yPx} = plot._hover;
+    ctx.strokeStyle = "rgba(232,238,246,.22)";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(xPx, padT); ctx.lineTo(xPx, padT+plotH); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(padL, yPx); ctx.lineTo(padL+plotW, yPx); ctx.stroke();
+
+    ctx.beginPath();
+    ctx.fillStyle = "rgba(232,238,246,.95)";
+    ctx.arc(xPx, yPx, 5.2, 0, Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,.40)";
+    ctx.stroke();
+  }
+
+  // store for hit-test
+  plot._render = { padL,padR,padT,padB,plotW,plotH, view, xToPx, yToPx, W, H };
+}
+
+function render(){
+  if (!state.lastPlot) return drawEmpty();
+  state.lastPlot.bounds = computeBounds(state.lastPlot.mode, state.lastPlot.series);
+  buildLegend(state.lastPlot);
+  renderSeriesPanel();
+  drawChart(state.lastPlot);
+}
+
+/* ============================
+   Hit-test (snap no X)
+============================ */
+function nearestByX(plot, mx){
+  // snap ao X mais próximo (modo numeric)
+  const r = plot._render;
+  if (!r) return null;
+  const xVal = r.view.xMin + (mx - r.padL)/r.plotW * (r.view.xMax - r.view.xMin);
+
+  // coletar xs de todas séries visíveis
+  let bestX = null, bestDx = Infinity;
+  for(const s of plot.series){
+    if (!state.visible[s.idx]) continue;
+    for(const p of s.points){
+      const dx = Math.abs(p.xNum - xVal);
+      if (dx < bestDx){
+        bestDx = dx; bestX = p.xNum;
+      }
+    }
+  }
+  return bestX;
+}
+
+function findNearestPoint(plot, mx, my){
+  const r = plot._render;
+  if (!r) return null;
+
+  const inside = (mx >= r.padL && mx <= r.padL+r.plotW && my >= r.padT && my <= r.padT+r.plotH);
+  if (!inside) return null;
+
+  let best = null;
+  let bestD = Infinity;
+
+  // snap X
+  let snapX = null;
+  if (plot.mode === "numeric"){
+    snapX = nearestByX(plot, mx);
+  }
+
+  for(const s of plot.series){
+    const idx = s.idx;
+    if (!state.visible[idx]) continue;
+    const st = state.styles[idx];
+
+    for(const p of s.points){
+      const xVal = (plot.mode === "numeric") ? p.xNum : p.idx;
+      const useX = (plot.mode === "numeric" && Number.isFinite(snapX)) ? snapX : xVal;
+
+      // para snap, só considere pontos com p.xNum ~ snapX
+      if (plot.mode === "numeric" && Number.isFinite(snapX)){
+        if (Math.abs(p.xNum - snapX) > 1e-12) continue;
+      }
+
+      const xPx = r.xToPx(useX);
+      const yPx = r.yToPx(p.y);
+      const dx = xPx - mx, dy = yPx - my;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d < bestD){
+        bestD = d;
+        best = { seriesIdx: idx, seriesName: st.name, color: st.color, point: p, xPx, yPx, dist: d, snapX };
+      }
+    }
+  }
+
+  return (best && bestD <= 22) ? best : null;
+}
+
+function showTooltip(nearest, clientX, clientY, mode){
+  if (!nearest){ tooltip.style.display="none"; return; }
+  const p = nearest.point;
+  const xText = mode === "numeric" ? fmt(p.xNum,6) : p.xLabel;
+
+  tooltip.innerHTML = `
+    <div class="t" style="display:flex;gap:10px;align-items:center">
+      <span class="dot" style="background:${nearest.color}"></span>
+      <span>${nearest.seriesName}</span>
+    </div>
+    <div class="kv"><span class="k">X</span><span class="v">${xText}</span></div>
+    <div class="kv"><span class="k">Y</span><span class="v">${fmt(p.y,6)}</span></div>
+    <div class="small" style="margin-top:6px;opacity:.9">Linha idx: ${p.idx+1}${mode==="numeric" ? " • Snap X" : ""}</div>
+  `;
+  tooltip.style.display="block";
+
+  const pad = 14;
+  const w = tooltip.offsetWidth;
+  const h = tooltip.offsetHeight;
+
+  let left = clientX + pad;
+  let top = clientY + pad;
+  if (left + w > window.innerWidth - 8) left = clientX - w - pad;
+  if (top + h > window.innerHeight - 8) top = clientY - h - pad;
+
+  tooltip.style.left = left + "px";
+  tooltip.style.top = top + "px";
+}
+
+/* ============================
+   Plot
+============================ */
+function plotNow(){
+  const res = readDataFromGrid();
+  if (!res.ok){ showErr(res.msg); return; }
+  ensureStyleArrays();
+
+  let baseCategories = [];
+  if (res.mode === "category"){
+    const big = res.series.reduce((a,b)=> (b.points.length>a.points.length?b:a), res.series[0]);
+    baseCategories = big.points.map(p => p.xLabel);
+  }
+
+  state.lastPlot = {
+    mode: res.mode,
+    series: res.series,
+    baseCategories,
+    bounds: computeBounds(res.mode, res.series),
+    _hover: null,
+    _render: null,
+    _sel: {active:false, x0:0,y0:0,x1:0,y1:0},
+  };
+
+  tooltip.style.display="none";
+  showOk("Gráfico gerado.");
+  render();
+  autosave();
+}
+
+/* ============================
+   Pan/Zoom + Zoom Selection (Alt+drag)
+============================ */
+let dragging=false;
+let last={x:0,y:0};
+let selecting=false;
+
+cv.addEventListener("mousedown", (e) => {
+  if (!state.lastPlot) return;
+
+  const rect = cv.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  if (e.altKey){
+    selecting = true;
+    state.lastPlot._sel = {active:true, x0:mx, y0:my, x1:mx, y1:my};
+    cv.style.cursor="crosshair";
+    render();
+    return;
+  }
+
+  dragging=true;
+  last = {x:e.clientX, y:e.clientY};
+  cv.style.cursor="grabbing";
+});
+window.addEventListener("mouseup", (e) => {
+  if (!state.lastPlot) { dragging=false; selecting=false; return; }
+
+  if (selecting){
+    // aplica zoom baseado no retângulo (precisa estar dentro do plot)
+    const r = state.lastPlot._render;
+    const sel = state.lastPlot._sel;
+    selecting = false;
+
+    if (r && sel && sel.active){
+      sel.active = false;
+
+      // converter px -> unidades de dados
+      const xA = r.view.xMin + (Math.min(sel.x0, sel.x1) - r.padL)/r.plotW * (r.view.xMax - r.view.xMin);
+      const xB = r.view.xMin + (Math.max(sel.x0, sel.x1) - r.padL)/r.plotW * (r.view.xMax - r.view.xMin);
+      const yA = r.view.yMax - (Math.min(sel.y0, sel.y1) - r.padT)/r.plotH * (r.view.yMax - r.view.yMin);
+      const yB = r.view.yMax - (Math.max(sel.y0, sel.y1) - r.padT)/r.plotH * (r.view.yMax - r.view.yMin);
+
+      const xMin = Math.min(xA,xB), xMax = Math.max(xA,xB);
+      const yMin = Math.min(yA,yB), yMax = Math.max(yA,yB);
+
+      const minSizeX = (r.view.xMax - r.view.xMin) * 0.02;
+      const minSizeY = (r.view.yMax - r.view.yMin) * 0.02;
+
+      if ((xMax-xMin) > minSizeX && (yMax-yMin) > minSizeY){
+        // atualiza zoom/pan para aproximar dessa janela
+        const base = state.lastPlot.bounds;
+
+        const baseXSpan = base.xMax - base.xMin;
+        const baseYSpan = base.yMax - base.yMin;
+
+        const viewXSpan = xMax - xMin;
+        const viewYSpan = yMax - yMin;
+
+        state.view.zoomX = clamp(baseXSpan / viewXSpan, 0.3, 60);
+        state.view.zoomY = clamp(baseYSpan / viewYSpan, 0.3, 60);
+
+        // pan: ajustar centros
+        const baseXCenter = (base.xMin + base.xMax)/2;
+        const baseYCenter = (base.yMin + base.yMax)/2;
+
+        const newXCenter = (xMin + xMax)/2;
+        const newYCenter = (yMin + yMax)/2;
+
+        // inverter do pan model (ver computeViewWindow)
+        // panXUnit = (panX/plotW)*xSpan ; xCenter = baseCenter - panXUnit
+        // => panXUnit = baseCenter - xCenter
+        const xSpan = baseXSpan / state.view.zoomX;
+        const ySpan = baseYSpan / state.view.zoomY;
+
+        const panXUnit = baseXCenter - newXCenter;
+        const panYUnit = newYCenter - baseYCenter;
+
+        state.view.panX = (panXUnit / xSpan) * r.plotW;
+        state.view.panY = (panYUnit / ySpan) * r.plotH;
+      }
+
+      tooltip.style.display="none";
+      state.lastPlot._hover = null;
+      render();
+      autosave();
+    }
+  }
+
+  dragging=false;
+  cv.style.cursor="crosshair";
+});
+window.addEventListener("mousemove", (e) => {
+  if (!state.lastPlot) return;
+
+  if (dragging){
+    const dx = e.clientX - last.x;
+    const dy = e.clientY - last.y;
+    last = {x:e.clientX, y:e.clientY};
+    state.view.panX += dx;
+    state.view.panY += dy;
+    tooltip.style.display="none";
+    state.lastPlot._hover = null;
+    render();
+    return;
+  }
+
+  if (selecting){
+    const rect = cv.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    state.lastPlot._sel.x1 = mx;
+    state.lastPlot._sel.y1 = my;
+    render();
+  }
+});
+
+cv.addEventListener("wheel", (e) => {
+  if (!state.lastPlot) return;
+  e.preventDefault();
+
+  const delta = Math.sign(e.deltaY);
+  const factor = (delta > 0) ? 0.9 : 1.1;
+
+  if (e.shiftKey) state.view.zoomY *= factor;
+  else state.view.zoomX *= factor;
+
+  state.view.zoomX = clamp(state.view.zoomX, 0.3, 60);
+  state.view.zoomY = clamp(state.view.zoomY, 0.3, 60);
+
+  tooltip.style.display="none";
+  state.lastPlot._hover = null;
+  render();
+}, {passive:false});
+
+/* hover / tooltip */
+cv.addEventListener("mousemove", (e) => {
+  if (!state.lastPlot || dragging || selecting) return;
+
+  const rect = cv.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  const nearest = findNearestPoint(state.lastPlot, mx, my);
+  if (nearest){
+    state.lastPlot._hover = { xPx: nearest.xPx, yPx: nearest.yPx, nearest };
+    showTooltip(nearest, e.clientX, e.clientY, state.lastPlot.mode);
+  } else {
+    state.lastPlot._hover = null;
+    tooltip.style.display="none";
+  }
+  render();
+});
+cv.addEventListener("mouseleave", () => {
+  tooltip.style.display="none";
+  if (state.lastPlot){
+    state.lastPlot._hover = null;
+    render();
+  }
+});
+
+$("#btnResetView").addEventListener("click", () => {
+  state.view = { zoomX: 1, zoomY: 1, panX: 0, panY: 0 };
+  tooltip.style.display="none";
+  if (state.lastPlot){
+    state.lastPlot._hover = null;
+    render();
+  }
+});
+
+/* ============================
+   PNG export
+============================ */
+$("#btnPNG").addEventListener("click", () => {
+  if (!state.lastPlot) return showErr("Gere um gráfico primeiro.");
+  const url = cv.toDataURL("image/png");
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "grafico.png";
+  a.click();
+});
+
+/* ============================
+   UI buttons
+============================ */
+$("#btnAddRow").addEventListener("click", () => { addRow(); autosave(); });
+$("#btnAddSeries").addEventListener("click", () => addSeries());
+$("#btnPlot").addEventListener("click", plotNow);
+
+$("#btnClear").addEventListener("click", () => {
+  clearMsgs();
+  state.seriesCount = 1;
+  state.styles = [];
+  state.visible = [];
+  state.selectedSeries = 0;
+  rebuildHeader();
+  clearGrid();
+  ensureStyleArrays();
+
+  state.lastPlot = null;
+  state.view = { zoomX: 1, zoomY: 1, panX: 0, panY: 0 };
+  legendBox.innerHTML = "";
+  seriesPanel.innerHTML = "Gere um gráfico para editar estilos.";
+  tooltip.style.display="none";
+  drawEmpty();
+  autosave();
+});
+
+$("#btnExample").addEventListener("click", () => {
+  clearMsgs();
+  while(state.seriesCount < 2) addSeries();
+  tbody.innerHTML = "";
+  const ex = [
+    {x:"0", ys:["0","0"]},
+    {x:"1", ys:["1","0.8"]},
+    {x:"2", ys:["2.1","1.6"]},
+    {x:"3", ys:["2.9","2.6"]},
+    {x:"4", ys:["4.2","3.4"]},
+    {x:"5", ys:["5.1","4.1"]},
+    {x:"6", ys:["6.0","5.0"]},
+    {x:"7", ys:["7.2","5.8"]},
+    {x:"8", ys:["7.9","6.7"]},
+    {x:"9", ys:["9.1","7.4"]},
+    {x:"10", ys:["10.2","8.1"]},
+  ];
+  ex.forEach(r => addRow(r));
+  addRow();
+
+  $("#title").value = "Exemplo (Tech)";
+  $("#xLabel").value = "Tempo (s)";
+  $("#yLabel").value = "Resposta (unid.)";
+  $("#chkFit").checked = true;
+  $("#fitDegree").value = "2";
+  $("#chkR2").checked = true;
+
+  autosave();
+  plotNow();
+});
+
+/* ============================
+   Start
+============================ */
+rebuildHeader();
+clearGrid();
+ensureStyleArrays();
+drawEmpty();
+tryLoadAutosave();
+
+window.addEventListener("resize", () => {
+  if (state.lastPlot) render();
+  else drawEmpty();
+});
+</script>
+</body>
+</html>
