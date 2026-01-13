@@ -1,0 +1,3778 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Decision OS • Tomada de Decisão (Apple/Microsoft-ish) v1.1</title>
+  <meta name="theme-color" content="#0b0d12" />
+  <meta name="color-scheme" content="dark light" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <style>
+    :root{
+      --bg0:#07080b; --bg1:#0b0d12;
+      --cardA: rgba(255,255,255,.09);
+      --cardB: rgba(255,255,255,.03);
+      --text:#eaf0ff; --muted:#9aa6c3; --line:rgba(255,255,255,.10);
+      --good:#2dd4bf; --bad:#fb7185; --warn:#fbbf24; --brand:#60a5fa;
+      --shadow: 0 20px 90px rgba(0,0,0,.58);
+      --shadow2: 0 12px 38px rgba(0,0,0,.40);
+      --r:18px; --r2:26px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display","SF Pro Text","Segoe UI", Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      --ring: 0 0 0 4px rgba(96,165,250,.14);
+      --ring2: 0 0 0 5px rgba(45,212,191,.12);
+      --tap:.985;
+      --safeTop: env(safe-area-inset-top, 0px);
+      --safeBottom: env(safe-area-inset-bottom, 0px);
+      --glass: rgba(255,255,255,.06);
+      --glass2: rgba(0,0,0,.18);
+    }
+    @media (prefers-color-scheme: light){
+      :root{
+        --bg0:#f7f7fb; --bg1:#eef0f6;
+        --cardA: rgba(255,255,255,.82);
+        --cardB: rgba(255,255,255,.62);
+        --text:#0b0d12; --muted:rgba(60,60,67,.70); --line:rgba(60,60,67,.16);
+        --shadow: 0 18px 60px rgba(0,0,0,.12);
+        --shadow2: 0 10px 30px rgba(0,0,0,.10);
+        --glass: rgba(255,255,255,.72);
+        --glass2: rgba(255,255,255,.62);
+      }
+    }
+
+    *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+    html,body{height:100%;}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      color:var(--text);
+      background:
+        radial-gradient(1200px 800px at 15% -10%, rgba(96,165,250,.22), transparent 60%),
+        radial-gradient(1000px 800px at 95% 10%, rgba(45,212,191,.14), transparent 55%),
+        radial-gradient(900px 700px at 80% 115%, rgba(251,113,133,.12), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1) 55%, var(--bg0) 100%);
+      overflow-x:hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    .safe{padding: var(--safeTop) 0 var(--safeBottom) 0;}
+    .wrap{max-width:1320px; margin:0 auto; padding:16px 16px 96px;}
+
+    .topbar{
+      position:sticky; top:0; z-index:50;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:12px 14px;
+      margin:-16px -16px 12px;
+      backdrop-filter: blur(18px);
+      background: linear-gradient(180deg, rgba(7,8,11,.92), rgba(7,8,11,.30));
+      border-bottom:1px solid var(--line);
+    }
+    @media (prefers-color-scheme: light){
+      .topbar{ background: linear-gradient(180deg, rgba(238,240,246,.90), rgba(238,240,246,.35)); }
+    }
+    .brand{display:flex; align-items:center; gap:12px; min-width:240px;}
+    .logo{
+      width:40px; height:40px; border-radius:14px;
+      background:
+        radial-gradient(14px 14px at 30% 30%, rgba(255,255,255,.35), transparent 60%),
+        radial-gradient(20px 20px at 70% 30%, rgba(255,255,255,.15), transparent 60%),
+        linear-gradient(135deg, rgba(96,165,250,.95), rgba(45,212,191,.75));
+      border:1px solid rgba(255,255,255,.15);
+      box-shadow: 0 16px 48px rgba(96,165,250,.18);
+      flex:0 0 auto;
+    }
+    .brand h1{margin:0; font-size:14px; letter-spacing:.2px; line-height:1.1}
+    .brand p{margin:0; font-size:12px; color:var(--muted); line-height:1.2}
+
+    .pill{
+      display:flex; align-items:center; gap:10px;
+      border:1px solid var(--line); background:rgba(255,255,255,.04);
+      border-radius:999px; padding:8px 10px;
+      box-shadow: 0 6px 24px rgba(0,0,0,.25) inset;
+      max-width:min(760px, 55vw);
+      overflow:hidden;
+    }
+    .pill .dot{width:8px;height:8px;border-radius:999px;background:rgba(255,255,255,.22);box-shadow:0 0 0 3px rgba(255,255,255,.06)}
+    .dot.good{background:rgba(45,212,191,.95); box-shadow:0 0 0 3px rgba(45,212,191,.12)}
+    .dot.warn{background:rgba(251,191,36,.95); box-shadow:0 0 0 3px rgba(251,191,36,.12)}
+    .dot.bad{background:rgba(251,113,133,.95); box-shadow:0 0 0 3px rgba(251,113,133,.12)}
+    .pill span{font-size:12px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+
+    .actions{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; align-items:center}
+    .btn{
+      appearance:none; border:none; cursor:pointer;
+      border-radius:12px; padding:10px 12px;
+      color:var(--text);
+      background:rgba(255,255,255,.06);
+      border:1px solid var(--line);
+      transition: transform .08s ease, background .15s ease, border-color .15s ease, filter .15s ease;
+      font-size:13px;
+      display:inline-flex; align-items:center; gap:9px;
+      user-select:none;
+      box-shadow: 0 10px 22px rgba(0,0,0,.22);
+      outline:none;
+    }
+    .btn:hover{background:rgba(255,255,255,.09); border-color:rgba(255,255,255,.14)}
+    .btn:active{transform:scale(var(--tap))}
+    .btn:focus-visible{box-shadow: var(--shadow), var(--ring)}
+    .btn.primary{
+      background: linear-gradient(135deg, rgba(96,165,250,.95), rgba(45,212,191,.72));
+      border-color: rgba(255,255,255,.18);
+      color:#071017;
+      font-weight:850;
+    }
+    .btn.danger{background:rgba(251,113,133,.14); border-color:rgba(251,113,133,.28)}
+    .btn.ghost{background:transparent; box-shadow:none}
+    .btn.sm{padding:8px 10px; border-radius:12px; font-size:12px}
+
+    .tabs{
+      display:flex;
+      gap:8px;
+      padding: 12px 12px 0;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      scroll-snap-type: x proximity;
+    }
+    @media (prefers-color-scheme: light){ .tabs{background: rgba(255,255,255,.65);} }
+    .tab{
+      flex: 0 0 auto;
+      min-width: 120px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      cursor:pointer;
+      font-weight:800;
+      font-size: 12px;
+      color: var(--muted);
+      text-align:center;
+      user-select:none;
+      transition: background .12s ease, border-color .12s ease, transform .12s ease;
+      white-space: nowrap;
+      scroll-snap-align: start;
+    }
+    .tabs::-webkit-scrollbar{display:none}
+    .toolRow, .heroActions{
+      overflow-x:auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width:none;
+    }
+    .toolRow::-webkit-scrollbar, .heroActions::-webkit-scrollbar{display:none}
+    /* evita “vazio gigante” em telas largas */
+    @media (min-width: 1200px){
+      .grid{grid-template-columns: 380px 1fr;}
+    }
+
+    @media (prefers-color-scheme: light){ .tab{color:rgba(11,13,18,.90);} }
+    .tab:active{transform:scale(.99)}
+    .tab:focus-visible{box-shadow: var(--ring2); border-color: rgba(45,212,191,.30)}
+    .tab.active{ background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.14); }
+    @media (prefers-color-scheme: light){ .tab.active{background: rgba(0,0,0,.06); border-color: rgba(0,0,0,.10);} }
+
+    .grid{display:grid; grid-template-columns:1.2fr .8fr; gap:12px;}
+    @media (max-width: 980px){ .grid{grid-template-columns:1fr;} }
+
+    .card{
+      background: linear-gradient(180deg, var(--cardA), var(--cardB));
+      border:1px solid var(--line);
+      border-radius: var(--r2);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card .hd{
+      padding:14px 16px 12px;
+      border-bottom:1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), transparent);
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+      flex-wrap:wrap;
+    }
+    .title{display:flex; flex-direction:column; gap:4px;}
+    .title h2{margin:0; font-size:14px; letter-spacing:.2px}
+    .title p{margin:0; font-size:12px; color:var(--muted)}
+    .card .bd{padding:14px 16px 16px;}
+
+    .hint{font-size:12px; color:var(--muted); line-height:1.45}
+    .kbd{
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      color: rgba(233,238,252,.92);
+    }
+
+    .filters{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;}
+
+    /* ========= Horizontal scroll (mobile/tablet) =========
+       Fix: garante rolagem lateral nas barras de abas, linhas de filtros, cabeçalhos/ações do editor
+       e dentro do modal de edição (modelos + avaliação). */
+    .hscrollX{overflow-x:auto; -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain;}
+    .hscrollX::-webkit-scrollbar{height:10px}
+
+    /* Barra de abas do topo (desktopTabs) vira rolável em telas menores */
+    #tabsTop{gap:10px;}
+    @media (max-width: 980px){
+      #tabsTop{flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:6px; scrollbar-width:none;}
+      #tabsTop::-webkit-scrollbar{display:none;}
+      #tabsTop .tab{flex:0 0 auto; min-width:150px;}
+    }
+
+    /* Linhas de filtros (Modelos/Dashboard/etc) com rolagem lateral */
+    @media (max-width: 980px){
+      .filters{flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:6px; align-items:stretch; scrollbar-width:thin;}
+      .filters .field{min-width:240px;}
+    }
+
+    /* Editor (segHead/toolRow) também precisa rolar lateral em telas pequenas */
+    @media (max-width: 980px){
+      .segHead{flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:6px; gap:10px;}
+      .segHead::-webkit-scrollbar{display:none;}
+      .toolRow{flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:6px;}
+      .toolRow::-webkit-scrollbar{display:none;}
+      .toolRow > *{flex:0 0 auto;}
+    }
+    .field{display:flex; flex-direction:column; gap:6px; min-width:160px;}
+    .field label{font-size:11px; color:var(--muted)}
+    input, select, textarea{
+      width:100%;
+      background: rgba(0,0,0,.22);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding:10px 10px;
+      color: var(--text);
+      outline:none;
+      font-family: var(--sans);
+      font-size: 13px;
+    }
+    @media (prefers-color-scheme: light){
+      input,select,textarea{background: rgba(255,255,255,.70); color: #0b0d12;}
+    }
+    textarea{min-height:92px; resize: vertical;}
+    input::placeholder, textarea::placeholder{color:rgba(154,166,195,.72)}
+    input:focus, select:focus, textarea:focus{border-color: rgba(96,165,250,.55); box-shadow: var(--ring);}
+    .divider{height:1px; background:var(--line); margin:12px 0;}
+
+    .list{display:flex; flex-direction:column; gap:10px;}
+    .row{
+      display:grid;
+      grid-template-columns: 1.2fr .7fr .6fr .9fr;
+      gap:10px;
+      align-items:center;
+      padding:12px;
+      border-radius: var(--r);
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.18);
+      transition: transform .08s ease, border-color .15s ease, background .15s ease;
+      cursor:pointer;
+      outline:none;
+    }
+    @media (prefers-color-scheme: light){ .row{background: rgba(255,255,255,.60);} }
+    .row:hover{border-color:rgba(255,255,255,.14); background: rgba(0,0,0,.22)}
+    @media (prefers-color-scheme: light){ .row:hover{background: rgba(255,255,255,.76); border-color: rgba(0,0,0,.12);} }
+    .row:active{transform:scale(.995)}
+    .row:focus-visible{box-shadow: var(--ring2); border-color: rgba(45,212,191,.30)}
+    @media (max-width:820px){ .row{grid-template-columns:1fr; gap:8px;} }
+
+    .main{display:flex; flex-direction:column; gap:3px;}
+    .name{font-size:13px; font-weight:900}
+    .meta{font-size:11px; color:var(--muted); display:flex; flex-wrap:wrap; gap:8px}
+    .badge{
+      font-size:11px;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      color: var(--muted);
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+    }
+    .badge b{color:var(--text); font-weight:950}
+    .right{display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap}
+    .mono{font-family:var(--mono)}
+    .amount{ text-align:right; font-family: var(--mono); font-size: 12px; font-weight:900; white-space:nowrap; }
+
+    .kpis{display:grid; grid-template-columns: repeat(4, 1fr); gap:10px;}
+    @media (max-width:980px){ .kpis{grid-template-columns: repeat(2, 1fr);} }
+    .kpi{
+      background: rgba(0,0,0,.18);
+      border:1px solid var(--line);
+      border-radius: var(--r);
+      padding:12px;
+      display:flex; flex-direction:column; gap:6px;
+      min-height:78px;
+    }
+    @media (prefers-color-scheme: light){ .kpi{background: rgba(255,255,255,.60);} }
+    .kpi .label{font-size:12px; color:var(--muted)}
+    .kpi .value{font-size:18px; font-weight:900; letter-spacing:.2px}
+    .kpi .sub{font-size:11px; color:var(--muted)}
+    .good{color:var(--good)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+
+    .miniGrid{display:grid; grid-template-columns: 1fr 1fr; gap:10px;}
+    @media (max-width:980px){ .miniGrid{grid-template-columns:1fr;} }
+    .panelBox{
+      border:1px solid var(--line);
+      border-radius: var(--r2);
+      background: rgba(0,0,0,.12);
+      padding:12px;
+    }
+    @media (prefers-color-scheme: light){ .panelBox{background: rgba(255,255,255,.62);} }
+    canvas{width:100%; height:220px; display:block; border-radius: 16px; border:1px solid var(--line); background: rgba(255,255,255,.03);}
+    @media (prefers-color-scheme: light){ canvas{background: rgba(255,255,255,.55);} }
+
+    .chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;}
+    .chip{
+      display:inline-flex; align-items:center; gap:8px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      border-radius:999px;
+      padding:7px 10px;
+      font-size:12px;
+      font-weight:900;
+      color: var(--text);
+      cursor:pointer;
+      user-select:none;
+    }
+    @media (prefers-color-scheme: light){ .chip{background: rgba(0,0,0,.05);} }
+    .chip:active{transform:scale(var(--tap))}
+    .chip small{font-weight:700; color:var(--muted)}
+    .chip .x{
+      width:18px;height:18px;border-radius:999px;
+      display:grid; place-items:center;
+      background: rgba(251,113,133,.14);
+      border:1px solid rgba(251,113,133,.28);
+      color: var(--bad);
+      font-weight:1000;
+      line-height:0;
+    }
+
+    /* ======= “Preenchimento fechado” (grade tipo software) ======= */
+    .softPanel{
+      border:1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(0,0,0,.16);
+      overflow:hidden;
+    }
+    @media (prefers-color-scheme: light){ .softPanel{background: rgba(255,255,255,.65);} }
+    .softHd{
+      padding:10px 12px;
+      border-bottom:1px solid var(--line);
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), transparent);
+      flex-wrap:wrap;
+    }
+    .softHd .left{
+      display:flex; flex-direction:column; gap:2px;
+    }
+    .softHd .left b{font-size:12px}
+    .softHd .left small{font-size:11px; color:var(--muted)}
+    .softBd{padding:10px 12px;}
+
+    .gridWrap{
+      border:1px solid var(--line);
+      border-radius: 16px;
+      overflow:auto;
+      background: rgba(0,0,0,.10);
+      max-height: 360px;
+    }
+    @media (prefers-color-scheme: light){ .gridWrap{background: rgba(255,255,255,.60);} }
+    table.sheet{
+      border-collapse:separate;
+      border-spacing:0;
+      width:max(760px, 100%);
+      font-size:12px;
+    }
+    .sheet th, .sheet td{
+      border-right:1px solid var(--line);
+      border-bottom:1px solid var(--line);
+      padding:8px 8px;
+      vertical-align:middle;
+      background: rgba(0,0,0,.12);
+      white-space:nowrap;
+    }
+    @media (prefers-color-scheme: light){
+      .sheet th, .sheet td{background: rgba(255,255,255,.70);}
+    }
+    .sheet th{
+      position:sticky; top:0; z-index:2;
+      font-weight:950;
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(0,0,0,.02));
+    }
+    @media (prefers-color-scheme: light){
+      .sheet th{background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.70));}
+    }
+    .sheet th:first-child, .sheet td:first-child{
+      position:sticky; left:0; z-index:3;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.05));
+      font-weight:900;
+      max-width: 260px;
+      overflow:hidden; text-overflow:ellipsis;
+    }
+    @media (prefers-color-scheme: light){
+      .sheet th:first-child, .sheet td:first-child{
+        background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.70));
+      }
+    }
+    .cellIn{
+      width:58px;
+      padding:8px 8px;
+      border-radius: 12px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      outline:none;
+      font-family: var(--mono);
+      text-align:center;
+      font-weight:900;
+    }
+    @media (prefers-color-scheme: light){
+      .cellIn{background: rgba(0,0,0,.04); border-color: rgba(0,0,0,.10); color:#0b0d12;}
+    }
+    .cellIn:focus{box-shadow: var(--ring2); border-color: rgba(45,212,191,.30)}
+    .cellIn.miss{border-color: rgba(251,191,36,.45); background: rgba(251,191,36,.10);}
+    .cellIn.bad{border-color: rgba(251,113,133,.50); background: rgba(251,113,133,.12);}
+
+    .miniRow{
+      display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+      margin-top:10px;
+    }
+    .toggle{
+      display:flex; align-items:center; gap:8px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      padding:8px 10px;
+      border-radius: 999px;
+      font-size:12px;
+      user-select:none;
+    }
+    @media (prefers-color-scheme: light){ .toggle{background: rgba(0,0,0,.05);} }
+    .toggle input{width:auto; accent-color: var(--brand);}
+
+    .toast{
+      position:fixed; left:50%; transform:translateX(-50%);
+      bottom: 16px;
+      z-index:999;
+      background: rgba(15,18,26,.88);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius: 999px;
+      padding:10px 14px;
+      backdrop-filter: blur(14px);
+      box-shadow: var(--shadow);
+      max-width:min(980px, calc(100% - 22px));
+      display:none;
+      font-size:13px;
+      color: var(--text);
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    @media (prefers-color-scheme: light){
+      .toast{background: rgba(255,255,255,.86); border-color: rgba(0,0,0,.12);}
+    }
+    .toast.show{display:flex}
+    .toast .msg{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:72vw}
+
+    .modal{
+      position:fixed; inset:0; display:none; place-items:center; z-index:1000;
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(8px);
+      padding: 16px;
+    }
+    .modal.show{display:grid}
+    .panel{
+      width:min(1060px, 100%);
+      border-radius: 24px;
+      border:1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      transform: translateY(4px);
+    }
+    @media (prefers-color-scheme: light){
+      .panel{border-color: rgba(0,0,0,.12); background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.70));}
+      .modal{background: rgba(0,0,0,.30);}
+    }
+    .phd{
+      padding:14px 16px;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      border-bottom:1px solid var(--line);
+    }
+    .phd h3{margin:0; font-size:14px}
+    .phd p{margin:0; font-size:12px; color:var(--muted)}
+    /* Modal body: rolagem vertical e também lateral quando algum bloco excede (ex: matriz/ações) */
+    .pbd{
+      padding:14px 16px 16px;
+      max-height: calc(100vh - 170px);
+      overflow: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+    .pft{
+      padding:12px 16px;
+      border-top:1px solid var(--line);
+      display:flex; gap:10px; justify-content:space-between; align-items:center; flex-wrap:wrap;
+    }
+
+    .loading{
+      position:fixed; inset:0; z-index:1200;
+      display:none; place-items:center;
+      background: rgba(0,0,0,.35);
+      backdrop-filter: blur(10px);
+      padding: 16px;
+    }
+    .loading.show{display:grid}
+    .loadingCard{
+      width:min(560px, 100%);
+      border-radius: 22px;
+      border:1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      box-shadow: var(--shadow);
+      padding: 14px 14px;
+      display:flex;
+      gap:12px;
+      align-items:center;
+    }
+    @media (prefers-color-scheme: light){
+      .loadingCard{border-color: rgba(0,0,0,.12); background: rgba(255,255,255,.85);}
+      .loading{background: rgba(0,0,0,.18);}
+    }
+    .spinner{
+      width:18px;height:18px;border-radius:999px;
+      border:2px solid rgba(255,255,255,.18);
+      border-top-color: rgba(96,165,250,.9);
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to{ transform: rotate(360deg);} }
+
+    .bottomNav{
+      position:fixed; left:0; right:0; bottom:0; z-index:60;
+      padding: 10px 12px calc(10px + var(--safeBottom));
+      backdrop-filter: blur(18px);
+      background: linear-gradient(180deg, rgba(7,8,11,.10), rgba(7,8,11,.78));
+      border-top: 1px solid var(--line);
+      display:none;
+    }
+    @media (prefers-color-scheme: light){
+      .bottomNav{ background: linear-gradient(180deg, rgba(238,240,246,.15), rgba(238,240,246,.86)); }
+    }
+    .bottomNav .tabs{width:100%; justify-content:space-between;}
+    @media (max-width:980px){
+      .bottomNav{display:block;}
+      .desktopTabs{display:none;}
+      .wrap{padding-bottom:132px;}
+    }
+    @media (prefers-reduced-motion: reduce){
+      *{scroll-behavior:auto !important; transition:none !important; animation:none !important}
+    }
+  
+
+    /* ===== Mobile tabs polish (PC/iPhone/iPad) ===== */
+    @media (max-width: 520px){
+      .tabs{
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+      .tabs::-webkit-scrollbar{ display:none; }
+      .tab{ flex: 0 0 auto; }
+    }
+</style>
+</head>
+
+<body class="safe">
+  <div class="wrap">
+    <header class="topbar" role="banner">
+      <div class="brand" aria-label="Identidade do app">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Decision OS</h1>
+          <p id="subtitle">Decisões • MCDA • Risco • Cenários • Decision Log</p>
+        </div>
+      </div>
+
+      <div class="actions" aria-label="Ações do topo">
+        <div class="pill" title="Usuário e status" aria-live="polite">
+          <span class="dot" id="statusDot" aria-hidden="true"></span>
+          <span id="statusLine">Inicializando…</span>
+        </div>
+
+        <div class="desktopTabs" aria-label="Navegação">
+          <div class="tabs" id="tabsTop" role="tablist">
+            <button class="tab active" data-tab="inbox" role="tab">🧠 Decisões</button>
+            <button class="tab" data-tab="dash" role="tab">📊 Dashboard</button>
+            <button class="tab" data-tab="models" role="tab">🧩 Modelos</button>
+            <button class="tab" data-tab="files" role="tab">📎 Arquivos</button>
+            <button class="tab" data-tab="settings" role="tab">⚙️ Ajustes</button>
+          </div>
+        </div>
+
+        <button class="btn ghost" id="btnBackup" title="Exportar backup JSON (Ctrl+E)">⤓ Backup</button>
+        <button class="btn ghost" id="btnExamples" title="Carregar 10 exemplos prontos (Ctrl+L)">☰ Exemplos</button>
+        <button class="btn primary" id="btnNew" title="Nova decisão (N)">＋ Nova decisão</button>
+      </div>
+    </header>
+
+    <main class="grid" role="main">
+      <!-- LEFT -->
+      <section class="card" aria-label="Conteúdo">
+        <div class="hd">
+          <div class="title">
+            <h2 id="pageTitle">Decisões</h2>
+            <p id="pageSub">Lista + filtro + status + trilha de decisão</p>
+          </div>
+
+          <div class="right">
+            <div class="field" style="min-width:220px;">
+              <label for="quickFilter">Filtro rápido</label>
+              <select id="quickFilter">
+                <option value="all">Tudo</option>
+                <option value="open">Abertas</option>
+                <option value="decided">Decididas</option>
+                <option value="archived">Arquivadas</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="bd">
+          <!-- INBOX -->
+          <div id="viewInbox">
+            <div class="kpis" aria-label="Indicadores">
+              <div class="kpi">
+                <div class="label">Usuário</div>
+                <div class="value" id="kpiUser">—</div>
+                <div class="sub">Perfil local</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Abertas</div>
+                <div class="value" id="kpiOpen">—</div>
+                <div class="sub">Em análise</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Decididas</div>
+                <div class="value" id="kpiDecided">—</div>
+                <div class="sub">Com log</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Revisão próxima</div>
+                <div class="value" id="kpiReview">—</div>
+                <div class="sub">Dias</div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="filters" aria-label="Busca">
+              <div class="field" style="min-width:280px;">
+                <label for="search">Buscar</label>
+                <input id="search" placeholder="Ex: troca de emprego, MBA, compra, relacionamento…" />
+              </div>
+              <div class="field" style="min-width:220px;">
+                <label for="domainFilter">Domínio</label>
+                <select id="domainFilter"></select>
+              </div>
+              <div class="field" style="min-width:220px;">
+                <label for="sort">Ordenar</label>
+                <select id="sort">
+                  <option value="updated">Atualização</option>
+                  <option value="deadline">Prazo</option>
+                  <option value="score">Score</option>
+                  <option value="risk">Risco</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="title" style="margin-bottom:10px;">
+              <h2 style="margin:0; font-size:13px;">Lista de decisões</h2>
+              <p style="margin:0; font-size:12px; color:var(--muted)">Abra uma decisão para ver ranking, gráficos e checklist anti-viés</p>
+            </div>
+            <div class="list" id="decisionList"></div>
+          </div>
+
+          <!-- DASH -->
+          <div id="viewDash" style="display:none;">
+            <div class="hint">
+              Dashboard técnico: MCDA (pontuação ponderada), risco ajustado, radar e matriz risco×retorno.
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="filters">
+              <div class="field" style="min-width:280px;">
+                <label for="dashPick">Decisão para analisar</label>
+                <select id="dashPick"></select>
+              </div>
+              <div class="field" style="min-width:220px;">
+                <label for="dashMode">Modo</label>
+                <select id="dashMode">
+                  <option value="riskAdj">Score ajustado por risco</option>
+                  <option value="raw">Score bruto (sem risco)</option>
+                </select>
+              </div>
+              <div class="field" style="min-width:220px;">
+                <label>&nbsp;</label>
+                <button class="btn" id="btnRecalc">⟳ Recalcular</button>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="miniGrid">
+              <div class="panelBox">
+                <div class="title" style="margin-bottom:8px;">
+                  <h2 style="margin:0; font-size:13px;">Radar (critérios)</h2>
+                  <p style="margin:0; font-size:12px; color:var(--muted)">Visualiza força por critério</p>
+                </div>
+                <canvas id="radar"></canvas>
+                <div class="hint" id="radarHint" style="margin-top:8px;">Selecione uma decisão com 2+ opções e 3+ critérios.</div>
+              </div>
+
+              <div class="panelBox">
+                <div class="title" style="margin-bottom:8px;">
+                  <h2 style="margin:0; font-size:13px;">Risco × Retorno</h2>
+                  <p style="margin:0; font-size:12px; color:var(--muted)">Matriz técnica para comparação</p>
+                </div>
+                <canvas id="riskReturn"></canvas>
+                <div class="hint" id="rrHint" style="margin-top:8px;">Risco = prob×impacto (0–100). Retorno = score (0–100).</div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="title" style="margin-bottom:10px;">
+              <h2 style="margin:0; font-size:13px;">Ranking</h2>
+              <p style="margin:0; font-size:12px; color:var(--muted)">Ordena opções e mostra justificativa objetiva</p>
+            </div>
+            <div class="list" id="rankList"></div>
+          </div>
+
+          <!-- MODELS -->
+          <div id="viewModels" style="display:none;">
+            <div class="hint">
+              Modelos por domínio: cria uma decisão já com <b>critérios & pesos</b> técnicos (editáveis) e <b>sugestões de opções</b>.
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="filters">
+              <div class="field" style="min-width:280px;">
+                <label for="modelDomain">Domínio</label>
+                <select id="modelDomain"></select>
+              </div>
+              <div class="field" style="min-width:260px; flex: 1 1 auto;">
+                <label for="modelName">Nome do modelo</label>
+                <input id="modelName" placeholder="Ex: Carreira / Compra grande / Saúde / Filhos…" />
+              </div>
+              <div class="field" style="min-width:220px;">
+                <label>&nbsp;</label>
+                <button class="btn primary" id="btnCreateFromModel">＋ Criar decisão a partir do modelo</button>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="title" style="margin-bottom:10px;">
+              <h2 style="margin:0; font-size:13px;">Biblioteca de modelos</h2>
+              <p style="margin:0; font-size:12px; color:var(--muted)">Você pode duplicar e editar depois.</p>
+            </div>
+            <div class="list" id="modelList"></div>
+          </div>
+
+          <!-- FILES -->
+          <div id="viewFiles" style="display:none;">
+            <div class="filters">
+              <div class="field" style="min-width:280px;">
+                <label for="fileSearch">Buscar arquivo</label>
+                <input id="fileSearch" placeholder="Ex: pdf, contrato, foto…" />
+              </div>
+              <div class="field" style="min-width:240px;">
+                <label>&nbsp;</label>
+                <button class="btn" id="btnAddFiles">📎 Importar arquivos</button>
+                <input id="filesInput" type="file" multiple style="display:none" />
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="hint">
+              Arquivos ficam <b>no seu navegador</b> (IndexedDB). Você pode anexar em cada decisão.
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="list" id="filesList"></div>
+          </div>
+
+          <!-- SETTINGS -->
+          <div id="viewSettings" style="display:none;">
+            <div class="hint">
+              Ajustes locais. Sem login por enquanto. Backup JSON exporta decisões e modelos (anexos ficam na IndexedDB).
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="filters">
+              <div class="field" style="min-width:260px;">
+                <label for="setUserName">Nome do usuário</label>
+                <input id="setUserName" placeholder="Ex: Wilson" />
+              </div>
+              <div class="field" style="min-width:260px;">
+                <label for="setRiskPolicy">Política de risco (global)</label>
+                <select id="setRiskPolicy">
+                  <option value="balanced">Balanceado</option>
+                  <option value="conservative">Conservador</option>
+                  <option value="aggressive">Agressivo</option>
+                </select>
+              </div>
+              <div class="field" style="min-width:260px;">
+                <label for="setReviewDays">Revisar decisão em (dias)</label>
+                <select id="setReviewDays">
+                  <option value="7">7</option>
+                  <option value="14">14</option>
+                  <option value="30" selected>30</option>
+                  <option value="60">60</option>
+                  <option value="90">90</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="filters">
+              <div class="field" style="min-width:260px;">
+                <label>&nbsp;</label>
+                <button class="btn primary" id="btnSaveSettings">✔ Salvar ajustes</button>
+              </div>
+              <div class="field" style="min-width:260px;">
+                <label>&nbsp;</label>
+                <button class="btn" id="btnDemo">✨ Criar dados demo</button>
+              </div>
+              <div class="field" style="min-width:260px;">
+                <label>&nbsp;</label>
+                <button class="btn danger" id="btnWipe">🗑️ Limpar decisões</button>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="filters">
+              <div class="field" style="min-width:260px;">
+                <label>&nbsp;</label>
+                <button class="btn" id="btnRestore">⤒ Importar backup</button>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="hint">
+              Atalhos: <span class="kbd">N</span> nova decisão • <span class="kbd">Ctrl+E</span> backup • <span class="kbd">Esc</span> fechar • <span class="kbd">Ctrl+K</span> buscar
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT -->
+      <aside class="card" aria-label="Painel rápido">
+        <div class="hd">
+          <div class="title">
+            <h2>Centro</h2>
+            <p id="rightSub">Resumo + decisão selecionada</p>
+          </div>
+          <button class="btn ghost" id="btnNow">⟳ Atualizar</button>
+        </div>
+
+        <div class="bd">
+          <div class="kpi" style="margin-bottom:10px;">
+            <div class="label">Agora</div>
+            <div class="value" id="nowTime">—</div>
+            <div class="sub" id="nowMeta">—</div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="title" style="margin-bottom:10px;">
+            <h2 style="margin:0; font-size:13px;">Em foco</h2>
+            <p style="margin:0; font-size:12px; color:var(--muted)">Resumo técnico da decisão selecionada</p>
+          </div>
+
+          <div class="panelBox" id="focusBox">
+            <div class="hint" id="focusHint">Selecione uma decisão na lista para ver o resumo aqui.</div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="title">
+            <h2 style="margin:0; font-size:13px;">Privacidade</h2>
+            <p style="margin:0; font-size:12px; color:var(--muted)">Sem login • dados locais</p>
+          </div>
+          <div class="divider"></div>
+
+          <div class="hint">
+            ✅ MCDA (pontuação ponderada)<br/>
+            ✅ Ajuste por risco (prob×impacto)<br/>
+            ✅ Cenários e custo da inação<br/>
+            ✅ Pre-mortem e anti-viés<br/>
+            ✅ Decision Log (aprender com você)<br/>
+            ✅ Anexos (IndexedDB)<br/>
+            ✅ <b>Grade “tipo software”</b> para notas e risco (melhor para gráficos)
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <!-- Mobile bottom nav -->
+  <nav class="bottomNav" aria-label="Navegação inferior">
+    <div class="tabs" id="tabsBottom" role="tablist">
+      <button class="tab active" data-tab="inbox" title="Decisões">🧠</button>
+      <button class="tab" data-tab="dash" title="Dashboard">📊</button>
+      <button class="tab" data-tab="models" title="Modelos">🧩</button>
+      <button class="tab" data-tab="files" title="Arquivos">📎</button>
+      <button class="tab" data-tab="settings" title="Ajustes">⚙️</button>
+    </div>
+  </nav>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-hidden="true">
+    <div class="msg" id="toastMsg">—</div>
+    <button class="btn ghost" id="toastClose" style="padding:8px 10px;">OK</button>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" id="loading" aria-hidden="true">
+    <div class="loadingCard">
+      <div class="spinner" aria-hidden="true"></div>
+      <div>
+        <div style="font-weight:950; font-size:13px;">Processando</div>
+        <div class="hint" id="loadingMsg">Carregando…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Decision Modal -->
+  <div class="modal" id="decisionModal" aria-hidden="true">
+    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="phd">
+        <div class="title">
+          <h3 id="modalTitle">Nova decisão</h3>
+          <p id="modalSub">Defina domínio, opções, critérios, pesos, risco e preencha na grade</p>
+        </div>
+        <div class="right">
+          <button class="btn ghost" id="btnCloseModal">Fechar</button>
+        </div>
+      </div>
+
+      <div class="pbd">
+        <div class="filters">
+          <div class="field" style="min-width:260px;">
+            <label for="dDomain">Domínio</label>
+            <select id="dDomain"></select>
+          </div>
+          <div class="field" style="min-width:240px;">
+            <label for="dStatus">Status</label>
+            <select id="dStatus">
+              <option value="open">Aberta</option>
+              <option value="decided">Decidida</option>
+              <option value="archived">Arquivada</option>
+            </select>
+          </div>
+          <div class="field" style="min-width:240px;">
+            <label for="dDeadline">Prazo para decidir</label>
+            <input id="dDeadline" type="date" />
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="filters">
+          <div class="field" style="min-width:320px; flex:1 1 auto;">
+            <label for="dTitle">Título</label>
+            <input id="dTitle" placeholder="Ex: Trocar de emprego / Comprar carro / Ter filhos / Mudar de cidade…" />
+          </div>
+          <div class="field" style="min-width:240px;">
+            <label for="dReversible">Reversibilidade</label>
+            <select id="dReversible">
+              <option value="2">Reversível (porta dupla)</option>
+              <option value="1">Semi-reversível</option>
+              <option value="0">Irreversível (porta única)</option>
+            </select>
+          </div>
+          <div class="field" style="min-width:240px;">
+            <label for="dHorizon">Horizonte</label>
+            <select id="dHorizon">
+              <option value="short">Curto (0–6m)</option>
+              <option value="mid">Médio (6–24m)</option>
+              <option value="long">Longo (2–10a)</option>
+              <option value="verylong">Muito longo (10a+)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="filters">
+          <div class="field" style="min-width:280px; flex:1 1 auto;">
+            <label for="dContext">Contexto (fatos e premissas)</label>
+            <textarea id="dContext" placeholder="Fatos, dados, restrições, premissas. Ex: salário, localização, prazos, responsabilidades…"></textarea>
+          </div>
+          <div class="field" style="min-width:280px; flex:1 1 auto;">
+            <label for="dInaction">Custo da inação</label>
+            <textarea id="dInaction" placeholder="Se eu NÃO decidir, o que acontece em 3/6/12 meses?"></textarea>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="filters">
+          <div class="field" style="min-width:300px; flex:1 1 auto;">
+            <label for="dOptions">Opções (uma por linha)</label>
+            <textarea id="dOptions" placeholder="Opção A&#10;Opção B&#10;Opção C"></textarea>
+            <div class="hint">Dica: 2–5 opções costuma ser o ideal (evita paralisia).</div>
+          </div>
+          <div class="field" style="min-width:300px; flex:1 1 auto;">
+            <label for="dCriteria">Critérios e pesos (uma por linha: nome | peso)</label>
+            <textarea id="dCriteria" placeholder="Crescimento | 25&#10;Risco | 20&#10;Custo | 15&#10;Tempo | 15&#10;Qualidade de vida | 25"></textarea>
+            <div class="hint">Peso total não precisa dar 100 — o app normaliza.</div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- ======= FECHADO / SOFTWARE-LIKE ======= -->
+        <div class="softPanel" aria-label="Editor de notas e risco">
+          <div class="softHd">
+            <div class="left">
+              <b>Editor “tipo software” (notas 0–10 + risco)</b>
+              <small>Evita texto solto e melhora gráficos/ranking. Se mudar opções/critérios, regenere a grade.</small>
+            </div>
+            <div class="right">
+              <button class="btn sm" id="btnRebuildGrid">⟳ Gerar/Atualizar grade</button>
+              <button class="btn sm" id="btnFillNeutral">≈ Preencher 5</button>
+              <button class="btn sm" id="btnFillByBest">⭐ Sugestão rápida</button>
+            </div>
+          </div>
+          <div class="softBd">
+            <div class="miniRow">
+              <label class="toggle" title="Quando ligado, células vazias ficam em amarelo e ajudam você a completar">
+                <input type="checkbox" id="gridShowMissing" checked />
+                Mostrar faltantes
+              </label>
+              <label class="toggle" title="Mantém notas dentro do intervalo 0–10 automaticamente">
+                <input type="checkbox" id="gridClamp" checked />
+                Travar 0–10
+              </label>
+              <span class="hint" id="gridSummary">—</span>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="title" style="margin-bottom:8px;">
+              <h2 style="margin:0; font-size:13px;">Notas (Opção × Critério)</h2>
+              <p style="margin:0; font-size:12px; color:var(--muted)">Digite 0–10. Células vazias contam como 0 (mas você vê o que falta).</p>
+            </div>
+            <div class="gridWrap">
+              <table class="sheet" id="scoreGrid" aria-label="Grade de notas"></table>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="title" style="margin-bottom:8px;">
+              <h2 style="margin:0; font-size:13px;">Risco (por opção)</h2>
+              <p style="margin:0; font-size:12px; color:var(--muted)">Probabilidade 0–10 e Impacto 0–10. Risco = prob×impacto (0–100).</p>
+            </div>
+            <div class="gridWrap" style="max-height:240px;">
+              <table class="sheet" id="riskGrid" aria-label="Grade de risco"></table>
+            </div>
+
+            <!-- compatibilidade: ainda mantemos os textareas (ocultos) para salvar/backup -->
+            <textarea id="dScores" style="display:none;"></textarea>
+            <textarea id="dRisk" style="display:none;"></textarea>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="filters">
+          <div class="field" style="min-width:280px; flex:1 1 auto;">
+            <label for="dProsCons">Prós/Contras (livre, mas técnico)</label>
+            <textarea id="dProsCons" placeholder="Opção A — PRÓS: … / CONTRAS: …&#10;Opção B — PRÓS: … / CONTRAS: …"></textarea>
+          </div>
+          <div class="field" style="min-width:280px; flex:1 1 auto;">
+            <label for="dPremortem">Pré-mortem (se deu errado, por quê?)</label>
+            <textarea id="dPremortem" placeholder="Liste causas de falha e medidas preventivas."></textarea>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="filters">
+          <div class="field" style="min-width:280px; flex:1 1 auto;">
+            <label for="dBias">Anti-viés (checklist rápido)</label>
+            <textarea id="dBias" placeholder="Ex: estou ancorado em um número? confirmação? stress? custo afundado?"></textarea>
+          </div>
+          <div class="field" style="min-width:320px;">
+            <label for="dFiles">Anexos</label>
+            <input id="dFiles" type="file" multiple />
+            <div class="hint" style="margin-top:6px;">PDFs/fotos ficam no navegador. Você consegue abrir/baixar depois.</div>
+            <div class="chips" id="dFileChips"></div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="filters">
+          <div class="field" style="min-width:280px; flex:1 1 auto;">
+            <label for="dDecisionLog">Decision Log (quando decidir)</label>
+            <textarea id="dDecisionLog" placeholder="Decisão tomada: …&#10;Justificativa: …&#10;O que eu aceito perder: …&#10;Próxima revisão em: …"></textarea>
+            <div class="hint">O app pode lembrar pela data (sem notificações, só no dashboard).</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pft">
+        <div class="hint" id="modalFootHint">Criado em: —</div>
+        <div class="right">
+          <button class="btn danger" id="btnDelete" style="display:none;">🗑️ Excluir</button>
+          <button class="btn" id="btnDuplicate">⎘ Duplicar</button>
+          <button class="btn primary" id="btnSave">✔ Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Restore Modal -->
+  <div class="modal" id="restoreModal" aria-hidden="true">
+    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="restoreTitle">
+      <div class="phd">
+        <div class="title">
+          <h3 id="restoreTitle">Importar backup</h3>
+          <p>Restaura decisões/modelos (sem anexos). Anexos ficam na IndexedDB local.</p>
+        </div>
+        <div class="right">
+          <button class="btn ghost" id="btnCloseRestore">Fechar</button>
+        </div>
+      </div>
+      <div class="pbd">
+        <div class="filters">
+          <div class="field" style="min-width:320px;">
+            <label for="restoreFile">Arquivo JSON</label>
+            <input id="restoreFile" type="file" accept="application/json" />
+          </div>
+          <div class="field" style="min-width:240px;">
+            <label>&nbsp;</label>
+            <button class="btn primary" id="btnDoRestore">⬆ Importar</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="hint">
+          Segurança: importe apenas backup do seu app.
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const $ = (id)=>document.getElementById(id);
+const $$ = (sel, root=document)=>Array.from(root.querySelectorAll(sel));
+
+const LS_DECISIONS = "decision_os_v11_decisions";
+const LS_MODELS    = "decision_os_v11_models";
+const LS_SETTINGS  = "decision_os_v11_settings";
+const LS_ACTIVE_TAB= "decision_os_v11_active_tab";
+
+const DB_NAME = "DecisionOS_DB";
+const DB_VER = 1;
+const FILE_STORE = "files";
+
+const state = {
+  activeTab: "inbox",
+  decisions: [],
+  models: [],
+  settings: { userName: "Wilson", riskPolicy: "balanced", reviewDays: 30 },
+
+  selectedId: null,
+  editingId: null,
+  tempFiles: [],
+  db: null,
+
+  renderQueued:false,
+  toastTimer:null,
+
+  // v1.1: cache UI editor
+  editor: {
+    mounted: false,
+    lastDecisionId: null,
+    matrixDirty: false,
+  }
+};
+
+const DOMAINS = [
+  {id:"professional", label:"Profissional / Carreira"},
+  {id:"financial",    label:"Financeiro"},
+  {id:"family",       label:"Familiar"},
+  {id:"relationship", label:"Relacionamentos"},
+  {id:"children",     label:"Filhos"},
+  {id:"health",       label:"Saúde"},
+  {id:"future",       label:"Futuro / Longo prazo"},
+  {id:"education",    label:"Educação"},
+  {id:"lifestyle",    label:"Mudança de vida"},
+  {id:"ethics",       label:"Ética / Valores"},
+  {id:"personal",     label:"Pessoal / Autoconhecimento"}
+];
+
+const DEFAULT_MODELS = [
+  {
+    id:"m_career",
+    domain:"professional",
+    name:"Carreira (técnico e estratégico)",
+    criteria:[
+      ["Crescimento",25],["Aprendizado",15],["Reputação",15],["Autonomia",10],
+      ["Estabilidade",10],["Risco",15],["Qualidade de vida",10]
+    ],
+    notes:"Use risco com penalização moderada."
+  },
+  {
+    id:"m_finance",
+    domain:"financial",
+    name:"Financeiro (retorno e proteção)",
+    criteria:[
+      ["Retorno esperado",25],["Risco",25],["Liquidez",15],["Prazo",15],["Custo de oportunidade",10],["Simplicidade",10]
+    ],
+    notes:"Regra: risco pesa alto."
+  },
+  {
+    id:"m_health",
+    domain:"health",
+    name:"Saúde (conservador)",
+    criteria:[
+      ["Segurança",35],["Evidência",25],["Eficácia",20],["Reversibilidade",10],["Custo",10]
+    ],
+    notes:"Regra: risco alto deve travar a decisão."
+  },
+  {
+    id:"m_children",
+    domain:"children",
+    name:"Filhos (longo prazo)",
+    criteria:[
+      ["Segurança",30],["Impacto no futuro",25],["Estabilidade",20],["Custo",10],["Qualidade de vida familiar",15]
+    ],
+    notes:"Horizonte longo e penalização forte por risco."
+  },
+  {
+    id:"m_relationship",
+    domain:"relationship",
+    name:"Relacionamentos (valores e confiança)",
+    criteria:[
+      ["Alinhamento de valores",30],["Confiança",25],["Compatibilidade",20],["Custo emocional",15],["Futuro",10]
+    ],
+    notes:"Aqui o app desacelera: registre emoções e evidências."
+  }
+];
+
+/* ===================== UX ===================== */
+function showLoading(msg="Carregando…"){
+  $("loadingMsg").textContent = msg;
+  $("loading").classList.add("show");
+  $("loading").setAttribute("aria-hidden","false");
+}
+function hideLoading(){
+  $("loading").classList.remove("show");
+  $("loading").setAttribute("aria-hidden","true");
+}
+function toast(msg){
+  $("toastMsg").textContent = msg;
+  $("toast").classList.add("show");
+  $("toast").setAttribute("aria-hidden","false");
+  clearTimeout(state.toastTimer);
+  state.toastTimer = setTimeout(()=> {
+    $("toast").classList.remove("show");
+    $("toast").setAttribute("aria-hidden","true");
+  }, 2600);
+}
+$("toastClose").addEventListener("click", ()=> {
+  $("toast").classList.remove("show");
+  $("toast").setAttribute("aria-hidden","true");
+});
+function rafRender(){
+  if(state.renderQueued) return;
+  state.renderQueued = true;
+  requestAnimationFrame(async ()=>{
+    state.renderQueued = false;
+    await renderAll();
+  });
+}
+function debounce(fn, ms){
+  let t=null;
+  return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); };
+}
+
+/* ===================== Modal A11y ===================== */
+function getFocusable(container){
+  return Array.from(container.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+    .filter(el=>!el.disabled && el.offsetParent!==null);
+}
+let modalTrapHandler=null, lastFocus=null;
+function openModal(id){
+  const m=$(id); lastFocus=document.activeElement;
+  m.classList.add("show"); m.setAttribute("aria-hidden","false");
+  document.body.style.overflow="hidden";
+  const panel=m.querySelector(".panel");
+  const f=getFocusable(panel); if(f[0]) f[0].focus({preventScroll:true});
+  modalTrapHandler=(e)=>{
+    if(e.key!=="Tab") return;
+    const items=getFocusable(panel); if(items.length===0) return;
+    const first=items[0], last=items[items.length-1];
+    if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+  };
+  document.addEventListener("keydown", modalTrapHandler);
+  m.addEventListener("mousedown",(e)=>{
+    const p=m.querySelector(".panel");
+    if(p && !p.contains(e.target)){
+      if(id==="decisionModal") closeDecisionModal();
+      if(id==="restoreModal") closeRestore();
+    }
+  },{once:true});
+}
+function closeModal(id){
+  const m=$(id);
+  m.classList.remove("show"); m.setAttribute("aria-hidden","true");
+  document.body.style.overflow="";
+  if(modalTrapHandler){ document.removeEventListener("keydown", modalTrapHandler); modalTrapHandler=null; }
+  if(lastFocus) lastFocus.focus({preventScroll:true});
+}
+
+/* ===================== Helpers ===================== */
+function pad(n){return String(n).padStart(2,"0");}
+function toISODate(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function fmtNiceDT(ts){
+  if(!ts) return "—";
+  const d=new Date(ts); if(isNaN(d.getTime())) return "—";
+  return d.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+}
+function safeText(s){
+  return String(s||"")
+    .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+}
+function uid(){ return (crypto?.randomUUID?.() || `id_${Date.now()}_${Math.random().toString(16).slice(2)}`); }
+function domainLabel(id){ return (DOMAINS.find(d=>d.id===id)?.label || "—"); }
+function clamp(n,a,b){ n=Number(n||0); return Math.max(a, Math.min(b, n)); }
+function nowClock(){
+  const d=new Date();
+  $("nowTime").textContent = d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  $("nowMeta").textContent = `${state.settings.userName||"Usuário"} • ${d.toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit",month:"short"})}`;
+}
+function setStatus(dotClass, text){
+  const d = $("statusDot");
+  d.classList.remove("good","warn","bad");
+  if(dotClass) d.classList.add(dotClass);
+  $("statusLine").textContent = text;
+}
+
+/* ===================== Storage ===================== */
+function loadAll(){
+  try{ state.decisions = JSON.parse(localStorage.getItem(LS_DECISIONS) || "[]"); }catch(e){ state.decisions=[]; }
+  try{ state.models = JSON.parse(localStorage.getItem(LS_MODELS) || "[]"); }catch(e){ state.models=[]; }
+  try{
+    const s = JSON.parse(localStorage.getItem(LS_SETTINGS) || "{}");
+    state.settings = {...state.settings, ...s};
+  }catch(e){}
+  try{
+    const t = localStorage.getItem(LS_ACTIVE_TAB);
+    if(t) state.activeTab = t;
+  }catch(e){}
+}
+function saveAll(){
+  localStorage.setItem(LS_DECISIONS, JSON.stringify(state.decisions));
+  localStorage.setItem(LS_MODELS, JSON.stringify(state.models));
+  localStorage.setItem(LS_SETTINGS, JSON.stringify(state.settings));
+  localStorage.setItem(LS_ACTIVE_TAB, state.activeTab);
+}
+
+/* ===================== IndexedDB ===================== */
+function idbOpen(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded=()=>{
+      const db=req.result;
+      if(!db.objectStoreNames.contains(FILE_STORE)){
+        const st=db.createObjectStore(FILE_STORE,{keyPath:"id"});
+        st.createIndex("by_name","name",{unique:false});
+        st.createIndex("by_addedAt","addedAt",{unique:false});
+      }
+    };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+function idbTx(mode="readonly"){
+  if(!state.db) throw new Error("IDB_OFF");
+  const tx=state.db.transaction(FILE_STORE, mode);
+  return {tx, store: tx.objectStore(FILE_STORE)};
+}
+function idbPutFile(fileObj){
+  return new Promise((resolve,reject)=>{
+    let tx,store; try{({tx,store}=idbTx("readwrite"));}catch(e){return reject(e);}
+    store.put(fileObj);
+    tx.oncomplete=()=>resolve(true);
+    tx.onerror=()=>reject(tx.error);
+  });
+}
+function idbGetFile(id){
+  return new Promise((resolve,reject)=>{
+    let tx,store; try{({tx,store}=idbTx("readonly"));}catch(e){return reject(e);}
+    const req=store.get(id);
+    req.onsuccess=()=>resolve(req.result||null);
+    req.onerror=()=>reject(req.error);
+  });
+}
+function idbDeleteFile(id){
+  return new Promise((resolve,reject)=>{
+    let tx,store; try{({tx,store}=idbTx("readwrite"));}catch(e){return reject(e);}
+    store.delete(id);
+    tx.oncomplete=()=>resolve(true);
+    tx.onerror=()=>reject(tx.error);
+  });
+}
+function idbListFiles(){
+  return new Promise((resolve,reject)=>{
+    let tx,store; try{({tx,store}=idbTx("readonly"));}catch(e){return reject(e);}
+    const req=store.getAll();
+    req.onsuccess=()=>resolve(req.result||[]);
+    req.onerror=()=>reject(req.error);
+  });
+}
+function fmtBytes(bytes){
+  const b = Number(bytes||0);
+  if(b<1024) return `${b} B`;
+  const kb=b/1024; if(kb<1024) return `${kb.toFixed(1)} KB`;
+  const mb=kb/1024; if(mb<1024) return `${mb.toFixed(1)} MB`;
+  const gb=mb/1024; return `${gb.toFixed(2)} GB`;
+}
+
+/* ===================== Tabs ===================== */
+const TAB_TITLES = {
+  inbox: ["Decisões","Lista + filtro + status + trilha de decisão"],
+  dash: ["Dashboard","Gráficos e ranking técnico da decisão"],
+  models: ["Modelos","Templates por domínio (critérios & pesos)"],
+  files: ["Arquivos","Biblioteca local (IndexedDB)"],
+  settings: ["Ajustes","Preferências locais, demo, backup e limpeza"]
+};
+function setTab(tab){
+  state.activeTab = tab;
+  saveAll();
+  $$("[data-tab]").forEach(b=> b.classList.toggle("active", b.dataset.tab===tab));
+  const show=(id,on)=>{ const el=$(id); if(el) el.style.display = on ? "block" : "none"; };
+  show("viewInbox", tab==="inbox");
+  show("viewDash", tab==="dash");
+  show("viewModels", tab==="models");
+  show("viewFiles", tab==="files");
+  show("viewSettings", tab==="settings");
+  $("pageTitle").textContent = TAB_TITLES[tab][0];
+  $("pageSub").textContent = TAB_TITLES[tab][1];
+  rafRender();
+}
+
+/* ===================== Decision Model ===================== */
+function newDecision(){
+  const now=Date.now();
+  return {
+    id: uid(),
+    domain: "professional",
+    status: "open",
+    title: "Nova decisão",
+    deadline: null,
+    reversible: 2,
+    horizon: "mid",
+
+    context: "",
+    inaction: "",
+
+    options: ["Opção A","Opção B"],
+    criteria: [
+      {name:"Impacto", weight:25},
+      {name:"Risco", weight:25},
+      {name:"Custo", weight:15},
+      {name:"Tempo", weight:15},
+      {name:"Qualidade de vida", weight:20},
+    ],
+
+    scores: {},        // scores[option][criterion]=0..10
+    risks: {},         // risks[option]={prob:0..10, impact:0..10}
+    prosCons: "",
+    premortem: "",
+    bias: "",
+
+    files: [],
+
+    decisionLog: "",
+    decidedOption: "",
+    reviewAt: null,
+
+    createdAt: now,
+    updatedAt: now
+  };
+}
+
+/* ===================== Parsing (fallback) ===================== */
+function parseOptions(text){
+  const arr = String(text||"").split("\n").map(s=>s.trim()).filter(Boolean);
+  return arr.length ? arr : ["Opção A","Opção B"];
+}
+function parseCriteria(text){
+  const lines = String(text||"").split("\n").map(s=>s.trim()).filter(Boolean);
+  const out=[];
+  for(const ln of lines){
+    const parts = ln.split("|").map(s=>s.trim());
+    if(!parts[0]) continue;
+    const w = clamp(parts[1] ?? 0, 0, 1000);
+    out.push({name: parts[0], weight: w});
+  }
+  return out.length ? out : [{name:"Impacto",weight:30},{name:"Risco",weight:30},{name:"Custo",weight:20},{name:"Tempo",weight:20}];
+}
+function parseScores(text){
+  const rows = String(text||"").split("\n").map(s=>s.trim()).filter(Boolean);
+  const out={};
+  for(const r of rows){
+    const [optPart, restPart] = r.split("|").map(s=>s.trim());
+    if(!optPart) continue;
+    out[optPart] = out[optPart] || {};
+    const rest = restPart || "";
+    const pairs = rest.split(",").map(s=>s.trim()).filter(Boolean);
+    for(const p of pairs){
+      const [k,v] = p.split("=").map(s=>s.trim());
+      if(!k) continue;
+      out[optPart][k] = clamp(v, 0, 10);
+    }
+  }
+  return out;
+}
+function parseRisks(text){
+  const rows = String(text||"").split("\n").map(s=>s.trim()).filter(Boolean);
+  const out={};
+  for(const r of rows){
+    const [optPart, restPart] = r.split("|").map(s=>s.trim());
+    if(!optPart) continue;
+    const rest = (restPart||"").toLowerCase();
+    let prob=0, impact=0;
+    rest.split(",").map(s=>s.trim()).forEach(seg=>{
+      const [k,v] = seg.split("=").map(s=>s.trim());
+      if(k==="prob"||k==="probabilidade") prob = clamp(v,0,10);
+      if(k==="impacto"||k==="impact") impact = clamp(v,0,10);
+    });
+    out[optPart] = {prob, impact};
+  }
+  return out;
+}
+
+/* ===================== MCDA + Risk ===================== */
+function normalizeWeights(criteria){
+  const sum = criteria.reduce((a,c)=>a + Number(c.weight||0), 0) || 1;
+  return criteria.map(c=> ({...c, wNorm: (Number(c.weight||0)/sum)}));
+}
+function scoreOption(dec, opt){
+  const crit = normalizeWeights(dec.criteria||[]);
+  const sc = dec.scores?.[opt] || {};
+  let raw=0;
+  for(const c of crit){
+    const v = clamp(sc[c.name] ?? 0, 0, 10) / 10;
+    raw += c.wNorm * v;
+  }
+  raw = clamp(raw,0,1);
+  const raw100 = raw*100;
+
+  const r = dec.risks?.[opt] || {prob:0, impact:0};
+  const risk100 = clamp((clamp(r.prob,0,10) * clamp(r.impact,0,10)), 0, 100);
+
+  const policy = state.settings.riskPolicy || "balanced";
+  const rev = Number(dec.reversible ?? 2);
+  const domain = dec.domain || "professional";
+
+  let k = policy==="conservative" ? 0.80 : policy==="aggressive" ? 0.35 : 0.55;
+  if(domain==="health" || domain==="children") k *= 1.25;
+  if(domain==="financial") k *= 1.10;
+  if(domain==="relationship" || domain==="family") k *= 1.05;
+  if(rev===0) k *= 1.20;
+  if(rev===1) k *= 1.08;
+
+  const adj = clamp(raw100 - (k * risk100), 0, 100);
+  return { raw100, risk100, adj100: adj };
+}
+function computeRanking(dec){
+  const opts = (dec.options||[]).slice();
+  const res = opts.map(opt=>{
+    const s = scoreOption(dec,opt);
+    return {opt, ...s};
+  }).sort((a,b)=> (b.adj100 - a.adj100) || (b.raw100 - a.raw100));
+  return res;
+
+function recommendationFromScore(adj100){
+  if(adj100 >= 72) return {key:"go", label:"✅ IR EM FRENTE", note:"Boa relação benefício×risco. Execute com plano e checkpoints."};
+  if(adj100 >= 55) return {key:"maybe", label:"🟡 TALVEZ / AJUSTAR", note:"Promissor, mas ajuste premissas/risco antes de decidir."};
+  return {key:"no", label:"⛔ NÃO AGORA", note:"Risco alto e/ou benefício baixo. Reestruture ou descarte."};
+}
+function renderOutcomePreview(){
+  const box = $("mxOutcome");
+  if(!box) return;
+
+  const dec = state.decisions.find(d=>d.id===state.selectedId);
+  if(!dec){
+    box.innerHTML = `<div class="outBox"><div class="outTop"><div><div class="ttl">Resultado</div><div class="sub">Selecione uma decisão para ver ranking e recomendação.</div></div></div></div>`;
+    return;
+  }
+
+  const ranking = computeRanking(dec);
+  if(!ranking.length){
+    box.innerHTML = `<div class="outBox"><div class="outTop"><div><div class="ttl">Resultado</div><div class="sub">Adicione opções e critérios para calcular.</div></div></div></div>`;
+    return;
+  }
+
+  const best = ranking[0];
+  const rec = recommendationFromScore(best.adj100);
+
+  const rows = ranking.slice(0,6).map((r,idx)=>`
+    <div class="rankRow">
+      <div><strong>${idx+1}.</strong> ${safeText(r.opt)}</div>
+      <div>
+        <span class="chip"><span class="miniDot"></span>Bruto <strong>${r.raw100.toFixed(0)}</strong></span>
+        <span class="chip"><span class="miniDot"></span>Risco <strong>${r.risk100.toFixed(0)}</strong></span>
+        <span class="chip"><span class="miniDot"></span>Ajust. <strong>${r.adj100.toFixed(0)}</strong></span>
+      </div>
+    </div>
+  `).join("");
+
+  box.innerHTML = `
+    <div class="outBox">
+      <div class="outTop">
+        <div>
+          <div class="ttl">📌 Recomendação: <span class="recTag ${rec.key}">${rec.label}</span></div>
+          <div class="sub"><b>Melhor opção:</b> ${safeText(best.opt)} • Score ajustado <b>${best.adj100.toFixed(0)}</b>/100. ${safeText(rec.note)}</div>
+        </div>
+        <div class="badge"><strong>${safeText(dec.domain||"")}</strong></div>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <span class="chip"><span class="miniDot"></span>Política: <strong>${safeText(state.settings.riskPolicy||"balanced")}</strong></span>
+        <span class="chip"><span class="miniDot"></span>Reversibilidade: <strong>${Number(dec.reversible??2)}</strong></span>
+        <span class="chip"><span class="miniDot"></span>Horizon: <strong>${safeText(dec.horizon||"mid")}</strong></span>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        ${rows}
+      </div>
+      <div class="hint">Obs.: “Bruto” vem da matriz (pesos normalizados). “Risco” = prob×impacto (0–100). “Ajust.” aplica política de risco + contexto.</div>
+    </div>
+  `;
+}
+}
+
+/* ===================== Drawing ===================== */
+function clearCanvas(c){
+  const ctx=c.getContext("2d");
+  const w=c.width = Math.max(320, Math.floor(c.clientWidth*devicePixelRatio));
+  const h=c.height = Math.max(220, Math.floor(c.clientHeight*devicePixelRatio));
+  ctx.clearRect(0,0,w,h);
+  return {ctx,w,h,px:devicePixelRatio};
+}
+function drawRadar(dec){
+  const canvas=$("radar");
+  const hint=$("radarHint");
+  const {ctx,w,h}=clearCanvas(canvas);
+
+  const criteria=(dec?.criteria||[]).map(c=>c.name);
+  const opts=(dec?.options||[]);
+
+  if(criteria.length<3 || opts.length<2){
+    hint.textContent = "Selecione uma decisão com 2+ opções e 3+ critérios.";
+    return;
+  }
+  hint.textContent = `Critérios: ${criteria.length} • Opções: ${opts.length}`;
+
+  const cx=w*0.5, cy=h*0.52;
+  const R=Math.min(w,h)*0.34;
+
+  ctx.globalAlpha=0.9;
+  ctx.lineWidth=1;
+  ctx.strokeStyle = "rgba(255,255,255,.18)";
+  for(let ring=1; ring<=4; ring++){
+    const rr=R*(ring/4);
+    ctx.beginPath();
+    for(let i=0;i<criteria.length;i++){
+      const a = (Math.PI*2*i/criteria.length) - Math.PI/2;
+      const x=cx+Math.cos(a)*rr, y=cy+Math.sin(a)*rr;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.closePath(); ctx.stroke();
+  }
+
+  ctx.font = `${Math.max(10, Math.floor(w/42))}px ${getComputedStyle(document.body).fontFamily}`;
+  ctx.fillStyle = "rgba(154,166,195,.95)";
+  for(let i=0;i<criteria.length;i++){
+    const a = (Math.PI*2*i/criteria.length) - Math.PI/2;
+    const x=cx+Math.cos(a)*R, y=cy+Math.sin(a)*R;
+    ctx.beginPath();
+    ctx.moveTo(cx,cy); ctx.lineTo(x,y);
+    ctx.strokeStyle="rgba(255,255,255,.10)"; ctx.stroke();
+
+    const tx=cx+Math.cos(a)*(R+14), ty=cy+Math.sin(a)*(R+14);
+    const lbl=criteria[i].slice(0,18);
+    ctx.fillText(lbl, tx-ctx.measureText(lbl).width/2, ty);
+  }
+
+  const colors = [
+    "rgba(96,165,250,.85)",
+    "rgba(45,212,191,.85)",
+    "rgba(251,191,36,.85)",
+    "rgba(251,113,133,.85)",
+    "rgba(255,255,255,.75)"
+  ];
+
+  opts.slice(0,5).forEach((opt, idx)=>{
+    const sc = dec.scores?.[opt] || {};
+    ctx.beginPath();
+    for(let i=0;i<criteria.length;i++){
+      const a=(Math.PI*2*i/criteria.length) - Math.PI/2;
+      const v=clamp(sc[criteria[i]] ?? 0, 0, 10)/10;
+      const rr=R*v;
+      const x=cx+Math.cos(a)*rr, y=cy+Math.sin(a)*rr;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = colors[idx%colors.length];
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = colors[idx%colors.length].replace(",.85",",.10");
+    ctx.fill();
+  });
+
+  ctx.font = `${Math.max(11, Math.floor(w/40))}px ${getComputedStyle(document.body).fontFamily}`;
+  opts.slice(0,5).forEach((opt, idx)=>{
+    const y = h - 14 - (opts.slice(0,5).length-1-idx)*16;
+    ctx.fillStyle = colors[idx%colors.length];
+    ctx.fillRect(12, y-10, 10, 10);
+    ctx.fillStyle = "rgba(233,240,255,.92)";
+    ctx.fillText(opt.slice(0,22), 28, y-1);
+  });
+}
+function drawRiskReturn(dec, ranking){
+  const canvas=$("riskReturn");
+  const hint=$("rrHint");
+  const {ctx,w,h}=clearCanvas(canvas);
+  if(!dec || !ranking?.length){
+    hint.textContent = "Selecione uma decisão com opções.";
+    return;
+  }
+  hint.textContent = "Eixo X: risco (0–100) • Eixo Y: score (0–100)";
+
+  const pad=28;
+  const x0=pad, y0=h-pad, x1=w-pad, y1=pad;
+
+  ctx.strokeStyle="rgba(255,255,255,.18)";
+  ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x0,y1); ctx.stroke();
+
+  ctx.strokeStyle="rgba(255,255,255,.08)";
+  for(let i=1;i<=4;i++){
+    const x=x0 + (x1-x0)*(i/5);
+    const y=y0 - (y0-y1)*(i/5);
+    ctx.beginPath(); ctx.moveTo(x,y0); ctx.lineTo(x,y1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(x1,y); ctx.stroke();
+  }
+
+  ctx.font = `${Math.max(11, Math.floor(w/44))}px ${getComputedStyle(document.body).fontFamily}`;
+  ranking.slice(0,10).forEach((r, idx)=>{
+    const x = x0 + (x1-x0)*(r.risk100/100);
+    const y = y0 - (y0-y1)*(r.adj100/100);
+    ctx.fillStyle="rgba(96,165,250,.85)";
+    if(idx===0) ctx.fillStyle="rgba(45,212,191,.90)";
+    ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="rgba(233,240,255,.92)";
+    ctx.fillText(r.opt.slice(0,18), x+10, y+4);
+  });
+}
+function drawBarsRanking(containerId, ranking){
+  const el = $(containerId);
+  if(!el) return;
+  el.innerHTML = "";
+  if(!ranking?.length){
+    el.innerHTML = `<div class="hint">Sem opções para rankear.</div>`;
+    return;
+  }
+  ranking.forEach((r, idx)=>{
+    const row = document.createElement("div");
+    row.className = "row";
+    row.tabIndex = 0;
+    row.innerHTML = `
+      <div class="main">
+        <div class="name">${safeText(r.opt)} ${idx===0 ? "🏁" : ""}</div>
+        <div class="meta">
+          <span class="badge">Adj <b class="mono">${r.adj100.toFixed(1)}</b></span>
+          <span class="badge">Bruto <b class="mono">${r.raw100.toFixed(1)}</b></span>
+          <span class="badge">Risco <b class="mono">${r.risk100.toFixed(0)}</b></span>
+        </div>
+      </div>
+      <div style="grid-column:2 / -1;">
+        <div style="height:10px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.04);overflow:hidden;">
+          <div style="height:100%;width:${clamp(r.adj100,0,100)}%;background:linear-gradient(90deg, rgba(45,212,191,.85), rgba(96,165,250,.85));"></div>
+        </div>
+        <div class="hint" style="margin-top:6px;">Penalização por risco conforme política: <b>${safeText(state.settings.riskPolicy)}</b></div>
+      </div>
+    `;
+    el.appendChild(row);
+  });
+}
+
+/* ===================== Render: selects ===================== */
+function fillDomains(){
+  const domSel = $("domainFilter");
+  const dDomain = $("dDomain");
+  const modelDomain = $("modelDomain");
+
+  const opts = [`<option value="all">Todos</option>`].concat(
+    DOMAINS.map(d=>`<option value="${d.id}">${safeText(d.label)}</option>`)
+  ).join("");
+  domSel.innerHTML = opts;
+
+  dDomain.innerHTML = DOMAINS.map(d=>`<option value="${d.id}">${safeText(d.label)}</option>`).join("");
+  modelDomain.innerHTML = DOMAINS.map(d=>`<option value="${d.id}">${safeText(d.label)}</option>`).join("");
+}
+
+/* ===================== Decisions: CRUD ===================== */
+function upsertDecision(dec){
+  dec.updatedAt = Date.now();
+  const idx = state.decisions.findIndex(d=>d.id===dec.id);
+  if(idx>=0) state.decisions[idx] = dec;
+  else state.decisions.unshift(dec);
+  saveAll();
+}
+function deleteDecision(id){
+  const idx = state.decisions.findIndex(d=>d.id===id);
+  if(idx>=0){
+    state.decisions.splice(idx,1);
+    saveAll();
+  }
+}
+
+/* ===================== Models ===================== */
+function ensureDefaultModels(){
+  if(state.models?.length) return;
+  state.models = DEFAULT_MODELS.map(m=>({
+    id: m.id,
+    domain: m.domain,
+    name: m.name,
+    criteria: m.criteria,
+    notes: m.notes || ""
+  }));
+  saveAll();
+}
+
+/* ===================== Exemplos (10 decisões prontas) ===================== */
+function buildExampleDecisions(){
+  const now = Date.now();
+  const mk = (x)=>({
+    id: x.id,
+    domain: x.domain || "professional",
+    status: x.status || "open",
+    title: x.title || "Decisão",
+    deadline: x.deadline ?? null,
+    reversible: (x.reversible ?? 2),
+    horizon: x.horizon || "mid",
+    context: x.context || "",
+    inaction: x.inaction || "",
+    options: (x.options||["Opção A","Opção B"]),
+    criteria: (x.criteria||[]).map(c=>({name:c.name, weight: clamp(Number(c.weight||0),0,1000)})),
+    scores: x.scores || {},
+    risks: x.risks || {},
+    prosCons: x.prosCons || "",
+    premortem: x.premortem || "",
+    bias: x.bias || "",
+    files: [],
+    decisionLog: x.decisionLog || "",
+    decidedOption: x.decidedOption || "",
+    reviewAt: x.reviewAt ?? null,
+    createdAt: x.createdAt ?? now,
+    updatedAt: x.updatedAt ?? now
+  });
+
+  // Observação: scores 0..10; riscos: prob/impact 0..10.
+  const ex = [
+    {
+      id:"ex_01_magsafe",
+      domain:"financial",
+      status:"closed",
+      title:"Comprar carregador MagSafe para iPhone 14?",
+      reversible:2,
+      horizon:"short",
+      context:"Objetivo: melhorar praticidade e preservar bateria. Uso diário intenso; quero algo confiável e durável.",
+      inaction:"Continuar com cabo comum e carregadores genéricos, com menor comodidade e possível desgaste.",
+      options:["MagSafe oficial","Carregador MagSafe bom (MFi/qualidade)","Ficar no cabo atual"],
+      criteria:[
+        {name:"Custo",weight:20},{name:"Conveniência",weight:25},{name:"Durabilidade",weight:20},{name:"Segurança",weight:20},{name:"Valor no dia a dia",weight:15}
+      ],
+      scores:{
+        "MagSafe oficial": {"Custo":4,"Conveniência":10,"Durabilidade":9,"Segurança":10,"Valor no dia a dia":9},
+        "Carregador MagSafe bom (MFi/qualidade)": {"Custo":7,"Conveniência":9,"Durabilidade":8,"Segurança":8,"Valor no dia a dia":8},
+        "Ficar no cabo atual": {"Custo":10,"Conveniência":5,"Durabilidade":6,"Segurança":7,"Valor no dia a dia":5}
+      },
+      risks:{
+        "MagSafe oficial": {prob:2, impact:3},
+        "Carregador MagSafe bom (MFi/qualidade)": {prob:4, impact:4},
+        "Ficar no cabo atual": {prob:3, impact:3}
+      },
+      prosCons:"• Oficial: melhor segurança/compatibilidade, mas caro.\n• Alternativa boa: ótimo custo-benefício.\n• Cabo: mais barato, menos prático.",
+      premortem:"Se eu comprar e não usar: foi por falta de hábito/rotina de carregamento e tomada longe da mesa.",
+      bias:"Viés: 'se é oficial é sempre melhor'. Mitigação: comparar especificações e reviews confiáveis.",
+      decidedOption:"Carregador MagSafe bom (MFi/qualidade)",
+      decisionLog:"Resultado: custo-benefício venceu. Mantém praticidade sem pagar o máximo. Reavaliar em 90 dias se a experiência justificar o oficial."
+    },
+    {
+      id:"ex_02_pmp",
+      domain:"professional",
+      status:"closed",
+      title:"Entrar forte no plano PMP nos próximos 60 dias?",
+      reversible:1,
+      horizon:"mid",
+      context:"Quero consolidar carreira de gestão de projetos e aumentar empregabilidade/salário.",
+      inaction:"Continuar estudando sem plano fechado e postergar prova, perdendo momentum.",
+      options:["Plano 60 dias (intenso)","Plano 120 dias (moderado)","Adiar para 2026 (sem data)"],
+      criteria:[
+        {name:"ROI de carreira",weight:30},{name:"Carga de tempo",weight:20},{name:"Risco de burnout",weight:20},{name:"Probabilidade de aprovação",weight:20},{name:"Custo financeiro",weight:10}
+      ],
+      scores:{
+        "Plano 60 dias (intenso)": {"ROI de carreira":9,"Carga de tempo":4,"Risco de burnout":5,"Probabilidade de aprovação":8,"Custo financeiro":7},
+        "Plano 120 dias (moderado)": {"ROI de carreira":8,"Carga de tempo":7,"Risco de burnout":7,"Probabilidade de aprovação":8,"Custo financeiro":7},
+        "Adiar para 2026 (sem data)": {"ROI de carreira":5,"Carga de tempo":9,"Risco de burnout":9,"Probabilidade de aprovação":4,"Custo financeiro":9}
+      },
+      risks:{
+        "Plano 60 dias (intenso)": {prob:6, impact:6},
+        "Plano 120 dias (moderado)": {prob:3, impact:4},
+        "Adiar para 2026 (sem data)": {prob:5, impact:7}
+      },
+      prosCons:"• 60 dias: rápido, mas exige disciplina e controle de energia.\n• 120 dias: sustentável e previsível.\n• Adiar: reduz pressão, mas perde janela de oportunidade.",
+      premortem:"Falha no plano ocorre por agenda lotada e falta de blocos fixos de estudo.",
+      bias:"Viés: 'quanto mais rápido melhor'. Mitigação: plano com checkpoints semanais.",
+      decidedOption:"Plano 120 dias (moderado)",
+      decisionLog:"Resultado: melhor equilíbrio esforço x consistência. Define calendário + simulados semanais."
+    },
+    {
+      id:"ex_03_ka_radio",
+      domain:"financial",
+      status:"open",
+      title:"Consertar o rádio original do Ka 2010 ou manter multimídia portátil?",
+      reversible:2,
+      horizon:"short",
+      context:"Rádio original falhando; já tenho multimídia portátil funcionando.",
+      inaction:"Usar só o portátil, sem gastar no rádio.",
+      options:["Manter só multimídia portátil","Consertar rádio original","Trocar por outro rádio simples"],
+      criteria:[
+        {name:"Custo",weight:25},{name:"Confiabilidade",weight:25},{name:"Praticidade",weight:20},{name:"Estética/integração",weight:15},{name:"Tempo para resolver",weight:15}
+      ],
+      scores:{
+        "Manter só multimídia portátil": {"Custo":9,"Confiabilidade":7,"Praticidade":8,"Estética/integração":6,"Tempo para resolver":10},
+        "Consertar rádio original": {"Custo":5,"Confiabilidade":6,"Praticidade":7,"Estética/integração":9,"Tempo para resolver":4},
+        "Trocar por outro rádio simples": {"Custo":6,"Confiabilidade":7,"Praticidade":7,"Estética/integração":7,"Tempo para resolver":6}
+      },
+      risks:{
+        "Manter só multimídia portátil": {prob:3, impact:3},
+        "Consertar rádio original": {prob:6, impact:5},
+        "Trocar por outro rádio simples": {prob:4, impact:4}
+      },
+      prosCons:"• Portátil: solução imediata e barata.\n• Conserto: pode ficar ótimo, mas risco de gastar e não resolver.\n• Troca: meio-termo.",
+      premortem:"Se eu gastar e continuar falhando: diagnóstico ruim/peça errada.",
+      bias:"Viés: 'original é melhor'. Mitigação: custo total vs benefício real.",
+      decisionLog:"Status aberto: fazer orçamento do conserto antes. Se passar de X, ficar no portátil."
+    },
+    {
+      id:"ex_04_gym",
+      domain:"health",
+      status:"closed",
+      title:"Aumentar treino (cardio + força) para meta estética em 12 semanas?",
+      reversible:1,
+      horizon:"short",
+      context:"Quero melhorar estética e performance sem comprometer trabalho/estudos.",
+      inaction:"Manter rotina atual e progresso mais lento.",
+      options:["Treino estruturado 4x/sem + cardio","Treino 3x/sem mais leve","Manter como está"],
+      criteria:[
+        {name:"Resultados",weight:30},{name:"Sustentabilidade",weight:25},{name:"Risco de lesão",weight:20},{name:"Compatível com rotina",weight:15},{name:"Prazer/aderência",weight:10}
+      ],
+      scores:{
+        "Treino estruturado 4x/sem + cardio": {"Resultados":9,"Sustentabilidade":7,"Risco de lesão":6,"Compatível com rotina":7,"Prazer/aderência":7},
+        "Treino 3x/sem mais leve": {"Resultados":7,"Sustentabilidade":9,"Risco de lesão":8,"Compatível com rotina":8,"Prazer/aderência":8},
+        "Manter como está": {"Resultados":4,"Sustentabilidade":10,"Risco de lesão":9,"Compatível com rotina":10,"Prazer/aderência":7}
+      },
+      risks:{
+        "Treino estruturado 4x/sem + cardio": {prob:5, impact:6},
+        "Treino 3x/sem mais leve": {prob:2, impact:4},
+        "Manter como está": {prob:3, impact:6}
+      },
+      decidedOption:"Treino 3x/sem mais leve",
+      decisionLog:"Escolha conservadora: consistência > intensidade. Ajustar para 4x/sem se energia e recuperação estiverem ok após 3 semanas."
+    },
+    {
+      id:"ex_05_course",
+      domain:"professional",
+      status:"open",
+      title:"Fazer pós/curso extra agora ou focar em consolidar projetos atuais?",
+      reversible:2,
+      horizon:"mid",
+      context:"Vontade de acelerar carreira, mas agenda já cheia.",
+      inaction:"Não fazer curso agora e investir em portfólio/projetos e resultados internos.",
+      options:["Fazer curso agora","Aguardar 3 meses e reavaliar","Não fazer (foco em entrega)"],
+      criteria:[
+        {name:"Impacto na carreira",weight:30},{name:"Carga de tempo",weight:25},{name:"Custo",weight:15},{name:"Risco de dispersão",weight:20},{name:"Prazer/aprendizado",weight:10}
+      ],
+      scores:{
+        "Fazer curso agora": {"Impacto na carreira":8,"Carga de tempo":4,"Custo":6,"Risco de dispersão":4,"Prazer/aprendizado":8},
+        "Aguardar 3 meses e reavaliar": {"Impacto na carreira":7,"Carga de tempo":8,"Custo":6,"Risco de dispersão":7,"Prazer/aprendizado":7},
+        "Não fazer (foco em entrega)": {"Impacto na carreira":6,"Carga de tempo":10,"Custo":10,"Risco de dispersão":9,"Prazer/aprendizado":5}
+      },
+      risks:{
+        "Fazer curso agora": {prob:6, impact:6},
+        "Aguardar 3 meses e reavaliar": {prob:3, impact:4},
+        "Não fazer (foco em entrega)": {prob:4, impact:5}
+      },
+      decisionLog:"Status aberto: travar critério 'carga de tempo' com base em agenda real da semana."
+    },
+    {
+      id:"ex_06_cabelo",
+      domain:"lifestyle",
+      status:"closed",
+      title:"Comprar máquina para barba/cabelo e reduzir idas ao barbeiro?",
+      reversible:2,
+      horizon:"mid",
+      context:"Barbeiro varia de R$35 a R$80. Quero manter barba curta e bochechas raspadas com consistência.",
+      inaction:"Continuar indo ao barbeiro e manter custo/tempo.",
+      options:["Comprar máquina boa e aprender","Continuar barbeiro","Comprar máquina barata"],
+      criteria:[
+        {name:"Custo total (6 meses)",weight:25},{name:"Qualidade do resultado",weight:30},{name:"Tempo",weight:15},{name:"Risco de erro estético",weight:20},{name:"Praticidade",weight:10}
+      ],
+      scores:{
+        "Comprar máquina boa e aprender": {"Custo total (6 meses)":8,"Qualidade do resultado":7,"Tempo":8,"Risco de erro estético":6,"Praticidade":8},
+        "Continuar barbeiro": {"Custo total (6 meses)":5,"Qualidade do resultado":9,"Tempo":5,"Risco de erro estético":9,"Praticidade":7},
+        "Comprar máquina barata": {"Custo total (6 meses)":9,"Qualidade do resultado":4,"Tempo":7,"Risco de erro estético":4,"Praticidade":6}
+      },
+      risks:{
+        "Comprar máquina boa e aprender": {prob:4, impact:5},
+        "Continuar barbeiro": {prob:2, impact:3},
+        "Comprar máquina barata": {prob:6, impact:6}
+      },
+      decidedOption:"Comprar máquina boa e aprender",
+      decisionLog:"Escolha: máquina boa + 2 semanas de prática com pente maior (seguro) antes de ir para cortes mais agressivos."
+    },
+    {
+      id:"ex_07_fin_invest",
+      domain:"financial",
+      status:"closed",
+      title:"Investir em curso caro agora ou aportar em reserva/investimentos?",
+      reversible:1,
+      horizon:"mid",
+      context:"Tenho ambição de crescimento, mas preciso manter segurança financeira.",
+      inaction:"Manter aportes e deixar curso para depois.",
+      options:["Curso caro agora","Meio-termo (curso menor) + aporte","Só aporte por 6 meses"],
+      criteria:[
+        {name:"Retorno esperado",weight:30},{name:"Risco",weight:25},{name:"Liquidez",weight:15},{name:"Impacto na carreira",weight:20},{name:"Paz mental",weight:10}
+      ],
+      scores:{
+        "Curso caro agora": {"Retorno esperado":8,"Risco":5,"Liquidez":4,"Impacto na carreira":8,"Paz mental":6},
+        "Meio-termo (curso menor) + aporte": {"Retorno esperado":7,"Risco":7,"Liquidez":7,"Impacto na carreira":7,"Paz mental":8},
+        "Só aporte por 6 meses": {"Retorno esperado":6,"Risco":9,"Liquidez":9,"Impacto na carreira":5,"Paz mental":9}
+      },
+      risks:{
+        "Curso caro agora": {prob:6, impact:6},
+        "Meio-termo (curso menor) + aporte": {prob:3, impact:4},
+        "Só aporte por 6 meses": {prob:2, impact:3}
+      },
+      decidedOption:"Meio-termo (curso menor) + aporte",
+      decisionLog:"Equilíbrio: mantém crescimento sem comprometer reserva. Reavaliar com indicadores (salário/bonus/novas oportunidades)."
+    },
+    {
+      id:"ex_08_move",
+      domain:"lifestyle",
+      status:"open",
+      title:"Mudar de cidade/estado por oportunidade melhor?",
+      reversible:0,
+      horizon:"long",
+      context:"Possível oferta melhor, mas mexe com rotina, custo e rede social.",
+      inaction:"Ficar onde está e buscar promoção interna/alternativas locais.",
+      options:["Aceitar e mudar","Negociar remoto/híbrido","Recusar e focar no local"],
+      criteria:[
+        {name:"Crescimento",weight:30},{name:"Qualidade de vida",weight:25},{name:"Custo de vida",weight:15},{name:"Risco",weight:15},{name:"Rede/apoio",weight:15}
+      ],
+      scores:{
+        "Aceitar e mudar": {"Crescimento":9,"Qualidade de vida":7,"Custo de vida":5,"Risco":5,"Rede/apoio":4},
+        "Negociar remoto/híbrido": {"Crescimento":8,"Qualidade de vida":8,"Custo de vida":7,"Risco":6,"Rede/apoio":7},
+        "Recusar e focar no local": {"Crescimento":6,"Qualidade de vida":8,"Custo de vida":8,"Risco":8,"Rede/apoio":9}
+      },
+      risks:{
+        "Aceitar e mudar": {prob:7, impact:7},
+        "Negociar remoto/híbrido": {prob:5, impact:6},
+        "Recusar e focar no local": {prob:4, impact:5}
+      },
+      decisionLog:"Status aberto: levantar dados reais (salário líquido, aluguel, deslocamento, rede de apoio, plano de saída)."
+    },
+    {
+      id:"ex_09_relationship",
+      domain:"relationship",
+      status:"closed",
+      title:"Retomar contato e investir em relacionamento que está 'morno'?",
+      reversible:2,
+      horizon:"mid",
+      context:"Interesse existe, mas sinais mistos. Quero clareza sem perder tempo/energia.",
+      inaction:"Manter distância e focar em outras áreas.",
+      options:["Conversar com clareza (1:1)","Ir devagar (mensagens + encontros)","Encerrar e seguir"],
+      criteria:[
+        {name:"Clareza",weight:25},{name:"Emoção/valor",weight:20},{name:"Risco emocional",weight:25},{name:"Tempo",weight:15},{name:"Alinhamento",weight:15}
+      ],
+      scores:{
+        "Conversar com clareza (1:1)": {"Clareza":10,"Emoção/valor":7,"Risco emocional":6,"Tempo":8,"Alinhamento":8},
+        "Ir devagar (mensagens + encontros)": {"Clareza":6,"Emoção/valor":7,"Risco emocional":7,"Tempo":6,"Alinhamento":7},
+        "Encerrar e seguir": {"Clareza":8,"Emoção/valor":4,"Risco emocional":9,"Tempo":9,"Alinhamento":6}
+      },
+      risks:{
+        "Conversar com clareza (1:1)": {prob:5, impact:6},
+        "Ir devagar (mensagens + encontros)": {prob:6, impact:5},
+        "Encerrar e seguir": {prob:3, impact:4}
+      },
+      decidedOption:"Conversar com clareza (1:1)",
+      decisionLog:"Melhor estratégia: maximiza clareza com risco controlado. Definir limites e próximos passos."
+    },
+    {
+      id:"ex_10_personal_project",
+      domain:"personal",
+      status:"closed",
+      title:"Criar um app pessoal (Decision OS) como projeto de portfólio?",
+      reversible:1,
+      horizon:"mid",
+      context:"Quero construir algo útil e mostrar capacidade (produto + engenharia).",
+      inaction:"Continuar só com ferramentas existentes sem projeto próprio.",
+      options:["Fazer MVP em 2 semanas","Fazer grande (3 meses)","Não fazer agora"],
+      criteria:[
+        {name:"Aprendizado",weight:25},{name:"Impacto/portfólio",weight:30},{name:"Tempo",weight:20},{name:"Risco de abandonar",weight:15},{name:"Diversão",weight:10}
+      ],
+      scores:{
+        "Fazer MVP em 2 semanas": {"Aprendizado":8,"Impacto/portfólio":8,"Tempo":7,"Risco de abandonar":7,"Diversão":8},
+        "Fazer grande (3 meses)": {"Aprendizado":9,"Impacto/portfólio":9,"Tempo":4,"Risco de abandonar":4,"Diversão":7},
+        "Não fazer agora": {"Aprendizado":4,"Impacto/portfólio":3,"Tempo":10,"Risco de abandonar":10,"Diversão":4}
+      },
+      risks:{
+        "Fazer MVP em 2 semanas": {prob:3, impact:4},
+        "Fazer grande (3 meses)": {prob:7, impact:6},
+        "Não fazer agora": {prob:4, impact:6}
+      },
+      decidedOption:"Fazer MVP em 2 semanas",
+      decisionLog:"Escolha: MVP rápido para validar valor e manter motivação. Depois evoluir incrementalmente."
+    }
+  ];
+
+  // carimbos de tempo escalonados (para o histórico ficar “real”)
+  const base = now - 1000*60*60*24*18;
+  return ex.map((d,i)=> mk({
+    ...d,
+    createdAt: base + i*(1000*60*60*24*1.2),
+    updatedAt: base + i*(1000*60*60*24*1.2) + 1000*60*12
+  }));
+}
+
+function ensureExampleDecisions(){
+  if(state.decisions?.length) return;
+  state.decisions = buildExampleDecisions();
+  saveAll();
+}
+
+function loadExamplesReplace(){
+  const ok = confirm("Carregar 10 exemplos prontos? Isso substituirá suas decisões atuais.");
+  if(!ok) return;
+  state.decisions = buildExampleDecisions();
+  state.activeId = state.decisions[0]?.id || null;
+  saveAll();
+  toast("Exemplos carregados ✅");
+  rafRender();
+}
+
+
+function seedDecisionExampleNumbers(dec){
+  try{
+    const opts = (dec.options && dec.options.length) ? dec.options : ["Opção A","Opção B"];
+    dec.options = opts;
+    dec.scores = dec.scores || {};
+    dec.risks  = dec.risks  || {};
+    const crits = (dec.criteria||[]).map(c=>c.name).filter(Boolean);
+    if(!crits.length) return;
+
+    // padrões (repetem se houver mais critérios)
+    const patA = [8,7,8,7,7,6,7,6];
+    const patB = [6,8,7,8,8,7,6,7];
+
+    opts.forEach((opt,oi)=>{
+      const base = (oi===0 ? patA : patB);
+      dec.scores[opt] = dec.scores[opt] || {};
+      crits.forEach((cn,i)=>{
+        if(dec.scores[opt][cn]===undefined || dec.scores[opt][cn]===null || dec.scores[opt][cn]===""){
+          dec.scores[opt][cn] = clamp(base[i % base.length],0,10);
+        }
+      });
+
+      if(!dec.risks[opt]){
+        // risco default: opção A um pouco menor, B um pouco maior
+        const prob = oi===0 ? 3 : 4;
+        const impact = oi===0 ? 3 : 4;
+        dec.risks[opt] = {prob, impact};
+      }
+    });
+  }catch(e){}
+}
+
+function makeDecisionFromModel(model){
+  const dec = newDecision();
+  dec.domain = model.domain;
+  dec.title = `Decisão: ${model.name}`;
+  dec.criteria = (model.criteria||[]).map(([name,weight])=>({name, weight: clamp(weight,0,1000)}));
+  seedDecisionExampleNumbers(dec);
+  return dec;
+}
+function getBestModelForDomain(domain){
+  const list = (state.models||[]).filter(m=>m.domain===domain);
+  if(list.length) return list[0];
+  return DEFAULT_MODELS.find(m=>m.domain===domain) || null;
+}
+
+/* ===================== v1.1 — “preenchimento fechado” ===================== */
+function injectClosedInputStyles(){
+  if(document.getElementById("closedInputStyles")) return;
+  const css = document.createElement("style");
+  css.id = "closedInputStyles";
+  css.textContent = `
+    .softCard{
+      border:1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(0,0,0,.14);
+      padding:12px;
+      box-shadow: 0 14px 40px rgba(0,0,0,.20);
+    }
+    @media (prefers-color-scheme: light){
+      .softCard{ background: rgba(255,255,255,.70); }
+    }
+    .segHead{
+      display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+      margin: 2px 0 10px;
+    }
+    .segHead .ttl{font-weight:950; font-size:12px;}
+    .segHead .sub{font-size:11px; color:var(--muted);}
+    .toolRow{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+    .miniBtn{
+      appearance:none; border:none; cursor:pointer;
+      border-radius: 12px; padding:8px 10px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      font-size:12px;
+      font-weight:900;
+      user-select:none;
+      transition: transform .08s ease, background .15s ease, border-color .15s ease;
+    }
+    .miniBtn:hover{background: rgba(255,255,255,.09); border-color: rgba(255,255,255,.14);}
+    .miniBtn:active{transform: scale(.985);}
+    .miniBtn.primary{
+      background: linear-gradient(135deg, rgba(96,165,250,.95), rgba(45,212,191,.72));
+      color:#071017; border-color: rgba(255,255,255,.18);
+    }
+    .gridTable{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      overflow:hidden;
+      border:1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255,255,255,.03);
+    }
+    @media (prefers-color-scheme: light){
+      .gridTable{background: rgba(255,255,255,.78);}
+    }
+    .gridTable th, .gridTable td{
+      border-bottom:1px solid var(--line);
+      border-right:1px solid var(--line);
+      padding: 8px;
+      vertical-align: middle;
+      font-size: 12px;
+    }
+    .gridTable th:last-child, .gridTable td:last-child{border-right:none;}
+    .gridTable tr:last-child td{border-bottom:none;}
+    .gridTable thead th{
+      position:sticky; top:0;
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+      backdrop-filter: blur(10px);
+      z-index: 1;
+      text-align:left;
+      font-weight:950;
+    }
+    .gridCell{
+      width: 64px;
+      text-align:center;
+      padding:8px 6px;
+      border-radius: 12px;
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      font-family: var(--mono);
+      font-weight:900;
+      outline:none;
+    }
+    @media (prefers-color-scheme: light){
+      .gridCell{background: rgba(255,255,255,.85); color:#0b0d12;}
+    }
+    .gridCell:focus{box-shadow: var(--ring); border-color: rgba(96,165,250,.55);}
+    .optName{
+      min-width: 180px;
+      font-weight: 950;
+    }
+    .critHead{
+      display:flex; flex-direction:column; gap:2px;
+      min-width: 140px;
+    }
+    .critHead small{
+      font-weight: 800;
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+    
+    .outBox{
+      border:1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(0,0,0,.14);
+      padding: 12px;
+      display:flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .outTop{
+      display:flex;
+      align-items:flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .outTop .ttl{ font-weight: 950; letter-spacing:.2px; }
+    .outTop .sub{ color: var(--muted); font-size:12px; margin-top:4px; line-height:1.3; }
+    .rankRow{
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .rankRow strong{ color: var(--text); }
+    .recTag{
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      font-weight: 900;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .recTag.go{ border-color: rgba(88,242,197,.35); }
+    .recTag.maybe{ border-color: rgba(255,207,90,.35); }
+    .recTag.no{ border-color: rgba(255,92,122,.35); }
+.riskBox{
+      display:grid;
+      grid-template-columns: 1.1fr .45fr .45fr .55fr;
+      gap:8px;
+      align-items:center;
+      border:1px solid var(--line);
+      border-radius: 16px;
+      padding:10px;
+      background: rgba(0,0,0,.12);
+      margin-bottom:8px;
+    }
+    @media (prefers-color-scheme: light){
+      .riskBox{background: rgba(255,255,255,.70);}
+    }
+    .riskBox .nm{font-weight:950;}
+    .step{
+      display:flex; align-items:center; gap:6px;
+      justify-content:flex-start;
+    }
+    .step button{
+      width:30px; height:30px; border-radius: 12px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      font-weight: 1000;
+      cursor:pointer;
+    }
+    .step button:active{transform: scale(.985);}
+    .step input{
+      width:54px;
+      text-align:center;
+      font-family: var(--mono);
+      font-weight: 950;
+      padding:8px 6px;
+    }
+    .riskChip{
+      display:inline-flex; align-items:center; gap:8px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      padding:6px 10px;
+      background: rgba(255,255,255,.05);
+      font-size:12px;
+      font-family: var(--mono);
+      font-weight: 950;
+      justify-content:center;
+      min-width:72px;
+    }
+  `;
+  document.head.appendChild(css);
+}
+
+function serializeScoresToTextarea(){
+  const optText = $("dOptions")?.value || "";
+  const critText= $("dCriteria")?.value || "";
+  const options = parseOptions(optText);
+  const criteria = parseCriteria(critText).map(c=>c.name);
+
+  const lines = [];
+  options.forEach(opt=>{
+    const pairs = [];
+    criteria.forEach(cn=>{
+      const key = `cell_${opt}__${cn}`;
+      const el = document.querySelector(`[data-cell="${CSS.escape(key)}"]`);
+      if(!el) return;
+      const v = clamp(el.value, 0, 10);
+      if(!Number.isFinite(Number(el.value)) && el.value!=="" ) return;
+      pairs.push(`${cn}=${v}`);
+    });
+    if(pairs.length) lines.push(`${opt} | ${pairs.join(", ")}`);
+  });
+  $("dScores").value = lines.join("\n");
+}
+
+function serializeRisksToTextarea(){
+  const optText = $("dOptions")?.value || "";
+  const options = parseOptions(optText);
+  const lines = [];
+  options.forEach(opt=>{
+    const p = document.querySelector(`[data-risk="prob__${CSS.escape(opt)}"]`);
+    const i = document.querySelector(`[data-risk="impact__${CSS.escape(opt)}"]`);
+    const prob = clamp(p?.value ?? 0, 0, 10);
+    const impact = clamp(i?.value ?? 0, 0, 10);
+    lines.push(`${opt} | prob=${prob}, impacto=${impact}`);
+  });
+  $("dRisk").value = lines.join("\n");
+}
+
+function buildMatrixEditor(){
+  injectClosedInputStyles();
+
+  const scoresTA = $("dScores");
+  const risksTA  = $("dRisk");
+  if(!scoresTA || !risksTA) return;
+
+  // Esconde os textareas, mantém como “fonte” serializada
+  scoresTA.style.display = "none";
+  risksTA.style.display  = "none";
+
+  // evita duplicar
+  if(document.getElementById("matrixEditorWrap")) return;
+
+  // Insere logo após o bloco de dScores/dRisk (onde eles ficam no DOM)
+  const anchor = risksTA.closest(".filters") || risksTA.parentElement;
+
+  const wrap = document.createElement("div");
+  wrap.id = "matrixEditorWrap";
+  wrap.style.marginTop = "10px";
+  wrap.innerHTML = `
+    <div class="softCard" style="margin-bottom:12px;">
+      <div class="segHead">
+        <div>
+          <div class="ttl">🧮 Matriz de notas (0–10)</div>
+          <div class="sub">Tabela fechada: opção × critério (mais fácil para análise e gráficos)</div>
+        </div>
+        <div class="toolRow">
+          <button class="miniBtn" id="mxRebuild" type="button">↺ Gerar/Atualizar matriz</button>
+          <button class="miniBtn" id="mxSeedAB" type="button">Auto: exemplo (A/B)</button>
+          <button class="miniBtn" id="mxFill5" type="button">Auto: preencher vazios = 5</button>
+          <button class="miniBtn" id="mxClear" type="button">Limpar notas</button>
+        </div>
+      </div>
+      <div style="overflow:auto; border-radius:16px;">
+        <table class="gridTable" id="mxTable"></table>
+      </div>
+      <div class="hint" style="margin-top:8px;">
+        Dica: ajuste <b>pesos</b> em “Critérios e pesos” acima. A tabela sempre segue seus critérios.
+      </div>
+    </div>
+
+    <div class="softCard">
+      <div class="segHead">
+        <div>
+          <div class="ttl">⚠️ Risco por opção (probabilidade × impacto)</div>
+          <div class="sub">Preenchimento fechado: stepper 0–10, risco final = 0–100</div>
+        </div>
+        <div class="toolRow">
+          <button class="miniBtn" id="rkNeutral" type="button">Auto: neutro (3×3)</button>
+          <button class="miniBtn" id="rkClear" type="button">Zerar riscos</button>
+        </div>
+      </div>
+      <div id="rkList"></div>
+      <div class="divider" style="margin:12px 0;"></div>
+      <div id="mxOutcome"></div>
+      <div class="hint" style="margin-top:8px;">
+        Política global em Ajustes: <b>${safeText(state.settings.riskPolicy||"balanced")}</b>.
+      </div>
+    </div>
+
+    <div class="softCard" style="margin-top:12px;">
+      <div class="segHead">
+        <div>
+          <div class="ttl">🧩 Ajuda de modelo (por domínio)</div>
+          <div class="sub">Aplicar critérios/pesos recomendados para acelerar o preenchimento</div>
+        </div>
+        <div class="toolRow">
+          <button class="miniBtn primary" id="mdlApply" type="button">Aplicar modelo do domínio</button>
+          <button class="miniBtn" id="mdlSuggest" type="button">Ver modelo sugerido</button>
+          <button class="miniBtn" id="wNorm" type="button">Normalizar pesos p/ 100</button>
+        </div>
+      </div>
+      <div class="hint" id="mdlHint">Selecione um domínio e clique em “Aplicar modelo do domínio”.</div>
+    </div>
+  `;
+
+  // coloca o editor logo após o bloco dos textareas
+  anchor.insertAdjacentElement("afterend", wrap);
+
+  // wire
+  $("mxRebuild").addEventListener("click", ()=>{ rebuildMatrixAndRisk();
+  renderOutcomePreview(); toast("Matriz atualizada."); });
+  $("mxSeedAB").addEventListener("click", ()=>{ seedMatrixAB(); toast("Exemplo aplicado (A/B)."); });
+  $("mxFill5").addEventListener("click", ()=>{ fillEmptyMatrixWith(5); toast("Vazios preenchidos = 5."); });
+  $("mxClear").addEventListener("click", ()=>{ fillAllMatrixWith(""); toast("Notas limpas."); });
+
+  $("rkNeutral").addEventListener("click", ()=>{ setAllRisks(3,3); toast("Risco neutro aplicado (3×3)."); });
+  $("rkClear").addEventListener("click", ()=>{ setAllRisks(0,0); toast("Riscos zerados."); });
+
+  $("mdlApply").addEventListener("click", ()=>{ applyDomainModelToCriteria(true); });
+  $("mdlSuggest").addEventListener("click", ()=>{ showDomainModelHint(); });
+  $("wNorm").addEventListener("click", ()=>{ normalizeCriteriaWeightsTo100(); toast("Pesos normalizados para 100."); });
+
+  // sempre que mexer em opções/critérios, reconstroi a matriz
+  const deb = debounce(()=>rebuildMatrixAndRisk(), 120);
+  $("dOptions").addEventListener("input", deb);
+  $("dCriteria").addEventListener("input", deb);
+  $("dDomain").addEventListener("change", ()=>{ showDomainModelHint(); });
+
+  // primeira construção
+  rebuildMatrixAndRisk();
+  state.editor.mounted = true;
+}
+
+function rebuildMatrixAndRisk(){
+  const optText = $("dOptions").value || "";
+  const critText= $("dCriteria").value || "";
+
+  const options = parseOptions(optText);
+  const criteria = parseCriteria(critText);
+
+  // gera tabela
+  const t = $("mxTable");
+  if(!t) return;
+  const headCells = criteria.map(c=>{
+    const w = clamp(c.weight,0,1000);
+    return `<th><div class="critHead">${safeText(c.name)}<small>peso ${safeText(w)}</small></div></th>`;
+  }).join("");
+
+  const thead = `
+    <thead>
+      <tr>
+        <th class="optName">Opção</th>
+        ${headCells}
+      </tr>
+    </thead>
+  `;
+
+  const tbodyRows = options.map(opt=>{
+    const cells = criteria.map(c=>{
+      const key = `cell_${opt}__${c.name}`;
+      return `
+        <td>
+          <input class="gridCell" inputmode="numeric" pattern="[0-9]*"
+            min="0" max="10" step="1"
+            data-cell="${safeText(key)}"
+            aria-label="Nota ${safeText(opt)} em ${safeText(c.name)} (0 a 10)"
+            placeholder="—"
+          />
+        </td>
+      `;
+    }).join("");
+    return `
+      <tr>
+        <td class="optName">${safeText(opt)}</td>
+        ${cells}
+      </tr>
+    `;
+  }).join("");
+
+  t.innerHTML = thead + `<tbody>${tbodyRows}</tbody>`;
+
+  // gera riscos (lista)
+  const rk = $("rkList");
+  rk.innerHTML = "";
+  options.forEach(opt=>{
+    const row = document.createElement("div");
+    row.className = "riskBox";
+    row.innerHTML = `
+      <div class="nm">${safeText(opt)}</div>
+
+      <div class="step">
+        <button type="button" data-step="dec" data-k="prob" data-opt="${safeText(opt)}">−</button>
+        <input data-risk="prob__${safeText(opt)}" inputmode="numeric" pattern="[0-9]*" value="0" />
+        <button type="button" data-step="inc" data-k="prob" data-opt="${safeText(opt)}">＋</button>
+      </div>
+
+      <div class="step">
+        <button type="button" data-step="dec" data-k="impact" data-opt="${safeText(opt)}">−</button>
+        <input data-risk="impact__${safeText(opt)}" inputmode="numeric" pattern="[0-9]*" value="0" />
+        <button type="button" data-step="inc" data-k="impact" data-opt="${safeText(opt)}">＋</button>
+      </div>
+
+      <div class="riskChip" data-riskchip="${safeText(opt)}">0</div>
+    `;
+    rk.appendChild(row);
+  });
+
+  // restore values from existing textareas (se tiver)
+  restoreMatrixFromTextareas();
+
+  // wire inputs
+  $$(`.gridCell`).forEach(inp=>{
+    inp.addEventListener("input", ()=>{
+      // aceita vazio, senão limita 0..10
+      if(inp.value===""){ serializeScoresToTextarea();
+      renderOutcomePreview(); return; }
+      inp.value = String(clamp(inp.value, 0, 10));
+      serializeScoresToTextarea();
+    });
+    inp.addEventListener("change", ()=>{ serializeScoresToTextarea(); });
+  });
+
+  $$(`[data-risk^="prob__"], [data-risk^="impact__"]`).forEach(inp=>{
+    inp.addEventListener("input", ()=>{
+      inp.value = String(clamp(inp.value,0,10));
+      updateRiskChips();
+      serializeRisksToTextarea();
+    });
+    inp.addEventListener("change", ()=>{
+      inp.value = String(clamp(inp.value,0,10));
+      updateRiskChips();
+      serializeRisksToTextarea();
+    });
+  });
+
+  $$(`[data-step]`).forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const opt = b.dataset.opt;
+      const k = b.dataset.k; // prob/impact
+      const dir = b.dataset.step; // inc/dec
+      const input = document.querySelector(`[data-risk="${k}__${CSS.escape(opt)}"]`);
+      if(!input) return;
+      const cur = clamp(input.value,0,10);
+      input.value = String(clamp(cur + (dir==="inc"?1:-1), 0, 10));
+      updateRiskChips();
+      serializeRisksToTextarea();
+    });
+  });
+
+  updateRiskChips();
+
+  // mantém textareas sempre alinhados
+  serializeScoresToTextarea();
+  serializeRisksToTextarea();
+}
+
+function updateRiskChips(){
+  const optText = $("dOptions").value || "";
+  const options = parseOptions(optText);
+  options.forEach(opt=>{
+    const p = document.querySelector(`[data-risk="prob__${CSS.escape(opt)}"]`);
+    const i = document.querySelector(`[data-risk="impact__${CSS.escape(opt)}"]`);
+    const val = clamp((clamp(p?.value,0,10) * clamp(i?.value,0,10)), 0, 100);
+    const chip = document.querySelector(`[data-riskchip="${CSS.escape(opt)}"]`);
+    if(chip) chip.textContent = String(val);
+  });
+}
+
+function restoreMatrixFromTextareas(){
+  // usa dScores/dRisk como fonte de restauração quando existe
+  const scores = parseScores($("dScores").value || "");
+  const risks  = parseRisks($("dRisk").value || "");
+
+  // scores
+  Object.keys(scores||{}).forEach(opt=>{
+    const per = scores[opt] || {};
+    Object.keys(per).forEach(crit=>{
+      const key = `cell_${opt}__${crit}`;
+      const el = document.querySelector(`[data-cell="${CSS.escape(key)}"]`);
+      if(el) el.value = String(clamp(per[crit],0,10));
+    });
+  });
+
+  // risks
+  Object.keys(risks||{}).forEach(opt=>{
+    const r = risks[opt] || {prob:0, impact:0};
+    const p = document.querySelector(`[data-risk="prob__${CSS.escape(opt)}"]`);
+    const i = document.querySelector(`[data-risk="impact__${CSS.escape(opt)}"]`);
+    if(p) p.value = String(clamp(r.prob,0,10));
+    if(i) i.value = String(clamp(r.impact,0,10));
+  });
+
+  updateRiskChips();
+  renderOutcomePreview();
+}
+
+function fillEmptyMatrixWith(val){
+  $$(`.gridCell`).forEach(inp=>{
+    if(inp.value==="") inp.value = String(clamp(val,0,10));
+  });
+  serializeScoresToTextarea();
+}
+function fillAllMatrixWith(val){
+  $$(`.gridCell`).forEach(inp=>{ inp.value = (val==="" ? "" : String(clamp(val,0,10))); });
+  serializeScoresToTextarea();
+}
+
+function seedMatrixAB(){
+  const options = parseOptions($("dOptions")?.value || "");
+  const criteria = parseCriteria($("dCriteria")?.value || "");
+  if(!options.length || !criteria.length) return;
+  const patA = [8,7,8,7,7,6,7,6];
+  const patB = [6,8,7,8,8,7,6,7];
+  options.forEach((opt,oi)=>{
+    const base = (oi===0 ? patA : (oi===1 ? patB : [7,7,7,7,7,7]));
+    criteria.forEach((c,i)=>{
+      const key = `cell_${opt}__${c.name}`;
+      const el = document.querySelector(`[data-cell="${CSS.escape(key)}"]`);
+      if(el) el.value = String(clamp(base[i % base.length],0,10));
+    });
+  });
+  // riscos default
+  options.forEach((opt,oi)=>{
+    const p = document.querySelector(`[data-risk="prob__${CSS.escape(opt)}"]`);
+    const i = document.querySelector(`[data-risk="impact__${CSS.escape(opt)}"]`);
+    const prob = oi===0 ? 3 : 4;
+    const impact = oi===0 ? 3 : 4;
+    if(p) p.value = String(prob);
+    if(i) i.value = String(impact);
+  });
+  updateRiskChips();
+  serializeScoresToTextarea();
+  serializeRisksToTextarea();
+  renderOutcomePreview();
+}
+
+function setAllRisks(prob, impact){
+  $$(`[data-risk^="prob__"]`).forEach(inp=> inp.value = String(clamp(prob,0,10)));
+  $$(`[data-risk^="impact__"]`).forEach(inp=> inp.value = String(clamp(impact,0,10)));
+  updateRiskChips();
+  serializeRisksToTextarea();
+}
+
+function showDomainModelHint(){
+  const domain = $("dDomain").value || "professional";
+  const m = getBestModelForDomain(domain);
+  const hint = $("mdlHint");
+  if(!hint) return;
+  if(!m){
+    hint.innerHTML = `Sem modelo padrão para <b>${safeText(domainLabel(domain))}</b>.`;
+    return;
+  }
+  hint.innerHTML = `
+    Modelo sugerido: <b>${safeText(m.name)}</b> • Critérios: <b>${(m.criteria||[]).length}</b><br/>
+    <span class="hint">${safeText(m.notes||"")}</span>
+  `;
+}
+
+function applyDomainModelToCriteria(confirmBefore=false){
+  const domain = $("dDomain").value || "professional";
+  const m = getBestModelForDomain(domain);
+  if(!m) return toast("Sem modelo para este domínio.");
+
+  if(confirmBefore){
+    const ok = confirm(`Aplicar modelo "${m.name}"? Isso substitui a lista de critérios/pesos atual.`);
+    if(!ok) return;
+  }
+
+  const lines = (m.criteria||[]).map(([name,weight])=>`${name} | ${clamp(weight,0,1000)}`).join("\n");
+  $("dCriteria").value = lines || $("dCriteria").value;
+
+  toast(`Modelo aplicado: ${m.name} ✅`);
+  rebuildMatrixAndRisk();
+  showDomainModelHint();
+}
+
+function normalizeCriteriaWeightsTo100(){
+  const crit = parseCriteria($("dCriteria").value || "");
+  const sum = crit.reduce((a,c)=>a+Number(c.weight||0),0) || 1;
+  const scaled = crit.map(c=>{
+    const w = (Number(c.weight||0) / sum) * 100;
+    return {name:c.name, weight: Math.round(w)};
+  });
+  $("dCriteria").value = scaled.map(c=>`${c.name} | ${c.weight}`).join("\n");
+  rebuildMatrixAndRisk();
+}
+
+/* ===================== Render: lists ===================== */
+function getFilteredDecisions(){
+  const q = ($("search").value||"").trim().toLowerCase();
+  const quick = $("quickFilter").value || "all";
+  const domain = $("domainFilter").value || "all";
+  const sort = $("sort").value || "updated";
+
+  let items = state.decisions.slice();
+
+  if(quick==="open") items = items.filter(d=>d.status==="open");
+  if(quick==="decided") items = items.filter(d=>d.status==="decided");
+  if(quick==="archived") items = items.filter(d=>d.status==="archived");
+
+  if(domain!=="all") items = items.filter(d=>d.domain===domain);
+
+  if(q){
+    items = items.filter(d=>{
+      const blob = [
+        d.title, d.context, d.inaction, d.prosCons, d.premortem, d.bias, d.decisionLog,
+        (d.options||[]).join(" "),
+        (d.criteria||[]).map(c=>c.name).join(" "),
+        domainLabel(d.domain)
+      ].join(" ").toLowerCase();
+      return blob.includes(q);
+    });
+  }
+
+  const scoreFor = (d)=>{
+    const rk = computeRanking(d);
+    return rk?.[0]?.adj100 ?? 0;
+  };
+  const riskFor = (d)=>{
+    const rk = computeRanking(d);
+    return rk?.[0]?.risk100 ?? 0;
+  };
+
+  items.sort((a,b)=>{
+    if(sort==="updated") return (b.updatedAt||0)-(a.updatedAt||0);
+    if(sort==="deadline") return (a.deadline||"9999-12-31").localeCompare(b.deadline||"9999-12-31");
+    if(sort==="score") return scoreFor(b)-scoreFor(a);
+    if(sort==="risk") return riskFor(b)-riskFor(a);
+    return 0;
+  });
+
+  return items;
+}
+
+function renderDecisionList(){
+  const el = $("decisionList");
+  const items = getFilteredDecisions();
+  el.innerHTML = "";
+
+  if(!items.length){
+    el.innerHTML = `<div class="hint">Sem decisões ainda. Clique em <b>＋ Nova decisão</b> ou gere dados demo em Ajustes.</div>`;
+    return;
+  }
+
+  items.forEach(d=>{
+    const rk = computeRanking(d);
+    const best = rk[0];
+    const statusBadge = d.status==="open" ? `<span class="badge">🟡 <b>Aberta</b></span>`
+                      : d.status==="decided" ? `<span class="badge">🟢 <b>Decidida</b></span>`
+                      : `<span class="badge">⚫ <b>Arquivada</b></span>`;
+    const dl = d.deadline ? d.deadline.split("-").reverse().join("/") : "—";
+    const row = document.createElement("div");
+    row.className="row";
+    row.tabIndex=0;
+    row.setAttribute("role","button");
+    row.innerHTML = `
+      <div class="main">
+        <div class="name">${safeText(d.title || "Sem título")}</div>
+        <div class="meta">
+          ${statusBadge}
+          <span class="badge">🏷️ <b>${safeText(domainLabel(d.domain))}</b></span>
+          <span class="badge">⏳ Prazo <b class="mono">${safeText(dl)}</b></span>
+        </div>
+      </div>
+      <div class="meta">
+        <span class="badge">Opções <b class="mono">${(d.options||[]).length}</b></span>
+        <span class="badge">Critérios <b class="mono">${(d.criteria||[]).length}</b></span>
+        <span class="badge">Anexos <b class="mono">${(d.files||[]).length}</b></span>
+      </div>
+      <div class="meta">
+        <span class="badge">Top Adj <b class="mono">${best ? best.adj100.toFixed(1) : "—"}</b></span>
+        <span class="badge">Top Risco <b class="mono">${best ? best.risk100.toFixed(0) : "—"}</b></span>
+      </div>
+      <div class="right">
+        <button class="btn" data-act="open" data-id="${d.id}">Abrir</button>
+        <button class="btn ghost" data-act="edit" data-id="${d.id}">Editar</button>
+      </div>
+    `;
+
+    row.addEventListener("click",(e)=>{
+      const actBtn = e.target?.closest?.("button[data-act]");
+      if(actBtn){
+        const id = actBtn.dataset.id;
+        const act = actBtn.dataset.act;
+        if(act==="open"){ selectDecision(id); setTab("dash"); return; }
+        if(act==="edit"){ openDecisionModal(id); return; }
+      }else{
+        selectDecision(d.id);
+      }
+    });
+    row.addEventListener("keydown",(e)=>{
+      if(e.key==="Enter" || e.key===" "){
+        e.preventDefault();
+        selectDecision(d.id);
+      }
+    });
+
+    el.appendChild(row);
+  });
+}
+
+function renderKpis(){
+  $("kpiUser").textContent = state.settings.userName || "Usuário";
+
+  const open = state.decisions.filter(d=>d.status==="open").length;
+  const decided = state.decisions.filter(d=>d.status==="decided").length;
+
+  $("kpiOpen").textContent = open;
+  $("kpiDecided").textContent = decided;
+
+  const now = Date.now();
+  let minDays = null;
+  state.decisions.filter(d=>d.status==="open").forEach(d=>{
+    const t = d.reviewAt ? new Date(d.reviewAt).getTime()
+            : d.deadline ? new Date(d.deadline+"T00:00:00").getTime()
+            : null;
+    if(!t || isNaN(t)) return;
+    const days = Math.ceil((t - now)/86400000);
+    if(minDays===null || days < minDays) minDays = days;
+  });
+  $("kpiReview").textContent = (minDays===null) ? "—" : String(minDays);
+}
+
+function renderDashPick(){
+  const sel = $("dashPick");
+  sel.innerHTML = `<option value="">— selecione —</option>` + state.decisions
+    .map(d=>`<option value="${d.id}">${safeText(d.title||"Sem título")}</option>`).join("");
+  if(state.selectedId){
+    sel.value = state.selectedId;
+  }
+}
+function renderDomainFilterDefaults(){
+  if(!$("domainFilter").value) $("domainFilter").value = "all";
+}
+
+function renderFocusPanel(){
+  const box = $("focusBox");
+  const hint = $("focusHint");
+  const dec = state.decisions.find(d=>d.id===state.selectedId) || null;
+
+  if(!dec){
+    hint.textContent = "Selecione uma decisão na lista para ver o resumo aqui.";
+    return;
+  }
+
+  const rk = computeRanking(dec);
+  const best = rk[0];
+
+  box.innerHTML = `
+    <div class="title" style="margin-bottom:8px;">
+      <h2 style="margin:0; font-size:13px;">${safeText(dec.title||"Sem título")}</h2>
+      <p style="margin:0; font-size:12px; color:var(--muted)}">Domínio: ${safeText(domainLabel(dec.domain))} • Status: ${safeText(dec.status)}</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="meta">
+      <span class="badge">Top opção <b>${best ? safeText(best.opt) : "—"}</b></span>
+      <span class="badge">Adj <b class="mono">${best ? best.adj100.toFixed(1) : "—"}</b></span>
+      <span class="badge">Bruto <b class="mono">${best ? best.raw100.toFixed(1) : "—"}</b></span>
+      <span class="badge">Risco <b class="mono">${best ? best.risk100.toFixed(0) : "—"}</b></span>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="hint">
+      Atualizado: <b>${fmtNiceDT(dec.updatedAt)}</b><br/>
+      Prazo: <b>${dec.deadline ? safeText(dec.deadline.split("-").reverse().join("/")) : "—"}</b><br/>
+      Revisão: <b>${dec.reviewAt ? safeText(String(dec.reviewAt)) : "—"}</b>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="right">
+      <button class="btn" id="btnFocusEdit">Editar</button>
+      <button class="btn primary" id="btnFocusDash">Ver no Dashboard</button>
+    </div>
+  `;
+
+  $("btnFocusEdit").addEventListener("click", ()=>openDecisionModal(dec.id));
+  $("btnFocusDash").addEventListener("click", ()=>{
+    setTab("dash");
+    $("dashPick").value = dec.id;
+    rafRender();
+  });
+}
+
+function renderDashboard(){
+  const pick = $("dashPick").value || state.selectedId || "";
+  const dec = state.decisions.find(d=>d.id===pick) || null;
+
+  if(!dec){
+    drawRadar(null);
+    drawRiskReturn(null,null);
+    $("rankList").innerHTML = `<div class="hint">Selecione uma decisão para ver o ranking.</div>`;
+    return;
+  }
+
+  const mode = $("dashMode").value || "riskAdj";
+  const rk = computeRanking(dec).map(x=>{
+    const s = scoreOption(dec, x.opt);
+    return (mode==="raw")
+      ? ({...x, adj100: s.raw100})
+      : x;
+  });
+
+  drawRadar(dec);
+  drawRiskReturn(dec, rk);
+  drawBarsRanking("rankList", rk);
+}
+
+function renderModelList(){
+  const el = $("modelList");
+  el.innerHTML = "";
+  if(!state.models?.length){
+    el.innerHTML = `<div class="hint">Sem modelos. Clique em “Criar dados demo” nos Ajustes para popular modelos padrão.</div>`;
+    return;
+  }
+
+  state.models.forEach(m=>{
+    const row = document.createElement("div");
+    row.className="row";
+    row.tabIndex=0;
+    row.innerHTML = `
+      <div class="main">
+        <div class="name">${safeText(m.name||"Modelo")}</div>
+        <div class="meta">
+          <span class="badge">🏷️ <b>${safeText(domainLabel(m.domain))}</b></span>
+          <span class="badge">Critérios <b class="mono">${(m.criteria||[]).length}</b></span>
+        </div>
+      </div>
+      <div class="meta" style="grid-column:2 / -1;">
+        <span class="badge">Notas <b>${safeText(m.notes||"—")}</b></span>
+      </div>
+      <div class="right">
+        <button class="btn primary" data-act="use" data-id="${m.id}">Usar</button>
+        <button class="btn danger" data-act="del" data-id="${m.id}">Excluir</button>
+      </div>
+    `;
+
+    row.addEventListener("click",(e)=>{
+      const b = e.target.closest("button[data-act]");
+      if(!b) return;
+      const act=b.dataset.act, id=b.dataset.id;
+      if(act==="use"){
+        const model = state.models.find(x=>x.id===id);
+        if(!model) return;
+        const dec = makeDecisionFromModel(model);
+        upsertDecision(dec);
+        selectDecision(dec.id);
+        toast("Decisão criada a partir do modelo ✅");
+        openDecisionModal(dec.id);
+      }
+      if(act==="del"){
+        state.models = state.models.filter(x=>x.id!==id);
+        saveAll();
+        toast("Modelo excluído.");
+        rafRender();
+      }
+    });
+
+    el.appendChild(row);
+  });
+}
+
+/* ===================== Files (IDB) ===================== */
+async function addFilesFromInput(fileList){
+  const files = Array.from(fileList||[]);
+  if(!files.length) return;
+
+  showLoading("Importando arquivos…");
+  try{
+    for(const f of files){
+      const id = uid();
+      const buf = await f.arrayBuffer();
+      const obj = {
+        id,
+        name: f.name,
+        type: f.type || "application/octet-stream",
+        size: f.size,
+        addedAt: Date.now(),
+        data: buf
+      };
+      await idbPutFile(obj);
+    }
+    toast(`${files.length} arquivo(s) importado(s).`);
+  }catch(e){
+    console.error(e);
+    toast("Falha ao importar arquivos.");
+  }finally{
+    hideLoading();
+    rafRender();
+  }
+}
+async function renderFilesList(){
+  const el = $("filesList");
+  const q = ($("fileSearch").value||"").trim().toLowerCase();
+  el.innerHTML = `<div class="hint">Carregando arquivos…</div>`;
+
+  let items=[];
+  try{ items = await idbListFiles(); }catch(e){ items=[]; }
+
+  if(q){
+    items = items.filter(f=>{
+      return (f.name||"").toLowerCase().includes(q) || (f.type||"").toLowerCase().includes(q);
+    });
+  }
+
+  if(!items.length){
+    el.innerHTML = `<div class="hint">Sem arquivos. Clique em <b>Importar arquivos</b>.</div>`;
+    return;
+  }
+
+  el.innerHTML = "";
+  items.sort((a,b)=>(b.addedAt||0)-(a.addedAt||0)).forEach(f=>{
+    const row = document.createElement("div");
+    row.className="row";
+    row.tabIndex=0;
+    row.innerHTML = `
+      <div class="main">
+        <div class="name">${safeText(f.name||"arquivo")}</div>
+        <div class="meta">
+          <span class="badge">Tipo <b class="mono">${safeText((f.type||"—").slice(0,28))}</b></span>
+          <span class="badge">Tam <b class="mono">${safeText(fmtBytes(f.size||0))}</b></span>
+          <span class="badge">ID <b class="mono">${safeText(String(f.id).slice(0,10))}…</b></span>
+        </div>
+      </div>
+      <div class="meta">
+        <span class="badge">Adicionado <b class="mono">${safeText(fmtNiceDT(f.addedAt))}</b></span>
+      </div>
+      <div class="right">
+        <button class="btn" data-act="open" data-id="${f.id}">Abrir</button>
+        <button class="btn danger" data-act="del" data-id="${f.id}">Excluir</button>
+      </div>
+    `;
+
+    row.addEventListener("click", async (e)=>{
+      const b = e.target.closest("button[data-act]");
+      if(!b) return;
+      const act=b.dataset.act;
+      const id=b.dataset.id;
+      if(act==="open"){
+        const obj = await idbGetFile(id);
+        if(!obj) return toast("Arquivo não encontrado.");
+        const blob = new Blob([obj.data], {type: obj.type || "application/octet-stream"});
+        const url = URL.createObjectURL(blob);
+        window.open(url, "_blank", "noopener,noreferrer");
+        setTimeout(()=>URL.revokeObjectURL(url), 30000);
+      }
+      if(act==="del"){
+        await idbDeleteFile(id);
+        toast("Arquivo excluído.");
+        rafRender();
+      }
+    });
+
+    el.appendChild(row);
+  });
+}
+
+/* ===================== Selection ===================== */
+function selectDecision(id){
+  state.selectedId = id;
+  const dec = state.decisions.find(d=>d.id===id);
+  if(dec){
+    $("dashPick").value = id;
+    setStatus("good", `${state.settings.userName||"Usuário"} • Selecionado: ${dec.title}`);
+  }
+  rafRender();
+}
+
+/* ===================== Modal: Decision ===================== */
+function resetDecisionModal(){
+  state.editingId = null;
+  state.tempFiles = [];
+  $("btnDelete").style.display = "none";
+  $("modalTitle").textContent = "Nova decisão";
+  $("modalFootHint").textContent = "Criado em: —";
+  $("dFileChips").innerHTML = "";
+  $("dFiles").value = "";
+}
+
+function fillDecisionModal(dec){
+  $("modalTitle").textContent = (dec?.id ? "Editar decisão" : "Nova decisão");
+  $("modalFootHint").textContent = `Criado em: ${fmtNiceDT(dec.createdAt)} • Atualizado: ${fmtNiceDT(dec.updatedAt)}`;
+  $("btnDelete").style.display = (dec?.id ? "inline-flex" : "none");
+
+  $("dDomain").value = dec.domain || "professional";
+  $("dStatus").value = dec.status || "open";
+  $("dDeadline").value = dec.deadline || "";
+  $("dTitle").value = dec.title || "";
+  $("dReversible").value = String(dec.reversible ?? 2);
+  $("dHorizon").value = dec.horizon || "mid";
+
+  $("dContext").value = dec.context || "";
+  $("dInaction").value = dec.inaction || "";
+
+  $("dOptions").value = (dec.options||[]).join("\n");
+  $("dCriteria").value = (dec.criteria||[]).map(c=>`${c.name} | ${c.weight}`).join("\n");
+
+  // textareas (backing)
+  const scoreLines = [];
+  for(const opt of (dec.options||[])){
+    const obj = dec.scores?.[opt] || {};
+    const pairs = Object.keys(obj).map(k=>`${k}=${clamp(obj[k],0,10)}`).join(", ");
+    if(pairs) scoreLines.push(`${opt} | ${pairs}`);
+  }
+  $("dScores").value = scoreLines.join("\n");
+
+  const riskLines = [];
+  for(const opt of (dec.options||[])){
+    const r = dec.risks?.[opt];
+    if(r) riskLines.push(`${opt} | prob=${clamp(r.prob,0,10)}, impacto=${clamp(r.impact,0,10)}`);
+  }
+  $("dRisk").value = riskLines.join("\n");
+
+  $("dProsCons").value = dec.prosCons || "";
+  $("dPremortem").value = dec.premortem || "";
+  $("dBias").value = dec.bias || "";
+  $("dDecisionLog").value = dec.decisionLog || "";
+
+  renderDecisionFileChips(dec.files||[]);
+  buildMatrixEditor();
+  showDomainModelHint();
+}
+
+function renderDecisionFileChips(fileIds){
+  const box = $("dFileChips");
+  box.innerHTML = "";
+  (fileIds||[]).forEach(id=>{
+    const chip = document.createElement("div");
+    chip.className="chip";
+    chip.innerHTML = `📎 <small class="mono">${safeText(String(id).slice(0,8))}…</small> <span class="x" title="Remover">×</span>`;
+    chip.addEventListener("click",(e)=>{
+      const isX = e.target.classList.contains("x");
+      if(!isX) return;
+      const dec = state.decisions.find(d=>d.id===state.editingId);
+      if(!dec) return;
+      dec.files = (dec.files||[]).filter(fid=>fid!==id);
+      upsertDecision(dec);
+      toast("Anexo removido da decisão.");
+      fillDecisionModal(dec);
+      rafRender();
+    });
+    box.appendChild(chip);
+  });
+
+  state.tempFiles.forEach(tf=>{
+    const chip = document.createElement("div");
+    chip.className="chip";
+    chip.innerHTML = `＋ <b>${safeText(tf.name||"arquivo")}</b> <small>${safeText(fmtBytes(tf.size||0))}</small> <span class="x" title="Remover">×</span>`;
+    chip.addEventListener("click",(e)=>{
+      const isX = e.target.classList.contains("x");
+      if(!isX) return;
+      state.tempFiles = state.tempFiles.filter(x=>x.id!==tf.id);
+      toast("Arquivo removido (antes de salvar).");
+      fillDecisionModal(state.decisions.find(d=>d.id===state.editingId) || newDecision());
+    });
+    box.appendChild(chip);
+  });
+}
+
+async function persistTempFilesAndGetIds(){
+  const ids = [];
+  if(!state.tempFiles.length) return ids;
+  showLoading("Salvando anexos…");
+  try{
+    for(const tf of state.tempFiles){
+      await idbPutFile(tf);
+      ids.push(tf.id);
+    }
+  }finally{
+    hideLoading();
+  }
+  return ids;
+}
+
+function openDecisionModal(id=null){
+  resetDecisionModal();
+
+  let dec = null;
+  if(id){
+    dec = state.decisions.find(d=>d.id===id);
+    if(!dec){
+      toast("Decisão não encontrada.");
+      return;
+    }
+    state.editingId = id;
+    fillDecisionModal(dec);
+  }else{
+    dec = newDecision();
+    state.editingId = null;
+    fillDecisionModal(dec);
+  }
+
+  openModal("decisionModal");
+}
+
+function closeDecisionModal(){
+  closeModal("decisionModal");
+}
+
+async function saveDecisionFromModal(){
+  // garante serialização antes de salvar
+  if(state.editor.mounted){
+    try{
+      serializeScoresToTextarea();
+      serializeRisksToTextarea();
+    }catch(e){}
+  }
+
+  const isEdit = !!state.editingId;
+  const base = isEdit ? (state.decisions.find(d=>d.id===state.editingId) || newDecision()) : newDecision();
+  const dec = {...base};
+
+  dec.domain = $("dDomain").value || "professional";
+  dec.status = $("dStatus").value || "open";
+  dec.deadline = $("dDeadline").value || null;
+  dec.title = ($("dTitle").value||"").trim() || "Sem título";
+  dec.reversible = Number($("dReversible").value ?? 2);
+  dec.horizon = $("dHorizon").value || "mid";
+
+  dec.context = $("dContext").value || "";
+  dec.inaction = $("dInaction").value || "";
+
+  dec.options = parseOptions($("dOptions").value);
+  dec.criteria = parseCriteria($("dCriteria").value);
+
+  const scores = parseScores($("dScores").value);
+  const risks = parseRisks($("dRisk").value);
+
+  dec.scores = {};
+  dec.risks = {};
+  dec.options.forEach(opt=>{
+    dec.scores[opt] = {...(scores[opt]||{})};
+    dec.risks[opt] = risks[opt] ? {...risks[opt]} : {prob:0, impact:0};
+  });
+
+  dec.prosCons = $("dProsCons").value || "";
+  dec.premortem = $("dPremortem").value || "";
+  dec.bias = $("dBias").value || "";
+  dec.decisionLog = $("dDecisionLog").value || "";
+
+  const existing = Array.isArray(dec.files) ? dec.files : [];
+  const newIds = await persistTempFilesAndGetIds();
+  dec.files = Array.from(new Set(existing.concat(newIds)));
+  state.tempFiles = [];
+
+  const days = Number(state.settings.reviewDays||30);
+  dec.reviewAt = new Date(Date.now() + days*86400000).toISOString().slice(0,10);
+
+  upsertDecision(dec);
+  state.selectedId = dec.id;
+
+  toast("Decisão salva ✅");
+  closeDecisionModal();
+  rafRender();
+}
+
+async function deleteDecisionFromModal(){
+  const id = state.editingId;
+  if(!id) return;
+  if(!confirm("Excluir esta decisão? (Isso não apaga arquivos da biblioteca.)")) return;
+
+  deleteDecision(id);
+  if(state.selectedId===id) state.selectedId=null;
+  toast("Decisão excluída.");
+  closeDecisionModal();
+  rafRender();
+}
+
+function duplicateDecision(){
+  const id = state.editingId;
+  const src = id ? state.decisions.find(d=>d.id===id) : null;
+  if(!src) return toast("Nada para duplicar.");
+  const copy = JSON.parse(JSON.stringify(src));
+  copy.id = uid();
+  copy.title = `${src.title} (cópia)`;
+  copy.status = "open";
+  copy.createdAt = Date.now();
+  copy.updatedAt = Date.now();
+  upsertDecision(copy);
+  selectDecision(copy.id);
+  toast("Duplicado ✅");
+  openDecisionModal(copy.id);
+}
+
+/* ===================== Restore ===================== */
+function openRestore(){ openModal("restoreModal"); }
+function closeRestore(){ closeModal("restoreModal"); }
+
+async function doRestore(file){
+  if(!file) return toast("Selecione um JSON.");
+  showLoading("Importando backup…");
+  try{
+    const text = await file.text();
+    const data = JSON.parse(text);
+
+    const decisions = Array.isArray(data.decisions) ? data.decisions : [];
+    const models = Array.isArray(data.models) ? data.models : [];
+
+    const cleanedDec = decisions.map(d=>{
+      const nd = newDecision();
+      const dd = {...nd, ...d};
+      dd.id = d.id || uid();
+      dd.options = Array.isArray(dd.options) ? dd.options : nd.options;
+      dd.criteria = Array.isArray(dd.criteria) ? dd.criteria : nd.criteria;
+      dd.files = Array.isArray(dd.files) ? dd.files : [];
+      dd.createdAt = dd.createdAt || Date.now();
+      dd.updatedAt = dd.updatedAt || Date.now();
+      return dd;
+    });
+
+    const cleanedModels = models.map(m=>({
+      id: m.id || uid(),
+      domain: m.domain || "professional",
+      name: m.name || "Modelo",
+      criteria: Array.isArray(m.criteria) ? m.criteria : [],
+      notes: m.notes || ""
+    }));
+
+    const mapD = new Map(state.decisions.map(d=>[d.id,d]));
+    cleanedDec.forEach(d=>mapD.set(d.id,d));
+    state.decisions = Array.from(mapD.values()).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+
+    const mapM = new Map(state.models.map(m=>[m.id,m]));
+    cleanedModels.forEach(m=>mapM.set(m.id,m));
+    state.models = Array.from(mapM.values());
+
+    saveAll();
+    toast("Backup importado ✅");
+    closeRestore();
+    rafRender();
+  }catch(e){
+    console.error(e);
+    toast("Falha ao importar JSON.");
+  }finally{
+    hideLoading();
+  }
+}
+
+/* ===================== Backup ===================== */
+function doBackup(){
+  const payload = {
+    app: "Decision OS",
+    version: "1.1",
+    exportedAt: new Date().toISOString(),
+    decisions: state.decisions,
+    models: state.models,
+    settings: state.settings
+  };
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `decision_os_backup_${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 15000);
+  toast("Backup exportado.");
+}
+
+/* ===================== Demo ===================== */
+function makeDemo(){
+  const d1 = newDecision();
+  d1.domain="professional";
+  d1.title="Trocar de emprego em 2026?";
+  d1.options=["Ficar onde estou","Mudar para empresa X","Concurso / setor público"];
+  d1.criteria=[
+    {name:"Crescimento",weight:25},
+    {name:"Qualidade de vida",weight:20},
+    {name:"Renda",weight:20},
+    {name:"Estabilidade",weight:15},
+    {name:"Reputação",weight:10},
+    {name:"Risco",weight:10}
+  ];
+  d1.scores={
+    "Ficar onde estou":{"Crescimento":6,"Qualidade de vida":6,"Renda":7,"Estabilidade":7,"Reputação":7,"Risco":7},
+    "Mudar para empresa X":{"Crescimento":8,"Qualidade de vida":7,"Renda":8,"Estabilidade":6,"Reputação":8,"Risco":5},
+    "Concurso / setor público":{"Crescimento":5,"Qualidade de vida":8,"Renda":6,"Estabilidade":9,"Reputação":6,"Risco":8}
+  };
+  d1.risks={
+    "Ficar onde estou":{prob:3,impact:5},
+    "Mudar para empresa X":{prob:5,impact:7},
+    "Concurso / setor público":{prob:4,impact:6}
+  };
+  d1.context="Premissas: manter evolução técnica, evitar estagnação, preservar finanças.";
+  d1.inaction="Se não decidir, posso perder janela de oportunidade e continuar insatisfeito.";
+  d1.premortem="Falha: escolher por impulso; não validar cultura; subestimar custo emocional.";
+  d1.bias="Ancoragem em salário; confirmação; aversão à perda.";
+
+  const d2 = newDecision();
+  d2.domain="financial";
+  d2.title="Comprar um bem caro agora?";
+  d2.options=["Comprar à vista","Financiar","Esperar 6 meses"];
+  d2.criteria=[
+    {name:"Retorno",weight:20},
+    {name:"Risco",weight:25},
+    {name:"Liquidez",weight:20},
+    {name:"Custo total",weight:20},
+    {name:"Tranquilidade",weight:15}
+  ];
+  d2.scores={
+    "Comprar à vista":{"Retorno":6,"Risco":7,"Liquidez":4,"Custo total":7,"Tranquilidade":7},
+    "Financiar":{"Retorno":6,"Risco":5,"Liquidez":6,"Custo total":4,"Tranquilidade":6},
+    "Esperar 6 meses":{"Retorno":5,"Risco":8,"Liquidez":8,"Custo total":6,"Tranquilidade":7}
+  };
+  d2.risks={
+    "Comprar à vista":{prob:3,impact:7},
+    "Financiar":{prob:5,impact:6},
+    "Esperar 6 meses":{prob:2,impact:4}
+  };
+
+  upsertDecision(d1);
+  upsertDecision(d2);
+
+  ensureDefaultModels();
+    ensureExampleDecisions();
+
+  toast("Dados demo criados ✅");
+  rafRender();
+}
+
+/* ===================== Settings ===================== */
+function fillSettingsUI(){
+  $("setUserName").value = state.settings.userName || "Wilson";
+  $("setRiskPolicy").value = state.settings.riskPolicy || "balanced";
+  $("setReviewDays").value = String(state.settings.reviewDays ?? 30);
+}
+function saveSettings(){
+  state.settings.userName = ($("setUserName").value||"").trim() || "Usuário";
+  state.settings.riskPolicy = $("setRiskPolicy").value || "balanced";
+  state.settings.reviewDays = Number($("setReviewDays").value || 30);
+  saveAll();
+  toast("Ajustes salvos ✅");
+  rafRender();
+}
+
+/* ===================== Wire events ===================== */
+function wireTabs(){
+  $$(`#tabsTop .tab`).forEach(b=>{
+    b.addEventListener("click", ()=>setTab(b.dataset.tab));
+  });
+  $$(`#tabsBottom .tab`).forEach(b=>{
+    b.addEventListener("click", ()=>setTab(b.dataset.tab));
+  });
+}
+function wireCore(){
+  $("btnNow").addEventListener("click", ()=>{ nowClock(); toast("Atualizado."); });
+
+  $("btnBackup").addEventListener("click", doBackup);
+  $("btnExamples").addEventListener("click", loadExamplesReplace);
+  $("btnNew").addEventListener("click", ()=>openDecisionModal(null));
+
+  $("btnCloseModal").addEventListener("click", closeDecisionModal);
+  $("btnSave").addEventListener("click", saveDecisionFromModal);
+  $("btnDelete").addEventListener("click", deleteDecisionFromModal);
+  $("btnDuplicate").addEventListener("click", duplicateDecision);
+
+  $("btnRestore").addEventListener("click", openRestore);
+  $("btnCloseRestore").addEventListener("click", closeRestore);
+  $("btnDoRestore").addEventListener("click", ()=>{
+    const f = $("restoreFile").files?.[0];
+    doRestore(f);
+  });
+
+  $("btnSaveSettings").addEventListener("click", saveSettings);
+  $("btnDemo").addEventListener("click", makeDemo);
+  $("btnWipe").addEventListener("click", ()=>{
+    if(!confirm("Limpar TODAS as decisões? (Modelos permanecem.)")) return;
+    state.decisions = [];
+    state.selectedId = null;
+    saveAll();
+    toast("Decisões removidas.");
+    rafRender();
+  });
+
+  $("btnRecalc").addEventListener("click", ()=>{ toast("Recalculado."); rafRender(); });
+  $("dashPick").addEventListener("change", ()=>{
+    const id = $("dashPick").value;
+    if(id) selectDecision(id);
+    rafRender();
+  });
+  $("dashMode").addEventListener("change", rafRender);
+
+  const deb = debounce(()=>rafRender(), 120);
+  ["search","quickFilter","domainFilter","sort"].forEach(id=>{
+    $(id).addEventListener("input", deb);
+    $(id).addEventListener("change", deb);
+  });
+
+  $("btnCreateFromModel").addEventListener("click", ()=>{
+    const domain = $("modelDomain").value || "professional";
+    const name = ($("modelName").value||"").trim();
+    const model = state.models.find(m=>m.domain===domain) || DEFAULT_MODELS.find(m=>m.domain===domain);
+    const m = model ? model : {domain, name:(name||"Modelo"), criteria:[["Impacto",30],["Risco",30],["Custo",20],["Tempo",20]], notes:""};
+    const dec = makeDecisionFromModel(m);
+    dec.title = name ? `Decisão: ${name}` : dec.title;
+    upsertDecision(dec);
+    selectDecision(dec.id);
+    toast("Decisão criada a partir do modelo ✅");
+    openDecisionModal(dec.id);
+  });
+
+  $("btnAddFiles").addEventListener("click", ()=>$("filesInput").click());
+  $("filesInput").addEventListener("change", async ()=>{
+    await addFilesFromInput($("filesInput").files);
+    $("filesInput").value = "";
+  });
+  $("fileSearch").addEventListener("input", debounce(()=>rafRender(), 150));
+
+  $("dFiles").addEventListener("change", async ()=>{
+    const files = Array.from($("dFiles").files||[]);
+    if(!files.length) return;
+
+    showLoading("Preparando anexos…");
+    try{
+      for(const f of files){
+        const id = uid();
+        const buf = await f.arrayBuffer();
+        state.tempFiles.push({
+          id,
+          name: f.name,
+          type: f.type || "application/octet-stream",
+          size: f.size,
+          addedAt: Date.now(),
+          data: buf
+        });
+      }
+      toast(`${files.length} arquivo(s) anexado(s) (pendente salvar).`);
+    }catch(e){
+      console.error(e);
+      toast("Falha ao anexar.");
+    }finally{
+      hideLoading();
+      const dec = state.decisions.find(d=>d.id===state.editingId) || newDecision();
+      renderDecisionFileChips(dec.files||[]);
+      $("dFiles").value="";
+    }
+  });
+
+  document.addEventListener("keydown",(e)=>{
+    if(e.key==="Escape"){
+      if($("decisionModal").classList.contains("show")) closeDecisionModal();
+      if($("restoreModal").classList.contains("show")) closeRestore();
+      return;
+    }
+    const inInput = ["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName);
+    if(!inInput && (e.key==="n" || e.key==="N")){
+      e.preventDefault();
+      openDecisionModal(null);
+      return;
+    }
+    if(e.ctrlKey && (e.key==="e" || e.key==="E")){
+      e.preventDefault();
+      doBackup();
+      return;
+    }
+    if(e.ctrlKey && (e.key==="l" || e.key==="L")){
+      e.preventDefault();
+      loadExamplesReplace();
+      return;
+    }
+    if(e.ctrlKey && (e.key==="k" || e.key==="K")){
+      e.preventDefault();
+      $("search").focus();
+      return;
+    }
+  });
+}
+
+/* ===================== Main render ===================== */
+async function renderAll(){
+  renderKpis();
+  renderDecisionList();
+  renderDashPick();
+  renderFocusPanel();
+  renderDashboard();
+  renderModelList();
+
+  if(state.activeTab==="files"){
+    await renderFilesList();
+  }
+
+  const sel = state.decisions.find(d=>d.id===state.selectedId);
+  if(sel){
+    setStatus("good", `${state.settings.userName||"Usuário"} • Em foco: ${sel.title}`);
+  }else{
+    setStatus("warn", `${state.settings.userName||"Usuário"} • Sem decisão selecionada`);
+  }
+}
+
+/* ===================== Init ===================== */
+async function init(){
+  showLoading("Inicializando Decision OS…");
+  try{
+    loadAll();
+    ensureDefaultModels();
+
+    fillDomains();
+    renderDomainFilterDefaults();
+    fillSettingsUI();
+
+    state.db = await idbOpen();
+
+    wireTabs();
+    wireCore();
+
+    setTab(state.activeTab || "inbox");
+    nowClock();
+    setInterval(nowClock, 1000);
+
+    toast("Pronto ✅");
+  }catch(e){
+    console.error(e);
+    setStatus("bad","Erro ao iniciar (ver console).");
+    toast("Erro ao iniciar.");
+  }finally{
+    hideLoading();
+    rafRender();
+  }
+}
+
+init();
+</script>
+</body>
+</html>
