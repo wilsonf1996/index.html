@@ -1435,3 +1435,1544 @@ function statusBadge(it){
 }
 
 /* ===================== CONTINUA NO PART 2/3 ===================== */
+
+
+<!-- ===================== PART 2/3 =====================
+Cole este bloco LOGO ABAIXO do PART 1/3 (continuação do <script>).
+======================================================= */
+
+/* ===================== IndexedDB (arquivos) ===================== */
+function idbOpen(){
+  return new Promise((resolve, reject)=>{
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = ()=>{
+      const db = req.result;
+      if(!db.objectStoreNames.contains(FILE_STORE)){
+        db.createObjectStore(FILE_STORE, { keyPath:"id" });
+      }
+    };
+    req.onsuccess = ()=> resolve(req.result);
+    req.onerror = ()=> reject(req.error);
+  });
+}
+function idbTx(mode="readonly"){
+  const tx = state.db.transaction(FILE_STORE, mode);
+  return tx.objectStore(FILE_STORE);
+}
+function idbPutFile(fileObj){
+  return new Promise((resolve, reject)=>{
+    const store = idbTx("readwrite");
+    const req = store.put(fileObj);
+    req.onsuccess = ()=> resolve(true);
+    req.onerror = ()=> reject(req.error);
+  });
+}
+function idbGetFile(id){
+  return new Promise((resolve, reject)=>{
+    const store = idbTx("readonly");
+    const req = store.get(id);
+    req.onsuccess = ()=> resolve(req.result || null);
+    req.onerror = ()=> reject(req.error);
+  });
+}
+function idbDelFile(id){
+  return new Promise((resolve, reject)=>{
+    const store = idbTx("readwrite");
+    const req = store.delete(id);
+    req.onsuccess = ()=> resolve(true);
+    req.onerror = ()=> reject(req.error);
+  });
+}
+function idbListFiles(){
+  return new Promise((resolve, reject)=>{
+    const store = idbTx("readonly");
+    const req = store.getAll();
+    req.onsuccess = ()=> resolve(req.result || []);
+    req.onerror = ()=> reject(req.error);
+  });
+}
+
+/* ===================== Storage estimate (v3.2) ===================== */
+async function refreshStorageInfo(){
+  // nem todo browser suporta navigator.storage.estimate()
+  if(!navigator.storage?.estimate){
+    state.storage = { ok:false, usage:null, quota:null, lastAt:Date.now() };
+    $("storageHint").textContent = "Armazenamento: (estimativa indisponível neste navegador)";
+    return;
+  }
+  try{
+    const est = await navigator.storage.estimate();
+    state.storage = { ok:true, usage: est.usage || null, quota: est.quota || null, lastAt:Date.now() };
+    const usage = est.usage ?? 0;
+    const quota = est.quota ?? 0;
+    const pct = quota ? Math.min(100, Math.round(usage/quota*100)) : null;
+    const fmt = (b)=> {
+      const u = ["B","KB","MB","GB"]; let i=0; let n=b;
+      while(n>=1024 && i<u.length-1){ n/=1024; i++; }
+      return `${n.toFixed(i===0?0:1)} ${u[i]}`;
+    };
+    $("storageHint").textContent = quota
+      ? `Armazenamento: usando ${fmt(usage)} de ${fmt(quota)} (${pct}%)`
+      : `Armazenamento: usando ${fmt(usage)}`;
+  }catch(e){
+    state.storage = { ok:false, usage:null, quota:null, lastAt:Date.now() };
+    $("storageHint").textContent = "Armazenamento: (erro ao estimar)";
+  }
+}
+
+/* ===================== Geo + Weather (sem API paga) ===================== */
+async function getGeoFix(){
+  if(state.settings.geo==="off"){
+    state.geo.ok=false;
+    return null;
+  }
+  if(!("geolocation" in navigator)){
+    state.geo.ok=false;
+    return null;
+  }
+  return new Promise((resolve)=>{
+    navigator.geolocation.getCurrentPosition(
+      (pos)=>{
+        state.geo.ok = true;
+        state.geo.lat = pos.coords.latitude;
+        state.geo.lon = pos.coords.longitude;
+        state.geo.accuracy = pos.coords.accuracy;
+        state.geo.lastFixAt = Date.now();
+        resolve(state.geo);
+      },
+      ()=>{
+        state.geo.ok=false;
+        resolve(null);
+      },
+      {
+        enableHighAccuracy:true,
+        timeout: 9000,
+        maximumAge: 60_000
+      }
+    );
+  });
+}
+
+/* Clima: usa Open-Meteo (grátis, sem chave) */
+async function refreshWeather(){
+  // só tenta se temos geo ok
+  if(!state.geo.ok || state.geo.lat==null || state.geo.lon==null) return;
+
+  // evita spam: 10 min cache
+  if(state.weather.ok && (Date.now()-state.weather.lastAt) < 10*60*1000) return;
+
+  const lat = state.geo.lat.toFixed(4);
+  const lon = state.geo.lon.toFixed(4);
+  try{
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`;
+    const r = await fetch(url, {cache:"no-store"});
+    if(!r.ok) throw new Error("weather");
+    const j = await r.json();
+    const t = j?.current?.temperature_2m;
+    const code = j?.current?.weather_code;
+    const desc = weatherCodeToText(code);
+    state.weather = { ok:true, temp:t, desc, code, lastAt:Date.now() };
+  }catch(e){
+    state.weather.ok=false;
+  }
+}
+function weatherCodeToText(code){
+  // mapa simples (Open-Meteo WMO)
+  const m = {
+    0:"Céu limpo", 1:"Predom. limpo", 2:"Parcialmente nublado", 3:"Nublado",
+    45:"Neblina", 48:"Neblina", 51:"Garoa fraca", 53:"Garoa", 55:"Garoa forte",
+    61:"Chuva fraca", 63:"Chuva", 65:"Chuva forte",
+    71:"Neve fraca", 73:"Neve", 75:"Neve forte",
+    80:"Pancadas fracas", 81:"Pancadas", 82:"Pancadas fortes",
+    95:"Tempestade", 96:"Tempestade c/ granizo", 99:"Granizo"
+  };
+  return m[code] || "Tempo";
+}
+
+/* ===================== Items CRUD ===================== */
+function newItem(type="event", seed={}){
+  const now = new Date();
+  const base = {
+    id: uid(),
+    type,
+    title: "",
+    body: "",
+    tags: [],
+    priority: 2,
+    status: "planned",
+    kanban: "todo",
+    locationName: "",
+    geo: null,
+    files: [], // [{id,name,type,size,addedAt}]
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+    start: null,
+    end: null,
+    due: null
+  };
+  return {...base, ...seed};
+}
+function upsertItem(item){
+  item.updatedAt = new Date().toISOString();
+  const idx = state.items.findIndex(x=>x.id===item.id);
+  if(idx>=0) state.items[idx] = item;
+  else state.items.unshift(item);
+  saveAll();
+  rafRender();
+}
+function deleteItem(id){
+  const idx = state.items.findIndex(x=>x.id===id);
+  if(idx>=0){
+    state.items.splice(idx,1);
+    saveAll();
+    rafRender();
+  }
+}
+
+/* ===================== Modal Create/Edit ===================== */
+function resetModalTemp(){
+  state.editingId = null;
+  state.tempFiles = [];
+  state.tempGeo = null;
+  $("mFiles").value = "";
+  $("mFileChips").innerHTML = "";
+  $("gpsHint").textContent = "Sem GPS anexado.";
+}
+function openNewModal(defaultType="event", prefill={}){
+  resetModalTemp();
+  $("modalTitle").textContent = "Novo";
+  $("modalSub").textContent = "Compromisso, tarefa ou nota";
+  $("btnDelete").style.display = "none";
+
+  $("mType").value = defaultType;
+  $("mTitle").value = prefill.title || "";
+  $("mPriority").value = String(prefill.priority ?? 2);
+  $("mStatus").value = prefill.status || "planned";
+  $("mKanban").value = prefill.kanban || "todo";
+  $("mBody").value = prefill.body || "";
+  $("mTags").value = (prefill.tags||[]).join(", ");
+  $("mLocationName").value = prefill.locationName || "";
+
+  // times
+  const now = new Date();
+  const start = prefill.start ? new Date(prefill.start) : now;
+  $("mStart").value = toLocalDTInputValue(start);
+  $("mEnd").value = prefill.end ? toLocalDTInputValue(new Date(prefill.end)) : "";
+  $("mDue").value = prefill.due ? toLocalDTInputValue(new Date(prefill.due)) : "";
+
+  $("modalFootHint").textContent = "Criado em: —";
+  applyModalTypeUI();
+  openModal("itemModal");
+}
+function openEditModal(id){
+  const it = state.items.find(x=>x.id===id);
+  if(!it){ toast("Item não encontrado."); return; }
+
+  resetModalTemp();
+  state.editingId = id;
+
+  $("modalTitle").textContent = "Editar";
+  $("modalSub").textContent = `${typeEmoji(it.type)} ${it.type==="event"?"Compromisso":it.type==="task"?"Tarefa":"Nota"}`;
+  $("btnDelete").style.display = "inline-flex";
+
+  $("mType").value = it.type;
+  $("mTitle").value = it.title || "";
+  $("mPriority").value = String(it.priority ?? 2);
+  $("mStatus").value = it.status || "planned";
+  $("mKanban").value = it.kanban || "todo";
+  $("mBody").value = it.body || "";
+  $("mTags").value = (it.tags||[]).join(", ");
+  $("mLocationName").value = it.locationName || "";
+
+  $("mStart").value = it.start ? toLocalDTInputValue(new Date(it.start)) : "";
+  $("mEnd").value = it.end ? toLocalDTInputValue(new Date(it.end)) : "";
+  $("mDue").value = it.due ? toLocalDTInputValue(new Date(it.due)) : "";
+
+  // files chips
+  state.tempFiles = Array.isArray(it.files) ? [...it.files] : [];
+  renderModalFileChips();
+
+  // geo
+  state.tempGeo = it.geo || null;
+  $("gpsHint").textContent = it.geo
+    ? `GPS anexado: ${it.geo.lat.toFixed(5)}, ${it.geo.lon.toFixed(5)} (±${Math.round(it.geo.accuracy||0)}m)`
+    : "Sem GPS anexado.";
+
+  $("modalFootHint").textContent = `Criado em: ${fmtNiceDT(it.createdAt)} • Atualizado: ${fmtNiceDT(it.updatedAt)}`;
+
+  applyModalTypeUI();
+  openModal("itemModal");
+}
+function closeItemModal(){
+  closeModal("itemModal");
+  resetModalTemp();
+}
+$("btnCloseModal").addEventListener("click", closeItemModal);
+
+function applyModalTypeUI(){
+  const t = $("mType").value;
+  const due = $("mDue").closest(".field");
+  const kan = $("mKanban").closest(".field");
+  const end = $("mEnd").closest(".field");
+  if(t==="task"){
+    due.style.display = "flex";
+    kan.style.display = "flex";
+    end.style.display = "none";
+    $("mStatus").value = $("mStatus").value || "planned";
+  }else if(t==="event"){
+    due.style.display = "none";
+    kan.style.display = "none";
+    end.style.display = "flex";
+  }else{
+    due.style.display = "none";
+    kan.style.display = "none";
+    end.style.display = "none";
+  }
+}
+$("mType").addEventListener("change", applyModalTypeUI);
+
+/* ===== Anexos no modal ===== */
+function renderModalFileChips(){
+  const wrap = $("mFileChips");
+  wrap.innerHTML = "";
+  if(!state.tempFiles.length){
+    wrap.innerHTML = `<span class="hint">Nenhum anexo neste item.</span>`;
+    return;
+  }
+  for(const f of state.tempFiles){
+    const chip = document.createElement("div");
+    chip.className = "chip";
+    chip.innerHTML = `${safeText(f.name)} <small>${formatBytes(f.size||0)}</small> <span class="x" title="Remover">×</span>`;
+    chip.addEventListener("click", async (e)=>{
+      // se clicou no X: remover
+      if(e.target && e.target.classList.contains("x")){
+        state.tempFiles = state.tempFiles.filter(x=>x.id!==f.id);
+        renderModalFileChips();
+        return;
+      }
+      // abrir download
+      const obj = await idbGetFile(f.id);
+      if(!obj){ toast("Arquivo não encontrado no armazenamento local."); return; }
+      downloadBlob(obj.blob, obj.name);
+    });
+    wrap.appendChild(chip);
+  }
+}
+function formatBytes(b){
+  const u=["B","KB","MB","GB"]; let i=0; let n=b||0;
+  while(n>=1024 && i<u.length-1){ n/=1024; i++; }
+  return `${n.toFixed(i===0?0:1)} ${u[i]}`;
+}
+function downloadBlob(blob, name){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name || "arquivo";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1500);
+}
+
+$("mFiles").addEventListener("change", async ()=>{
+  const files = Array.from($("mFiles").files || []);
+  if(!files.length) return;
+  showLoading("Salvando anexos…");
+  try{
+    for(const f of files){
+      const id = uid();
+      const obj = {
+        id,
+        name: f.name,
+        type: f.type || "application/octet-stream",
+        size: f.size || 0,
+        addedAt: new Date().toISOString(),
+        blob: f
+      };
+      await idbPutFile(obj);
+      state.tempFiles.push({ id, name: obj.name, type: obj.type, size: obj.size, addedAt: obj.addedAt });
+    }
+    renderModalFileChips();
+    await refreshStorageInfo();
+    toast("Anexos adicionados.");
+  }catch(e){
+    toast("Falha ao salvar anexos (IndexedDB).");
+  }finally{
+    hideLoading();
+    $("mFiles").value = "";
+  }
+});
+
+/* ===== GPS no modal ===== */
+$("btnAttachGPS").addEventListener("click", async ()=>{
+  showLoading("Capturando GPS…");
+  const fix = await getGeoFix();
+  hideLoading();
+  if(!fix){
+    toast("GPS indisponível / permissão negada.");
+    return;
+  }
+  state.tempGeo = { lat: fix.lat, lon: fix.lon, accuracy: fix.accuracy, at: new Date().toISOString() };
+  $("gpsHint").textContent = `GPS anexado: ${fix.lat.toFixed(5)}, ${fix.lon.toFixed(5)} (±${Math.round(fix.accuracy||0)}m)`;
+  toast("GPS anexado ao item (ao salvar).");
+});
+
+/* ===== Save/Delete/Duplicate ===== */
+$("btnSave").addEventListener("click", ()=>{
+  const type = $("mType").value;
+  const title = $("mTitle").value.trim();
+  if(!title){
+    toast("Título é obrigatório.");
+    $("mTitle").focus();
+    return;
+  }
+
+  const tags = normalizeTags($("mTags").value);
+  const prio = Number($("mPriority").value)||2;
+  const status = $("mStatus").value || "planned";
+  const kanban = $("mKanban").value || "todo";
+  const body = $("mBody").value || "";
+  const locationName = $("mLocationName").value || "";
+
+  const start = parseDT($("mStart").value);
+  const end   = parseDT($("mEnd").value);
+  const due   = parseDT($("mDue").value);
+
+  let it = null;
+  if(state.editingId){
+    it = state.items.find(x=>x.id===state.editingId);
+    if(!it){ toast("Item não encontrado."); return; }
+  }else{
+    it = newItem(type);
+  }
+
+  it.type = type;
+  it.title = title;
+  it.body = body;
+  it.tags = tags;
+  it.priority = prio;
+  it.status = status;
+  it.kanban = type==="task" ? kanban : it.kanban;
+  it.locationName = locationName;
+  it.geo = state.tempGeo ? {...state.tempGeo} : null;
+  it.files = [...state.tempFiles];
+
+  it.start = (type==="note") ? null : (start ? start.toISOString() : null);
+  it.end   = (type==="event") ? (end ? end.toISOString() : null) : null;
+  it.due   = (type==="task") ? (due ? due.toISOString() : null) : null;
+
+  // sanity: event end before start
+  if(it.type==="event" && it.start && it.end){
+    const a=new Date(it.start), b=new Date(it.end);
+    if(b < a){
+      toast("Fim não pode ser antes do início.");
+      return;
+    }
+  }
+
+  upsertItem(it);
+  toast("Salvo.");
+  closeItemModal();
+});
+
+$("btnDelete").addEventListener("click", ()=>{
+  if(!state.editingId) return;
+  const it = state.items.find(x=>x.id===state.editingId);
+  if(!it) return;
+  const ok = confirm(`Excluir "${it.title}"?`);
+  if(!ok) return;
+  deleteItem(it.id);
+  toast("Excluído.");
+  closeItemModal();
+});
+
+$("btnDuplicate").addEventListener("click", ()=>{
+  // duplica o que está no modal (sem depender de salvar antes)
+  const type = $("mType").value;
+  const title = $("mTitle").value.trim() || "Cópia";
+  const tags = normalizeTags($("mTags").value);
+  const prio = Number($("mPriority").value)||2;
+  const status = $("mStatus").value || "planned";
+  const kanban = $("mKanban").value || "todo";
+  const body = $("mBody").value || "";
+  const locationName = $("mLocationName").value || "";
+  const start = parseDT($("mStart").value);
+  const end   = parseDT($("mEnd").value);
+  const due   = parseDT($("mDue").value);
+
+  const it = newItem(type, {
+    title: `${title} (cópia)`,
+    body,
+    tags,
+    priority: prio,
+    status,
+    kanban,
+    locationName,
+    geo: state.tempGeo ? {...state.tempGeo} : null,
+    files: [...state.tempFiles],
+    start: (type==="note") ? null : (start ? start.toISOString() : null),
+    end:   (type==="event") ? (end ? end.toISOString() : null) : null,
+    due:   (type==="task") ? (due ? due.toISOString() : null) : null
+  });
+  upsertItem(it);
+  toast("Duplicado.");
+});
+
+/* ===================== Quick Add (Hoje) ===================== */
+$("btnQuickAdd").addEventListener("click", ()=>{
+  // cria um "check-in" tipo nota rápida no horário atual
+  const now = new Date();
+  openNewModal("note", {
+    title: `Check-in ${pad(now.getHours())}:${pad(now.getMinutes())}`,
+    body: "",
+    tags: ["check-in"]
+  });
+});
+
+/* ===================== Files view (biblioteca) ===================== */
+$("btnAddFiles").addEventListener("click", ()=> $("filesInput").click());
+$("filesInput").addEventListener("change", async ()=>{
+  const files = Array.from($("filesInput").files || []);
+  if(!files.length) return;
+  showLoading("Importando arquivos…");
+  try{
+    for(const f of files){
+      const id = uid();
+      const obj = {
+        id,
+        name: f.name,
+        type: f.type || "application/octet-stream",
+        size: f.size || 0,
+        addedAt: new Date().toISOString(),
+        blob: f
+      };
+      await idbPutFile(obj);
+    }
+    toast("Arquivos importados.");
+    await refreshStorageInfo();
+    rafRender();
+  }catch(e){
+    toast("Falha ao importar arquivos.");
+  }finally{
+    hideLoading();
+    $("filesInput").value = "";
+  }
+});
+
+/* ===================== Lists rendering helpers ===================== */
+function makeRow(it){
+  const d = itemKeyDate(it);
+  const when = itemWhen(it);
+  const tags = (it.tags||[]).slice(0,3);
+  const more = (it.tags||[]).length>3 ? `+${(it.tags||[]).length-3}` : "";
+
+  const badgeType = it.type==="event" ? "📅 Compromisso" : it.type==="task" ? "✅ Tarefa" : "📝 Nota";
+  const pr = prioLabel(it.priority);
+  const st = statusBadge(it);
+  const stLabel = st==="done" ? "Concluído" : st==="doing" ? "Em andamento" : st==="canceled" ? "Cancelado" : "Planejado";
+  const hasFiles = (it.files||[]).length;
+  const hasGeo = it.geo ? "GPS" : "";
+
+  const el = document.createElement("div");
+  el.className = "row";
+  el.tabIndex = 0;
+  el.innerHTML = `
+    <div class="main">
+      <div class="name">${safeText(it.title)}</div>
+      <div class="meta">
+        <span class="badge"><b>${badgeType}</b></span>
+        <span class="badge"><b>${safeText(stLabel)}</b></span>
+        <span class="badge"><b>${safeText(pr)}</b></span>
+        ${it.locationName ? `<span class="badge">📍 <b>${safeText(it.locationName)}</b></span>` : ""}
+        ${hasGeo ? `<span class="badge">🧭 <b>${hasGeo}</b></span>` : ""}
+        ${hasFiles ? `<span class="badge">📎 <b>${hasFiles}</b></span>` : ""}
+        ${tags.map(t=>`<span class="badge">#<b>${safeText(t)}</b></span>`).join("")}
+        ${more ? `<span class="badge"><b>${safeText(more)}</b></span>` : ""}
+      </div>
+    </div>
+    <div class="amount">${safeText(when)}</div>
+    <div class="amount mono">${safeText(fmtNiceDT(d))}</div>
+    <div class="right">
+      <button class="btn" data-open="${it.id}">Abrir</button>
+      <button class="btn danger" data-del="${it.id}">Excluir</button>
+    </div>
+  `;
+  el.addEventListener("click", (e)=>{
+    const t = e.target;
+    if(t?.dataset?.open){
+      openEditModal(t.dataset.open);
+      return;
+    }
+    if(t?.dataset?.del){
+      const ok = confirm("Excluir este item?");
+      if(!ok) return;
+      deleteItem(t.dataset.del);
+      toast("Excluído.");
+      return;
+    }
+    openEditModal(it.id);
+  });
+  el.addEventListener("keydown", (e)=>{
+    if(e.key==="Enter" || e.key===" "){
+      e.preventDefault();
+      openEditModal(it.id);
+    }
+  });
+  return el;
+}
+
+/* ===================== Kanban Drag & Drop ===================== */
+function makeTaskCard(it){
+  const el = document.createElement("div");
+  el.className = "task";
+  el.draggable = true;
+  el.dataset.id = it.id;
+  const due = it.due ? `Vence: ${fmtNiceDT(it.due)}` : "Sem vencimento";
+  const pr = prioLabel(it.priority);
+  el.innerHTML = `
+    <b>${safeText(it.title)}</b>
+    <div class="tmeta">
+      <span>Prioridade: ${safeText(pr)}</span>
+      <span>${safeText(due)}</span>
+      ${(it.tags||[]).slice(0,2).map(t=>`<span>#${safeText(t)}</span>`).join("")}
+    </div>
+  `;
+  el.addEventListener("dblclick", ()=> openEditModal(it.id));
+  el.addEventListener("dragstart", (e)=>{
+    e.dataTransfer.setData("text/plain", it.id);
+    e.dataTransfer.effectAllowed = "move";
+  });
+  return el;
+}
+function setupDrop(zone, colName){
+  zone.addEventListener("dragover", (e)=>{ e.preventDefault(); zone.classList.add("drop-hover"); });
+  zone.addEventListener("dragleave", ()=> zone.classList.remove("drop-hover"));
+  zone.addEventListener("drop", (e)=>{
+    e.preventDefault();
+    zone.classList.remove("drop-hover");
+    const id = e.dataTransfer.getData("text/plain");
+    if(!id) return;
+    const it = state.items.find(x=>x.id===id);
+    if(!it) return;
+
+    // Se arrastou no Kanban, muda kanban e status
+    if(it.type==="task"){
+      it.kanban = colName;
+      it.status = (colName==="done") ? "done" : (colName==="doing") ? "doing" : "planned";
+      upsertItem(it);
+      toast("Tarefa movida.");
+      return;
+    }
+
+    // Se arrastou item não-task para o calendário do mês (handled elsewhere)
+  });
+}
+
+/* ===== Drop tarefa em um dia do mês -> ajusta vencimento ===== */
+function attachDropOnDayCell(cell, dayDate){
+  cell.addEventListener("dragover", (e)=>{ e.preventDefault(); cell.classList.add("drop-hover"); });
+  cell.addEventListener("dragleave", ()=> cell.classList.remove("drop-hover"));
+  cell.addEventListener("drop", (e)=>{
+    e.preventDefault();
+    cell.classList.remove("drop-hover");
+    const id = e.dataTransfer.getData("text/plain");
+    if(!id) return;
+    const it = state.items.find(x=>x.id===id);
+    if(!it) return;
+    if(it.type!=="task"){ toast("Somente tarefas podem ser soltas em dias (vencimento)."); return; }
+    const due = new Date(dayDate);
+    // mantém hora atual se já tinha due
+    if(it.due){
+      const old = new Date(it.due);
+      due.setHours(old.getHours(), old.getMinutes(), 0, 0);
+    }else{
+      due.setHours(18, 0, 0, 0);
+    }
+    it.due = due.toISOString();
+    upsertItem(it);
+    toast("Vencimento atualizado.");
+    // se estiver no mês, atualiza drawer
+    if(state.activeTab==="month") renderDayDrawer(dayDate);
+  });
+}
+
+/* ===================== Filters / Search ===================== */
+function textMatch(it, q){
+  if(!q) return true;
+  const s = q.toLowerCase();
+  const hay = [
+    it.title||"",
+    it.body||"",
+    it.locationName||"",
+    ...(it.tags||[])
+  ].join(" ").toLowerCase();
+  return hay.includes(s);
+}
+
+/* ===================== v3.2 Command Palette ===================== */
+function openPalette(){
+  state.paletteOpen = true;
+  state.paletteQuery = "";
+  state.paletteIndex = 0;
+  $("paletteInput").value = "";
+  renderPalette();
+  openModal("paletteModal");
+  setTimeout(()=> $("paletteInput").focus({preventScroll:true}), 20);
+}
+function closePalette(){
+  state.paletteOpen = false;
+  closeModal("paletteModal");
+}
+$("btnPalette").addEventListener("click", openPalette);
+$("btnClosePalette").addEventListener("click", closePalette);
+
+function paletteItems(){
+  // comandos
+  const cmds = [
+    {title:"Novo compromisso", sub:"Criar um compromisso (evento)", kbd:"N E", run:()=>{ closePalette(); openNewModal("event"); }},
+    {title:"Nova tarefa", sub:"Criar tarefa no Kanban", kbd:"N T", run:()=>{ closePalette(); openNewModal("task"); }},
+    {title:"Nova nota", sub:"Criar anotação rápida", kbd:"N N", run:()=>{ closePalette(); openNewModal("note"); }},
+    {title:"Ir para Hoje", sub:"Abrir visão Hoje", kbd:"Alt H", run:()=>{ closePalette(); setTab("today"); }},
+    {title:"Ir para Semana", sub:"Abrir visão Semana", kbd:"Alt W", run:()=>{ closePalette(); setTab("week"); }},
+    {title:"Ir para Mês", sub:"Abrir visão Mês", kbd:"Alt M", run:()=>{ closePalette(); setTab("month"); }},
+    {title:"Ir para Tarefas", sub:"Abrir Kanban", kbd:"Alt T", run:()=>{ closePalette(); setTab("tasks"); }},
+    {title:"Ir para Notas", sub:"Abrir Notas", kbd:"Alt N", run:()=>{ closePalette(); setTab("notes"); }},
+    {title:"Ir para Arquivos", sub:"Abrir Arquivos", kbd:"Alt F", run:()=>{ closePalette(); setTab("files"); }},
+    {title:"Ir para Ajustes", sub:"Abrir Ajustes", kbd:"Alt S", run:()=>{ closePalette(); setTab("settings"); }},
+    {title:"Exportar backup JSON", sub:"Baixar backup", kbd:"Ctrl E", run:()=>{ closePalette(); doBackup(); }},
+    {title:"Exportar calendário (.ICS)", sub:"Baixar .ics com eventos e tarefas", kbd:"—", run:()=>{ closePalette(); exportICS(); }},
+    {title:"Atualizar painel", sub:"Atualiza KPIs / clima / listas", kbd:"R", run:()=>{ closePalette(); manualRefresh(); }},
+  ];
+
+  // busca de itens (top 8)
+  const q = state.paletteQuery.trim().toLowerCase();
+  const items = state.items
+    .filter(it=> q ? textMatch(it,q) : false)
+    .slice(0, 8)
+    .map(it=>({
+      title:`${typeEmoji(it.type)} ${it.title}`,
+      sub: itemWhen(it),
+      kbd:"Abrir",
+      run:()=>{ closePalette(); openEditModal(it.id); }
+    }));
+
+  const merged = q ? [...cmds, ...items] : cmds;
+  return merged;
+}
+function renderPalette(){
+  const q = $("paletteInput").value || "";
+  state.paletteQuery = q;
+  const list = $("paletteList");
+  const items = paletteItems();
+  if(state.paletteIndex >= items.length) state.paletteIndex = Math.max(0, items.length-1);
+
+  list.innerHTML = "";
+  items.forEach((it, idx)=>{
+    const el = document.createElement("div");
+    el.className = "pItem";
+    el.tabIndex = 0;
+    el.dataset.idx = String(idx);
+    el.innerHTML = `
+      <div class="pLeft">
+        <div class="pTitle">${safeText(it.title)}</div>
+        <div class="pSub">${safeText(it.sub||"")}</div>
+      </div>
+      <div class="pKbd">${safeText(it.kbd||"")}</div>
+    `;
+    if(idx===state.paletteIndex){
+      el.style.boxShadow = "var(--ring2)";
+      el.style.borderColor = "rgba(45,212,191,.30)";
+    }
+    el.addEventListener("click", ()=> it.run());
+    el.addEventListener("mouseenter", ()=> { state.paletteIndex = idx; renderPalette(); });
+    el.addEventListener("keydown", (e)=>{
+      if(e.key==="Enter"){ e.preventDefault(); it.run(); }
+    });
+    list.appendChild(el);
+  });
+
+  if(!items.length){
+    list.innerHTML = `<div class="hint" style="padding:10px;">Sem resultados.</div>`;
+  }
+}
+$("paletteInput").addEventListener("input", debounce(renderPalette, 30));
+
+/* ===================== Backup / Restore / Wipe ===================== */
+function doBackup(){
+  const data = {
+    version: "3.2",
+    exportedAt: new Date().toISOString(),
+    settings: state.settings,
+    items: state.items
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+  downloadBlob(blob, `agenda_pro_backup_${toISODate(new Date())}.json`);
+  toast("Backup exportado.");
+}
+$("btnBackup").addEventListener("click", doBackup);
+
+function openRestore(){
+  $("restoreFile").value = "";
+  openModal("restoreModal");
+}
+function closeRestore(){ closeModal("restoreModal"); }
+$("btnRestore").addEventListener("click", openRestore);
+$("btnCloseRestore").addEventListener("click", closeRestore);
+
+$("btnDoRestore").addEventListener("click", async ()=>{
+  const f = $("restoreFile").files?.[0];
+  if(!f){ toast("Selecione um arquivo JSON."); return; }
+  showLoading("Importando…");
+  try{
+    const txt = await f.text();
+    const j = JSON.parse(txt);
+    if(!j || !Array.isArray(j.items)) throw new Error("invalid");
+    // merge: substitui tudo por padrão
+    state.items = j.items;
+    if(j.settings) state.settings = {...state.settings, ...j.settings};
+    saveAll();
+    toast("Importado. (Anexos não vêm no backup)");
+    closeRestore();
+    rafRender();
+  }catch(e){
+    toast("Falha ao importar. Arquivo inválido.");
+  }finally{
+    hideLoading();
+  }
+});
+
+$("btnWipe").addEventListener("click", async ()=>{
+  const ok = confirm("Limpar TODOS os itens? (não apaga anexos da biblioteca)");
+  if(!ok) return;
+  state.items = [];
+  saveAll();
+  rafRender();
+  toast("Itens limpos.");
+});
+
+/* ===================== Settings ===================== */
+$("btnSaveSettings").addEventListener("click", ()=>{
+  state.settings.userName = $("setUserName").value.trim() || "Wilson";
+  state.settings.geo = $("setGeo").value;
+  state.settings.units = $("setUnits").value;
+  saveAll();
+  toast("Ajustes salvos.");
+  rafRender();
+});
+$("btnDemo").addEventListener("click", ()=>{
+  const now = new Date();
+  const s1 = newItem("event", {
+    title:"Reunião • Projeto",
+    start: addDays(now,0).toISOString(),
+    end: addDays(new Date(now.getTime()+60*60*1000),0).toISOString(),
+    locationName:"Escritório",
+    tags:["cliente","obra"],
+    priority:3
+  });
+  const t1 = newItem("task", {
+    title:"Enviar relatório",
+    due: addDays(new Date(),1).toISOString(),
+    kanban:"todo",
+    tags:["trabalho"],
+    priority:3
+  });
+  const n1 = newItem("note", {
+    title:"Ideias",
+    body:"Checklist: \n- ligar para fornecedor\n- revisar cronograma\n- separar docs",
+    tags:["pessoal","checklist"]
+  });
+  upsertItem(s1); upsertItem(t1); upsertItem(n1);
+  toast("Demo criado.");
+});
+
+/* ===================== Export ICS (v3.2) ===================== */
+function escICS(s){
+  return String(s||"")
+    .replaceAll("\\","\\\\")
+    .replaceAll(";","\\;")
+    .replaceAll(",","\\,")
+    .replaceAll("\n","\\n");
+}
+function dtToICS(dt){
+  const d = new Date(dt);
+  const y=d.getUTCFullYear(), m=pad(d.getUTCMonth()+1), da=pad(d.getUTCDate());
+  const h=pad(d.getUTCHours()), mi=pad(d.getUTCMinutes()), se=pad(d.getUTCSeconds());
+  return `${y}${m}${da}T${h}${mi}${se}Z`;
+}
+function exportICS(){
+  const lines = [];
+  lines.push("BEGIN:VCALENDAR");
+  lines.push("VERSION:2.0");
+  lines.push("PRODID:-//Agenda Pro//PT-BR//");
+  lines.push("CALSCALE:GREGORIAN");
+
+  const all = state.items.filter(it=>{
+    if(it.type==="event" && it.start) return true;
+    if(it.type==="task" && it.due) return true;
+    return false;
+  });
+
+  for(const it of all){
+    lines.push("BEGIN:VEVENT");
+    lines.push(`UID:${escICS(it.id)}@agendapro`);
+    lines.push(`DTSTAMP:${dtToICS(new Date())}`);
+    const title = it.type==="task" ? `✅ ${it.title}` : `📅 ${it.title}`;
+    lines.push(`SUMMARY:${escICS(title)}`);
+    const desc = [it.body||"", (it.locationName?`Local: ${it.locationName}`:""), (it.tags?.length?`Tags: ${it.tags.join(", ")}`:"")].filter(Boolean).join("\n");
+    if(desc) lines.push(`DESCRIPTION:${escICS(desc)}`);
+    if(it.locationName) lines.push(`LOCATION:${escICS(it.locationName)}`);
+
+    if(it.type==="event"){
+      const st = new Date(it.start);
+      const en = it.end ? new Date(it.end) : new Date(st.getTime()+60*60*1000);
+      lines.push(`DTSTART:${dtToICS(st)}`);
+      lines.push(`DTEND:${dtToICS(en)}`);
+    }else{
+      // tarefa com vencimento -> cria evento no horário do due com duração 15 min
+      const st = new Date(it.due);
+      const en = new Date(st.getTime()+15*60*1000);
+      lines.push(`DTSTART:${dtToICS(st)}`);
+      lines.push(`DTEND:${dtToICS(en)}`);
+    }
+    lines.push("END:VEVENT");
+  }
+
+  lines.push("END:VCALENDAR");
+  const blob = new Blob([lines.join("\r\n")], {type:"text/calendar"});
+  downloadBlob(blob, `agenda_pro_${toISODate(new Date())}.ics`);
+  toast("ICS exportado.");
+}
+$("btnICS").addEventListener("click", exportICS);
+
+/* ===================== CONTINUA NO PART 3/3 ===================== */
+
+
+<!-- ===================== PART 3/3 =====================
+Cole este bloco LOGO ABAIXO do PART 2/3 (fecha o <script> e o HTML).
+======================================================= */
+
+function statusBadge(it){
+  if(it.status==="done") return "done";
+  if(it.status==="doing") return "doing";
+  if(it.status==="canceled") return "canceled";
+  return "planned";
+}
+function prioLabel(p){
+  const n = Number(p)||2;
+  if(n<=1) return "Baixa";
+  if(n===2) return "Normal";
+  if(n===3) return "Alta";
+  return "Crítica";
+}
+function typeEmoji(t){
+  return t==="event" ? "📅" : t==="task" ? "✅" : "📝";
+}
+function itemKeyDate(it){
+  // data “principal” p/ ordenar/mostrar
+  if(it.type==="event" && it.start) return it.start;
+  if(it.type==="task" && it.due) return it.due;
+  return it.updatedAt || it.createdAt || new Date().toISOString();
+}
+function itemWhen(it){
+  if(it.type==="event"){
+    const s = it.start ? fmtTime(it.start) : "—";
+    const e = it.end ? fmtTime(it.end) : "";
+    return e ? `${s}–${e}` : s;
+  }
+  if(it.type==="task"){
+    if(it.due) return `Vence ${fmtNiceDT(it.due)}`;
+    return it.kanban==="done" ? "Concluída" : "Sem vencimento";
+  }
+  return `Atualizado ${fmtNiceDT(it.updatedAt||it.createdAt)}`;
+}
+
+/* ===================== Tabs / Nav ===================== */
+function setTab(tab){
+  state.activeTab = tab;
+  // update tabs
+  document.querySelectorAll(".tab").forEach(x=>{
+    x.classList.toggle("active", x.dataset.tab===tab);
+  });
+  // update views
+  document.querySelectorAll(".view").forEach(v=>{
+    v.classList.toggle("active", v.id===`view-${tab}`);
+  });
+  // close drawer on tab change
+  closeDrawer();
+
+  rafRender();
+  // focus search
+  if(tab==="today" || tab==="week" || tab==="month" || tab==="tasks" || tab==="notes"){
+    setTimeout(()=> $("globalSearch").focus({preventScroll:true}), 20);
+  }
+}
+
+document.querySelectorAll(".tab").forEach(btn=>{
+  btn.addEventListener("click", ()=> setTab(btn.dataset.tab));
+});
+
+/* ===================== Drawer (Day details) ===================== */
+function openDrawer(){
+  $("drawer").classList.add("open");
+}
+function closeDrawer(){
+  $("drawer").classList.remove("open");
+  $("drawerTitle").textContent = "Dia";
+  $("drawerSub").textContent = "—";
+  $("drawerList").innerHTML = "";
+}
+$("btnCloseDrawer").addEventListener("click", closeDrawer);
+
+function renderDayDrawer(date){
+  // date: Date
+  const key = toISODate(date);
+  const items = itemsForDay(date);
+
+  $("drawerTitle").textContent = `Dia ${key}`;
+  $("drawerSub").textContent = `${items.length} item(ns)`;
+  const list = $("drawerList");
+  list.innerHTML = "";
+
+  if(!items.length){
+    list.innerHTML = `<div class="hint">Nada por aqui. Crie algo para este dia.</div>`;
+  }else{
+    for(const it of items){
+      list.appendChild(makeRow(it));
+    }
+  }
+
+  // botões do drawer
+  $("btnDayNewEvent").onclick = ()=>{
+    openNewModal("event", {
+      title:"",
+      start: new Date(date).toISOString()
+    });
+  };
+  $("btnDayNewTask").onclick = ()=>{
+    const d = new Date(date); d.setHours(18,0,0,0);
+    openNewModal("task", { title:"", due: d.toISOString() });
+  };
+  $("btnDayNewNote").onclick = ()=>{
+    openNewModal("note", { title:`Nota ${key}`, body:"" });
+  };
+
+  openDrawer();
+}
+
+/* ===================== Queries (Hoje / Semana / Mês) ===================== */
+function itemsForDay(date){
+  const start = startOfDay(date).getTime();
+  const end = endOfDay(date).getTime();
+  const q = state.search.trim().toLowerCase();
+  const fType = state.filterType;
+  const fStatus = state.filterStatus;
+
+  return state.items
+    .filter(it=>{
+      if(fType!=="all" && it.type!==fType) return false;
+      if(fStatus!=="all"){
+        if((it.status||"planned")!==fStatus) return false;
+      }
+      if(!textMatch(it, q)) return false;
+
+      const k = itemKeyDate(it);
+      const t = new Date(k).getTime();
+      return t>=start && t<=end;
+    })
+    .sort((a,b)=> new Date(itemKeyDate(a)) - new Date(itemKeyDate(b)));
+}
+
+function itemsForRange(from, to){
+  const a = startOfDay(from).getTime();
+  const b = endOfDay(to).getTime();
+  const q = state.search.trim().toLowerCase();
+  const fType = state.filterType;
+  const fStatus = state.filterStatus;
+
+  return state.items
+    .filter(it=>{
+      if(fType!=="all" && it.type!==fType) return false;
+      if(fStatus!=="all"){
+        if((it.status||"planned")!==fStatus) return false;
+      }
+      if(!textMatch(it, q)) return false;
+      const t = new Date(itemKeyDate(it)).getTime();
+      return t>=a && t<=b;
+    })
+    .sort((x,y)=> new Date(itemKeyDate(x)) - new Date(itemKeyDate(y)));
+}
+
+/* ===================== Today view ===================== */
+function renderToday(){
+  const now = new Date();
+  $("todayDate").textContent = fmtNiceDate(now);
+  const list = $("todayList");
+  list.innerHTML = "";
+  const items = itemsForDay(now);
+
+  if(!items.length){
+    list.innerHTML = `<div class="hint">Nada para hoje. Use “+” para criar.</div>`;
+  }else{
+    for(const it of items) list.appendChild(makeRow(it));
+  }
+
+  // CTA create
+  $("btnNewToday").onclick = ()=> openNewModal("event", { start: now.toISOString() });
+}
+
+/* ===================== Week view ===================== */
+function renderWeek(){
+  const now = new Date();
+  const start = startOfWeek(now);
+  const end = endOfWeek(now);
+
+  $("weekRange").textContent = `${fmtNiceDate(start)} → ${fmtNiceDate(end)}`;
+
+  // grid
+  const grid = $("weekGrid");
+  grid.innerHTML = "";
+
+  for(let i=0;i<7;i++){
+    const d = addDays(start, i);
+    const items = itemsForDay(d);
+
+    const card = document.createElement("div");
+    card.className = "dayCard";
+    card.innerHTML = `
+      <div class="dayHead">
+        <div class="dayTitle">${weekDayShort(d)} • ${pad(d.getDate())}/${pad(d.getMonth()+1)}</div>
+        <button class="btn" data-open="1">Abrir</button>
+      </div>
+      <div class="dayMini">
+        ${items.slice(0,4).map(it=>`<div class="mini">${safeText(typeEmoji(it.type)+" "+it.title)}</div>`).join("")}
+        ${items.length>4 ? `<div class="mini muted">+${items.length-4} mais…</div>` : (items.length? "" : `<div class="mini muted">vazio</div>`)}
+      </div>
+    `;
+    card.querySelector("[data-open]").addEventListener("click", ()=> renderDayDrawer(d));
+    grid.appendChild(card);
+  }
+
+  // list
+  const list = $("weekList");
+  list.innerHTML = "";
+  const items = itemsForRange(start, end);
+
+  if(!items.length){
+    list.innerHTML = `<div class="hint">Sem itens nesta semana.</div>`;
+  }else{
+    for(const it of items) list.appendChild(makeRow(it));
+  }
+}
+
+/* ===================== Month view ===================== */
+function renderMonth(){
+  const base = new Date(state.monthCursor || new Date());
+  const year = base.getFullYear();
+  const month = base.getMonth(); // 0-11
+
+  $("monthLabel").textContent = `${monthName(month)} ${year}`;
+
+  const first = new Date(year, month, 1);
+  const last = new Date(year, month+1, 0);
+
+  const startGrid = startOfWeek(first);
+  const endGrid = endOfWeek(last);
+
+  const grid = $("monthGrid");
+  grid.innerHTML = "";
+
+  const todayKey = toISODate(new Date());
+
+  let d = new Date(startGrid);
+  while(d <= endGrid){
+    const cell = document.createElement("div");
+    cell.className = "mCell";
+    const key = toISODate(d);
+    const inMonth = d.getMonth()===month;
+
+    const items = itemsForDay(d);
+    const mini = items.slice(0,3).map(it=>`<div class="mMini">${safeText(typeEmoji(it.type)+" "+it.title)}</div>`).join("");
+    const more = items.length>3 ? `<div class="mMini muted">+${items.length-3} mais…</div>` : "";
+
+    cell.innerHTML = `
+      <div class="mTop">
+        <div class="mDay ${key===todayKey?'today':''} ${inMonth?'':'muted'}">${d.getDate()}</div>
+        <div class="mDots">${items.length?`<span class="dot"></span><span class="dot"></span>`:""}</div>
+      </div>
+      <div class="mBody">
+        ${mini || `<div class="mMini muted">—</div>`}
+        ${more}
+      </div>
+    `;
+    cell.addEventListener("click", ()=> renderDayDrawer(new Date(d)));
+
+    // drop tasks here => adjust due
+    attachDropOnDayCell(cell, new Date(d));
+
+    grid.appendChild(cell);
+    d = addDays(d, 1);
+  }
+
+  // list (month)
+  const list = $("monthList");
+  list.innerHTML = "";
+  const items = itemsForRange(first, last);
+  if(!items.length) list.innerHTML = `<div class="hint">Sem itens neste mês.</div>`;
+  else for(const it of items) list.appendChild(makeRow(it));
+}
+
+$("btnMonthPrev").addEventListener("click", ()=>{
+  const d = new Date(state.monthCursor || new Date());
+  d.setMonth(d.getMonth()-1);
+  state.monthCursor = d.toISOString();
+  rafRender();
+});
+$("btnMonthNext").addEventListener("click", ()=>{
+  const d = new Date(state.monthCursor || new Date());
+  d.setMonth(d.getMonth()+1);
+  state.monthCursor = d.toISOString();
+  rafRender();
+});
+$("btnMonthToday").addEventListener("click", ()=>{
+  state.monthCursor = new Date().toISOString();
+  rafRender();
+});
+
+/* ===================== Tasks view (Kanban) ===================== */
+function renderTasks(){
+  const q = state.search.trim().toLowerCase();
+  const fStatus = state.filterStatus;
+  // tasks only
+  const tasks = state.items.filter(it=>{
+    if(it.type!=="task") return false;
+    if(fStatus!=="all" && (it.status||"planned")!==fStatus) return false;
+    if(!textMatch(it,q)) return false;
+    return true;
+  });
+
+  const todo = $("kTodo"); const doing = $("kDoing"); const done = $("kDone");
+  todo.innerHTML = ""; doing.innerHTML=""; done.innerHTML="";
+
+  for(const it of tasks.sort((a,b)=> (Number(b.priority||2)-Number(a.priority||2)) || (new Date(itemKeyDate(a))-new Date(itemKeyDate(b))))){
+    const col = (it.kanban||"todo");
+    const card = makeTaskCard(it);
+    if(col==="doing") doing.appendChild(card);
+    else if(col==="done") done.appendChild(card);
+    else todo.appendChild(card);
+  }
+
+  setupDrop($("colTodo"), "todo");
+  setupDrop($("colDoing"), "doing");
+  setupDrop($("colDone"), "done");
+
+  $("btnNewTask").onclick = ()=> openNewModal("task");
+}
+
+/* ===================== Notes view ===================== */
+function renderNotes(){
+  const q = state.search.trim().toLowerCase();
+  const list = $("notesList");
+  list.innerHTML = "";
+  const notes = state.items
+    .filter(it=> it.type==="note")
+    .filter(it=> textMatch(it, q))
+    .sort((a,b)=> new Date(itemKeyDate(b)) - new Date(itemKeyDate(a)));
+
+  if(!notes.length){
+    list.innerHTML = `<div class="hint">Sem notas. Crie uma em “+”.</div>`;
+  }else{
+    for(const it of notes) list.appendChild(makeRow(it));
+  }
+
+  $("btnNewNote").onclick = ()=> openNewModal("note");
+}
+
+/* ===================== Files view ===================== */
+async function renderFiles(){
+  const list = $("filesList");
+  list.innerHTML = "";
+  let files = [];
+  try{
+    files = await idbListFiles();
+  }catch(e){
+    list.innerHTML = `<div class="hint">Erro ao ler biblioteca (IndexedDB).</div>`;
+    return;
+  }
+
+  const q = state.search.trim().toLowerCase();
+  if(q){
+    files = files.filter(f=> (f.name||"").toLowerCase().includes(q));
+  }
+
+  files.sort((a,b)=> new Date(b.addedAt||0) - new Date(a.addedAt||0));
+
+  if(!files.length){
+    list.innerHTML = `<div class="hint">Sem arquivos na biblioteca. Use “Importar”.</div>`;
+    return;
+  }
+
+  for(const f of files){
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `
+      <div class="main">
+        <div class="name">${safeText(f.name||"arquivo")}</div>
+        <div class="meta">
+          <span class="badge"><b>${safeText(f.type||"")}</b></span>
+          <span class="badge"><b>${safeText(formatBytes(f.size||0))}</b></span>
+          <span class="badge">Adicionado: <b>${safeText(fmtNiceDT(f.addedAt))}</b></span>
+        </div>
+      </div>
+      <div class="right">
+        <button class="btn" data-dl="${f.id}">Baixar</button>
+        <button class="btn danger" data-rm="${f.id}">Apagar</button>
+      </div>
+    `;
+    row.addEventListener("click", async (e)=>{
+      const t = e.target;
+      if(t?.dataset?.dl){
+        const obj = await idbGetFile(t.dataset.dl);
+        if(!obj){ toast("Arquivo não encontrado."); return; }
+        downloadBlob(obj.blob, obj.name);
+        return;
+      }
+      if(t?.dataset?.rm){
+        const ok = confirm("Apagar este arquivo da biblioteca? (não dá para desfazer)");
+        if(!ok) return;
+        await idbDelFile(t.dataset.rm);
+        toast("Arquivo apagado.");
+        await refreshStorageInfo();
+        rafRender();
+        return;
+      }
+    });
+
+    list.appendChild(row);
+  }
+}
+
+/* ===================== Global search / filters ===================== */
+function bindTopControls(){
+  $("globalSearch").addEventListener("input", debounce(()=>{
+    state.search = $("globalSearch").value;
+    rafRender();
+  }, 40));
+
+  $("filterType").addEventListener("change", ()=>{
+    state.filterType = $("filterType").value;
+    rafRender();
+  });
+  $("filterStatus").addEventListener("change", ()=>{
+    state.filterStatus = $("filterStatus").value;
+    rafRender();
+  });
+}
+bindTopControls();
+
+/* ===================== Header stats ===================== */
+function renderStats(){
+  const now = new Date();
+  const today = itemsForDay(now);
+  const week = itemsForRange(startOfWeek(now), endOfWeek(now));
+
+  const tasks = state.items.filter(x=>x.type==="task");
+  const done = tasks.filter(x=>x.status==="done").length;
+  const open = tasks.length - done;
+
+  $("kpiToday").textContent = String(today.length);
+  $("kpiWeek").textContent = String(week.length);
+  $("kpiTasks").textContent = `${open}/${tasks.length}`;
+
+  // header info: hora / clima / local
+  $("hdrUser").textContent = state.settings.userName || "Wilson";
+  $("hdrTime").textContent = new Date().toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"});
+
+  if(state.weather.ok && state.weather.temp!=null){
+    $("hdrWeather").textContent = `${Math.round(state.weather.temp)}° • ${state.weather.desc||"Tempo"}`;
+  }else{
+    $("hdrWeather").textContent = "—";
+  }
+
+  if(state.geo.ok && state.geo.accuracy!=null){
+    $("hdrLoc").textContent = `GPS ±${Math.round(state.geo.accuracy)}m`;
+  }else{
+    $("hdrLoc").textContent = "Local: —";
+  }
+}
+
+/* ===================== Manual refresh ===================== */
+async function manualRefresh(){
+  showLoading("Atualizando…");
+  try{
+    await getGeoFix();
+    await refreshWeather();
+    await refreshStorageInfo();
+    toast("Atualizado.");
+  }finally{
+    hideLoading();
+    rafRender();
+  }
+}
+$("btnRefresh").addEventListener("click", manualRefresh);
+
+/* ===================== Keyboard shortcuts ===================== */
+document.addEventListener("keydown", (e)=>{
+  const k = e.key.toLowerCase();
+
+  // ESC closes modals
+  if(e.key==="Escape"){
+    // fecha modais abertos
+    if($("paletteModal").classList.contains("open")) return closePalette();
+    if($("itemModal").classList.contains("open")) return closeItemModal();
+    if($("restoreModal").classList.contains("open")) return closeRestore();
+    if($("drawer").classList.contains("open")) return closeDrawer();
+  }
+
+  // Ctrl+K or Cmd+K -> palette
+  if((e.ctrlKey || e.metaKey) && k==="k"){
+    e.preventDefault();
+    return openPalette();
+  }
+
+  // Ctrl+E export backup
+  if((e.ctrlKey || e.metaKey) && k==="e"){
+    e.preventDefault();
+    return doBackup();
+  }
+
+  // R refresh (quando não está digitando)
+  const ae = document.activeElement;
+  const typing = ae && (ae.tagName==="INPUT" || ae.tagName==="TEXTAREA");
+  if(!typing && !e.ctrlKey && !e.metaKey && k==="r"){
+    e.preventDefault();
+    return manualRefresh();
+  }
+
+  // quick new
+  if(!typing && k==="n"){
+    // N abre modal com opções via palette (mais elegante)
+    e.preventDefault();
+    return openPalette();
+  }
+
+  // Alt nav
+  if(e.altKey && k==="h"){ e.preventDefault(); return setTab("today"); }
+  if(e.altKey && k==="w"){ e.preventDefault(); return setTab("week"); }
+  if(e.altKey && k==="m"){ e.preventDefault(); return setTab("month"); }
+  if(e.altKey && k==="t"){ e.preventDefault(); return setTab("tasks"); }
+  if(e.altKey && k==="n"){ e.preventDefault(); return setTab("notes"); }
+  if(e.altKey && k==="f"){ e.preventDefault(); return setTab("files"); }
+  if(e.altKey && k==="s"){ e.preventDefault(); return setTab("settings"); }
+
+  // palette navigation
+  if($("paletteModal").classList.contains("open")){
+    const items = paletteItems();
+    if(e.key==="ArrowDown"){
+      e.preventDefault();
+      state.paletteIndex = Math.min(items.length-1, state.paletteIndex+1);
+      renderPalette();
+    }
+    if(e.key==="ArrowUp"){
+      e.preventDefault();
+      state.paletteIndex = Math.max(0, state.paletteIndex-1);
+      renderPalette();
+    }
+    if(e.key==="Enter"){
+      e.preventDefault();
+      const it = items[state.paletteIndex];
+      if(it) it.run();
+    }
+  }
+});
+
+$("paletteInput").addEventListener("keydown", (e)=>{
+  if(e.key==="Escape"){ e.preventDefault(); closePalette(); }
+});
+
+/* ===================== Palette input render on open ===================== */
+$("paletteModal").addEventListener("click", (e)=>{
+  if(e.target && e.target.id==="paletteModal") closePalette();
+});
+$("restoreModal").addEventListener("click", (e)=>{
+  if(e.target && e.target.id==="restoreModal") closeRestore();
+});
+$("itemModal").addEventListener("click", (e)=>{
+  if(e.target && e.target.id==="itemModal") closeItemModal();
+});
+
+/* ===================== Render pipeline ===================== */
+let _raf = 0;
+function rafRender(){
+  if(_raf) cancelAnimationFrame(_raf);
+  _raf = requestAnimationFrame(renderAll);
+}
+
+async function renderAll(){
+  _raf = 0;
+
+  // header
+  renderStats();
+
+  // tab renders
+  if(state.activeTab==="today") renderToday();
+  if(state.activeTab==="week") renderWeek();
+  if(state.activeTab==="month") renderMonth();
+  if(state.activeTab==="tasks") renderTasks();
+  if(state.activeTab==="notes") renderNotes();
+  if(state.activeTab==="files") await renderFiles();
+
+  // settings fill
+  $("setUserName").value = state.settings.userName || "Wilson";
+  $("setGeo").value = state.settings.geo || "ask";
+  $("setUnits").value = state.settings.units || "metric";
+}
+
+/* ===================== App init ===================== */
+async function init(){
+  // load persisted
+  const settings = loadSettings();
+  state.settings = {...state.settings, ...settings};
+  state.items = loadItems();
+
+  // set controls initial
+  $("globalSearch").value = state.search;
+  $("filterType").value = state.filterType;
+  $("filterStatus").value = state.filterStatus;
+
+  // open indexeddb
+  try{
+    state.db = await idbOpen();
+  }catch(e){
+    toast("Aviso: IndexedDB indisponível. Anexos podem não funcionar.");
+  }
+
+  await refreshStorageInfo();
+
+  // time ticker
+  setInterval(()=>{
+    // só re-rendera header
+    $("hdrTime").textContent = new Date().toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"});
+  }, 20_000);
+
+  // geo + weather (best effort)
+  await getGeoFix();
+  await refreshWeather();
+
+  // periodic weather refresh
+  setInterval(async ()=>{
+    await refreshWeather();
+    renderStats();
+  }, 6*60*1000);
+
+  // open default tab
+  setTab("today");
+
+  // initial render
+  rafRender();
+}
+init();
+
+/* ===================== END SCRIPT ===================== */
+</script>
+</body>
+</html>
