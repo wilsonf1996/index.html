@@ -1,0 +1,2598 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Decision OS • Tomada de Decisão (Apple/Microsoft-ish) v1.0</title>
+  <meta name="theme-color" content="#0b0d12" />
+  <meta name="color-scheme" content="dark light" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <style>
+    :root{
+      --bg0:#07080b; --bg1:#0b0d12;
+      --cardA: rgba(255,255,255,.09);
+      --cardB: rgba(255,255,255,.03);
+      --text:#eaf0ff; --muted:#9aa6c3; --line:rgba(255,255,255,.10);
+      --good:#2dd4bf; --bad:#fb7185; --warn:#fbbf24; --brand:#60a5fa;
+      --shadow: 0 20px 90px rgba(0,0,0,.58);
+      --shadow2: 0 12px 38px rgba(0,0,0,.40);
+      --r:18px; --r2:26px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display","SF Pro Text","Segoe UI", Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      --ring: 0 0 0 4px rgba(96,165,250,.14);
+      --ring2: 0 0 0 5px rgba(45,212,191,.12);
+      --tap:.985;
+      --safeTop: env(safe-area-inset-top, 0px);
+      --safeBottom: env(safe-area-inset-bottom, 0px);
+      --glass: rgba(255,255,255,.06);
+      --glass2: rgba(0,0,0,.18);
+    }
+    @media (prefers-color-scheme: light){
+      :root{
+        --bg0:#f7f7fb; --bg1:#eef0f6;
+        --cardA: rgba(255,255,255,.82);
+        --cardB: rgba(255,255,255,.62);
+        --text:#0b0d12; --muted:rgba(60,60,67,.70); --line:rgba(60,60,67,.16);
+        --shadow: 0 18px 60px rgba(0,0,0,.12);
+        --shadow2: 0 10px 30px rgba(0,0,0,.10);
+        --glass: rgba(255,255,255,.72);
+        --glass2: rgba(255,255,255,.62);
+      }
+    }
+
+    *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+    html,body{height:100%;}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      color:var(--text);
+      background:
+        radial-gradient(1200px 800px at 15% -10%, rgba(96,165,250,.22), transparent 60%),
+        radial-gradient(1000px 800px at 95% 10%, rgba(45,212,191,.14), transparent 55%),
+        radial-gradient(900px 700px at 80% 115%, rgba(251,113,133,.12), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1) 55%, var(--bg0) 100%);
+      overflow-x:hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    .safe{padding: var(--safeTop) 0 var(--safeBottom) 0;}
+    .wrap{max-width:1320px; margin:0 auto; padding:16px 16px 96px;}
+
+    .topbar{
+      position:sticky; top:0; z-index:50;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:12px 14px;
+      margin:-16px -16px 12px;
+      backdrop-filter: blur(18px);
+      background: linear-gradient(180deg, rgba(7,8,11,.92), rgba(7,8,11,.30));
+      border-bottom:1px solid var(--line);
+    }
+    @media (prefers-color-scheme: light){
+      .topbar{ background: linear-gradient(180deg, rgba(238,240,246,.90), rgba(238,240,246,.35)); }
+    }
+    .brand{display:flex; align-items:center; gap:12px; min-width:240px;}
+    .logo{
+      width:40px; height:40px; border-radius:14px;
+      background:
+        radial-gradient(14px 14px at 30% 30%, rgba(255,255,255,.35), transparent 60%),
+        radial-gradient(20px 20px at 70% 30%, rgba(255,255,255,.15), transparent 60%),
+        linear-gradient(135deg, rgba(96,165,250,.95), rgba(45,212,191,.75));
+      border:1px solid rgba(255,255,255,.15);
+      box-shadow: 0 16px 48px rgba(96,165,250,.18);
+      flex:0 0 auto;
+    }
+    .brand h1{margin:0; font-size:14px; letter-spacing:.2px; line-height:1.1}
+    .brand p{margin:0; font-size:12px; color:var(--muted); line-height:1.2}
+
+    .pill{
+      display:flex; align-items:center; gap:10px;
+      border:1px solid var(--line); background:rgba(255,255,255,.04);
+      border-radius:999px; padding:8px 10px;
+      box-shadow: 0 6px 24px rgba(0,0,0,.25) inset;
+      max-width:min(760px, 55vw);
+      overflow:hidden;
+    }
+    .pill .dot{width:8px;height:8px;border-radius:999px;background:rgba(255,255,255,.22);box-shadow:0 0 0 3px rgba(255,255,255,.06)}
+    .dot.good{background:rgba(45,212,191,.95); box-shadow:0 0 0 3px rgba(45,212,191,.12)}
+    .dot.warn{background:rgba(251,191,36,.95); box-shadow:0 0 0 3px rgba(251,191,36,.12)}
+    .dot.bad{background:rgba(251,113,133,.95); box-shadow:0 0 0 3px rgba(251,113,133,.12)}
+    .pill span{font-size:12px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+
+    .actions{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; align-items:center}
+    .btn{
+      appearance:none; border:none; cursor:pointer;
+      border-radius:12px; padding:10px 12px;
+      color:var(--text);
+      background:rgba(255,255,255,.06);
+      border:1px solid var(--line);
+      transition: transform .08s ease, background .15s ease, border-color .15s ease, filter .15s ease;
+      font-size:13px;
+      display:inline-flex; align-items:center; gap:9px;
+      user-select:none;
+      box-shadow: 0 10px 22px rgba(0,0,0,.22);
+      outline:none;
+    }
+    .btn:hover{background:rgba(255,255,255,.09); border-color:rgba(255,255,255,.14)}
+    .btn:active{transform:scale(var(--tap))}
+    .btn:focus-visible{box-shadow: var(--shadow), var(--ring)}
+    .btn.primary{
+      background: linear-gradient(135deg, rgba(96,165,250,.95), rgba(45,212,191,.72));
+      border-color: rgba(255,255,255,.18);
+      color:#071017;
+      font-weight:850;
+    }
+    .btn.danger{background:rgba(251,113,133,.14); border-color:rgba(251,113,133,.28)}
+    .btn.ghost{background:transparent; box-shadow:none}
+
+    .tabs{
+      display:flex; gap:8px; flex-wrap:wrap;
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.20);
+      border-radius: 999px;
+      padding:6px;
+    }
+    @media (prefers-color-scheme: light){ .tabs{background: rgba(255,255,255,.65);} }
+    .tab{
+      cursor:pointer;
+      padding:9px 12px;
+      border-radius: 999px;
+      font-size:12px;
+      border:1px solid transparent;
+      color: rgba(233,240,255,.92);
+      background: transparent;
+      transition: background .15s ease, border-color .15s ease, transform .08s ease;
+      user-select:none;
+      display:flex; align-items:center; gap:8px;
+      outline:none;
+      white-space:nowrap;
+    }
+    @media (prefers-color-scheme: light){ .tab{color:rgba(11,13,18,.90);} }
+    .tab:active{transform:scale(.99)}
+    .tab:focus-visible{box-shadow: var(--ring2); border-color: rgba(45,212,191,.30)}
+    .tab.active{ background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.14); }
+    @media (prefers-color-scheme: light){ .tab.active{background: rgba(0,0,0,.06); border-color: rgba(0,0,0,.10);} }
+
+    .grid{display:grid; grid-template-columns:1.2fr .8fr; gap:12px;}
+    @media (max-width: 980px){ .grid{grid-template-columns:1fr;} }
+
+    .card{
+      background: linear-gradient(180deg, var(--cardA), var(--cardB));
+      border:1px solid var(--line);
+      border-radius: var(--r2);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card .hd{
+      padding:14px 16px 12px;
+      border-bottom:1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), transparent);
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+      flex-wrap:wrap;
+    }
+    .title{display:flex; flex-direction:column; gap:4px;}
+    .title h2{margin:0; font-size:14px; letter-spacing:.2px}
+    .title p{margin:0; font-size:12px; color:var(--muted)}
+    .card .bd{padding:14px 16px 16px;}
+
+    .hint{font-size:12px; color:var(--muted); line-height:1.45}
+    .kbd{
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      color: rgba(233,238,252,.92);
+    }
+
+    .filters{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;}
+    .field{display:flex; flex-direction:column; gap:6px; min-width:160px;}
+    .field label{font-size:11px; color:var(--muted)}
+    input, select, textarea{
+      width:100%;
+      background: rgba(0,0,0,.22);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding:10px 10px;
+      color: var(--text);
+      outline:none;
+      font-family: var(--sans);
+      font-size: 13px;
+    }
+    @media (prefers-color-scheme: light){
+      input,select,textarea{background: rgba(255,255,255,.70); color: #0b0d12;}
+    }
+    textarea{min-height:92px; resize: vertical;}
+    input::placeholder, textarea::placeholder{color:rgba(154,166,195,.72)}
+    input:focus, select:focus, textarea:focus{border-color: rgba(96,165,250,.55); box-shadow: var(--ring);}
+    .divider{height:1px; background:var(--line); margin:12px 0;}
+
+    .list{display:flex; flex-direction:column; gap:10px;}
+    .row{
+      display:grid;
+      grid-template-columns: 1.2fr .7fr .6fr .9fr;
+      gap:10px;
+      align-items:center;
+      padding:12px;
+      border-radius: var(--r);
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.18);
+      transition: transform .08s ease, border-color .15s ease, background .15s ease;
+      cursor:pointer;
+      outline:none;
+    }
+    @media (prefers-color-scheme: light){ .row{background: rgba(255,255,255,.60);} }
+    .row:hover{border-color:rgba(255,255,255,.14); background: rgba(0,0,0,.22)}
+    @media (prefers-color-scheme: light){ .row:hover{background: rgba(255,255,255,.76); border-color: rgba(0,0,0,.12);} }
+    .row:active{transform:scale(.995)}
+    .row:focus-visible{box-shadow: var(--ring2); border-color: rgba(45,212,191,.30)}
+    @media (max-width:820px){ .row{grid-template-columns:1fr; gap:8px;} }
+
+    .main{display:flex; flex-direction:column; gap:3px;}
+    .name{font-size:13px; font-weight:900}
+    .meta{font-size:11px; color:var(--muted); display:flex; flex-wrap:wrap; gap:8px}
+    .badge{
+      font-size:11px;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      color: var(--muted);
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+    }
+    .badge b{color:var(--text); font-weight:950}
+    .right{display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap}
+    .mono{font-family:var(--mono)}
+    .amount{ text-align:right; font-family: var(--mono); font-size: 12px; font-weight:900; white-space:nowrap; }
+
+    .kpis{display:grid; grid-template-columns: repeat(4, 1fr); gap:10px;}
+    @media (max-width:980px){ .kpis{grid-template-columns: repeat(2, 1fr);} }
+    .kpi{
+      background: rgba(0,0,0,.18);
+      border:1px solid var(--line);
+      border-radius: var(--r);
+      padding:12px;
+      display:flex; flex-direction:column; gap:6px;
+      min-height:78px;
+    }
+    @media (prefers-color-scheme: light){ .kpi{background: rgba(255,255,255,.60);} }
+    .kpi .label{font-size:12px; color:var(--muted)}
+    .kpi .value{font-size:18px; font-weight:900; letter-spacing:.2px}
+    .kpi .sub{font-size:11px; color:var(--muted)}
+    .good{color:var(--good)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+
+    .miniGrid{display:grid; grid-template-columns: 1fr 1fr; gap:10px;}
+    @media (max-width:980px){ .miniGrid{grid-template-columns:1fr;} }
+    .panelBox{
+      border:1px solid var(--line);
+      border-radius: var(--r2);
+      background: rgba(0,0,0,.12);
+      padding:12px;
+    }
+    @media (prefers-color-scheme: light){ .panelBox{background: rgba(255,255,255,.62);} }
+    canvas{width:100%; height:220px; display:block; border-radius: 16px; border:1px solid var(--line); background: rgba(255,255,255,.03);}
+    @media (prefers-color-scheme: light){ canvas{background: rgba(255,255,255,.55);} }
+
+    .chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;}
+    .chip{
+      display:inline-flex; align-items:center; gap:8px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      border-radius:999px;
+      padding:7px 10px;
+      font-size:12px;
+      font-weight:900;
+      color: var(--text);
+      cursor:pointer;
+      user-select:none;
+    }
+    @media (prefers-color-scheme: light){ .chip{background: rgba(0,0,0,.05);} }
+    .chip:active{transform:scale(var(--tap))}
+    .chip small{font-weight:700; color:var(--muted)}
+    .chip .x{
+      width:18px;height:18px;border-radius:999px;
+      display:grid; place-items:center;
+      background: rgba(251,113,133,.14);
+      border:1px solid rgba(251,113,133,.28);
+      color: var(--bad);
+      font-weight:1000;
+      line-height:0;
+    }
+
+    .toast{
+      position:fixed; left:50%; transform:translateX(-50%);
+      bottom: 16px;
+      z-index:999;
+      background: rgba(15,18,26,.88);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius: 999px;
+      padding:10px 14px;
+      backdrop-filter: blur(14px);
+      box-shadow: var(--shadow);
+      max-width:min(980px, calc(100% - 22px));
+      display:none;
+      font-size:13px;
+      color: var(--text);
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    @media (prefers-color-scheme: light){
+      .toast{background: rgba(255,255,255,.86); border-color: rgba(0,0,0,.12);}
+    }
+    .toast.show{display:flex}
+    .toast .msg{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:72vw}
+
+    .modal{
+      position:fixed; inset:0; display:none; place-items:center; z-index:1000;
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(8px);
+      padding: 16px;
+    }
+    .modal.show{display:grid}
+    .panel{
+      width:min(1020px, 100%);
+      border-radius: 24px;
+      border:1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      transform: translateY(4px);
+    }
+    @media (prefers-color-scheme: light){
+      .panel{border-color: rgba(0,0,0,.12); background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.70));}
+      .modal{background: rgba(0,0,0,.30);}
+    }
+    .phd{
+      padding:14px 16px;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      border-bottom:1px solid var(--line);
+    }
+    .phd h3{margin:0; font-size:14px}
+    .phd p{margin:0; font-size:12px; color:var(--muted)}
+    .pbd{padding:14px 16px 16px;}
+    .pft{
+      padding:12px 16px;
+      border-top:1px solid var(--line);
+      display:flex; gap:10px; justify-content:space-between; align-items:center; flex-wrap:wrap;
+    }
+
+    .loading{
+      position:fixed; inset:0; z-index:1200;
+      display:none; place-items:center;
+      background: rgba(0,0,0,.35);
+      backdrop-filter: blur(10px);
+      padding: 16px;
+    }
+    .loading.show{display:grid}
+    .loadingCard{
+      width:min(560px, 100%);
+      border-radius: 22px;
+      border:1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      box-shadow: var(--shadow);
+      padding: 14px 14px;
+      display:flex;
+      gap:12px;
+      align-items:center;
+    }
+    @media (prefers-color-scheme: light){
+      .loadingCard{border-color: rgba(0,0,0,.12); background: rgba(255,255,255,.85);}
+      .loading{background: rgba(0,0,0,.18);}
+    }
+    .spinner{
+      width:18px;height:18px;border-radius:999px;
+      border:2px solid rgba(255,255,255,.18);
+      border-top-color: rgba(96,165,250,.9);
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to{ transform: rotate(360deg);} }
+
+    .bottomNav{
+      position:fixed; left:0; right:0; bottom:0; z-index:60;
+      padding: 10px 12px calc(10px + var(--safeBottom));
+      backdrop-filter: blur(18px);
+      background: linear-gradient(180deg, rgba(7,8,11,.10), rgba(7,8,11,.78));
+      border-top: 1px solid var(--line);
+      display:none;
+    }
+    @media (prefers-color-scheme: light){
+      .bottomNav{ background: linear-gradient(180deg, rgba(238,240,246,.15), rgba(238,240,246,.86)); }
+    }
+    .bottomNav .tabs{width:100%; justify-content:space-between;}
+    @media (max-width:980px){
+      .bottomNav{display:block;}
+      .desktopTabs{display:none;}
+      .wrap{padding-bottom:132px;}
+    }
+    @media (prefers-reduced-motion: reduce){
+      *{scroll-behavior:auto !important; transition:none !important; animation:none !important}
+    }
+  </style>
+</head>
+
+<body class="safe">
+  <div class="wrap">
+    <header class="topbar" role="banner">
+      <div class="brand" aria-label="Identidade do app">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Decision OS</h1>
+          <p id="subtitle">Decisões • MCDA • Risco • Cenários • Decision Log</p>
+        </div>
+      </div>
+
+      <div class="actions" aria-label="Ações do topo">
+        <div class="pill" title="Usuário e status" aria-live="polite">
+          <span class="dot" id="statusDot" aria-hidden="true"></span>
+          <span id="statusLine">Inicializando…</span>
+        </div>
+
+        <div class="desktopTabs" aria-label="Navegação">
+          <div class="tabs" id="tabsTop" role="tablist">
+            <button class="tab active" data-tab="inbox" role="tab">🧠 Decisões</button>
+            <button class="tab" data-tab="dash" role="tab">📊 Dashboard</button>
+            <button class="tab" data-tab="models" role="tab">🧩 Modelos</button>
+            <button class="tab" data-tab="files" role="tab">📎 Arquivos</button>
+            <button class="tab" data-tab="settings" role="tab">⚙️ Ajustes</button>
+          </div>
+        </div>
+
+        <button class="btn ghost" id="btnBackup" title="Exportar backup JSON (Ctrl+E)">⤓ Backup</button>
+        <button class="btn primary" id="btnNew" title="Nova decisão (N)">＋ Nova decisão</button>
+      </div>
+    </header>
+
+    <main class="grid" role="main">
+      <!-- LEFT -->
+      <section class="card" aria-label="Conteúdo">
+        <div class="hd">
+          <div class="title">
+            <h2 id="pageTitle">Decisões</h2>
+            <p id="pageSub">Lista + filtro + status + trilha de decisão</p>
+          </div>
+
+          <div class="right">
+            <div class="field" style="min-width:220px;">
+              <label for="quickFilter">Filtro rápido</label>
+              <select id="quickFilter">
+                <option value="all">Tudo</option>
+                <option value="open">Abertas</option>
+                <option value="decided">Decididas</option>
+                <option value="archived">Arquivadas</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="bd">
+          <!-- INBOX -->
+          <div id="viewInbox">
+            <div class="kpis" aria-label="Indicadores">
+              <div class="kpi">
+                <div class="label">Usuário</div>
+                <div class="value" id="kpiUser">—</div>
+                <div class="sub">Perfil local</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Abertas</div>
+                <div class="value" id="kpiOpen">—</div>
+                <div class="sub">Em análise</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Decididas</div>
+                <div class="value" id="kpiDecided">—</div>
+                <div class="sub">Com log</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Revisão próxima</div>
+                <div class="value" id="kpiReview">—</div>
+                <div class="sub">Dias</div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="filters" aria-label="Busca">
+              <div class="field" style="min-width:280px;">
+                <label for="search">Buscar</label>
+                <input id="search" placeholder="Ex: troca de emprego, MBA, compra, relacionamento…" />
+              </div>
+              <div class="field" style="min-width:220px;">
+                <label for="domainFilter">Domínio</label>
+                <select id="domainFilter"></select>
+              </div>
+              <div class="field" style="min-width:220px;">
+                <label for="sort">Ordenar</label>
+                <select id="sort">
+                  <option value="updated">Atualização</option>
+                  <option value="deadline">Prazo</option>
+                  <option value="score">Score</option>
+                  <option value="risk">Risco</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="title" style="margin-bottom:10px;">
+              <h2 style="margin:0; font-size:13px;">Lista de decisões</h2>
+              <p style="margin:0; font-size:12px; color:var(--muted)">Abra uma decisão para ver ranking, gráficos e checklist anti-viés</p>
+            </div>
+            <div class="list" id="decisionList"></div>
+          </div>
+
+          <!-- DASH -->
+          <div id="viewDash" style="display:none;">
+            <div class="hint">
+              Dashboard técnico: MCDA (pontuação ponderada), risco ajustado, radar e matriz risco×retorno.
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="filters">
+              <div class="field" style="min-width:280px;">
+                <label for="dashPick">Decisão para analisar</label>
+                <select id="dashPick"></select>
+              </div>
+              <div class="field" style="min-width:220px;">
+                <label for="dashMode">Modo</label>
+                <select id="dashMode">
+                  <option value="riskAdj">Score ajustado por risco</option>
+                  <option value="raw">Score bruto (sem risco)</option>
+                </select>
+              </div>
+              <div class="field" style="min-width:220px;">
+                <label>&nbsp;</label>
+                <button class="btn" id="btnRecalc">⟳ Recalcular</button>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="miniGrid">
+              <div class="panelBox">
+                <div class="title" style="margin-bottom:8px;">
+                  <h2 style="margin:0; font-size:13px;">Radar (critérios)</h2>
+                  <p style="margin:0; font-size:12px; color:var(--muted)">Visualiza força por critério</p>
+                </div>
+                <canvas id="radar"></canvas>
+                <div class="hint" id="radarHint" style="margin-top:8px;">Selecione uma decisão com 2+ opções e 3+ critérios.</div>
+              </div>
+
+              <div class="panelBox">
+                <div class="title" style="margin-bottom:8px;">
+                  <h2 style="margin:0; font-size:13px;">Risco × Retorno</h2>
+                  <p style="margin:0; font-size:12px; color:var(--muted)">Matriz técnica para comparação</p>
+                </div>
+                <canvas id="riskReturn"></canvas>
+                <div class="hint" id="rrHint" style="margin-top:8px;">Risco = prob×impacto (0–100). Retorno = score (0–100).</div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="title" style="margin-bottom:10px;">
+              <h2 style="margin:0; font-size:13px;">Ranking</h2>
+              <p style="margin:0; font-size:12px; color:var(--muted)">Ordena opções e mostra justificativa objetiva</p>
+            </div>
+            <div class="list" id="rankList"></div>
+          </div>
+
+          <!-- MODELS -->
+          <div id="viewModels" style="display:none;">
+            <div class="hint">
+              Modelos por domínio: cria uma decisão já com <b>critérios & pesos</b> técnicos (editáveis).
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="filters">
+              <div class="field" style="min-width:280px;">
+                <label for="modelDomain">Domínio</label>
+                <select id="modelDomain"></select>
+              </div>
+              <div class="field" style="min-width:260px; flex: 1 1 auto;">
+                <label for="modelName">Nome do modelo</label>
+                <input id="modelName" placeholder="Ex: Carreira / Compra grande / Saúde / Filhos…" />
+              </div>
+              <div class="field" style="min-width:220px;">
+                <label>&nbsp;</label>
+                <button class="btn primary" id="btnCreateFromModel">＋ Criar decisão a partir do modelo</button>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="title" style="margin-bottom:10px;">
+              <h2 style="margin:0; font-size:13px;">Biblioteca de modelos</h2>
+              <p style="margin:0; font-size:12px; color:var(--muted)">Você pode duplicar e editar depois.</p>
+            </div>
+            <div class="list" id="modelList"></div>
+          </div>
+
+          <!-- FILES -->
+          <div id="viewFiles" style="display:none;">
+            <div class="filters">
+              <div class="field" style="min-width:280px;">
+                <label for="fileSearch">Buscar arquivo</label>
+                <input id="fileSearch" placeholder="Ex: pdf, contrato, foto…" />
+              </div>
+              <div class="field" style="min-width:240px;">
+                <label>&nbsp;</label>
+                <button class="btn" id="btnAddFiles">📎 Importar arquivos</button>
+                <input id="filesInput" type="file" multiple style="display:none" />
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="hint">
+              Arquivos ficam <b>no seu navegador</b> (IndexedDB). Você pode anexar em cada decisão.
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="list" id="filesList"></div>
+          </div>
+
+          <!-- SETTINGS -->
+          <div id="viewSettings" style="display:none;">
+            <div class="hint">
+              Ajustes locais. Sem login por enquanto. Backup JSON exporta decisões e modelos (anexos ficam na IndexedDB).
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="filters">
+              <div class="field" style="min-width:260px;">
+                <label for="setUserName">Nome do usuário</label>
+                <input id="setUserName" placeholder="Ex: Wilson" />
+              </div>
+              <div class="field" style="min-width:260px;">
+                <label for="setRiskPolicy">Política de risco (global)</label>
+                <select id="setRiskPolicy">
+                  <option value="balanced">Balanceado</option>
+                  <option value="conservative">Conservador</option>
+                  <option value="aggressive">Agressivo</option>
+                </select>
+              </div>
+              <div class="field" style="min-width:260px;">
+                <label for="setReviewDays">Revisar decisão em (dias)</label>
+                <select id="setReviewDays">
+                  <option value="7">7</option>
+                  <option value="14">14</option>
+                  <option value="30" selected>30</option>
+                  <option value="60">60</option>
+                  <option value="90">90</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="filters">
+              <div class="field" style="min-width:260px;">
+                <label>&nbsp;</label>
+                <button class="btn primary" id="btnSaveSettings">✔ Salvar ajustes</button>
+              </div>
+              <div class="field" style="min-width:260px;">
+                <label>&nbsp;</label>
+                <button class="btn" id="btnDemo">✨ Criar dados demo</button>
+              </div>
+              <div class="field" style="min-width:260px;">
+                <label>&nbsp;</label>
+                <button class="btn danger" id="btnWipe">🗑️ Limpar decisões</button>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="filters">
+              <div class="field" style="min-width:260px;">
+                <label>&nbsp;</label>
+                <button class="btn" id="btnRestore">⤒ Importar backup</button>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="hint">
+              Atalhos: <span class="kbd">N</span> nova decisão • <span class="kbd">Ctrl+E</span> backup • <span class="kbd">Esc</span> fechar • <span class="kbd">Ctrl+K</span> buscar
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT -->
+      <aside class="card" aria-label="Painel rápido">
+        <div class="hd">
+          <div class="title">
+            <h2>Centro</h2>
+            <p id="rightSub">Resumo + decisão selecionada</p>
+          </div>
+          <button class="btn ghost" id="btnNow">⟳ Atualizar</button>
+        </div>
+
+        <div class="bd">
+          <div class="kpi" style="margin-bottom:10px;">
+            <div class="label">Agora</div>
+            <div class="value" id="nowTime">—</div>
+            <div class="sub" id="nowMeta">—</div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="title" style="margin-bottom:10px;">
+            <h2 style="margin:0; font-size:13px;">Em foco</h2>
+            <p style="margin:0; font-size:12px; color:var(--muted)">Resumo técnico da decisão selecionada</p>
+          </div>
+
+          <div class="panelBox" id="focusBox">
+            <div class="hint" id="focusHint">Selecione uma decisão na lista para ver o resumo aqui.</div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="title">
+            <h2 style="margin:0; font-size:13px;">Privacidade</h2>
+            <p style="margin:0; font-size:12px; color:var(--muted)">Sem login • dados locais</p>
+          </div>
+          <div class="divider"></div>
+
+          <div class="hint">
+            ✅ MCDA (pontuação ponderada)<br/>
+            ✅ Ajuste por risco (prob×impacto)<br/>
+            ✅ Cenários e custo da inação<br/>
+            ✅ Pre-mortem e anti-viés<br/>
+            ✅ Decision Log (aprender com você)<br/>
+            ✅ Anexos (IndexedDB)
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <!-- Mobile bottom nav -->
+  <nav class="bottomNav" aria-label="Navegação inferior">
+    <div class="tabs" id="tabsBottom" role="tablist">
+      <button class="tab active" data-tab="inbox" title="Decisões">🧠</button>
+      <button class="tab" data-tab="dash" title="Dashboard">📊</button>
+      <button class="tab" data-tab="models" title="Modelos">🧩</button>
+      <button class="tab" data-tab="files" title="Arquivos">📎</button>
+      <button class="tab" data-tab="settings" title="Ajustes">⚙️</button>
+    </div>
+  </nav>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-hidden="true">
+    <div class="msg" id="toastMsg">—</div>
+    <button class="btn ghost" id="toastClose" style="padding:8px 10px;">OK</button>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" id="loading" aria-hidden="true">
+    <div class="loadingCard">
+      <div class="spinner" aria-hidden="true"></div>
+      <div>
+        <div style="font-weight:950; font-size:13px;">Processando</div>
+        <div class="hint" id="loadingMsg">Carregando…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Decision Modal -->
+  <div class="modal" id="decisionModal" aria-hidden="true">
+    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="phd">
+        <div class="title">
+          <h3 id="modalTitle">Nova decisão</h3>
+          <p id="modalSub">Defina domínio, opções, critérios, pesos, riscos e cenários</p>
+        </div>
+        <div class="right">
+          <button class="btn ghost" id="btnCloseModal">Fechar</button>
+        </div>
+      </div>
+
+      <div class="pbd">
+        <div class="filters">
+          <div class="field" style="min-width:260px;">
+            <label for="dDomain">Domínio</label>
+            <select id="dDomain"></select>
+          </div>
+          <div class="field" style="min-width:240px;">
+            <label for="dStatus">Status</label>
+            <select id="dStatus">
+              <option value="open">Aberta</option>
+              <option value="decided">Decidida</option>
+              <option value="archived">Arquivada</option>
+            </select>
+          </div>
+          <div class="field" style="min-width:240px;">
+            <label for="dDeadline">Prazo para decidir</label>
+            <input id="dDeadline" type="date" />
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="filters">
+          <div class="field" style="min-width:320px; flex:1 1 auto;">
+            <label for="dTitle">Título</label>
+            <input id="dTitle" placeholder="Ex: Trocar de emprego / Comprar carro / Ter filhos / Mudar de cidade…" />
+          </div>
+          <div class="field" style="min-width:240px;">
+            <label for="dReversible">Reversibilidade</label>
+            <select id="dReversible">
+              <option value="2">Reversível (porta dupla)</option>
+              <option value="1">Semi-reversível</option>
+              <option value="0">Irreversível (porta única)</option>
+            </select>
+          </div>
+          <div class="field" style="min-width:240px;">
+            <label for="dHorizon">Horizonte</label>
+            <select id="dHorizon">
+              <option value="short">Curto (0–6m)</option>
+              <option value="mid">Médio (6–24m)</option>
+              <option value="long">Longo (2–10a)</option>
+              <option value="verylong">Muito longo (10a+)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="filters">
+          <div class="field" style="min-width:280px; flex:1 1 auto;">
+            <label for="dContext">Contexto (fatos e premissas)</label>
+            <textarea id="dContext" placeholder="Escreva fatos, dados, restrições, premissas. Ex: salário, localização, prazos, responsabilidades…"></textarea>
+          </div>
+          <div class="field" style="min-width:280px; flex:1 1 auto;">
+            <label for="dInaction">Custo da inação</label>
+            <textarea id="dInaction" placeholder="Se eu NÃO decidir, o que acontece em 3/6/12 meses?"></textarea>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="filters">
+          <div class="field" style="min-width:300px; flex:1 1 auto;">
+            <label for="dOptions">Opções (uma por linha)</label>
+            <textarea id="dOptions" placeholder="Opção A&#10;Opção B&#10;Opção C"></textarea>
+            <div class="hint">Dica: 2–5 opções costuma ser o ideal (evita paralisia).</div>
+          </div>
+          <div class="field" style="min-width:300px; flex:1 1 auto;">
+            <label for="dCriteria">Critérios e pesos (uma por linha: nome | peso)</label>
+            <textarea id="dCriteria" placeholder="Crescimento | 25&#10;Risco | 20&#10;Custo | 15&#10;Tempo | 15&#10;Qualidade de vida | 25"></textarea>
+            <div class="hint">Peso total não precisa dar 100 — o app normaliza.</div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="filters">
+          <div class="field" style="min-width:300px; flex:1 1 auto;">
+            <label for="dScores">Notas por opção (0–10) — formato: opção | critério=nota, ...</label>
+            <textarea id="dScores" placeholder="Opção A | Crescimento=8, Risco=5, Custo=6, Tempo=7, Qualidade de vida=8&#10;Opção B | Crescimento=6, Risco=8, Custo=7, Tempo=6, Qualidade de vida=7"></textarea>
+            <div class="hint">Você pode preencher aos poucos. Critérios faltantes assumem 0 (editável depois).</div>
+          </div>
+          <div class="field" style="min-width:300px; flex:1 1 auto;">
+            <label for="dRisk">Risco por opção (0–10) — formato: opção | prob=, impacto=</label>
+            <textarea id="dRisk" placeholder="Opção A | prob=4, impacto=7&#10;Opção B | prob=3, impacto=5"></textarea>
+            <div class="hint">Risco = prob×impacto (0–100). O app ajusta o score conforme política de risco.</div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="filters">
+          <div class="field" style="min-width:280px; flex:1 1 auto;">
+            <label for="dProsCons">Prós/Contras (livre, mas técnico)</label>
+            <textarea id="dProsCons" placeholder="Opção A — PRÓS: … / CONTRAS: …&#10;Opção B — PRÓS: … / CONTRAS: …"></textarea>
+          </div>
+          <div class="field" style="min-width:280px; flex:1 1 auto;">
+            <label for="dPremortem">Pré-mortem (se deu errado, por quê?)</label>
+            <textarea id="dPremortem" placeholder="Liste causas de falha e medidas preventivas."></textarea>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="filters">
+          <div class="field" style="min-width:280px; flex:1 1 auto;">
+            <label for="dBias">Anti-viés (checklist rápido)</label>
+            <textarea id="dBias" placeholder="Ex: estou ancorado em um número? estou confirmando só o que quero ouvir? estou decidindo sob estresse?"></textarea>
+          </div>
+          <div class="field" style="min-width:320px;">
+            <label for="dFiles">Anexos</label>
+            <input id="dFiles" type="file" multiple />
+            <div class="hint" style="margin-top:6px;">PDFs/fotos ficam no navegador. Você consegue abrir/baixar depois.</div>
+            <div class="chips" id="dFileChips"></div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="filters">
+          <div class="field" style="min-width:280px; flex:1 1 auto;">
+            <label for="dDecisionLog">Decision Log (quando decidir)</label>
+            <textarea id="dDecisionLog" placeholder="Decisão tomada: …&#10;Justificativa: …&#10;O que eu aceito perder: …&#10;Próxima revisão em: …"></textarea>
+            <div class="hint">O app pode lembrar pela data (sem notificações, só no dashboard).</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pft">
+        <div class="hint" id="modalFootHint">Criado em: —</div>
+        <div class="right">
+          <button class="btn danger" id="btnDelete" style="display:none;">🗑️ Excluir</button>
+          <button class="btn" id="btnDuplicate">⎘ Duplicar</button>
+          <button class="btn primary" id="btnSave">✔ Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Restore Modal -->
+  <div class="modal" id="restoreModal" aria-hidden="true">
+    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="restoreTitle">
+      <div class="phd">
+        <div class="title">
+          <h3 id="restoreTitle">Importar backup</h3>
+          <p>Restaura decisões/modelos (sem anexos). Anexos ficam na IndexedDB local.</p>
+        </div>
+        <div class="right">
+          <button class="btn ghost" id="btnCloseRestore">Fechar</button>
+        </div>
+      </div>
+      <div class="pbd">
+        <div class="filters">
+          <div class="field" style="min-width:320px;">
+            <label for="restoreFile">Arquivo JSON</label>
+            <input id="restoreFile" type="file" accept="application/json" />
+          </div>
+          <div class="field" style="min-width:240px;">
+            <label>&nbsp;</label>
+            <button class="btn primary" id="btnDoRestore">⬆ Importar</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="hint">
+          Segurança: importe apenas backup do seu app.
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* =========================================================
+   Decision OS — single-file app (v1.0)
+   - Domínios + modelos por domínio (templates)
+   - MCDA (score ponderado) + ajuste por risco
+   - Cenários + custo da inação
+   - Pre-mortem + anti-viés + Decision Log
+   - Arquivos: IndexedDB
+   ========================================================= */
+
+const $ = (id)=>document.getElementById(id);
+const $$ = (sel, root=document)=>Array.from(root.querySelectorAll(sel));
+
+const LS_DECISIONS = "decision_os_v1_decisions";
+const LS_MODELS    = "decision_os_v1_models";
+const LS_SETTINGS  = "decision_os_v1_settings";
+const LS_ACTIVE_TAB= "decision_os_v1_active_tab";
+
+const DB_NAME = "DecisionOS_DB";
+const DB_VER = 1;
+const FILE_STORE = "files";
+
+const state = {
+  activeTab: "inbox",
+  decisions: [],
+  models: [],
+  settings: { userName: "Wilson", riskPolicy: "balanced", reviewDays: 30 },
+
+  selectedId: null,
+  editingId: null,
+  tempFiles: [],
+  db: null,
+
+  renderQueued:false,
+  toastTimer:null
+};
+
+const DOMAINS = [
+  {id:"professional", label:"Profissional / Carreira"},
+  {id:"financial",    label:"Financeiro"},
+  {id:"family",       label:"Familiar"},
+  {id:"relationship", label:"Relacionamentos"},
+  {id:"children",     label:"Filhos"},
+  {id:"health",       label:"Saúde"},
+  {id:"future",       label:"Futuro / Longo prazo"},
+  {id:"education",    label:"Educação"},
+  {id:"lifestyle",    label:"Mudança de vida"},
+  {id:"ethics",       label:"Ética / Valores"},
+  {id:"personal",     label:"Pessoal / Autoconhecimento"}
+];
+
+const DEFAULT_MODELS = [
+  {
+    id:"m_career",
+    domain:"professional",
+    name:"Carreira (técnico e estratégico)",
+    criteria:[
+      ["Crescimento",25],["Aprendizado",15],["Reputação",15],["Autonomia",10],
+      ["Estabilidade",10],["Risco",15],["Qualidade de vida",10]
+    ],
+    notes:"Use risco com penalização moderada."
+  },
+  {
+    id:"m_finance",
+    domain:"financial",
+    name:"Financeiro (retorno e proteção)",
+    criteria:[
+      ["Retorno esperado",25],["Risco",25],["Liquidez",15],["Prazo",15],["Custo de oportunidade",10],["Simplicidade",10]
+    ],
+    notes:"Regra: risco pesa alto."
+  },
+  {
+    id:"m_health",
+    domain:"health",
+    name:"Saúde (conservador)",
+    criteria:[
+      ["Segurança",35],["Evidência",25],["Eficácia",20],["Reversibilidade",10],["Custo",10]
+    ],
+    notes:"Regra: risco alto deve travar a decisão."
+  },
+  {
+    id:"m_children",
+    domain:"children",
+    name:"Filhos (longo prazo)",
+    criteria:[
+      ["Segurança",30],["Impacto no futuro",25],["Estabilidade",20],["Custo",10],["Qualidade de vida familiar",15]
+    ],
+    notes:"Horizonte longo e penalização forte por risco."
+  },
+  {
+    id:"m_relationship",
+    domain:"relationship",
+    name:"Relacionamentos (valores e confiança)",
+    criteria:[
+      ["Alinhamento de valores",30],["Confiança",25],["Compatibilidade",20],["Custo emocional",15],["Futuro",10]
+    ],
+    notes:"Aqui o app desacelera: registre emoções e evidências."
+  }
+];
+
+/* ===================== UX ===================== */
+function showLoading(msg="Carregando…"){
+  $("loadingMsg").textContent = msg;
+  $("loading").classList.add("show");
+  $("loading").setAttribute("aria-hidden","false");
+}
+function hideLoading(){
+  $("loading").classList.remove("show");
+  $("loading").setAttribute("aria-hidden","true");
+}
+function toast(msg){
+  $("toastMsg").textContent = msg;
+  $("toast").classList.add("show");
+  $("toast").setAttribute("aria-hidden","false");
+  clearTimeout(state.toastTimer);
+  state.toastTimer = setTimeout(()=> {
+    $("toast").classList.remove("show");
+    $("toast").setAttribute("aria-hidden","true");
+  }, 2600);
+}
+$("toastClose").addEventListener("click", ()=> {
+  $("toast").classList.remove("show");
+  $("toast").setAttribute("aria-hidden","true");
+});
+function rafRender(){
+  if(state.renderQueued) return;
+  state.renderQueued = true;
+  requestAnimationFrame(async ()=>{
+    state.renderQueued = false;
+    await renderAll();
+  });
+}
+function debounce(fn, ms){
+  let t=null;
+  return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); };
+}
+
+/* ===================== Modal A11y ===================== */
+function getFocusable(container){
+  return Array.from(container.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+    .filter(el=>!el.disabled && el.offsetParent!==null);
+}
+let modalTrapHandler=null, lastFocus=null;
+function openModal(id){
+  const m=$(id); lastFocus=document.activeElement;
+  m.classList.add("show"); m.setAttribute("aria-hidden","false");
+  document.body.style.overflow="hidden";
+  const panel=m.querySelector(".panel");
+  const f=getFocusable(panel); if(f[0]) f[0].focus({preventScroll:true});
+  modalTrapHandler=(e)=>{
+    if(e.key!=="Tab") return;
+    const items=getFocusable(panel); if(items.length===0) return;
+    const first=items[0], last=items[items.length-1];
+    if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+  };
+  document.addEventListener("keydown", modalTrapHandler);
+  m.addEventListener("mousedown",(e)=>{
+    const p=m.querySelector(".panel");
+    if(p && !p.contains(e.target)){
+      if(id==="decisionModal") closeDecisionModal();
+      if(id==="restoreModal") closeRestore();
+    }
+  },{once:true});
+}
+function closeModal(id){
+  const m=$(id);
+  m.classList.remove("show"); m.setAttribute("aria-hidden","true");
+  document.body.style.overflow="";
+  if(modalTrapHandler){ document.removeEventListener("keydown", modalTrapHandler); modalTrapHandler=null; }
+  if(lastFocus) lastFocus.focus({preventScroll:true});
+}
+
+/* ===================== Helpers ===================== */
+function pad(n){return String(n).padStart(2,"0");}
+function toISODate(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function fmtNiceDT(ts){
+  if(!ts) return "—";
+  const d=new Date(ts); if(isNaN(d.getTime())) return "—";
+  return d.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+}
+function safeText(s){
+  return String(s||"")
+    .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+}
+function uid(){ return (crypto?.randomUUID?.() || `id_${Date.now()}_${Math.random().toString(16).slice(2)}`); }
+function domainLabel(id){ return (DOMAINS.find(d=>d.id===id)?.label || "—"); }
+function clamp(n,a,b){ n=Number(n||0); return Math.max(a, Math.min(b, n)); }
+function nowClock(){
+  const d=new Date();
+  $("nowTime").textContent = d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  $("nowMeta").textContent = `${state.settings.userName||"Usuário"} • ${d.toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit",month:"short"})}`;
+}
+function setStatus(dotClass, text){
+  const d = $("statusDot");
+  d.classList.remove("good","warn","bad");
+  if(dotClass) d.classList.add(dotClass);
+  $("statusLine").textContent = text;
+}
+
+/* ===================== Storage ===================== */
+function loadAll(){
+  try{ state.decisions = JSON.parse(localStorage.getItem(LS_DECISIONS) || "[]"); }catch(e){ state.decisions=[]; }
+  try{ state.models = JSON.parse(localStorage.getItem(LS_MODELS) || "[]"); }catch(e){ state.models=[]; }
+  try{
+    const s = JSON.parse(localStorage.getItem(LS_SETTINGS) || "{}");
+    state.settings = {...state.settings, ...s};
+  }catch(e){}
+  try{
+    const t = localStorage.getItem(LS_ACTIVE_TAB);
+    if(t) state.activeTab = t;
+  }catch(e){}
+}
+function saveAll(){
+  localStorage.setItem(LS_DECISIONS, JSON.stringify(state.decisions));
+  localStorage.setItem(LS_MODELS, JSON.stringify(state.models));
+  localStorage.setItem(LS_SETTINGS, JSON.stringify(state.settings));
+  localStorage.setItem(LS_ACTIVE_TAB, state.activeTab);
+}
+
+/* ===================== IndexedDB ===================== */
+function idbOpen(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded=()=>{
+      const db=req.result;
+      if(!db.objectStoreNames.contains(FILE_STORE)){
+        const st=db.createObjectStore(FILE_STORE,{keyPath:"id"});
+        st.createIndex("by_name","name",{unique:false});
+        st.createIndex("by_addedAt","addedAt",{unique:false});
+      }
+    };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+function idbTx(mode="readonly"){
+  if(!state.db) throw new Error("IDB_OFF");
+  const tx=state.db.transaction(FILE_STORE, mode);
+  return {tx, store: tx.objectStore(FILE_STORE)};
+}
+function idbPutFile(fileObj){
+  return new Promise((resolve,reject)=>{
+    let tx,store; try{({tx,store}=idbTx("readwrite"));}catch(e){return reject(e);}
+    store.put(fileObj);
+    tx.oncomplete=()=>resolve(true);
+    tx.onerror=()=>reject(tx.error);
+  });
+}
+function idbGetFile(id){
+  return new Promise((resolve,reject)=>{
+    let tx,store; try{({tx,store}=idbTx("readonly"));}catch(e){return reject(e);}
+    const req=store.get(id);
+    req.onsuccess=()=>resolve(req.result||null);
+    req.onerror=()=>reject(req.error);
+  });
+}
+function idbDeleteFile(id){
+  return new Promise((resolve,reject)=>{
+    let tx,store; try{({tx,store}=idbTx("readwrite"));}catch(e){return reject(e);}
+    store.delete(id);
+    tx.oncomplete=()=>resolve(true);
+    tx.onerror=()=>reject(tx.error);
+  });
+}
+function idbListFiles(){
+  return new Promise((resolve,reject)=>{
+    let tx,store; try{({tx,store}=idbTx("readonly"));}catch(e){return reject(e);}
+    const req=store.getAll();
+    req.onsuccess=()=>resolve(req.result||[]);
+    req.onerror=()=>reject(req.error);
+  });
+}
+
+function fmtBytes(bytes){
+  const b = Number(bytes||0);
+  if(b<1024) return `${b} B`;
+  const kb=b/1024; if(kb<1024) return `${kb.toFixed(1)} KB`;
+  const mb=kb/1024; if(mb<1024) return `${mb.toFixed(1)} MB`;
+  const gb=mb/1024; return `${gb.toFixed(2)} GB`;
+}
+
+/* ===================== Tabs ===================== */
+const TAB_TITLES = {
+  inbox: ["Decisões","Lista + filtro + trilha de decisão"],
+  dash: ["Dashboard","Gráficos e ranking técnico da decisão"],
+  models: ["Modelos","Templates por domínio (critérios & pesos)"],
+  files: ["Arquivos","Biblioteca local (IndexedDB)"],
+  settings: ["Ajustes","Preferências locais, demo, backup e limpeza"]
+};
+function setTab(tab){
+  state.activeTab = tab;
+  saveAll();
+  $$("[data-tab]").forEach(b=> b.classList.toggle("active", b.dataset.tab===tab));
+  const show=(id,on)=>{ const el=$(id); if(el) el.style.display = on ? "block" : "none"; };
+  show("viewInbox", tab==="inbox");
+  show("viewDash", tab==="dash");
+  show("viewModels", tab==="models");
+  show("viewFiles", tab==="files");
+  show("viewSettings", tab==="settings");
+  $("pageTitle").textContent = TAB_TITLES[tab][0];
+  $("pageSub").textContent = TAB_TITLES[tab][1];
+  rafRender();
+}
+
+/* ===================== Decision Model ===================== */
+function newDecision(){
+  const now=Date.now();
+  return {
+    id: uid(),
+    domain: "professional",
+    status: "open",
+    title: "Nova decisão",
+    deadline: null,
+    reversible: 2,
+    horizon: "mid",
+
+    context: "",
+    inaction: "",
+
+    options: ["Opção A","Opção B"],
+    criteria: [
+      {name:"Impacto", weight:25},
+      {name:"Risco", weight:25},
+      {name:"Custo", weight:15},
+      {name:"Tempo", weight:15},
+      {name:"Qualidade de vida", weight:20},
+    ],
+
+    scores: {},        // scores[option][criterion]=0..10
+    risks: {},         // risks[option]={prob:0..10, impact:0..10}
+    prosCons: "",
+    premortem: "",
+    bias: "",
+
+    files: [],
+
+    decisionLog: "",
+    decidedOption: "",
+    reviewAt: null,
+
+    createdAt: now,
+    updatedAt: now
+  };
+}
+
+/* ===================== Parsing modal inputs ===================== */
+function parseOptions(text){
+  const arr = String(text||"").split("\n").map(s=>s.trim()).filter(Boolean);
+  return arr.length ? arr : ["Opção A","Opção B"];
+}
+function parseCriteria(text){
+  const lines = String(text||"").split("\n").map(s=>s.trim()).filter(Boolean);
+  const out=[];
+  for(const ln of lines){
+    const parts = ln.split("|").map(s=>s.trim());
+    if(!parts[0]) continue;
+    const w = clamp(parts[1] ?? 0, 0, 1000);
+    out.push({name: parts[0], weight: w});
+  }
+  return out.length ? out : [{name:"Impacto",weight:30},{name:"Risco",weight:30},{name:"Custo",weight:20},{name:"Tempo",weight:20}];
+}
+function parseScores(text){
+  // "Opção A | Crit=8, Crit2=5"
+  const rows = String(text||"").split("\n").map(s=>s.trim()).filter(Boolean);
+  const out={};
+  for(const r of rows){
+    const [optPart, restPart] = r.split("|").map(s=>s.trim());
+    if(!optPart) continue;
+    out[optPart] = out[optPart] || {};
+    const rest = restPart || "";
+    const pairs = rest.split(",").map(s=>s.trim()).filter(Boolean);
+    for(const p of pairs){
+      const [k,v] = p.split("=").map(s=>s.trim());
+      if(!k) continue;
+      out[optPart][k] = clamp(v, 0, 10);
+    }
+  }
+  return out;
+}
+function parseRisks(text){
+  // "Opção A | prob=4, impacto=7"
+  const rows = String(text||"").split("\n").map(s=>s.trim()).filter(Boolean);
+  const out={};
+  for(const r of rows){
+    const [optPart, restPart] = r.split("|").map(s=>s.trim());
+    if(!optPart) continue;
+    const rest = (restPart||"").toLowerCase();
+    let prob=0, impact=0;
+    rest.split(",").map(s=>s.trim()).forEach(seg=>{
+      const [k,v] = seg.split("=").map(s=>s.trim());
+      if(k==="prob"||k==="probabilidade") prob = clamp(v,0,10);
+      if(k==="impacto"||k==="impact") impact = clamp(v,0,10);
+    });
+    out[optPart] = {prob, impact};
+  }
+  return out;
+}
+
+/* ===================== MCDA + Risk ===================== */
+function normalizeWeights(criteria){
+  const sum = criteria.reduce((a,c)=>a + Number(c.weight||0), 0) || 1;
+  return criteria.map(c=> ({...c, wNorm: (Number(c.weight||0)/sum)}));
+}
+function scoreOption(dec, opt){
+  const crit = normalizeWeights(dec.criteria||[]);
+  const sc = dec.scores?.[opt] || {};
+  // WSM: soma(wNorm * (nota/10)) -> 0..1
+  let raw=0;
+  for(const c of crit){
+    const v = clamp(sc[c.name] ?? 0, 0, 10) / 10;
+    raw += c.wNorm * v;
+  }
+  raw = clamp(raw,0,1);
+  const raw100 = raw*100;
+
+  // risk
+  const r = dec.risks?.[opt] || {prob:0, impact:0};
+  const risk100 = clamp((clamp(r.prob,0,10) * clamp(r.impact,0,10)), 0, 100);
+
+  // policy factor
+  const policy = state.settings.riskPolicy || "balanced";
+  const rev = Number(dec.reversible ?? 2); // 0..2
+  const domain = dec.domain || "professional";
+
+  // base penalty strength
+  let k = policy==="conservative" ? 0.80 : policy==="aggressive" ? 0.35 : 0.55;
+
+  // domain multipliers (mais conservador em saúde/filhos)
+  if(domain==="health" || domain==="children") k *= 1.25;
+  if(domain==="financial") k *= 1.10;
+  if(domain==="relationship" || domain==="family") k *= 1.05;
+
+  // irreversível aumenta penalidade
+  if(rev===0) k *= 1.20;
+  if(rev===1) k *= 1.08;
+
+  // adjusted: raw - k*(risk/100)*100
+  const adj = clamp(raw100 - (k * risk100), 0, 100);
+
+  return { raw100, risk100, adj100: adj };
+}
+function computeRanking(dec){
+  const opts = (dec.options||[]).slice();
+  const res = opts.map(opt=>{
+    const s = scoreOption(dec,opt);
+    return {opt, ...s};
+  }).sort((a,b)=> (b.adj100 - a.adj100) || (b.raw100 - a.raw100));
+  return res;
+}
+
+/* ===================== Drawing ===================== */
+function clearCanvas(c){
+  const ctx=c.getContext("2d");
+  const w=c.width = Math.max(320, Math.floor(c.clientWidth*devicePixelRatio));
+  const h=c.height = Math.max(220, Math.floor(c.clientHeight*devicePixelRatio));
+  ctx.clearRect(0,0,w,h);
+  return {ctx,w,h,px:devicePixelRatio};
+}
+function drawRadar(dec){
+  const canvas=$("radar");
+  const hint=$("radarHint");
+  const {ctx,w,h}=clearCanvas(canvas);
+
+  const criteria=(dec?.criteria||[]).map(c=>c.name);
+  const opts=(dec?.options||[]);
+
+  if(criteria.length<3 || opts.length<2){
+    hint.textContent = "Selecione uma decisão com 2+ opções e 3+ critérios.";
+    return;
+  }
+  hint.textContent = `Critérios: ${criteria.length} • Opções: ${opts.length}`;
+
+  const cx=w*0.5, cy=h*0.52;
+  const R=Math.min(w,h)*0.34;
+
+  // grid
+  ctx.globalAlpha=0.9;
+  ctx.lineWidth=1;
+  ctx.strokeStyle = "rgba(255,255,255,.18)";
+  for(let ring=1; ring<=4; ring++){
+    const rr=R*(ring/4);
+    ctx.beginPath();
+    for(let i=0;i<criteria.length;i++){
+      const a = (Math.PI*2*i/criteria.length) - Math.PI/2;
+      const x=cx+Math.cos(a)*rr, y=cy+Math.sin(a)*rr;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.closePath(); ctx.stroke();
+  }
+  // axes + labels
+  ctx.font = `${Math.max(10, Math.floor(w/42))}px ${getComputedStyle(document.body).fontFamily}`;
+  ctx.fillStyle = "rgba(154,166,195,.95)";
+  for(let i=0;i<criteria.length;i++){
+    const a = (Math.PI*2*i/criteria.length) - Math.PI/2;
+    const x=cx+Math.cos(a)*R, y=cy+Math.sin(a)*R;
+    ctx.beginPath();
+    ctx.moveTo(cx,cy); ctx.lineTo(x,y);
+    ctx.strokeStyle="rgba(255,255,255,.10)"; ctx.stroke();
+
+    const tx=cx+Math.cos(a)*(R+14), ty=cy+Math.sin(a)*(R+14);
+    const lbl=criteria[i].slice(0,18);
+    ctx.fillText(lbl, tx-ctx.measureText(lbl).width/2, ty);
+  }
+
+  // polygons per option (subtle strokes)
+  const colors = [
+    "rgba(96,165,250,.85)",
+    "rgba(45,212,191,.85)",
+    "rgba(251,191,36,.85)",
+    "rgba(251,113,133,.85)",
+    "rgba(255,255,255,.75)"
+  ];
+
+  opts.slice(0,5).forEach((opt, idx)=>{
+    const sc = dec.scores?.[opt] || {};
+    ctx.beginPath();
+    for(let i=0;i<criteria.length;i++){
+      const a=(Math.PI*2*i/criteria.length) - Math.PI/2;
+      const v=clamp(sc[criteria[i]] ?? 0, 0, 10)/10;
+      const rr=R*v;
+      const x=cx+Math.cos(a)*rr, y=cy+Math.sin(a)*rr;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = colors[idx%colors.length];
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = colors[idx%colors.length].replace(",.85",",.10");
+    ctx.fill();
+  });
+
+  // legend
+  ctx.font = `${Math.max(11, Math.floor(w/40))}px ${getComputedStyle(document.body).fontFamily}`;
+  opts.slice(0,5).forEach((opt, idx)=>{
+    const y = h - 14 - (opts.slice(0,5).length-1-idx)*16;
+    ctx.fillStyle = colors[idx%colors.length];
+    ctx.fillRect(12, y-10, 10, 10);
+    ctx.fillStyle = "rgba(233,240,255,.92)";
+    ctx.fillText(opt.slice(0,22), 28, y-1);
+  });
+}
+
+function drawRiskReturn(dec, ranking){
+  const canvas=$("riskReturn");
+  const hint=$("rrHint");
+  const {ctx,w,h}=clearCanvas(canvas);
+  if(!dec || !ranking?.length){
+    hint.textContent = "Selecione uma decisão com opções.";
+    return;
+  }
+  hint.textContent = "Eixo X: risco (0–100) • Eixo Y: score (0–100)";
+
+  const pad=28;
+  const x0=pad, y0=h-pad, x1=w-pad, y1=pad;
+
+  // axes
+  ctx.strokeStyle="rgba(255,255,255,.18)";
+  ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x0,y1); ctx.stroke();
+
+  // grid
+  ctx.strokeStyle="rgba(255,255,255,.08)";
+  for(let i=1;i<=4;i++){
+    const x=x0 + (x1-x0)*(i/5);
+    const y=y0 - (y0-y1)*(i/5);
+    ctx.beginPath(); ctx.moveTo(x,y0); ctx.lineTo(x,y1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(x1,y); ctx.stroke();
+  }
+
+  // points
+  ctx.font = `${Math.max(11, Math.floor(w/44))}px ${getComputedStyle(document.body).fontFamily}`;
+  ranking.slice(0,10).forEach((r, idx)=>{
+    const x = x0 + (x1-x0)*(r.risk100/100);
+    const y = y0 - (y0-y1)*(r.adj100/100);
+    ctx.fillStyle="rgba(96,165,250,.85)";
+    if(idx===0) ctx.fillStyle="rgba(45,212,191,.90)";
+    ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="rgba(233,240,255,.92)";
+    ctx.fillText(r.opt.slice(0,18), x+10, y+4);
+  });
+}
+
+function drawBarsRanking(containerId, ranking){
+  const el = $(containerId);
+  if(!el) return;
+  el.innerHTML = "";
+  if(!ranking?.length){
+    el.innerHTML = `<div class="hint">Sem opções para rankear.</div>`;
+    return;
+  }
+  ranking.forEach((r, idx)=>{
+    const row = document.createElement("div");
+    row.className = "row";
+    row.tabIndex = 0;
+    row.innerHTML = `
+      <div class="main">
+        <div class="name">${safeText(r.opt)} ${idx===0 ? "🏁" : ""}</div>
+        <div class="meta">
+          <span class="badge">Adj <b class="mono">${r.adj100.toFixed(1)}</b></span>
+          <span class="badge">Bruto <b class="mono">${r.raw100.toFixed(1)}</b></span>
+          <span class="badge">Risco <b class="mono">${r.risk100.toFixed(0)}</b></span>
+        </div>
+      </div>
+      <div style="grid-column:2 / -1;">
+        <div style="height:10px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.04);overflow:hidden;">
+          <div style="height:100%;width:${clamp(r.adj100,0,100)}%;background:linear-gradient(90deg, rgba(45,212,191,.85), rgba(96,165,250,.85));"></div>
+        </div>
+        <div class="hint" style="margin-top:6px;">Penalização por risco conforme política: <b>${safeText(state.settings.riskPolicy)}</b></div>
+      </div>
+    `;
+    el.appendChild(row);
+  });
+}
+
+/* ===================== Render: selects ===================== */
+function fillDomains(){
+  const domSel = $("domainFilter");
+  const dDomain = $("dDomain");
+  const modelDomain = $("modelDomain");
+
+  const opts = [`<option value="all">Todos</option>`].concat(
+    DOMAINS.map(d=>`<option value="${d.id}">${safeText(d.label)}</option>`)
+  ).join("");
+  domSel.innerHTML = opts;
+
+  dDomain.innerHTML = DOMAINS.map(d=>`<option value="${d.id}">${safeText(d.label)}</option>`).join("");
+  modelDomain.innerHTML = DOMAINS.map(d=>`<option value="${d.id}">${safeText(d.label)}</option>`).join("");
+}
+
+/* ===================== Decisions: CRUD ===================== */
+function upsertDecision(dec){
+  dec.updatedAt = Date.now();
+  const idx = state.decisions.findIndex(d=>d.id===dec.id);
+  if(idx>=0) state.decisions[idx] = dec;
+  else state.decisions.unshift(dec);
+  saveAll();
+}
+
+function deleteDecision(id){
+  const idx = state.decisions.findIndex(d=>d.id===id);
+  if(idx>=0){
+    state.decisions.splice(idx,1);
+    saveAll();
+  }
+}
+
+/* ===================== Models ===================== */
+function ensureDefaultModels(){
+  if(state.models?.length) return;
+  state.models = DEFAULT_MODELS.map(m=>({
+    id: m.id,
+    domain: m.domain,
+    name: m.name,
+    criteria: m.criteria,
+    notes: m.notes || ""
+  }));
+  saveAll();
+}
+
+function makeDecisionFromModel(model){
+  const dec = newDecision();
+  dec.domain = model.domain;
+  dec.title = `Decisão: ${model.name}`;
+  dec.criteria = (model.criteria||[]).map(([name,weight])=>({name, weight: clamp(weight,0,1000)}));
+  // scores/risks vazios: usuário preenche
+  return dec;
+}
+
+/* ===================== Render: lists ===================== */
+function getFilteredDecisions(){
+  const q = ($("search").value||"").trim().toLowerCase();
+  const quick = $("quickFilter").value || "all";
+  const domain = $("domainFilter").value || "all";
+  const sort = $("sort").value || "updated";
+
+  let items = state.decisions.slice();
+
+  if(quick==="open") items = items.filter(d=>d.status==="open");
+  if(quick==="decided") items = items.filter(d=>d.status==="decided");
+  if(quick==="archived") items = items.filter(d=>d.status==="archived");
+
+  if(domain!=="all") items = items.filter(d=>d.domain===domain);
+
+  if(q){
+    items = items.filter(d=>{
+      const blob = [
+        d.title, d.context, d.inaction, d.prosCons, d.premortem, d.bias, d.decisionLog,
+        (d.options||[]).join(" "),
+        (d.criteria||[]).map(c=>c.name).join(" "),
+        domainLabel(d.domain)
+      ].join(" ").toLowerCase();
+      return blob.includes(q);
+    });
+  }
+
+  // compute sort helpers when needed
+  const scoreFor = (d)=>{
+    const rk = computeRanking(d);
+    return rk?.[0]?.adj100 ?? 0;
+  };
+  const riskFor = (d)=>{
+    const rk = computeRanking(d);
+    return rk?.[0]?.risk100 ?? 0;
+  };
+
+  items.sort((a,b)=>{
+    if(sort==="updated") return (b.updatedAt||0)-(a.updatedAt||0);
+    if(sort==="deadline") return (a.deadline||"9999-12-31").localeCompare(b.deadline||"9999-12-31");
+    if(sort==="score") return scoreFor(b)-scoreFor(a);
+    if(sort==="risk") return riskFor(b)-riskFor(a);
+    return 0;
+  });
+
+  return items;
+}
+
+function renderDecisionList(){
+  const el = $("decisionList");
+  const items = getFilteredDecisions();
+  el.innerHTML = "";
+
+  if(!items.length){
+    el.innerHTML = `<div class="hint">Sem decisões ainda. Clique em <b>＋ Nova decisão</b> ou gere dados demo em Ajustes.</div>`;
+    return;
+  }
+
+  items.forEach(d=>{
+    const rk = computeRanking(d);
+    const best = rk[0];
+    const statusBadge = d.status==="open" ? `<span class="badge">🟡 <b>Aberta</b></span>`
+                      : d.status==="decided" ? `<span class="badge">🟢 <b>Decidida</b></span>`
+                      : `<span class="badge">⚫ <b>Arquivada</b></span>`;
+    const dl = d.deadline ? d.deadline.split("-").reverse().join("/") : "—";
+    const row = document.createElement("div");
+    row.className="row";
+    row.tabIndex=0;
+    row.setAttribute("role","button");
+    row.innerHTML = `
+      <div class="main">
+        <div class="name">${safeText(d.title || "Sem título")}</div>
+        <div class="meta">
+          ${statusBadge}
+          <span class="badge">🏷️ <b>${safeText(domainLabel(d.domain))}</b></span>
+          <span class="badge">⏳ Prazo <b class="mono">${safeText(dl)}</b></span>
+        </div>
+      </div>
+      <div class="meta">
+        <span class="badge">Opções <b class="mono">${(d.options||[]).length}</b></span>
+        <span class="badge">Critérios <b class="mono">${(d.criteria||[]).length}</b></span>
+        <span class="badge">Anexos <b class="mono">${(d.files||[]).length}</b></span>
+      </div>
+      <div class="meta">
+        <span class="badge">Top Adj <b class="mono">${best ? best.adj100.toFixed(1) : "—"}</b></span>
+        <span class="badge">Top Risco <b class="mono">${best ? best.risk100.toFixed(0) : "—"}</b></span>
+      </div>
+      <div class="right">
+        <button class="btn" data-act="open" data-id="${d.id}">Abrir</button>
+        <button class="btn ghost" data-act="edit" data-id="${d.id}">Editar</button>
+      </div>
+    `;
+
+    row.addEventListener("click",(e)=>{
+      const actBtn = e.target?.closest?.("button[data-act]");
+      if(actBtn){
+        const id = actBtn.dataset.id;
+        const act = actBtn.dataset.act;
+        if(act==="open"){ selectDecision(id); setTab("dash"); return; }
+        if(act==="edit"){ openDecisionModal(id); return; }
+      }else{
+        selectDecision(d.id);
+      }
+    });
+    row.addEventListener("keydown",(e)=>{
+      if(e.key==="Enter" || e.key===" "){
+        e.preventDefault();
+        selectDecision(d.id);
+      }
+    });
+
+    el.appendChild(row);
+  });
+}
+
+function renderKpis(){
+  $("kpiUser").textContent = state.settings.userName || "Usuário";
+
+  const open = state.decisions.filter(d=>d.status==="open").length;
+  const decided = state.decisions.filter(d=>d.status==="decided").length;
+
+  $("kpiOpen").textContent = open;
+  $("kpiDecided").textContent = decided;
+
+  // revisão próxima: menor diferença para reviewAt (ou deadline se sem reviewAt) dentre "open"
+  const now = Date.now();
+  let minDays = null;
+  state.decisions.filter(d=>d.status==="open").forEach(d=>{
+    const t = d.reviewAt ? new Date(d.reviewAt).getTime()
+            : d.deadline ? new Date(d.deadline+"T00:00:00").getTime()
+            : null;
+    if(!t || isNaN(t)) return;
+    const days = Math.ceil((t - now)/86400000);
+    if(minDays===null || days < minDays) minDays = days;
+  });
+  $("kpiReview").textContent = (minDays===null) ? "—" : String(minDays);
+}
+
+function renderDashPick(){
+  const sel = $("dashPick");
+  sel.innerHTML = `<option value="">— selecione —</option>` + state.decisions
+    .map(d=>`<option value="${d.id}">${safeText(d.title||"Sem título")}</option>`).join("");
+  if(state.selectedId){
+    sel.value = state.selectedId;
+  }
+}
+
+function renderDomainFilterDefaults(){
+  // deixa "Todos" como default se não houver opção
+  if(!$("domainFilter").value) $("domainFilter").value = "all";
+}
+
+function renderFocusPanel(){
+  const box = $("focusBox");
+  const hint = $("focusHint");
+  const dec = state.decisions.find(d=>d.id===state.selectedId) || null;
+
+  if(!dec){
+    hint.textContent = "Selecione uma decisão na lista para ver o resumo aqui.";
+    return;
+  }
+
+  const rk = computeRanking(dec);
+  const best = rk[0];
+
+  box.innerHTML = `
+    <div class="title" style="margin-bottom:8px;">
+      <h2 style="margin:0; font-size:13px;">${safeText(dec.title||"Sem título")}</h2>
+      <p style="margin:0; font-size:12px; color:var(--muted)}">Domínio: ${safeText(domainLabel(dec.domain))} • Status: ${safeText(dec.status)}</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="meta">
+      <span class="badge">Top opção <b>${best ? safeText(best.opt) : "—"}</b></span>
+      <span class="badge">Adj <b class="mono">${best ? best.adj100.toFixed(1) : "—"}</b></span>
+      <span class="badge">Bruto <b class="mono">${best ? best.raw100.toFixed(1) : "—"}</b></span>
+      <span class="badge">Risco <b class="mono">${best ? best.risk100.toFixed(0) : "—"}</b></span>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="hint">
+      Atualizado: <b>${fmtNiceDT(dec.updatedAt)}</b><br/>
+      Prazo: <b>${dec.deadline ? safeText(dec.deadline.split("-").reverse().join("/")) : "—"}</b><br/>
+      Revisão: <b>${dec.reviewAt ? safeText(String(dec.reviewAt)) : "—"}</b>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="right">
+      <button class="btn" id="btnFocusEdit">Editar</button>
+      <button class="btn primary" id="btnFocusDash">Ver no Dashboard</button>
+    </div>
+  `;
+
+  $("btnFocusEdit").addEventListener("click", ()=>openDecisionModal(dec.id));
+  $("btnFocusDash").addEventListener("click", ()=>{
+    setTab("dash");
+    $("dashPick").value = dec.id;
+    rafRender();
+  });
+}
+
+function renderDashboard(){
+  const pick = $("dashPick").value || state.selectedId || "";
+  const dec = state.decisions.find(d=>d.id===pick) || null;
+
+  // desenha mesmo sem seleção: limpa
+  if(!dec){
+    drawRadar(null);
+    drawRiskReturn(null,null);
+    $("rankList").innerHTML = `<div class="hint">Selecione uma decisão para ver o ranking.</div>`;
+    return;
+  }
+
+  const mode = $("dashMode").value || "riskAdj";
+  const rk = computeRanking(dec).map(x=>{
+    const s = scoreOption(dec, x.opt);
+    return (mode==="raw")
+      ? ({...x, adj100: s.raw100}) // força Y como bruto
+      : x;
+  });
+
+  drawRadar(dec);
+  drawRiskReturn(dec, rk);
+  drawBarsRanking("rankList", rk);
+}
+
+function renderModelList(){
+  const el = $("modelList");
+  el.innerHTML = "";
+  if(!state.models?.length){
+    el.innerHTML = `<div class="hint">Sem modelos. Clique em “Criar dados demo” nos Ajustes para popular modelos padrão.</div>`;
+    return;
+  }
+
+  state.models.forEach(m=>{
+    const row = document.createElement("div");
+    row.className="row";
+    row.tabIndex=0;
+    row.innerHTML = `
+      <div class="main">
+        <div class="name">${safeText(m.name||"Modelo")}</div>
+        <div class="meta">
+          <span class="badge">🏷️ <b>${safeText(domainLabel(m.domain))}</b></span>
+          <span class="badge">Critérios <b class="mono">${(m.criteria||[]).length}</b></span>
+        </div>
+      </div>
+      <div class="meta" style="grid-column:2 / -1;">
+        <span class="badge">Notas <b>${safeText(m.notes||"—")}</b></span>
+      </div>
+      <div class="right">
+        <button class="btn primary" data-act="use" data-id="${m.id}">Usar</button>
+        <button class="btn danger" data-act="del" data-id="${m.id}">Excluir</button>
+      </div>
+    `;
+
+    row.addEventListener("click",(e)=>{
+      const b = e.target.closest("button[data-act]");
+      if(!b) return;
+      const act=b.dataset.act, id=b.dataset.id;
+      if(act==="use"){
+        const model = state.models.find(x=>x.id===id);
+        if(!model) return;
+        const dec = makeDecisionFromModel(model);
+        upsertDecision(dec);
+        selectDecision(dec.id);
+        toast("Decisão criada a partir do modelo ✅");
+        openDecisionModal(dec.id);
+      }
+      if(act==="del"){
+        state.models = state.models.filter(x=>x.id!==id);
+        saveAll();
+        toast("Modelo excluído.");
+        rafRender();
+      }
+    });
+
+    el.appendChild(row);
+  });
+}
+
+/* ===================== Files (IDB) ===================== */
+async function addFilesFromInput(fileList){
+  const files = Array.from(fileList||[]);
+  if(!files.length) return;
+
+  showLoading("Importando arquivos…");
+  try{
+    for(const f of files){
+      const id = uid();
+      const buf = await f.arrayBuffer();
+      const obj = {
+        id,
+        name: f.name,
+        type: f.type || "application/octet-stream",
+        size: f.size,
+        addedAt: Date.now(),
+        data: buf
+      };
+      await idbPutFile(obj);
+    }
+    toast(`${files.length} arquivo(s) importado(s).`);
+  }catch(e){
+    console.error(e);
+    toast("Falha ao importar arquivos.");
+  }finally{
+    hideLoading();
+    rafRender();
+  }
+}
+
+async function renderFilesList(){
+  const el = $("filesList");
+  const q = ($("fileSearch").value||"").trim().toLowerCase();
+  el.innerHTML = `<div class="hint">Carregando arquivos…</div>`;
+
+  let items=[];
+  try{ items = await idbListFiles(); }catch(e){ items=[]; }
+
+  if(q){
+    items = items.filter(f=>{
+      return (f.name||"").toLowerCase().includes(q) || (f.type||"").toLowerCase().includes(q);
+    });
+  }
+
+  if(!items.length){
+    el.innerHTML = `<div class="hint">Sem arquivos. Clique em <b>Importar arquivos</b>.</div>`;
+    return;
+  }
+
+  el.innerHTML = "";
+  items.sort((a,b)=>(b.addedAt||0)-(a.addedAt||0)).forEach(f=>{
+    const row = document.createElement("div");
+    row.className="row";
+    row.tabIndex=0;
+    row.innerHTML = `
+      <div class="main">
+        <div class="name">${safeText(f.name||"arquivo")}</div>
+        <div class="meta">
+          <span class="badge">Tipo <b class="mono">${safeText((f.type||"—").slice(0,28))}</b></span>
+          <span class="badge">Tam <b class="mono">${safeText(fmtBytes(f.size||0))}</b></span>
+          <span class="badge">ID <b class="mono">${safeText(String(f.id).slice(0,10))}…</b></span>
+        </div>
+      </div>
+      <div class="meta">
+        <span class="badge">Adicionado <b class="mono">${safeText(fmtNiceDT(f.addedAt))}</b></span>
+      </div>
+      <div class="right">
+        <button class="btn" data-act="open" data-id="${f.id}">Abrir</button>
+        <button class="btn danger" data-act="del" data-id="${f.id}">Excluir</button>
+      </div>
+    `;
+
+    row.addEventListener("click", async (e)=>{
+      const b = e.target.closest("button[data-act]");
+      if(!b) return;
+      const act=b.dataset.act;
+      const id=b.dataset.id;
+      if(act==="open"){
+        const obj = await idbGetFile(id);
+        if(!obj) return toast("Arquivo não encontrado.");
+        const blob = new Blob([obj.data], {type: obj.type || "application/octet-stream"});
+        const url = URL.createObjectURL(blob);
+        window.open(url, "_blank", "noopener,noreferrer");
+        setTimeout(()=>URL.revokeObjectURL(url), 30000);
+      }
+      if(act==="del"){
+        await idbDeleteFile(id);
+        toast("Arquivo excluído.");
+        rafRender();
+      }
+    });
+
+    el.appendChild(row);
+  });
+}
+
+/* ===================== Selection ===================== */
+function selectDecision(id){
+  state.selectedId = id;
+  const dec = state.decisions.find(d=>d.id===id);
+  if(dec){
+    $("dashPick").value = id;
+    // status line
+    setStatus("good", `${state.settings.userName||"Usuário"} • Selecionado: ${dec.title}`);
+  }
+  rafRender();
+}
+
+/* ===================== Modal: Decision ===================== */
+function resetDecisionModal(){
+  state.editingId = null;
+  state.tempFiles = [];
+  $("btnDelete").style.display = "none";
+  $("modalTitle").textContent = "Nova decisão";
+  $("modalFootHint").textContent = "Criado em: —";
+  $("dFileChips").innerHTML = "";
+  $("dFiles").value = "";
+}
+
+function fillDecisionModal(dec){
+  $("modalTitle").textContent = (dec?.id ? "Editar decisão" : "Nova decisão");
+  $("modalFootHint").textContent = `Criado em: ${fmtNiceDT(dec.createdAt)} • Atualizado: ${fmtNiceDT(dec.updatedAt)}`;
+  $("btnDelete").style.display = (dec?.id ? "inline-flex" : "none");
+
+  $("dDomain").value = dec.domain || "professional";
+  $("dStatus").value = dec.status || "open";
+  $("dDeadline").value = dec.deadline || "";
+  $("dTitle").value = dec.title || "";
+  $("dReversible").value = String(dec.reversible ?? 2);
+  $("dHorizon").value = dec.horizon || "mid";
+
+  $("dContext").value = dec.context || "";
+  $("dInaction").value = dec.inaction || "";
+
+  $("dOptions").value = (dec.options||[]).join("\n");
+  $("dCriteria").value = (dec.criteria||[]).map(c=>`${c.name} | ${c.weight}`).join("\n");
+
+  // scores -> text
+  const scoreLines = [];
+  for(const opt of (dec.options||[])){
+    const obj = dec.scores?.[opt] || {};
+    const pairs = Object.keys(obj).map(k=>`${k}=${clamp(obj[k],0,10)}`).join(", ");
+    if(pairs) scoreLines.push(`${opt} | ${pairs}`);
+  }
+  $("dScores").value = scoreLines.join("\n");
+
+  // risks -> text
+  const riskLines = [];
+  for(const opt of (dec.options||[])){
+    const r = dec.risks?.[opt];
+    if(r) riskLines.push(`${opt} | prob=${clamp(r.prob,0,10)}, impacto=${clamp(r.impact,0,10)}`);
+  }
+  $("dRisk").value = riskLines.join("\n");
+
+  $("dProsCons").value = dec.prosCons || "";
+  $("dPremortem").value = dec.premortem || "";
+  $("dBias").value = dec.bias || "";
+  $("dDecisionLog").value = dec.decisionLog || "";
+
+  // chips: anexos da decisão
+  renderDecisionFileChips(dec.files||[]);
+}
+
+function renderDecisionFileChips(fileIds){
+  const box = $("dFileChips");
+  box.innerHTML = "";
+  (fileIds||[]).forEach(id=>{
+    const chip = document.createElement("div");
+    chip.className="chip";
+    chip.innerHTML = `📎 <small class="mono">${safeText(String(id).slice(0,8))}…</small> <span class="x" title="Remover">×</span>`;
+    chip.addEventListener("click",(e)=>{
+      const isX = e.target.classList.contains("x");
+      if(!isX) return;
+      // remove do arquivo atual em edição (no save a gente reusa)
+      const dec = state.decisions.find(d=>d.id===state.editingId);
+      if(!dec) return;
+      dec.files = (dec.files||[]).filter(fid=>fid!==id);
+      upsertDecision(dec);
+      toast("Anexo removido da decisão.");
+      fillDecisionModal(dec);
+      rafRender();
+    });
+    box.appendChild(chip);
+  });
+
+  // chips: arquivos temporários (ainda não salvos na decisão)
+  state.tempFiles.forEach(tf=>{
+    const chip = document.createElement("div");
+    chip.className="chip";
+    chip.innerHTML = `＋ <b>${safeText(tf.name||"arquivo")}</b> <small>${safeText(fmtBytes(tf.size||0))}</small> <span class="x" title="Remover">×</span>`;
+    chip.addEventListener("click",(e)=>{
+      const isX = e.target.classList.contains("x");
+      if(!isX) return;
+      state.tempFiles = state.tempFiles.filter(x=>x.id!==tf.id);
+      toast("Arquivo removido (antes de salvar).");
+      fillDecisionModal(state.decisions.find(d=>d.id===state.editingId) || newDecision());
+    });
+    box.appendChild(chip);
+  });
+}
+
+async function persistTempFilesAndGetIds(){
+  // salva tempFiles na IDB e devolve IDs
+  const ids = [];
+  if(!state.tempFiles.length) return ids;
+  showLoading("Salvando anexos…");
+  try{
+    for(const tf of state.tempFiles){
+      await idbPutFile(tf);
+      ids.push(tf.id);
+    }
+  }finally{
+    hideLoading();
+  }
+  return ids;
+}
+
+function openDecisionModal(id=null){
+  resetDecisionModal();
+
+  let dec = null;
+  if(id){
+    dec = state.decisions.find(d=>d.id===id);
+    if(!dec){
+      toast("Decisão não encontrada.");
+      return;
+    }
+    state.editingId = id;
+    fillDecisionModal(dec);
+  }else{
+    dec = newDecision();
+    state.editingId = null;
+    fillDecisionModal(dec);
+  }
+
+  openModal("decisionModal");
+}
+
+function closeDecisionModal(){
+  closeModal("decisionModal");
+}
+
+async function saveDecisionFromModal(){
+  const isEdit = !!state.editingId;
+  const base = isEdit ? (state.decisions.find(d=>d.id===state.editingId) || newDecision()) : newDecision();
+
+  const dec = {...base};
+
+  dec.domain = $("dDomain").value || "professional";
+  dec.status = $("dStatus").value || "open";
+  dec.deadline = $("dDeadline").value || null;
+  dec.title = ($("dTitle").value||"").trim() || "Sem título";
+  dec.reversible = Number($("dReversible").value ?? 2);
+  dec.horizon = $("dHorizon").value || "mid";
+
+  dec.context = $("dContext").value || "";
+  dec.inaction = $("dInaction").value || "";
+
+  dec.options = parseOptions($("dOptions").value);
+  dec.criteria = parseCriteria($("dCriteria").value);
+
+  const scores = parseScores($("dScores").value);
+  const risks = parseRisks($("dRisk").value);
+
+  // garante estruturas para todas opções
+  dec.scores = {};
+  dec.risks = {};
+  dec.options.forEach(opt=>{
+    dec.scores[opt] = {...(scores[opt]||{})};
+    dec.risks[opt] = risks[opt] ? {...risks[opt]} : {prob:0, impact:0};
+  });
+
+  dec.prosCons = $("dProsCons").value || "";
+  dec.premortem = $("dPremortem").value || "";
+  dec.bias = $("dBias").value || "";
+  dec.decisionLog = $("dDecisionLog").value || "";
+
+  // anexos: já existentes + temporários
+  const existing = Array.isArray(dec.files) ? dec.files : [];
+  const newIds = await persistTempFilesAndGetIds();
+  dec.files = Array.from(new Set(existing.concat(newIds)));
+  state.tempFiles = [];
+
+  // revisão
+  const days = Number(state.settings.reviewDays||30);
+  dec.reviewAt = new Date(Date.now() + days*86400000).toISOString().slice(0,10);
+
+  upsertDecision(dec);
+  state.selectedId = dec.id;
+
+  toast("Decisão salva ✅");
+  closeDecisionModal();
+  rafRender();
+}
+
+async function deleteDecisionFromModal(){
+  const id = state.editingId;
+  if(!id) return;
+  if(!confirm("Excluir esta decisão? (Isso não apaga arquivos da biblioteca.)")) return;
+
+  deleteDecision(id);
+  if(state.selectedId===id) state.selectedId=null;
+  toast("Decisão excluída.");
+  closeDecisionModal();
+  rafRender();
+}
+
+function duplicateDecision(){
+  const id = state.editingId;
+  const src = id ? state.decisions.find(d=>d.id===id) : null;
+  if(!src) return toast("Nada para duplicar.");
+  const copy = JSON.parse(JSON.stringify(src));
+  copy.id = uid();
+  copy.title = `${src.title} (cópia)`;
+  copy.status = "open";
+  copy.createdAt = Date.now();
+  copy.updatedAt = Date.now();
+  upsertDecision(copy);
+  selectDecision(copy.id);
+  toast("Duplicado ✅");
+  openDecisionModal(copy.id);
+}
+
+/* ===================== Restore ===================== */
+function openRestore(){ openModal("restoreModal"); }
+function closeRestore(){ closeModal("restoreModal"); }
+
+async function doRestore(file){
+  if(!file) return toast("Selecione um JSON.");
+  showLoading("Importando backup…");
+  try{
+    const text = await file.text();
+    const data = JSON.parse(text);
+
+    const decisions = Array.isArray(data.decisions) ? data.decisions : [];
+    const models = Array.isArray(data.models) ? data.models : [];
+
+    // validações mínimas
+    const cleanedDec = decisions.map(d=>{
+      const nd = newDecision();
+      const dd = {...nd, ...d};
+      dd.id = d.id || uid();
+      dd.options = Array.isArray(dd.options) ? dd.options : nd.options;
+      dd.criteria = Array.isArray(dd.criteria) ? dd.criteria : nd.criteria;
+      dd.files = Array.isArray(dd.files) ? dd.files : [];
+      dd.createdAt = dd.createdAt || Date.now();
+      dd.updatedAt = dd.updatedAt || Date.now();
+      return dd;
+    });
+
+    const cleanedModels = models.map(m=>({
+      id: m.id || uid(),
+      domain: m.domain || "professional",
+      name: m.name || "Modelo",
+      criteria: Array.isArray(m.criteria) ? m.criteria : [],
+      notes: m.notes || ""
+    }));
+
+    // merge (mantém existentes; se id igual, sobrescreve)
+    const mapD = new Map(state.decisions.map(d=>[d.id,d]));
+    cleanedDec.forEach(d=>mapD.set(d.id,d));
+    state.decisions = Array.from(mapD.values()).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+
+    const mapM = new Map(state.models.map(m=>[m.id,m]));
+    cleanedModels.forEach(m=>mapM.set(m.id,m));
+    state.models = Array.from(mapM.values());
+
+    saveAll();
+    toast("Backup importado ✅");
+    closeRestore();
+    rafRender();
+  }catch(e){
+    console.error(e);
+    toast("Falha ao importar JSON.");
+  }finally{
+    hideLoading();
+  }
+}
+
+/* ===================== Backup ===================== */
+function doBackup(){
+  const payload = {
+    app: "Decision OS",
+    version: "1.0",
+    exportedAt: new Date().toISOString(),
+    decisions: state.decisions,
+    models: state.models,
+    settings: state.settings
+  };
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `decision_os_backup_${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 15000);
+  toast("Backup exportado.");
+}
+
+/* ===================== Demo ===================== */
+function makeDemo(){
+  const d1 = newDecision();
+  d1.domain="professional";
+  d1.title="Trocar de emprego em 2026?";
+  d1.options=["Ficar onde estou","Mudar para empresa X","Concurso / setor público"];
+  d1.criteria=[
+    {name:"Crescimento",weight:25},
+    {name:"Qualidade de vida",weight:20},
+    {name:"Renda",weight:20},
+    {name:"Estabilidade",weight:15},
+    {name:"Reputação",weight:10},
+    {name:"Risco",weight:10}
+  ];
+  d1.scores={
+    "Ficar onde estou":{"Crescimento":6,"Qualidade de vida":6,"Renda":7,"Estabilidade":7,"Reputação":7,"Risco":7},
+    "Mudar para empresa X":{"Crescimento":8,"Qualidade de vida":7,"Renda":8,"Estabilidade":6,"Reputação":8,"Risco":5},
+    "Concurso / setor público":{"Crescimento":5,"Qualidade de vida":8,"Renda":6,"Estabilidade":9,"Reputação":6,"Risco":8}
+  };
+  d1.risks={
+    "Ficar onde estou":{prob:3,impact:5},
+    "Mudar para empresa X":{prob:5,impact:7},
+    "Concurso / setor público":{prob:4,impact:6}
+  };
+  d1.context="Premissas: manter evolução técnica, evitar estagnação, preservar finanças.";
+  d1.inaction="Se não decidir, posso perder janela de oportunidade e continuar insatisfeito.";
+  d1.premortem="Falha: escolher por impulso; não validar cultura; subestimar custo emocional.";
+  d1.bias="Ancoragem em salário; confirmação; aversão à perda.";
+
+  const d2 = newDecision();
+  d2.domain="financial";
+  d2.title="Comprar um bem caro agora?";
+  d2.options=["Comprar à vista","Financiar","Esperar 6 meses"];
+  d2.criteria=[
+    {name:"Retorno",weight:20},
+    {name:"Risco",weight:25},
+    {name:"Liquidez",weight:20},
+    {name:"Custo total",weight:20},
+    {name:"Tranquilidade",weight:15}
+  ];
+  d2.scores={
+    "Comprar à vista":{"Retorno":6,"Risco":7,"Liquidez":4,"Custo total":7,"Tranquilidade":7},
+    "Financiar":{"Retorno":6,"Risco":5,"Liquidez":6,"Custo total":4,"Tranquilidade":6},
+    "Esperar 6 meses":{"Retorno":5,"Risco":8,"Liquidez":8,"Custo total":6,"Tranquilidade":7}
+  };
+  d2.risks={
+    "Comprar à vista":{prob:3,impact:7},
+    "Financiar":{prob:5,impact:6},
+    "Esperar 6 meses":{prob:2,impact:4}
+  };
+
+  upsertDecision(d1);
+  upsertDecision(d2);
+
+  ensureDefaultModels();
+
+  toast("Dados demo criados ✅");
+  rafRender();
+}
+
+/* ===================== Settings ===================== */
+function fillSettingsUI(){
+  $("setUserName").value = state.settings.userName || "Wilson";
+  $("setRiskPolicy").value = state.settings.riskPolicy || "balanced";
+  $("setReviewDays").value = String(state.settings.reviewDays ?? 30);
+}
+
+function saveSettings(){
+  state.settings.userName = ($("setUserName").value||"").trim() || "Usuário";
+  state.settings.riskPolicy = $("setRiskPolicy").value || "balanced";
+  state.settings.reviewDays = Number($("setReviewDays").value || 30);
+  saveAll();
+  toast("Ajustes salvos ✅");
+  rafRender();
+}
+
+/* ===================== Wire events ===================== */
+function wireTabs(){
+  // top tabs
+  $$(`#tabsTop .tab`).forEach(b=>{
+    b.addEventListener("click", ()=>setTab(b.dataset.tab));
+  });
+  // bottom tabs
+  $$(`#tabsBottom .tab`).forEach(b=>{
+    b.addEventListener("click", ()=>setTab(b.dataset.tab));
+  });
+}
+
+function wireCore(){
+  $("btnNow").addEventListener("click", ()=>{ nowClock(); toast("Atualizado."); });
+
+  $("btnBackup").addEventListener("click", doBackup);
+
+  $("btnNew").addEventListener("click", ()=>openDecisionModal(null));
+
+  $("btnCloseModal").addEventListener("click", closeDecisionModal);
+  $("btnSave").addEventListener("click", saveDecisionFromModal);
+  $("btnDelete").addEventListener("click", deleteDecisionFromModal);
+  $("btnDuplicate").addEventListener("click", duplicateDecision);
+
+  $("btnRestore").addEventListener("click", openRestore);
+  $("btnCloseRestore").addEventListener("click", closeRestore);
+  $("btnDoRestore").addEventListener("click", ()=>{
+    const f = $("restoreFile").files?.[0];
+    doRestore(f);
+  });
+
+  $("btnSaveSettings").addEventListener("click", saveSettings);
+  $("btnDemo").addEventListener("click", makeDemo);
+  $("btnWipe").addEventListener("click", ()=>{
+    if(!confirm("Limpar TODAS as decisões? (Modelos permanecem.)")) return;
+    state.decisions = [];
+    state.selectedId = null;
+    saveAll();
+    toast("Decisões removidas.");
+    rafRender();
+  });
+
+  // dashboard
+  $("btnRecalc").addEventListener("click", ()=>{ toast("Recalculado."); rafRender(); });
+  $("dashPick").addEventListener("change", ()=>{
+    const id = $("dashPick").value;
+    if(id) selectDecision(id);
+    rafRender();
+  });
+  $("dashMode").addEventListener("change", rafRender);
+
+  // filtros (debounce)
+  const deb = debounce(()=>rafRender(), 120);
+  ["search","quickFilter","domainFilter","sort"].forEach(id=>{
+    $(id).addEventListener("input", deb);
+    $(id).addEventListener("change", deb);
+  });
+
+  // modelos
+  $("btnCreateFromModel").addEventListener("click", ()=>{
+    const domain = $("modelDomain").value || "professional";
+    const name = ($("modelName").value||"").trim();
+    // cria "decisão" baseada no primeiro modelo do domínio se existir, senão usa defaults
+    const model = state.models.find(m=>m.domain===domain) || DEFAULT_MODELS.find(m=>m.domain===domain);
+    const m = model ? model : {domain, name:(name||"Modelo"), criteria:[["Impacto",30],["Risco",30],["Custo",20],["Tempo",20]], notes:""};
+    const dec = makeDecisionFromModel(m);
+    dec.title = name ? `Decisão: ${name}` : dec.title;
+    upsertDecision(dec);
+    selectDecision(dec.id);
+    toast("Decisão criada a partir do modelo ✅");
+    openDecisionModal(dec.id);
+  });
+
+  // files tab
+  $("btnAddFiles").addEventListener("click", ()=>$("filesInput").click());
+  $("filesInput").addEventListener("change", async ()=>{
+    await addFilesFromInput($("filesInput").files);
+    $("filesInput").value = "";
+  });
+  $("fileSearch").addEventListener("input", debounce(()=>rafRender(), 150));
+
+  // decision modal: anexos
+  $("dFiles").addEventListener("change", async ()=>{
+    const files = Array.from($("dFiles").files||[]);
+    if(!files.length) return;
+
+    showLoading("Preparando anexos…");
+    try{
+      for(const f of files){
+        const id = uid();
+        const buf = await f.arrayBuffer();
+        state.tempFiles.push({
+          id,
+          name: f.name,
+          type: f.type || "application/octet-stream",
+          size: f.size,
+          addedAt: Date.now(),
+          data: buf
+        });
+      }
+      toast(`${files.length} arquivo(s) anexado(s) (pendente salvar).`);
+    }catch(e){
+      console.error(e);
+      toast("Falha ao anexar.");
+    }finally{
+      hideLoading();
+      // re-render chips
+      const dec = state.decisions.find(d=>d.id===state.editingId) || newDecision();
+      renderDecisionFileChips(dec.files||[]);
+      $("dFiles").value="";
+    }
+  });
+
+  // keyboard shortcuts
+  document.addEventListener("keydown",(e)=>{
+    if(e.key==="Escape"){
+      if($("decisionModal").classList.contains("show")) closeDecisionModal();
+      if($("restoreModal").classList.contains("show")) closeRestore();
+      return;
+    }
+    const inInput = ["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName);
+    if(!inInput && (e.key==="n" || e.key==="N")){
+      e.preventDefault();
+      openDecisionModal(null);
+      return;
+    }
+    if(e.ctrlKey && (e.key==="e" || e.key==="E")){
+      e.preventDefault();
+      doBackup();
+      return;
+    }
+    if(e.ctrlKey && (e.key==="k" || e.key==="K")){
+      e.preventDefault();
+      $("search").focus();
+      return;
+    }
+  });
+}
+
+/* ===================== Main render ===================== */
+async function renderAll(){
+  renderKpis();
+  renderDecisionList();
+  renderDashPick();
+  renderFocusPanel();
+  renderDashboard();
+  renderModelList();
+
+  if(state.activeTab==="files"){
+    await renderFilesList();
+  }
+
+  // status line
+  const sel = state.decisions.find(d=>d.id===state.selectedId);
+  if(sel){
+    setStatus("good", `${state.settings.userName||"Usuário"} • Em foco: ${sel.title}`);
+  }else{
+    setStatus("warn", `${state.settings.userName||"Usuário"} • Sem decisão selecionada`);
+  }
+}
+
+/* ===================== Init ===================== */
+async function init(){
+  showLoading("Inicializando Decision OS…");
+  try{
+    loadAll();
+    ensureDefaultModels();
+
+    fillDomains();
+    renderDomainFilterDefaults();
+    fillSettingsUI();
+
+    state.db = await idbOpen();
+
+    wireTabs();
+    wireCore();
+
+    setTab(state.activeTab || "inbox");
+    nowClock();
+    setInterval(nowClock, 1000);
+
+    toast("Pronto ✅");
+  }catch(e){
+    console.error(e);
+    setStatus("bad","Erro ao iniciar (ver console).");
+    toast("Erro ao iniciar.");
+  }finally{
+    hideLoading();
+    rafRender();
+  }
+}
+
+init();
+
+</script>
+</body>
+</html>
