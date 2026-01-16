@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Portal • Apps</title>
   <meta name="theme-color" content="#0b0d12" />
+  <meta name="color-scheme" content="dark light" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
   <style>
     :root{
@@ -760,7 +764,8 @@ const PATH = {
   requests: "/portal_requests",      // cancel requests
   access: "/portal_access",          // access/{userKey}/...
   settings: "/portal_settings",      // global info (pix, admin contact, etc.)
-  planRequests: "/portal_plan_requests" // requests de plano/pagamento
+  planRequests: "/portal_plan_requests", // requests de plano/pagamento
+  sessions: "/portal_sessions"            // sessions/{token}
 };
 
 const ADMIN_BOOTSTRAP = {
@@ -813,6 +818,7 @@ const DEFAULT_APPS = [
   {id:"docs", name:"Documentos", desc:"Arquivos", url:"https://wilsonf1996.github.io/index.html/documentos/documentos3.html", tag:"Docs"},
   {id:"alarme", name:"Alarme", desc:"Lembretes", url:"https://wilsonf1996.github.io/index.html/documentos/alarme.html", tag:"Alarm"},
   {id:"jogos", name:"Jogos", desc:"Fun", url:"https://wilsonf1996.github.io/index.html/jogo/jogobot.html", tag:"Game"},
+  {id:"nexus", name:"NEXUS • Decisões", desc:"Decision OS", url:"https://wilsonf1996.github.io/index.html/decis%C3%A3o/d1.html", tag:"NEXUS"},
   {id:"cv", name:"Currículos", desc:"Carreira", url:"https://wilsonf1996.github.io/index.html/curriculo/gestaocurriculo.html", tag:"CV"},
 ];
 
@@ -920,23 +926,68 @@ async function sha256(text){
    Session
    ========================= */
 function saveSession(sess){
+  // compat: mantém v3, mas escreve também o v4 (com token SSO)
   state.session = sess;
   localStorage.setItem("portal_session_v3", JSON.stringify(sess));
+
+  // v4: sessão + token (para subapps como NEXUS)
+  const v4 = {
+    ...sess,
+    sessionToken: sess.sessionToken || null,
+    issuedAt: Date.now()
+  };
+  localStorage.setItem("portal_session_v4", JSON.stringify(v4));
   setPill();
 }
+
 function loadSession(){
+  try{
+    const rawV4 = localStorage.getItem("portal_session_v4");
+    if(rawV4){
+      const s4 = JSON.parse(rawV4);
+      // normaliza campos esperados
+      return {
+        userKey: s4.userKey,
+        username: s4.username,
+        fullName: s4.fullName,
+        role: s4.role,
+        status: s4.status,
+        sessionToken: s4.sessionToken || null
+      };
+    }
+  }catch(e){}
+
+  // fallback v3
   try{
     const raw = localStorage.getItem("portal_session_v3");
     if(!raw) return null;
-    return JSON.parse(raw);
-  }catch{ return null; }
+    const s = JSON.parse(raw);
+    return {
+      userKey: s.userKey,
+      username: s.username,
+      fullName: s.fullName,
+      role: s.role,
+      status: s.status,
+      sessionToken: null
+    };
+  }catch(e){
+    return null;
+  }
 }
+
 function clearSession(){
+  // encerra token SSO no banco (sem travar o logout)
+  try{
+    const s = loadSession();
+    if(s && s.sessionToken) destroyPortalSession(s.sessionToken);
+  }catch(e){}
   state.session = null;
   state.myAccess = null;
   localStorage.removeItem("portal_session_v3");
+  localStorage.removeItem("portal_session_v4");
   setPill();
 }
+
 
 /* =========================
    DB operations
@@ -1177,6 +1228,28 @@ async function setUserPending(userKey){
   });
 }
 
+
+/* =========================
+   Portal SSO (RTDB) — token compartilhável com subapps (ex.: NEXUS)
+   ========================= */
+function newSessionToken(){
+  return "ps_" + Math.random().toString(16).slice(2) + Date.now().toString(16);
+}
+async function createPortalSession(userKey, username){
+  const token = newSessionToken();
+  const exp = Date.now() + (7*24*60*60*1000); // 7 dias
+  await db.ref(`${PATH.sessions}/${token}`).set({
+    userKey, username,
+    createdAt: Date.now(),
+    exp
+  });
+  return token;
+}
+async function destroyPortalSession(token){
+  if(!token) return;
+  await db.ref(`${PATH.sessions}/${token}`).remove().catch(()=>null);
+}
+
 /* =========================
    Auth (RTDB)
    ========================= */
@@ -1191,12 +1264,21 @@ async function login(username, password){
   const hash = await sha256(password);
   if(hash !== user.passHash) throw new Error("Senha incorreta.");
 
+  let sessionToken = null;
+  try{
+    sessionToken = await createPortalSession(user.userKey, user.username);
+  }catch(e){
+    // se falhar, ainda permite login (SSO será criado depois)
+    sessionToken = null;
+  }
+
   saveSession({
     userKey: user.userKey,
     username: user.username,
     fullName: user.fullName,
     role: user.role,
-    status: user.status
+    status: user.status,
+    sessionToken
   });
 }
 
@@ -1261,6 +1343,23 @@ function composeAllowedApps(access){
   return allowed;
 }
 
+
+function goApp(url){
+  const s = loadSession();
+  const token = s?.sessionToken || null;
+  if(!token){ window.location.href = url; return; }
+
+  try{
+    const u = new URL(url, window.location.href);
+    u.searchParams.set("i4_session", token);
+    window.location.href = u.toString();
+  }catch(e){
+    // fallback simples
+    const sep = url.includes("?") ? "&" : "?";
+    window.location.href = url + sep + "i4_session=" + encodeURIComponent(token);
+  }
+}
+
 function renderHome(){
   if(!state.session || !state.myAccess) return;
   $("helloName").textContent = safeText(state.session.fullName || state.session.username);
@@ -1292,7 +1391,7 @@ function renderHome(){
   apps.forEach(a=>{
     const div = document.createElement("div");
     div.className = "appBtn";
-    div.onclick = ()=> window.location.href = a.url;
+    div.onclick = ()=> goApp(a.url);
     div.innerHTML = `
       <div class="appTop">
         <div class="appName">${safeText(a.name)}</div>
