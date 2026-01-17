@@ -207,8 +207,7 @@
     }
 
     /* Modal */
-    .overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:14px;z-index:80;background:rgba(0,0,0,.62);backdrop-filter: blur(10px);}
-    .overlay.show{display:flex;}
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.58);display:none;align-items:center;justify-content:center;padding:14px;z-index:80}
     .modal{
       width:min(1100px, 100%);
       max-height:min(92vh, 860px);
@@ -274,11 +273,34 @@
     .tourBtns{ margin-top: 10px; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
     .tourBtns .btn{ pointer-events:auto; }
 
-  </style>
+  
+/* ===== i4 Ecosystem Gate (non-invasive) ===== */
+.ecoPill{display:inline-flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);box-shadow:var(--shadow2)}
+.ecoDot{width:9px;height:9px;border-radius:50%;background:#ff5c7a;box-shadow:0 0 0 4px rgba(255,92,122,.15)}
+.ecoDot.on{background:#58f2c5;box-shadow:0 0 0 4px rgba(88,242,197,.14)}
+.ecoTxt{display:flex;flex-direction:column;line-height:1.1}
+.ecoTxt b{font-size:12px}
+.ecoTxt span{font-size:11px;color:var(--muted)}
+.ecoBar{position:fixed;top:14px;right:14px;z-index:9997;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.ecoBar .btn{cursor:pointer}
+.ecoOverlay{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.62);align-items:center;justify-content:center;padding:18px}
+.ecoOverlay.show{display:flex}
+.ecoModal{max-width:980px;width:min(980px,96vw);max-height:88vh;overflow:auto;-webkit-overflow-scrolling:touch;border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.05));border:1px solid rgba(255,255,255,.12);box-shadow:var(--shadow);backdrop-filter:blur(18px)}
+.ecoHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 16px 10px}
+.ecoHead .t{font-size:16px;font-weight:800}
+.ecoHead .s{font-size:12px;color:var(--muted);margin-top:4px}
+.ecoBody{padding:14px 16px 16px}
+.ecoGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:820px){.ecoGrid{grid-template-columns:1fr}}
+.ecoCard{border-radius:18px;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.10);padding:14px}
+.ecoCard label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
+.ecoCard input{width:100%;padding:12px 12px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--text);outline:none}
+.ecoRow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.ecoHr{height:1px;background:rgba(255,255,255,.10);margin:14px 0}
+.ecoLock{position:fixed;inset:0;z-index:9996;pointer-events:none;display:none}
+.ecoLock.on{display:block;backdrop-filter:blur(10px);background:rgba(0,0,0,.30)}
 
-  <!-- Firebase (RTDB) - compat (mesmo banco do i4) -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+</style>
 </head>
 <body>
   <div class="topbar">
@@ -295,9 +317,6 @@
           <div class="pill"><span class="dot ok" id="sysDot"></span><span id="sysState">Pronto</span></div>
           <div class="pill"><span>👤</span><strong id="who">Wilson</strong></div>
           <div class="pill"><span>🕒</span><span id="clock">--:--</span></div>
-          <button class="btn small" id="btnI4" type="button">i4 Conta</button>
-          <button class="btn small" id="btnAuth" type="button">Entrar</button>
-          <button class="btn small danger" id="btnLogout" type="button">Sair</button>
           <button class="btn small ghost" id="btnHelp">Guia</button>
           <button class="btn small" id="btnImport">Importar</button>
           <button class="btn small" id="btnExport">Exportar</button>
@@ -466,10 +485,6 @@
   </div>
 
 <script>
-
-  // ===== Safe DOM bind helpers (evita travar o app se algum elemento nao existir) =====
-  const on = (sel, evt, fn, opts) => { const el = document.querySelector(sel); if(el) el.addEventListener(evt, fn, opts); };
-  const onId = (id, evt, fn, opts) => { const el = document.getElementById(id); if(el) el.addEventListener(evt, fn, opts); };
 (()=> {
   'use strict';
 
@@ -1635,7 +1650,7 @@
       renderLive();
     });
 
-    on('#wf_reset','click', ()=>{
+    $('#wf_reset').addEventListener('click', ()=>{
       // restore from saved
       const saved = getActive();
       Object.assign(local, deepClone(saved));
@@ -1644,7 +1659,7 @@
       renderWeights(); renderLive();
     });
 
-    on('#wf_apply','click', ()=>{
+    $('#wf_apply').addEventListener('click', ()=>{
       const real = getActive();
       if(!real) return;
       real.criteria = deepClone(local.criteria);
@@ -1745,7 +1760,7 @@
     const today = new Date();
     inp.value = today.toISOString().slice(0,10);
 
-    on('#tl_add','click', ()=>{
+    $('#tl_add').addEventListener('click', ()=>{
       const type = $('#tl_type').value;
       const at = new Date($('#tl_at').value || today.toISOString().slice(0,10)).toISOString();
       const text = ($('#tl_text').value || '').trim();
@@ -1758,7 +1773,7 @@
       setSys('Adicionado','ok'); setTimeout(()=>setSys('Pronto','ok'), 700);
     });
 
-    on('#tl_markReview','click', ()=>{
+    $('#tl_markReview').addEventListener('click', ()=>{
       pushTrail(d, 'review', 'Revisão concluída e estado reavaliado.');
       touch(d); save(S); renderAll();
     });
@@ -1806,7 +1821,7 @@
       });
     });
 
-    on('#ns_save','click', ()=>{
+    $('#ns_save').addEventListener('click', ()=>{
       const ns = S.settings.northStar;
       ns.vision = $('#ns_vision').value.trim();
       ns.principles = ($('#ns_principles').value||'').split('\n').map(s=>s.trim()).filter(Boolean);
@@ -1816,7 +1831,7 @@
       setSys('Bússola salva','ok'); setTimeout(()=>setSys('Pronto','ok'), 700);
     });
 
-    on('#mkAligned','click', ()=>{
+    $('#mkAligned').addEventListener('click', ()=>{
       const base = makeDecision({
         title: 'Nova decisão alinhada',
         domain: d.domain,
@@ -1844,7 +1859,7 @@
       setSys('Criada','ok'); setTimeout(()=>setSys('Pronto','ok'), 700);
     });
 
-    on('#mkPremortem','click', ()=>{
+    $('#mkPremortem').addEventListener('click', ()=>{
       const base = makeDecision({
         title: 'Nova decisão (pré‑mortem)',
         domain: d.domain,
@@ -2185,9 +2200,9 @@
   }
 
   function wireNotesEditor(d){
-    on('#n_ass','input', ()=> d.notes.assumptions = $('#n_ass').value);
-    on('#n_evd','input', ()=> d.notes.evidence = $('#n_evd').value);
-    on('#n_pm','input', ()=> d.notes.preMortem = $('#n_pm').value);
+    $('#n_ass').addEventListener('input', ()=> d.notes.assumptions = $('#n_ass').value);
+    $('#n_evd').addEventListener('input', ()=> d.notes.evidence = $('#n_evd').value);
+    $('#n_pm').addEventListener('input', ()=> d.notes.preMortem = $('#n_pm').value);
     $$('textarea[data-pros]').forEach(t=>{
       t.addEventListener('input', ()=> d.notes.pros[t.dataset.pros] = t.value);
     });
@@ -2262,7 +2277,7 @@
         </div>
       </div>
     `;
-    on('#libImport','click', ()=>{
+    $('#libImport').addEventListener('click', ()=>{
       const m = S.library[libOpenIndex];
       const d = makeDecision({
         title: m.title,
@@ -2315,7 +2330,7 @@
   });
 
   // search
-  on('#q','input', ()=> renderLeft());
+  $('#q').addEventListener('input', ()=> renderLeft());
 
   // examples
   function loadExamples(){
@@ -2354,10 +2369,10 @@
     renderAll();
   }
 
-  on('#btnExamples','click', loadExamples);
+  $('#btnExamples').addEventListener('click', loadExamples);
 
   // top actions
-  on('#btnNew','click', ()=>{
+  $('#btnNew').addEventListener('click', ()=>{
     const d = makeDecision({ title: 'Nova decisão', domain:'Outro', status:'Em análise', reviewDays:14, seed:'B' });
     S.decisions.unshift(d);
     activeId = d.id; S.lastOpenId = activeId;
@@ -2366,13 +2381,13 @@
     openEditor(d.id);
   });
 
-  on('#btnExport','click', ()=>{
+  $('#btnExport').addEventListener('click', ()=>{
     const data = JSON.stringify(S, null, 2);
     download('nexus_decisions_export.json', data, 'application/json');
     setSys('Exportado','ok'); setTimeout(()=>setSys('Pronto','ok'), 700);
   });
 
-  on('#btnImport','click', ()=>{
+  $('#btnImport').addEventListener('click', ()=>{
     const inp = document.createElement('input');
     inp.type = 'file';
     inp.accept = 'application/json';
@@ -2397,29 +2412,29 @@
     inp.click();
   });
 
-  on('#btnHelp','click', ()=>{ openGuide(); });
+  $('#btnHelp').addEventListener('click', ()=>{ openGuide(); });
 
 // main buttons
-  on('#btnQuickFill','click', ()=>{
+  $('#btnQuickFill').addEventListener('click', ()=>{
     const d = getActive(); if(!d) return;
     autoSeedDecision(d, Math.random()>.5?'A':'B');
     pushTrail(d,'note','Preenchimento automático aplicado.');
     touch(d); save(S); renderAll();
   });
-  on('#btnRecalc','click', ()=>{
+  $('#btnRecalc').addEventListener('click', ()=>{
     setSys('Recalculado','ok'); setTimeout(()=>setSys('Pronto','ok'), 600);
     renderAll();
   });
-  on('#btnStar','click', ()=>{
+  $('#btnStar').addEventListener('click', ()=>{
     const d = getActive(); if(!d) return;
     d.starred = !d.starred;
     touch(d); save(S); renderAll();
   });
-  on('#btnEdit','click', ()=>{
+  $('#btnEdit').addEventListener('click', ()=>{
     const d = getActive(); if(!d) return;
     openEditor(d.id);
   });
-  on('#btnDel','click', ()=>{
+  $('#btnDel').addEventListener('click', ()=>{
     const d = getActive(); if(!d) return;
     if(!confirm('Excluir esta decisão?')) return;
     S.decisions = S.decisions.filter(x=>x.id!==d.id);
@@ -2430,12 +2445,12 @@
   });
 
   // modal wiring
-  on('#mClose','click', closeEditor);
-  on('#ov','click', (e)=>{
+  $('#mClose').addEventListener('click', closeEditor);
+  $('#ov').addEventListener('click', (e)=>{
     if(e.target.id==='ov') closeEditor();
   });
 
-  on('#mSave','click', ()=>{
+  $('#mSave').addEventListener('click', ()=>{
     const d = S.decisions.find(x=>x.id===editingId);
     if(!d) return;
 
@@ -2457,7 +2472,7 @@
     setSys('Salvo','ok'); setTimeout(()=>setSys('Pronto','ok'), 700);
   });
 
-  on('#eMode','click', (e)=>{
+  $('#eMode').addEventListener('click', (e)=>{
     const b = e.target.closest('button[data-mode]');
     if(!b) return;
     const d = S.decisions.find(x=>x.id===editingId);
@@ -2465,14 +2480,14 @@
     setEditMode(b.dataset.mode, d);
   });
 
-  on('#mNormalize','click', ()=>{
+  $('#mNormalize').addEventListener('click', ()=>{
     const d = S.decisions.find(x=>x.id===editingId); if(!d) return;
     normalizeWeights(d);
     renderCritBox(d);
     setEditMode(editingMode, d);
     setSys('Pesos normalizados','ok'); setTimeout(()=>setSys('Editando','warn'), 600);
   });
-  on('#mReset','click', ()=>{
+  $('#mReset').addEventListener('click', ()=>{
     const d = S.decisions.find(x=>x.id===editingId); if(!d) return;
     // set all matrix values to 0
     for(const o of d.options){
@@ -2483,14 +2498,14 @@
     setEditMode('matrix', d);
     setSys('Matriz zerada','warn');
   });
-  on('#mAuto','click', ()=>{
+  $('#mAuto').addEventListener('click', ()=>{
     const d = S.decisions.find(x=>x.id===editingId); if(!d) return;
     autoSeedDecision(d, Math.random()>.5?'A':'B');
     pushTrail(d,'note','Auto: exemplo (A/B) aplicado.');
     setEditMode(editingMode, d);
     setSys('Auto preenchido','ok'); setTimeout(()=>setSys('Editando','warn'), 700);
   });
-  on('#mPreMortem','click', ()=>{
+  $('#mPreMortem').addEventListener('click', ()=>{
     const d = S.decisions.find(x=>x.id===editingId); if(!d) return;
     d.notes.preMortem = d.notes.preMortem || 'Imagine que falhou. Liste 5 razões e mitigações.';
     setEditMode('notes', d);
@@ -2545,480 +2560,18 @@
   init();
 
 
-  // guide / tour (safe binds)
-  const onId = (id, evt, fn)=>{ const el = document.getElementById(id); if(el) el.addEventListener(evt, fn); };
+  // guide / tour
+  $('#gClose').addEventListener('click', closeGuide);
+  $('#gStartTour').addEventListener('click', ()=>{ closeGuide(); startTour(); });
+  $('#gLoadExamples').addEventListener('click', ()=>{ loadExamples(true); toast('Exemplos','10 demos carregados'); renderLeft(); });
+  $('#gOpenAcademyTab').addEventListener('click', ()=>{ mainTab='academy'; closeGuide(); renderAll(); });
+  $('#gShortcuts').addEventListener('click', ()=>{ toast('Atalhos','Ctrl+Shift+N / Ctrl+E / Ctrl+Enter / Ctrl+K / Ctrl+L','ok'); });
 
-  onId('gClose','click', closeGuide);
-  onId('gStartTour','click', ()=>{ closeGuide(); startTour(); });
-  onId('gLoadExamples','click', ()=>{ loadExamples(true); toast('Exemplos','10 demos carregados'); renderLeft(); });
-  onId('gOpenAcademyTab','click', ()=>{ mainTab='academy'; closeGuide(); renderAll(); });
-  onId('gShortcuts','click', ()=>{ toast('Atalhos','Ctrl+Shift+N / Ctrl+E / Ctrl+Enter / Ctrl+K / Ctrl+L','ok'); });
+  $('#tourExit').addEventListener('click', endTour);
+  $('#tourPrev').addEventListener('click', ()=>{ tourI = Math.max(0, tourI-1); showTour(tourI); });
+  $('#tourNext').addEventListener('click', ()=>{ tourI = Math.min(TOUR.length-1, tourI+1); showTour(tourI); });
 
-  onId('tourExit','click', endTour);
-  onId('tourPrev','click', ()=>{ tourI = Math.max(0, tourI-1); showTour(tourI); });
-  onId('tourNext','click', ()=>{ tourI = Math.min(TOUR.length-1, tourI+1); showTour(tourI); });
-
-  window.addEventListener('resize', ()=>{ const t=document.getElementById('tour'); if(t && t.classList.contains('show')) showTour(tourI); });
-
-
-  /* =========================
-     Ecossistema i4 ↔ NEXUS (SSO + Gate + Cloud Sync)
-     Mantém o app 100% igual — só adiciona conta e integração.
-     ========================= */
-  const I4_URL = "https://wilsonf1996.github.io/index.html/i4.html";
-
-  const firebaseConfig = {
-  apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
-  authDomain: "agenda-6accc.firebaseapp.com",
-  databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
-  projectId: "agenda-6accc",
-  storageBucket: "agenda-6accc.appspot.com",
-  messagingSenderId: "794262176773",
-  appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
-  measurementId: "G-CVBQ54PERH"
-};
-  let db = null;
-
-  const PATH = {
-    users: "/portal_users",
-    usernames: "/portal_usernames",
-    access: "/portal_access",
-    planRequests: "/portal_plan_requests",
-    sessions: "/portal_sessions",
-    nexusData: "/portal_apps_data/nexus"
-  };
-
-  // ====== i4-compatible helpers (NEXUS) ======
-  function safeTextLocal(s){ return String(s ?? "").replace(/[<>]/g,"").trim(); }
-  function normalizeKeyLocal(s){
-    return safeTextLocal(s)
-      .toLowerCase()
-      .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-      .replace(/[^a-z0-9]+/g,"_")
-      .replace(/^_+|_+$/g,"")
-      .slice(0, 80);
-  }
-  async function sha256Local(text){
-    const enc = new TextEncoder().encode(String(text ?? ""));
-    const buf = await crypto.subtle.digest("SHA-256", enc);
-    const arr = Array.from(new Uint8Array(buf));
-    return arr.map(b=>b.toString(16).padStart(2,"0")).join("");
-  }
-
-  function initFirebase(){
-    try{
-      if(!window.firebase) return;
-      if(!firebase.apps || !firebase.apps.length) firebase.initializeApp(firebaseConfig);
-      db = firebase.database();
-    }catch(e){ db = null; }
-  }
-
-  function qs(name){
-    try{ return new URLSearchParams(location.search).get(name); }catch(e){ return null; }
-  }
-
-  function getI4Token(){
-    const t = qs("i4_session");
-    if(t) return t;
-    try{
-      const s4 = JSON.parse(localStorage.getItem("portal_session_v4")||"null");
-      if(s4 && s4.sessionToken) return s4.sessionToken;
-    }catch(e){}
-    return null;
-  }
-
-  function getPortalSession(){
-    const keys = ["portal_session_v4","portal_session_v3","portal_session","i4_session"];
-    for(const k of keys){
-      try{
-        const raw = localStorage.getItem(k);
-        if(!raw) continue;
-        const s = JSON.parse(raw);
-        const sess = (s && (s.session || s.data)) ? (s.session || s.data) : s;
-        if(sess && (sess.userKey || sess.uid)){
-          return {
-            userKey: sess.userKey || sess.uid,
-            username: sess.username || sess.user || sess.email || "",
-            fullName: sess.fullName || sess.name || "",
-            role: sess.role || "user",
-            status: sess.status || "active",
-            sessionToken: sess.sessionToken || sess.token || sess.i4_session || ""
-          };
-        }
-      }catch(e){}
-    }
-    return null;
-  }
-
-  function setPortalSession(sess){
-    try{ localStorage.setItem("portal_session_v4", JSON.stringify(sess)); }catch(e){}
-    try{ localStorage.setItem("portal_session_v3", JSON.stringify(sess)); }catch(e){}
-  }
-
-  async function validateToken(token){
-    initFirebase();
-    if(!db || !token) return null;
-    const snap = await db.ref(PATH.sessions + "/" + token).once("value");
-    if(!snap.exists()) return null;
-    const s = snap.val();
-    if(s && s.exp && Date.now() > s.exp) return null;
-    return s;
-  }
-
-  async function fetchUserByKey(userKey){
-    initFirebase();
-    if(!db || !userKey) return null;
-    const snap = await db.ref(PATH.users + "/" + userKey).once("value");
-    return snap.exists()? snap.val(): null;
-  }
-
-  async function fetchAccess(userKey){
-    initFirebase();
-    if(!db || !userKey) return null;
-    const snap = await db.ref(PATH.access + "/" + userKey).once("value");
-    return snap.exists()? snap.val(): null;
-  }
-
-  function isAllowed(access, user){
-    const role = ((user && user.role) ? user.role : "user").toLowerCase();
-    if(role === "admin") return true;
-    const a = access || {};
-    const okStatus = (a.accessStatus||"").toLowerCase()==="active";
-    const okPay = (a.paymentStatus||"").toLowerCase()==="approved";
-    const allowNexus = !!(a.defaultAllow && a.defaultAllow.nexus);
-    return okStatus && okPay && allowNexus;
-  }
-
-  function openI4(){
-    const token = getI4Token();
-    if(!token) { location.href = I4_URL; return; }
-    try{
-      const u = new URL(I4_URL, location.href);
-      u.searchParams.set("i4_session", token);
-      location.href = u.toString();
-    }catch(e){
-      location.href = I4_URL + "?i4_session=" + encodeURIComponent(token);
-    }
-  }
-
-  function show(id, on){
-    const el = document.getElementById(id);
-    if(!el) return;
-    el.classList.toggle("show", !!on);
-    el.setAttribute("aria-hidden", on? "false":"true");
-  }
-
-  function setAuthButtons(logged){
-    const bAuth = document.getElementById("btnAuth");
-    const bOut  = document.getElementById("btnLogout");
-    if(!bAuth || !bOut) return;
-    bAuth.textContent = logged ? "Conta" : "Entrar";
-    bAuth.disabled = false; // sempre abre modal
-    bAuth.style.opacity = 1;
-    bOut.disabled = !logged;
-    bOut.style.opacity = logged ? 1 : .45;
-  }
-
-    async function createUserFromNexus(username, pass, fullName){
-    initFirebase();
-    if(!db) throw new Error("Banco indisponível");
-    const uname = safeTextLocal(username);
-    const ukey = normalizeKeyLocal(uname);
-    if(!ukey || ukey.length < 3) throw new Error("Usuário inválido");
-    if(String(pass||"").length < 4) throw new Error("Senha muito curta");
-
-    const mapSnap = await db.ref(PATH.usernames + "/" + ukey).once("value");
-    if(mapSnap.exists()) throw new Error("Esse usuário já existe");
-
-    const passHash = await sha256Local(pass);
-    const userRef = db.ref(PATH.users).push();
-    const userKey = userRef.key;
-
-    const user = {
-      userKey: userKey,
-      username: uname,
-      usernameKey: ukey,
-      fullName: safeTextLocal(fullName || uname),
-      passHash: passHash,
-      role: "user",
-      status: "active",
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    };
-
-    const updates = {};
-    updates[PATH.users + "/" + userKey] = user;
-    updates[PATH.usernames + "/" + ukey] = { userKey: userKey };
-
-    updates[PATH.access + "/" + userKey] = {
-      userKey: userKey,
-      plan: "-",
-      accessStatus: "pending",
-      paymentStatus: "pending",
-      requestedPlan: "",
-      requestedCents: 0,
-      requestedAt: 0,
-      defaultAllow: { nexus: false },
-      extras: {},
-      updatedAt: Date.now()
-    };
-
-    await db.ref().update(updates);
-    return user;
-  }
-
-  async function loginFromNexus(username, pass){
-    initFirebase();
-    if(!db) throw new Error("Banco indisponível");
-    const uname = safeTextLocal(username);
-    const ukey = normalizeKeyLocal(uname);
-    if(!ukey) throw new Error("Usuário inválido");
-
-    const mapSnap = await db.ref(PATH.usernames + "/" + ukey).once("value");
-    if(!mapSnap.exists()) throw new Error("Usuário não encontrado");
-
-    const userKey = (mapSnap.val()||{}).userKey;
-    if(!userKey) throw new Error("Usuário inválido");
-
-    const userSnap = await db.ref(PATH.users + "/" + userKey).once("value");
-    if(!userSnap.exists()) throw new Error("Usuário inválido");
-    const user = userSnap.val();
-
-    if(user.status === "blocked") throw new Error("Conta bloqueada. Contate o administrador.");
-
-    const hash = await sha256Local(pass);
-    if(hash !== (user.passHash||"")) throw new Error("Senha incorreta");
-
-    const token = "ps_" + Math.random().toString(16).slice(2) + Date.now().toString(16);
-    const exp = Date.now() + (7*24*60*60*1000);
-    await db.ref(PATH.sessions + "/" + token).set({
-      userKey: user.userKey,
-      username: user.username,
-      createdAt: Date.now(),
-      exp: exp
-    });
-
-    const sess = {
-      userKey: user.userKey,
-      username: user.username,
-      fullName: user.fullName || "",
-      role: user.role || "user",
-      status: user.status || "active",
-      sessionToken: token,
-      issuedAt: Date.now()
-    };
-
-    setPortalSession(sess);
-    return sess;
-  }
-
-async function logoutFromNexus(){
-    initFirebase();
-    try{
-      const s = getPortalSession();
-      if(s && s.sessionToken && db) await db.ref(PATH.sessions + "/" + s.sessionToken).remove().catch(function(){ return null; });
-    }catch(e){}
-    localStorage.removeItem("portal_session_v3");
-    localStorage.removeItem("portal_session_v4");
-    setAuthButtons(false);
-    show("ovGate", false);
-    show("ovAuth", false);
-    try{ const st=document.getElementById("syncText"); if(st) st.textContent="Offline (sem i4)"; }catch(e){}
-    try{ toast("Conta","Deslogado","ok"); }catch(e){}
-  }
-
-  async function loadCloudState(userKey){
-    initFirebase();
-    if(!db || !userKey) return;
-    const snap = await db.ref(PATH.nexusData + "/" + userKey + "/state").once("value");
-    if(!snap.exists()) return;
-    const cloudState = snap.val();
-    if(!cloudState) return;
-    // substitui estado e re-renderiza
-    S = cloudState;
-    if(!S.decisions || !S.decisions.length) S = defaultState();
-    save(S);
-    try{ renderAll(); }catch(e){ location.reload(); }
-    try{ toast("Sync","Dados carregados do i4","ok"); }catch(e){}
-  }
-
-  let cloudTimer = null;
-  function saveCloudDebounced(){
-    if(cloudTimer) clearTimeout(cloudTimer);
-    cloudTimer = setTimeout(async function(){
-      const sess = getPortalSession();
-      if(!sess || !sess.userKey) return;
-      const user = await fetchUserByKey(sess.userKey);
-      const access = await fetchAccess(sess.userKey);
-      if(!isAllowed(access, user)) return;
-      initFirebase();
-      if(!db) return;
-      await db.ref(PATH.nexusData + "/" + sess.userKey + "/state").set(S);
-      await db.ref(PATH.nexusData + "/" + sess.userKey + "/updatedAt").set(Date.now());
-      const st = document.getElementById("syncText");
-      if(st) st.textContent = "Sincronizado (i4)";
-    }, 650);
-  }
-
-  // Intercepta persistência local do NEXUS (KEY) para sincronizar no cloud sem quebrar o app
-  (function(){
-    try{
-      const __lsSet = localStorage.setItem.bind(localStorage);
-      localStorage.setItem = function(k,v){
-        __lsSet(k,v);
-        try{
-          if(typeof KEY !== 'undefined' && k === KEY){
-            saveCloudDebounced();
-          }
-        }catch(e){}
-      };
-    }catch(e){}
-  })();
-
-
-  // Hook no save(): NÃO reatribuir (save é const no NEXUS). Em vez disso, intercepta localStorage.setItem(KEY,...)
-
-  async function applyGate(){
-    initFirebase();
-    const token = getI4Token();
-    let tokenSess = null;
-    if(token){
-      try{ tokenSess = await validateToken(token); }catch(e){ tokenSess = null; }
-    }
-
-    let sess = getPortalSession();
-    if(tokenSess && tokenSess.userKey){
-      const user = await fetchUserByKey(tokenSess.userKey);
-      sess = {
-        userKey: tokenSess.userKey,
-        username: (user && user.username) ? user.username : (tokenSess.username||""),
-        fullName: (user && user.fullName) ? user.fullName : "",
-        role: (user && user.role) ? user.role : "user",
-        status: (user && user.status) ? user.status : "active",
-        sessionToken: token
-      };
-      setPortalSession(sess);
-    }
-
-    setAuthButtons(!!sess);
-
-    const st = document.getElementById("syncText");
-    const dot = document.getElementById("dotSync");
-
-    if(!sess){
-      if(st) st.textContent = "Modo local (entre p/ sincronizar)";
-      if(dot) dot.className = "dot warn";
-      return;
-    }
-
-    const user = await fetchUserByKey(sess.userKey);
-    const access = await fetchAccess(sess.userKey);
-    const allowed = isAllowed(access, user);
-
-    const accessLine = document.getElementById("accessLine");
-    if(accessLine){
-      accessLine.textContent = "Status: " + (access?.accessStatus||"—") + " | Pagamento: " + (access?.paymentStatus||"—") + " | Nexus: " + (access?.defaultAllow?.nexus ? "SIM":"NÃO");
-    }
-
-    if(!allowed){
-      if(st) st.textContent = "Bloqueado (i4)";
-      if(dot) dot.className = "dot bad";
-      const box = document.getElementById("gateMsg");
-      if(box){
-        box.innerHTML = "<b>Conta:</b> " + escapeHtml((user?.username||sess.username||"—")) +
-          "<br><b>Status:</b> " + escapeHtml((access?.accessStatus||"—")) +
-          "<br><b>Pagamento:</b> " + escapeHtml((access?.paymentStatus||"—")) +
-          "<br><b>NEXUS liberado:</b> " + (access?.defaultAllow?.nexus ? "SIM":"NÃO") +
-          "<br><br>Abra o i4 para solicitar/assinar. O admin do i4 libera o app.";
-      }
-      show("ovGate", true);
-      return;
-    }
-
-    if(st) st.textContent = "Sincronizando (i4)";
-    if(dot) dot.className = "dot ok";
-    show("ovGate", false);
-    await loadCloudState(sess.userKey);
-  }
-
-  async function requestNexus(){
-    initFirebase();
-    const s = getPortalSession();
-    if(!db || !s || !s.userKey) return toast("Aviso","Entre primeiro","warn");
-    const key = db.ref(PATH.planRequests).push().key;
-    await db.ref(PATH.planRequests + "/" + key).set({
-      type: "request_nexus",
-      userKey: s.userKey,
-      username: s.username,
-      createdAt: Date.now(),
-      status: "open"
-    });
-    toast("Solicitação","Enviada ao i4/admin","ok");
-  }
-
-  document.addEventListener("DOMContentLoaded", function(){
-    function on(sel, evt, fn){
-      const el = document.querySelector(sel);
-      if(el) el.addEventListener(evt, fn);
-    }
-
-    on("#btnI4","click", openI4);
-    on("#btnAuth","click", function(){ show("ovAuth", true); });
-    on("#btnLogout","click", logoutFromNexus);
-
-    on("#aClose","click", function(){ show("ovAuth", false); });
-    on("#openI4fromAuth","click", openI4);
-
-    on("#liBtn","click", async function(){
-      try{
-        await loginFromNexus(document.getElementById("liUser").value, document.getElementById("liPass").value);
-        toast("Conta","Login realizado","ok");
-        show("ovAuth", false);
-        await applyGate();
-      }catch(e){ toast("Erro", e.message || "Falha no login","warn"); }
-    });
-
-    on("#suBtn","click", async function(){
-      try{
-        const u = await createUserFromNexus(
-          document.getElementById("suUser").value,
-          document.getElementById("suPass").value,
-          document.getElementById("suName").value
-        );
-        toast("Conta","Criada no i4 (aguardando liberação)","ok");
-        await loginFromNexus(u.username, document.getElementById("suPass").value);
-        show("ovAuth", false);
-        await applyGate();
-      }catch(e){ toast("Erro", e.message || "Falha ao criar conta","warn"); }
-    });
-
-    on("#reqBtn","click", requestNexus);
-
-    on("#gClose2","click", function(){ show("ovGate", false); });
-    on("#gOpenI4","click", openI4);
-    on("#gRetry","click", async function(){ show("ovGate", false); await applyGate(); });
-    on("#gLogout","click", async function(){ show("ovGate", false); await logoutFromNexus(); });
-
-    
-    // Delegação robusta: evita travar cliques por binds faltando (Guia/Tour)
-    document.addEventListener('click', (e)=>{
-      const t = e.target;
-      if(!t) return;
-      const id = t.id || '';
-      if(id === 'gClose'){
-        const ov = t.closest('.overlay') || document.getElementById('ovGuide') || document.getElementById('guide') || document.getElementById('guidePanel');
-        if(ov){ ov.classList.remove('show'); ov.setAttribute('aria-hidden','true'); }
-      }
-      if(id === 'gStartTour'){
-        const ov = t.closest('.overlay') || document.getElementById('ovGuide') || document.getElementById('guide') || document.getElementById('guidePanel');
-        if(ov){ ov.classList.remove('show'); ov.setAttribute('aria-hidden','true'); }
-        const tour = document.getElementById('tour');
-        if(tour){ tour.classList.add('show'); tour.setAttribute('aria-hidden','false'); }
-      }
-    }, {capture:true});
-
-applyGate();
-  });
+  window.addEventListener('resize', ()=>{ if($('#tour').classList.contains('show')) showTour(tourI); });
 
 })();
 </script>
@@ -3065,6 +2618,546 @@ applyGate();
     </div>
     <div class="tourRing" id="tourRing" aria-hidden="true"></div>
   </div>
+
+
+<div class="ecoLock" id="ecoLock"></div>
+
+<div class="ecoBar" id="ecoBar" style="display:none">
+  <div class="ecoPill" id="ecoPill" role="button" aria-label="Status da conta i4">
+    <div class="ecoDot" id="ecoDot"></div>
+    <div class="ecoTxt">
+      <b id="ecoName">Deslogado</b>
+      <span id="ecoSub">Conta i4 necessária</span>
+    </div>
+  </div>
+  <button class="btn small" id="ecoOpenI4" type="button">i4</button>
+  <button class="btn small" id="ecoAuth" type="button">Entrar</button>
+  <button class="btn small danger" id="ecoOut" type="button" style="display:none">Sair</button>
+</div>
+
+<div class="ecoOverlay" id="ovEcoAuth" aria-hidden="true">
+  <div class="ecoModal" role="dialog" aria-modal="true" aria-label="Conta i4">
+    <div class="ecoHead">
+      <div>
+        <div class="t">Conta i4 (central)</div>
+        <div class="s">O NEXUS usa a mesma conta e o mesmo banco do i4. Sem login, você só acessa esta tela.</div>
+      </div>
+      <button class="btn small ghost" id="ecoClose" type="button">Fechar</button>
+    </div>
+    <div class="ecoBody">
+      <div class="ecoGrid">
+        <div class="ecoCard">
+          <b>Entrar</b>
+          <label for="ecoLiUser">Usuário</label>
+          <input id="ecoLiUser" autocomplete="username" placeholder="ex: wilso">
+          <label for="ecoLiPass">Senha</label>
+          <input id="ecoLiPass" type="password" autocomplete="current-password" placeholder="••••••">
+          <div style="height:10px"></div>
+          <div class="ecoRow">
+            <button class="btn primary" id="ecoLiBtn" type="button">Entrar</button>
+            <button class="btn" id="ecoForgot" type="button" title="Não implementado (por enquanto)">Esqueci</button>
+          </div>
+        </div>
+        <div class="ecoCard">
+          <b>Criar conta</b>
+          <label for="ecoSuUser">Usuário</label>
+          <input id="ecoSuUser" autocomplete="username" placeholder="sem espaços">
+          <label for="ecoSuName">Nome completo</label>
+          <input id="ecoSuName" autocomplete="name" placeholder="Seu nome">
+          <label for="ecoSuPass">Senha</label>
+          <input id="ecoSuPass" type="password" autocomplete="new-password" placeholder="mín. 4 caracteres">
+          <div style="height:10px"></div>
+          <button class="btn primary" id="ecoSuBtn" type="button">Criar conta</button>
+        </div>
+      </div>
+
+      <div class="ecoHr"></div>
+
+      <div class="ecoCard">
+        <b>Status do NEXUS</b>
+        <div style="height:8px"></div>
+        <div id="ecoAccessLine" style="color:var(--muted)">—</div>
+        <div style="height:12px"></div>
+        <div class="ecoRow">
+          <button class="btn small" id="ecoReq" type="button">Solicitar liberação</button>
+          <button class="btn small" id="ecoGoI4" type="button">Abrir i4</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ecoOverlay" id="ovEcoGate" aria-hidden="true">
+  <div class="ecoModal" role="dialog" aria-modal="true" aria-label="NEXUS bloqueado">
+    <div class="ecoHead">
+      <div>
+        <div class="t">🔒 NEXUS bloqueado</div>
+        <div class="s">Você está logado no i4, mas o admin ainda não liberou o app NEXUS para sua conta.</div>
+      </div>
+      <button class="btn small ghost" id="ecoGateClose" type="button">Fechar</button>
+    </div>
+    <div class="ecoBody">
+      <div class="ecoCard" id="ecoGateMsg">—</div>
+      <div style="height:12px"></div>
+      <div class="ecoRow">
+        <button class="btn primary" id="ecoGateI4" type="button">Ir para i4</button>
+        <button class="btn" id="ecoGateRetry" type="button">Tentar de novo</button>
+        <button class="btn danger" id="ecoGateOut" type="button">Sair</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== Firebase (i4 central) ===== -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+(() => {
+  'use strict';
+
+  const I4_URL = "https://wilsonf1996.github.io/index.html/i4.html";
+  const firebaseConfig = {
+  apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+  authDomain: "agenda-6accc.firebaseapp.com",
+  databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+  projectId: "agenda-6accc",
+  storageBucket: "agenda-6accc.appspot.com",
+  messagingSenderId: "794262176773",
+  appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+  measurementId: "G-CVBQ54PERH"
+}
+
+  let db = null;
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+  } catch (e) {
+    console.warn("Firebase init fail:", e);
+  }
+
+  const $ = (id)=>document.getElementById(id);
+  const safeJSON = (raw)=>{ try{ return JSON.parse(raw); }catch(e){ return null; } };
+
+  // ===== i4 session format (matches i4 saveSession/loadSession) =====
+  function loadSession() {
+    try {
+      const rawV4 = localStorage.getItem("portal_session_v4");
+      if (rawV4) {
+        const s4 = JSON.parse(rawV4);
+        if (s4 && s4.userKey) return {
+          userKey: s4.userKey,
+          username: s4.username || "",
+          fullName: s4.fullName || "",
+          role: s4.role || "user",
+          status: s4.status || "active",
+          sessionToken: s4.sessionToken || null
+        };
+      }
+    } catch (e) {}
+    try {
+      const raw = localStorage.getItem("portal_session_v3");
+      if (!raw) return null;
+      const s = JSON.parse(raw);
+      if (s && s.userKey) return {
+        userKey: s.userKey,
+        username: s.username || "",
+        fullName: s.fullName || "",
+        role: s.role || "user",
+        status: s.status || "active",
+        sessionToken: null
+      };
+    } catch (e) {}
+    return null;
+  }
+
+  function saveSession(sess) {
+    // v3 compat + v4 com token (igual i4)
+    localStorage.setItem("portal_session_v3", JSON.stringify(sess));
+    const v4 = { ...sess, sessionToken: sess.sessionToken || null, issuedAt: Date.now() };
+    localStorage.setItem("portal_session_v4", JSON.stringify(v4));
+  }
+
+  async function sha256(text){
+    const enc = new TextEncoder().encode(text);
+    const buf = await crypto.subtle.digest("SHA-256", enc);
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+  }
+
+  function normalizeKey(s){
+    return String(s||"").trim().toLowerCase().replace(/\s+/g,"").replace(/[^a-z0-9._-]/g,"");
+  }
+
+  function qs(name){
+    try{ return new URLSearchParams(location.search).get(name); }catch(e){ return null; }
+  }
+
+  function getToken() {
+    const t = qs("i4_session");
+    if (t) return t;
+    const s = loadSession();
+    return s?.sessionToken || null;
+  }
+
+  function clearAllSessions() {
+    ["portal_session_v4","portal_session_v3","portal_session","i4_session","nexus_session","portal_last_user"].forEach(k=>{
+      try{ localStorage.removeItem(k); }catch(e){}
+    });
+    try {
+      const u=new URL(location.href);
+      u.searchParams.delete("i4_session");
+      history.replaceState(null,"",u.toString());
+    } catch(e) {}
+  }
+
+  function show(id,on){
+    const el=$(id);
+    if(!el) return;
+    el.classList.toggle("show",!!on);
+    el.setAttribute("aria-hidden", on ? "false":"true");
+  }
+
+  function lockApp(on){
+    const lk=$("ecoLock");
+    if(lk) lk.classList.toggle("on",!!on);
+  }
+
+  function toastCompat(title, msg){
+    try{ if(typeof window.toast==="function") return window.toast(title,msg); }catch(e){}
+    try{ if(typeof window.uiToast==="function") return window.uiToast(title,msg); }catch(e){}
+    alert(title+"\n\n"+msg);
+  }
+
+  const PATH = {
+    users: "portal_users",
+    usernames: "portal_usernames",
+    access: "portal_access",
+    sessions: "portal_sessions"
+  };
+
+  async function get(refPath){
+    if(!db) throw new Error("DB indisponível");
+    const snap = await db.ref(refPath).get().catch(()=>null);
+    if(!snap || !snap.exists()) return null;
+    return snap.val();
+  }
+
+  async function set(refPath, val){
+    if(!db) throw new Error("DB indisponível");
+    await db.ref(refPath).set(val);
+  }
+
+  async function upd(refPath, val){
+    if(!db) throw new Error("DB indisponível");
+    await db.ref(refPath).update(val);
+  }
+
+  async function remove(refPath){
+    if(!db) return;
+    await db.ref(refPath).remove().catch(()=>null);
+  }
+
+  async function validateToken(token){
+    if(!token) return null;
+    const s = await get(`${PATH.sessions}/${token}`);
+    if(!s) return null;
+    if(s.exp && Date.now()>s.exp) return null;
+    return s;
+  }
+
+  async function createPortalSession(userKey, username){
+    const token = crypto.randomUUID ? crypto.randomUUID() : (Date.now()+"_"+Math.random().toString(16).slice(2));
+    const now = Date.now();
+    await set(`${PATH.sessions}/${token}`, {
+      token,
+      userKey,
+      username,
+      app: "i4",
+      createdAt: now,
+      lastSeenAt: now
+    });
+    return token;
+  }
+
+  async function destroyPortalSession(token){
+    if(!token) return;
+    await remove(`${PATH.sessions}/${token}`);
+  }
+
+  async function login(username, password){
+    const key = normalizeKey(username);
+    if(!key) throw new Error("Usuário inválido.");
+    const map = await get(`${PATH.usernames}/${key}`);
+    const userKey = map?.userKey || map; // compat
+    if(!userKey) throw new Error("Usuário não encontrado.");
+    const user = await get(`${PATH.users}/${userKey}`);
+    if(!user) throw new Error("Usuário inválido.");
+    if(user.status === "blocked") throw new Error("Conta bloqueada. Contate o administrador.");
+    const hash = await sha256(password);
+    if(hash !== user.passHash) throw new Error("Senha incorreta.");
+
+    let sessionToken = null;
+    try {
+      sessionToken = await createPortalSession(user.userKey || userKey, user.username || username);
+    } catch(e) {
+      sessionToken = null;
+    }
+
+    saveSession({
+      userKey: user.userKey || userKey,
+      username: user.username || username,
+      fullName: user.fullName || "",
+      role: user.role || "user",
+      status: user.status || "active",
+      sessionToken
+    });
+    return loadSession();
+  }
+
+  async function createUser(username, fullName, password){
+    const usernameKey = normalizeKey(username);
+    if(!usernameKey) throw new Error("Usuário inválido.");
+    const exists = await get(`${PATH.usernames}/${usernameKey}`);
+    if(exists) throw new Error("Esse usuário já existe.");
+
+    const passHash = await sha256(password);
+    const userKey = db.ref(PATH.users).push().key;
+    const now = Date.now();
+    const userObj = {
+      userKey,
+      username: String(username).trim(),
+      usernameKey,
+      fullName: String(fullName||username).trim(),
+      passHash,
+      role: "user",
+      status: "active",
+      createdAt: now,
+      updatedAt: now
+    };
+
+    const updates = {};
+    updates[`${PATH.users}/${userKey}`] = userObj;
+    updates[`${PATH.usernames}/${usernameKey}`] = { userKey };
+
+    // 1º acesso: tudo desligado, acesso pendente (igual i4)
+    updates[`${PATH.access}/${userKey}`] = {
+      plan: "Pendente",
+      accessStatus: "pending",
+      paymentStatus: "pending",
+      defaultAllow: { nexus: false },
+      createdAt: now,
+      updatedAt: now
+    };
+
+    await db.ref().update(updates);
+
+    let sessionToken = null;
+    try {
+      sessionToken = await createPortalSession(userKey, username);
+    } catch(e) {
+      sessionToken = null;
+    }
+
+    saveSession({
+      userKey,
+      username: String(username).trim(),
+      fullName: String(fullName||username).trim(),
+      role: "user",
+      status: "active",
+      sessionToken
+    });
+    return loadSession();
+  }
+
+  async function fetchAccess(userKey){
+    return await get(`${PATH.access}/${userKey}`);
+  }
+
+  function allowedForNexus(access, sess){
+    if(!sess) return false;
+    if(String(sess.role||"").toLowerCase()==="admin") return true;
+    if(!access) return false;
+    const okStatus = access.accessStatus === "active";
+    const okPay = access.paymentStatus === "approved";
+    const allow = !!(access.defaultAllow && access.defaultAllow.nexus === true);
+    return okStatus && okPay && allow;
+  }
+
+  function openI4(){
+    const token = getToken();
+    if(!token) { location.href = I4_URL; return; }
+    const u = new URL(I4_URL, location.href);
+    u.searchParams.set("i4_session", token);
+    location.href = u.toString();
+  }
+
+  async function hardLogout(){
+    try {
+      const token = getToken();
+      if(token) await destroyPortalSession(token);
+    } catch(e) {}
+    clearAllSessions();
+    location.href = location.pathname;
+  }
+
+  function setBarState(sess, access){
+    const bar = $("ecoBar");
+    if(!bar) return;
+    bar.style.display = "flex";
+    const dot = $("ecoDot");
+    const name = $("ecoName");
+    const sub = $("ecoSub");
+    const bAuth = $("ecoAuth");
+    const bOut = $("ecoOut");
+
+    if(!sess){
+      if(dot) dot.classList.remove("on");
+      if(name) name.textContent = "Deslogado";
+      if(sub) sub.textContent = "Conta i4 necessária";
+      if(bAuth) bAuth.style.display = "";
+      if(bOut) bOut.style.display = "none";
+      return;
+    }
+    if(dot) dot.classList.add("on");
+    if(name) name.textContent = sess.fullName ? sess.fullName : ("@"+(sess.username||""));
+    const st = access?.accessStatus || "—";
+    const pay = access?.paymentStatus || "—";
+    const allow = access?.defaultAllow?.nexus ? "SIM" : "NÃO";
+    if(sub) sub.textContent = `NEXUS: ${st} • PIX: ${pay} • Liberado: ${allow}`;
+    if(bAuth) bAuth.style.display = "none";
+    if(bOut) bOut.style.display = "";
+  }
+
+  async function syncFromUrlToken(){
+    const token = qs("i4_session");
+    if(!token) return;
+    const s = await validateToken(token);
+    if(!s || !s.userKey) return;
+    const user = await get(`${PATH.users}/${s.userKey}`);
+    if(!user) return;
+    saveSession({
+      userKey: user.userKey || s.userKey,
+      username: user.username || s.username || "",
+      fullName: user.fullName || "",
+      role: user.role || "user",
+      status: user.status || "active",
+      sessionToken: token
+    });
+    // limpa parâmetro (fica só no localStorage)
+    try {
+      const u=new URL(location.href);
+      u.searchParams.delete("i4_session");
+      history.replaceState(null,"",u.toString());
+    } catch(e) {}
+  }
+
+  async function applyGate(){
+    // regra do usuário: sem login i4 ou login pelo NEXUS => só tela de auth
+    const sess = loadSession();
+    if(!sess){
+      setBarState(null,null);
+      lockApp(true);
+      show("ovEcoGate", false);
+      show("ovEcoAuth", true);
+      return;
+    }
+
+    const access = await fetchAccess(sess.userKey).catch(()=>null);
+    setBarState(sess, access);
+
+    const line = $("ecoAccessLine");
+    if(line){
+      const st = access?.accessStatus || "pending";
+      const pay = access?.paymentStatus || "pending";
+      const allow = access?.defaultAllow?.nexus ? "SIM" : "NÃO";
+      line.textContent = `Status: ${st} • Pagamento: ${pay} • NEXUS liberado: ${allow}`;
+    }
+
+    if(!allowedForNexus(access, sess)){
+      lockApp(true);
+      $("ecoGateMsg").textContent = "Você está logado no i4, mas o admin ainda não liberou o NEXUS (ou pagamento não aprovado).";
+      show("ovEcoAuth", false);
+      show("ovEcoGate", true);
+    } else {
+      lockApp(false);
+      show("ovEcoGate", false);
+      show("ovEcoAuth", false);
+    }
+  }
+
+  function installOverlayOnce(){
+    if($("ovEcoAuth")) return;
+    const host = document.createElement("div");
+    host.innerHTML = "\n<div class=\"ecoLock\" id=\"ecoLock\"></div>\n\n<div class=\"ecoBar\" id=\"ecoBar\" style=\"display:none\">\n  <div class=\"ecoPill\" id=\"ecoPill\" role=\"button\" aria-label=\"Status da conta i4\">\n    <div class=\"ecoDot\" id=\"ecoDot\"></div>\n    <div class=\"ecoTxt\">\n      <b id=\"ecoName\">Deslogado</b>\n      <span id=\"ecoSub\">Conta i4 necess\u00e1ria</span>\n    </div>\n  </div>\n  <button class=\"btn small\" id=\"ecoOpenI4\" type=\"button\">i4</button>\n  <button class=\"btn small\" id=\"ecoAuth\" type=\"button\">Entrar</button>\n  <button class=\"btn small danger\" id=\"ecoOut\" type=\"button\" style=\"display:none\">Sair</button>\n</div>\n\n<div class=\"ecoOverlay\" id=\"ovEcoAuth\" aria-hidden=\"true\">\n  <div class=\"ecoModal\" role=\"dialog\" aria-modal=\"true\" aria-label=\"Conta i4\">\n    <div class=\"ecoHead\">\n      <div>\n        <div class=\"t\">Conta i4 (central)</div>\n        <div class=\"s\">O NEXUS usa a mesma conta e o mesmo banco do i4. Sem login, voc\u00ea s\u00f3 acessa esta tela.</div>\n      </div>\n      <button class=\"btn small ghost\" id=\"ecoClose\" type=\"button\">Fechar</button>\n    </div>\n    <div class=\"ecoBody\">\n      <div class=\"ecoGrid\">\n        <div class=\"ecoCard\">\n          <b>Entrar</b>\n          <label for=\"ecoLiUser\">Usu\u00e1rio</label>\n          <input id=\"ecoLiUser\" autocomplete=\"username\" placeholder=\"ex: wilso\">\n          <label for=\"ecoLiPass\">Senha</label>\n          <input id=\"ecoLiPass\" type=\"password\" autocomplete=\"current-password\" placeholder=\"\u2022\u2022\u2022\u2022\u2022\u2022\">\n          <div style=\"height:10px\"></div>\n          <div class=\"ecoRow\">\n            <button class=\"btn primary\" id=\"ecoLiBtn\" type=\"button\">Entrar</button>\n            <button class=\"btn\" id=\"ecoForgot\" type=\"button\" title=\"N\u00e3o implementado (por enquanto)\">Esqueci</button>\n          </div>\n        </div>\n        <div class=\"ecoCard\">\n          <b>Criar conta</b>\n          <label for=\"ecoSuUser\">Usu\u00e1rio</label>\n          <input id=\"ecoSuUser\" autocomplete=\"username\" placeholder=\"sem espa\u00e7os\">\n          <label for=\"ecoSuName\">Nome completo</label>\n          <input id=\"ecoSuName\" autocomplete=\"name\" placeholder=\"Seu nome\">\n          <label for=\"ecoSuPass\">Senha</label>\n          <input id=\"ecoSuPass\" type=\"password\" autocomplete=\"new-password\" placeholder=\"m\u00edn. 4 caracteres\">\n          <div style=\"height:10px\"></div>\n          <button class=\"btn primary\" id=\"ecoSuBtn\" type=\"button\">Criar conta</button>\n        </div>\n      </div>\n\n      <div class=\"ecoHr\"></div>\n\n      <div class=\"ecoCard\">\n        <b>Status do NEXUS</b>\n        <div style=\"height:8px\"></div>\n        <div id=\"ecoAccessLine\" style=\"color:var(--muted)\">\u2014</div>\n        <div style=\"height:12px\"></div>\n        <div class=\"ecoRow\">\n          <button class=\"btn small\" id=\"ecoReq\" type=\"button\">Solicitar libera\u00e7\u00e3o</button>\n          <button class=\"btn small\" id=\"ecoGoI4\" type=\"button\">Abrir i4</button>\n        </div>\n      </div>\n    </div>\n  </div>\n</div>\n\n<div class=\"ecoOverlay\" id=\"ovEcoGate\" aria-hidden=\"true\">\n  <div class=\"ecoModal\" role=\"dialog\" aria-modal=\"true\" aria-label=\"NEXUS bloqueado\">\n    <div class=\"ecoHead\">\n      <div>\n        <div class=\"t\">\ud83d\udd12 NEXUS bloqueado</div>\n        <div class=\"s\">Voc\u00ea est\u00e1 logado no i4, mas o admin ainda n\u00e3o liberou o app NEXUS para sua conta.</div>\n      </div>\n      <button class=\"btn small ghost\" id=\"ecoGateClose\" type=\"button\">Fechar</button>\n    </div>\n    <div class=\"ecoBody\">\n      <div class=\"ecoCard\" id=\"ecoGateMsg\">\u2014</div>\n      <div style=\"height:12px\"></div>\n      <div class=\"ecoRow\">\n        <button class=\"btn primary\" id=\"ecoGateI4\" type=\"button\">Ir para i4</button>\n        <button class=\"btn\" id=\"ecoGateRetry\" type=\"button\">Tentar de novo</button>\n        <button class=\"btn danger\" id=\"ecoGateOut\" type=\"button\">Sair</button>\n      </div>\n    </div>\n  </div>\n</div>\n";
+    document.body.appendChild(host);
+  }
+
+  function bindClicks(){
+    document.addEventListener("click", async (ev)=>{
+      const el = ev.target?.closest?.("button,[role='button'],a");
+      if(!el) return;
+      const id = el.id || "";
+
+      if(id==="ecoOpenI4" || id==="ecoGoI4" || id==="ecoGateI4"){ ev.preventDefault(); openI4(); return; }
+      if(id==="ecoAuth"){ ev.preventDefault(); show("ovEcoAuth", true); return; }
+      if(id==="ecoClose"){ ev.preventDefault(); show("ovEcoAuth", false); return; }
+      if(id==="ecoGateClose"){ ev.preventDefault(); show("ovEcoGate", false); return; }
+      if(id==="ecoGateRetry"){ ev.preventDefault(); await applyGate(); return; }
+      if(id==="ecoOut" || id==="ecoGateOut"){ ev.preventDefault(); await hardLogout(); return; }
+
+      if(id==="ecoLiBtn"){ 
+        ev.preventDefault();
+        try{
+          await login($("ecoLiUser").value, $("ecoLiPass").value);
+          toastCompat("Login","Conectado ao i4.");
+          await applyGate();
+        }catch(e){ toastCompat("Erro", String(e.message||e)); }
+        return;
+      }
+      if(id==="ecoSuBtn"){ 
+        ev.preventDefault();
+        try{
+          const p = $("ecoSuPass").value || "";
+          if(String(p).length < 4) throw new Error("Senha muito curta.");
+          await createUser($("ecoSuUser").value, $("ecoSuName").value, p);
+          toastCompat("Conta criada","Conta criada no i4. Agora solicite liberação do NEXUS.");
+          await applyGate();
+        }catch(e){ toastCompat("Erro", String(e.message||e)); }
+        return;
+      }
+      if(id==="ecoReq"){ 
+        ev.preventDefault();
+        const sess = loadSession();
+        if(!sess){ toastCompat("Conta","Faça login primeiro."); return; }
+        try{
+          await upd(`${PATH.access}/${sess.userKey}`, {
+            accessStatus: "pending",
+            paymentStatus: "pending",
+            requestedNexusAt: Date.now(),
+            updatedAt: Date.now()
+          });
+          toastCompat("Solicitado","Pedido enviado ao admin do i4.");
+          await applyGate();
+        }catch(e){ toastCompat("Erro", String(e.message||e)); }
+        return;
+      }
+    }, {capture:true});
+  }
+
+  window.addEventListener("storage", (ev)=>{
+    if(ev.key==="portal_session_v4" || ev.key==="portal_session_v3") applyGate();
+  });
+
+  document.addEventListener("DOMContentLoaded", async ()=>{
+    installOverlayOnce();
+    bindClicks();
+    await syncFromUrlToken();
+    await applyGate();
+    setInterval(applyGate, 2500);
+  });
+})();
+</script>
 
 </body>
 </html>
