@@ -278,7 +278,6 @@
   <!-- Firebase (RTDB) - compat (mesmo banco do i4) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-
 </head>
 <body>
   <div class="topbar">
@@ -297,7 +296,7 @@
           <div class="pill"><span>🕒</span><span id="clock">--:--</span></div>
           <button class="btn small" id="btnI4" type="button">i4 Conta</button>
           <button class="btn small" id="btnAuth" type="button">Entrar</button>
-          <button class="btn small danger" id="btnLogout">Sair</button>
+          <button class="btn small danger" id="btnLogout" type="button">Sair</button>
           <button class="btn small ghost" id="btnHelp">Guia</button>
           <button class="btn small" id="btnImport">Importar</button>
           <button class="btn small" id="btnExport">Exportar</button>
@@ -472,8 +471,6 @@
   /* ----------------------- Utilities ----------------------- */
   const $ = (sel, root=document) => root.querySelector(sel);
   const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
-
-  function on(sel, evt, fn){ const el = $(sel); if(el) el.addEventListener(evt, fn); }
   const uid = () => Math.random().toString(16).slice(2) + Date.now().toString(16);
   const clamp = (v,min,max) => Math.max(min, Math.min(max, v));
   const nowISO = () => new Date().toISOString();
@@ -2543,23 +2540,26 @@
   init();
 
 
-  // guide / tour (safe binds)
-  on('#gClose','click', closeGuide);
-  on('#gStartTour','click', ()=>{ closeGuide(); startTour(); });
-  on('#gLoadExamples','click', ()=>{ loadExamples(true); toast('Exemplos','10 demos carregados'); renderLeft(); });
-  on('#gOpenAcademyTab','click', ()=>{ mainTab='academy'; closeGuide(); renderAll(); });
-  on('#gShortcuts','click', ()=>{ toast('Atalhos','Ctrl+Shift+N / Ctrl+E / Ctrl+Enter / Ctrl+K / Ctrl+L','ok'); });
+  // guide / tour
+  $('#gClose').addEventListener('click', closeGuide);
+  $('#gStartTour').addEventListener('click', ()=>{ closeGuide(); startTour(); });
+  $('#gLoadExamples').addEventListener('click', ()=>{ loadExamples(true); toast('Exemplos','10 demos carregados'); renderLeft(); });
+  $('#gOpenAcademyTab').addEventListener('click', ()=>{ mainTab='academy'; closeGuide(); renderAll(); });
+  $('#gShortcuts').addEventListener('click', ()=>{ toast('Atalhos','Ctrl+Shift+N / Ctrl+E / Ctrl+Enter / Ctrl+K / Ctrl+L','ok'); });
 
-  on('#tourExit','click', endTour);
-  on('#tourPrev','click', ()=>{ tourI = Math.max(0, tourI-1); showTour(tourI); });
-  on('#tourNext','click', ()=>{ tourI = Math.min(TOUR.length-1, tourI+1); showTour(tourI); });
+  $('#tourExit').addEventListener('click', endTour);
+  $('#tourPrev').addEventListener('click', ()=>{ tourI = Math.max(0, tourI-1); showTour(tourI); });
+  $('#tourNext').addEventListener('click', ()=>{ tourI = Math.min(TOUR.length-1, tourI+1); showTour(tourI); });
 
-  window.addEventListener('resize', ()=>{ const t=$('#tour'); if(t && t.classList.contains('show')) showTour(tourI); });
+  window.addEventListener('resize', ()=>{ if($('#tour').classList.contains('show')) showTour(tourI); });
 
 
   /* =========================
-     i4 SSO + Gate + Cloud Sync (RTDB)
+     Ecossistema i4 ↔ NEXUS (SSO + Gate + Cloud Sync)
+     Mantém o app 100% igual — só adiciona conta e integração.
      ========================= */
+  const I4_URL = "https://wilsonf1996.github.io/index.html/i4.html";
+
   const firebaseConfig = {
   apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
   authDomain: "agenda-6accc.firebaseapp.com",
@@ -2585,214 +2585,123 @@
       if(!window.firebase) return;
       if(!firebase.apps || !firebase.apps.length) firebase.initializeApp(firebaseConfig);
       db = firebase.database();
-    }catch(e){
-      db = null;
-    }
+    }catch(e){ db = null; }
   }
 
   function qs(name){
-    try{ return new URLSearchParams(location.search).get(name); }catch{ return null; }
+    try{ return new URLSearchParams(location.search).get(name); }catch(e){ return null; }
   }
 
-  function getI4SessionToken(){
+  function getI4Token(){
     const t = qs("i4_session");
     if(t) return t;
     try{
       const s4 = JSON.parse(localStorage.getItem("portal_session_v4")||"null");
-      if(s4?.sessionToken) return s4.sessionToken;
+      if(s4 && s4.sessionToken) return s4.sessionToken;
     }catch(e){}
     return null;
   }
 
-  function getLocalSession(){
-    // prefer v4
-    try{
-      const s4 = JSON.parse(localStorage.getItem("portal_session_v4")||"null");
-      if(s4?.userKey) return s4;
-    }catch(e){}
-    // fallback v3
-    try{
-      const s3 = JSON.parse(localStorage.getItem("portal_session_v3")||"null");
-      if(s3?.userKey) return s3;
-    }catch(e){}
+  function getPortalSession(){
+    try{ const s4 = JSON.parse(localStorage.getItem("portal_session_v4")||"null"); if(s4 && s4.userKey) return s4; }catch(e){}
+    try{ const s3 = JSON.parse(localStorage.getItem("portal_session_v3")||"null"); if(s3 && s3.userKey) return s3; }catch(e){}
     return null;
+  }
+
+  function setPortalSession(sess){
+    try{ localStorage.setItem("portal_session_v4", JSON.stringify(sess)); }catch(e){}
+    try{ localStorage.setItem("portal_session_v3", JSON.stringify(sess)); }catch(e){}
   }
 
   async function validateToken(token){
+    initFirebase();
     if(!db || !token) return null;
-    const snap = await db.ref(`${PATH.sessions}/${token}`).once('value');
+    const snap = await db.ref(PATH.sessions + "/" + token).once("value");
     if(!snap.exists()) return null;
     const s = snap.val();
-    if(s.exp && Date.now() > s.exp) return null;
-    return s; // {userKey, username, exp...}
+    if(s && s.exp && Date.now() > s.exp) return null;
+    return s;
   }
 
-  async function fetchUser(userKey){
+  async function fetchUserByKey(userKey){
+    initFirebase();
     if(!db || !userKey) return null;
-    const snap = await db.ref(`${PATH.users}/${userKey}`).once('value');
+    const snap = await db.ref(PATH.users + "/" + userKey).once("value");
     return snap.exists()? snap.val(): null;
   }
 
   async function fetchAccess(userKey){
+    initFirebase();
     if(!db || !userKey) return null;
-    const snap = await db.ref(`${PATH.access}/${userKey}`).once('value');
+    const snap = await db.ref(PATH.access + "/" + userKey).once("value");
     return snap.exists()? snap.val(): null;
   }
 
   function isAllowed(access, user){
-    // admin sempre pode (se existir role)
-    const role = (user?.role || "user").toLowerCase();
+    const role = ((user && user.role) ? user.role : "user").toLowerCase();
     if(role === "admin") return true;
-
     const a = access || {};
-    const okStatus = (a.accessStatus||"").toLowerCase() === "active";
-    const okPay = (a.paymentStatus||"").toLowerCase() === "approved";
+    const okStatus = (a.accessStatus||"").toLowerCase()==="active";
+    const okPay = (a.paymentStatus||"").toLowerCase()==="approved";
     const allowNexus = !!(a.defaultAllow && a.defaultAllow.nexus);
     return okStatus && okPay && allowNexus;
   }
 
-  function showOverlay(id, show){
-    const el = document.getElementById(id);
-    if(!el) return;
-    if(show){
-      el.classList.add("show");
-      el.setAttribute("aria-hidden","false");
-    } else {
-      el.classList.remove("show");
-      el.setAttribute("aria-hidden","true");
+  function openI4(){
+    const token = getI4Token();
+    if(!token) { location.href = I4_URL; return; }
+    try{
+      const u = new URL(I4_URL, location.href);
+      u.searchParams.set("i4_session", token);
+      location.href = u.toString();
+    }catch(e){
+      location.href = I4_URL + "?i4_session=" + encodeURIComponent(token);
     }
   }
 
-  function openI4(){
-    // sua URL do i4
-    const i4url = "https://wilsonf1996.github.io/index.html/i4.html";
-    const token = getI4SessionToken();
-    if(!token) { location.href = i4url; return; }
-    try{
-      const u = new URL(i4url, location.href);
-      u.searchParams.set("i4_session", token);
-      location.href = u.toString();
-    }catch{
-      location.href = i4url + "?i4_session=" + encodeURIComponent(token);
-    }
+  function show(id, on){
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.classList.toggle("show", !!on);
+    el.setAttribute("aria-hidden", on? "false":"true");
   }
 
   function setAuthButtons(logged){
     const bAuth = document.getElementById("btnAuth");
     const bOut  = document.getElementById("btnLogout");
     if(!bAuth || !bOut) return;
-    // sempre visível; alterna estado
     bAuth.disabled = !!logged;
     bAuth.style.opacity = logged ? .55 : 1;
     bOut.disabled = !logged;
     bOut.style.opacity = logged ? 1 : .55;
   }
 
-  async function applyGate(){
-    initFirebase();
-
-    // 1) tenta token
-    const token = getI4SessionToken();
-    let sessFromToken = null;
-    if(token && db){
-      try{ sessFromToken = await validateToken(token); }catch(e){ sessFromToken = null; }
-    }
-
-    // 2) tenta sessão local
-    let local = getLocalSession();
-
-    // 3) normaliza sessão
-    let session = null;
-    if(sessFromToken?.userKey){
-      const user = await fetchUser(sessFromToken.userKey);
-      session = {
-        userKey: sessFromToken.userKey,
-        username: user?.username || sessFromToken.username || "",
-        fullName: user?.fullName || "",
-        role: user?.role || "user",
-        status: user?.status || "active",
-        sessionToken: token
-      };
-      localStorage.setItem("portal_session_v4", JSON.stringify(session));
-    } else if(local?.userKey) {
-      session = local;
-    }
-
-    // 4) UI
-    setAuthButtons(!!session);
-
-    // 5) se não logado → bloqueia sync cloud mas deixa usar modo local
-    // (você pode mudar para “bloquear tudo” se quiser)
-    if(!session) {
-      // Mostra uma “dica” e permite entrar
-      document.getElementById("syncText").textContent = "Modo local (entre para sincronizar)";
-      document.getElementById("dotSync").className = "dot warn";
-      return { session:null, allowed:false, access:null, user:null };
-    }
-
-    // 6) checa acesso
-    let user = null, access = null;
-    try{
-      initFirebase();
-      user = await fetchUser(session.userKey);
-      access = await fetchAccess(session.userKey);
-    }catch(e){}
-
-    const allowed = isAllowed(access, user);
-
-    // 7) se não liberado → gate
-    if(!allowed){
-      const msg = [];
-      msg.push(`<b>Conta:</b> ${escapeHtml(user?.username||session.username||'—')}`);
-      msg.push(`<b>Status:</b> ${escapeHtml(access?.accessStatus||'—')}`);
-      msg.push(`<b>Pagamento:</b> ${escapeHtml(access?.paymentStatus||'—')}`);
-      msg.push(`<b>NEXUS liberado:</b> ${access?.defaultAllow?.nexus ? 'SIM' : 'NÃO'}`);
-      msg.push(`<br/>Abra o i4 para solicitar liberação/assinatura. O admin do i4 controla o acesso.`);
-      const box = document.getElementById("gateMsg");
-      if(box) box.innerHTML = msg.join("<br/>");
-      showOverlay("ovGate", true);
-
-      document.getElementById("syncText").textContent = "Bloqueado (i4)";
-      document.getElementById("dotSync").className = "dot bad";
-      return { session, allowed:false, access, user };
-    }
-
-    // 8) allowed → habilita cloud sync
-    document.getElementById("syncText").textContent = "Sincronizando (i4)";
-    document.getElementById("dotSync").className = "dot ok";
-    await loadFromCloud(session.userKey);
-    return { session, allowed:true, access, user };
-  }
-
   async function createUserFromNexus(username, pass, fullName){
     initFirebase();
-    if(!db) throw new Error("DB indisponível");
+    if(!db) throw new Error("Banco indisponível");
     username = (username||"").trim().toLowerCase();
-    if(!username || username.length < 3) throw new Error("Usuário inválido");
-    if(!pass || pass.length < 4) throw new Error("Senha muito curta");
+    if(username.length < 3) throw new Error("Usuário inválido");
+    if((pass||"").length < 4) throw new Error("Senha muito curta");
 
-    // verifica se username existe
-    const snap = await db.ref(PATH.users).orderByChild("username").equalTo(username).once('value');
-    if(snap.exists()) throw new Error("Usuário já existe");
+    const exists = await db.ref(PATH.users).orderByChild("username").equalTo(username).once("value");
+    if(exists.exists()) throw new Error("Usuário já existe");
 
     const userKey = db.ref(PATH.users).push().key;
     const user = {
-      userKey,
-      username,
-      fullName: fullName||username,
-      password: pass,          // (igual ao i4 atual) — depois podemos melhorar com hash
+      userKey: userKey,
+      username: username,
+      fullName: fullName || username,
+      password: pass,
       role: "user",
       status: "active",
       createdAt: Date.now()
     };
-    await db.ref(`${PATH.users}/${userKey}`).set(user);
-
-    // cria access padrão (bloqueado até admin aprovar)
-    await db.ref(`${PATH.access}/${userKey}`).set({
-      userKey,
+    await db.ref(PATH.users + "/" + userKey).set(user);
+    await db.ref(PATH.access + "/" + userKey).set({
+      userKey: userKey,
       accessStatus: "pending",
       paymentStatus: "pending",
-      defaultAllow: { nexus: false },
+      defaultAllow: { nexus:false },
       updatedAt: Date.now()
     });
     return user;
@@ -2800,156 +2709,223 @@
 
   async function loginFromNexus(username, pass){
     initFirebase();
-    if(!db) throw new Error("DB indisponível");
+    if(!db) throw new Error("Banco indisponível");
     username = (username||"").trim().toLowerCase();
-    const snap = await db.ref(PATH.users).orderByChild("username").equalTo(username).once('value');
+    const snap = await db.ref(PATH.users).orderByChild("username").equalTo(username).once("value");
     if(!snap.exists()) throw new Error("Usuário não encontrado");
-    let found = null;
-    snap.forEach(ch=>{ found = ch.val(); });
-    if(!found) throw new Error("Usuário inválido");
-    if((found.password||"") !== pass) throw new Error("Senha incorreta");
+    let user = null;
+    snap.forEach(function(ch){ user = ch.val(); });
+    if(!user) throw new Error("Usuário inválido");
+    if((user.password||"") !== pass) throw new Error("Senha incorreta");
 
-    // cria token compartilhável (mesmo padrão i4)
     const token = "ps_" + Math.random().toString(16).slice(2) + Date.now().toString(16);
     const exp = Date.now() + (7*24*60*60*1000);
-    await db.ref(`${PATH.sessions}/${token}`).set({
-      userKey: found.userKey, username: found.username, createdAt: Date.now(), exp
+    await db.ref(PATH.sessions + "/" + token).set({
+      userKey: user.userKey,
+      username: user.username,
+      createdAt: Date.now(),
+      exp: exp
     });
 
-    const session = {
-      userKey: found.userKey,
-      username: found.username,
-      fullName: found.fullName || "",
-      role: found.role || "user",
-      status: found.status || "active",
-      sessionToken: token
+    const sess = {
+      userKey: user.userKey,
+      username: user.username,
+      fullName: user.fullName || "",
+      role: user.role || "user",
+      status: user.status || "active",
+      sessionToken: token,
+      issuedAt: Date.now()
     };
-    localStorage.setItem("portal_session_v4", JSON.stringify(session));
-    localStorage.setItem("portal_session_v3", JSON.stringify(session)); // compat
-    return session;
+    setPortalSession(sess);
+    return sess;
   }
 
   async function logoutFromNexus(){
     initFirebase();
     try{
-      const s = getLocalSession();
-      if(s?.sessionToken && db) await db.ref(`${PATH.sessions}/${s.sessionToken}`).remove().catch(()=>null);
+      const s = getPortalSession();
+      if(s && s.sessionToken && db) await db.ref(PATH.sessions + "/" + s.sessionToken).remove().catch(function(){ return null; });
     }catch(e){}
     localStorage.removeItem("portal_session_v3");
     localStorage.removeItem("portal_session_v4");
     setAuthButtons(false);
-    document.getElementById("syncText").textContent = "Modo local (deslogado)";
-    document.getElementById("dotSync").className = "dot warn";
+    show("ovGate", false);
+    show("ovAuth", false);
+    try{ toast("Conta","Deslogado","ok"); }catch(e){}
   }
 
-  // ----- Cloud data (decisões) -----
-  async function loadFromCloud(userKey){
+  async function loadCloudState(userKey){
     initFirebase();
     if(!db || !userKey) return;
-    const snap = await db.ref(`${PATH.nexusData}/${userKey}`).once('value');
+    const snap = await db.ref(PATH.nexusData + "/" + userKey + "/state").once("value");
     if(!snap.exists()) return;
-    const payload = snap.val() || {};
-    if(payload.decisions && Array.isArray(payload.decisions)){
-      S.decisions = payload.decisions;
-      // mantém activeId válido
-      if(S.decisions.length && !S.decisions.find(x=>x.id===activeId)) activeId = S.decisions[0].id;
-      renderAll();
-      toast("Sync","Dados carregados do i4","ok");
-    }
+    const cloudState = snap.val();
+    if(!cloudState) return;
+    // substitui estado e re-renderiza
+    S = cloudState;
+    if(!S.decisions || !S.decisions.length) S = defaultState();
+    save(S);
+    try{ renderAll(); }catch(e){ location.reload(); }
+    try{ toast("Sync","Dados carregados do i4","ok"); }catch(e){}
   }
 
-  let saveT = null;
-  function saveToCloudDebounced(){
-    if(saveT) clearTimeout(saveT);
-    saveT = setTimeout(async ()=>{
-      const s = getLocalSession();
-      if(!s?.userKey) return;
-      // só salva se estiver liberado
-      try{
-        const access = await fetchAccess(s.userKey);
-        const user = await fetchUser(s.userKey);
-        if(!isAllowed(access, user)) return;
-        initFirebase();
-        if(!db) return;
-        await db.ref(`${PATH.nexusData}/${s.userKey}`).set({
-          updatedAt: Date.now(),
-          decisions: S.decisions
-        });
-        document.getElementById("syncText").textContent = "Sincronizado (i4)";
-      }catch(e){}
-    }, 700);
-  }
-
-  // Hook: sempre que salvar local, também tenta salvar no cloud
-  const __origPersist = persist;
-  persist = function(){
-    __origPersist();
-    saveToCloudDebounced();
-  };
-
-  // UI bindings (safe + after DOM)
-  window.NEXUS_I4 = { openI4, applyGate, logoutFromNexus }; // debug
-  document.addEventListener('DOMContentLoaded', ()=>{
-    on('#btnI4','click', openI4);
-    on('#btnAuth','click', ()=> showOverlay('ovAuth', true));
-    on('#btnLogout','click', async ()=>{ await logoutFromNexus(); toast('Conta','Deslogado','ok'); });
-
-    on('#aClose','click', ()=> showOverlay('ovAuth', false));
-    on('#openI4fromAuth','click', openI4);
-
-    on('#liBtn','click', async ()=>{
-      const u = document.getElementById('liUser')?.value||'';
-      const p = document.getElementById('liPass')?.value||'';
-      try{
-        await loginFromNexus(u,p);
-        toast('Conta','Login realizado','ok');
-        showOverlay('ovAuth', false);
-        await applyGate();
-      }catch(e){
-        toast('Erro', e.message || 'Falha no login','warn');
-      }
-    });
-
-    on('#suBtn','click', async ()=>{
-      const u = document.getElementById('suUser')?.value||'';
-      const n = document.getElementById('suName')?.value||'';
-      const p = document.getElementById('suPass')?.value||'';
-      try{
-        const user = await createUserFromNexus(u,p,n);
-        toast('Conta','Criada no i4 (aguardando liberação)','ok');
-        await loginFromNexus(user.username, p);
-        showOverlay('ovAuth', false);
-        await applyGate();
-      }catch(e){
-        toast('Erro', e.message || 'Falha ao criar conta','warn');
-      }
-    });
-
-    on('#reqBtn','click', async ()=>{
+  let cloudTimer = null;
+  function saveCloudDebounced(){
+    if(cloudTimer) clearTimeout(cloudTimer);
+    cloudTimer = setTimeout(async function(){
+      const sess = getPortalSession();
+      if(!sess || !sess.userKey) return;
+      const user = await fetchUserByKey(sess.userKey);
+      const access = await fetchAccess(sess.userKey);
+      if(!isAllowed(access, user)) return;
       initFirebase();
-      const s = getLocalSession();
-      if(!db || !s?.userKey) return toast('Aviso','Entre primeiro','warn');
-      try{
-        const key = db.ref(PATH.planRequests).push().key;
-        await db.ref(`${PATH.planRequests}/${key}`).set({
-          type:'request_nexus',
-          userKey:s.userKey,
-          username:s.username,
-          createdAt: Date.now(),
-          status:'open'
-        });
-        toast('Solicitação','Enviada ao i4/admin','ok');
-      }catch(e){
-        toast('Erro','Não foi possível enviar','warn');
+      if(!db) return;
+      await db.ref(PATH.nexusData + "/" + sess.userKey + "/state").set(S);
+      await db.ref(PATH.nexusData + "/" + sess.userKey + "/updatedAt").set(Date.now());
+      const st = document.getElementById("syncText");
+      if(st) st.textContent = "Sincronizado (i4)";
+    }, 650);
+  }
+
+  // Intercepta persistência local do NEXUS (KEY) para sincronizar no cloud sem quebrar o app
+  (function(){
+    try{
+      const __lsSet = localStorage.setItem.bind(localStorage);
+      localStorage.setItem = function(k,v){
+        __lsSet(k,v);
+        try{
+          if(typeof KEY !== 'undefined' && k === KEY){
+            saveCloudDebounced();
+          }
+        }catch(e){}
+      };
+    }catch(e){}
+  })();
+
+
+  // Hook no save(): NÃO reatribuir (save é const no NEXUS). Em vez disso, intercepta localStorage.setItem(KEY,...)
+
+  async function applyGate(){
+    initFirebase();
+    const token = getI4Token();
+    let tokenSess = null;
+    if(token){
+      try{ tokenSess = await validateToken(token); }catch(e){ tokenSess = null; }
+    }
+
+    let sess = getPortalSession();
+    if(tokenSess && tokenSess.userKey){
+      const user = await fetchUserByKey(tokenSess.userKey);
+      sess = {
+        userKey: tokenSess.userKey,
+        username: (user && user.username) ? user.username : (tokenSess.username||""),
+        fullName: (user && user.fullName) ? user.fullName : "",
+        role: (user && user.role) ? user.role : "user",
+        status: (user && user.status) ? user.status : "active",
+        sessionToken: token
+      };
+      setPortalSession(sess);
+    }
+
+    setAuthButtons(!!sess);
+
+    const st = document.getElementById("syncText");
+    const dot = document.getElementById("dotSync");
+
+    if(!sess){
+      if(st) st.textContent = "Modo local (entre p/ sincronizar)";
+      if(dot) dot.className = "dot warn";
+      return;
+    }
+
+    const user = await fetchUserByKey(sess.userKey);
+    const access = await fetchAccess(sess.userKey);
+    const allowed = isAllowed(access, user);
+
+    const accessLine = document.getElementById("accessLine");
+    if(accessLine){
+      accessLine.textContent = "Status: " + (access?.accessStatus||"—") + " | Pagamento: " + (access?.paymentStatus||"—") + " | Nexus: " + (access?.defaultAllow?.nexus ? "SIM":"NÃO");
+    }
+
+    if(!allowed){
+      if(st) st.textContent = "Bloqueado (i4)";
+      if(dot) dot.className = "dot bad";
+      const box = document.getElementById("gateMsg");
+      if(box){
+        box.innerHTML = "<b>Conta:</b> " + escapeHtml((user?.username||sess.username||"—")) +
+          "<br><b>Status:</b> " + escapeHtml((access?.accessStatus||"—")) +
+          "<br><b>Pagamento:</b> " + escapeHtml((access?.paymentStatus||"—")) +
+          "<br><b>NEXUS liberado:</b> " + (access?.defaultAllow?.nexus ? "SIM":"NÃO") +
+          "<br><br>Abra o i4 para solicitar/assinar. O admin do i4 libera o app.";
       }
+      show("ovGate", true);
+      return;
+    }
+
+    if(st) st.textContent = "Sincronizando (i4)";
+    if(dot) dot.className = "dot ok";
+    show("ovGate", false);
+    await loadCloudState(sess.userKey);
+  }
+
+  async function requestNexus(){
+    initFirebase();
+    const s = getPortalSession();
+    if(!db || !s || !s.userKey) return toast("Aviso","Entre primeiro","warn");
+    const key = db.ref(PATH.planRequests).push().key;
+    await db.ref(PATH.planRequests + "/" + key).set({
+      type: "request_nexus",
+      userKey: s.userKey,
+      username: s.username,
+      createdAt: Date.now(),
+      status: "open"
+    });
+    toast("Solicitação","Enviada ao i4/admin","ok");
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    function on(sel, evt, fn){
+      const el = document.querySelector(sel);
+      if(el) el.addEventListener(evt, fn);
+    }
+
+    on("#btnI4","click", openI4);
+    on("#btnAuth","click", function(){ show("ovAuth", true); });
+    on("#btnLogout","click", logoutFromNexus);
+
+    on("#aClose","click", function(){ show("ovAuth", false); });
+    on("#openI4fromAuth","click", openI4);
+
+    on("#liBtn","click", async function(){
+      try{
+        await loginFromNexus(document.getElementById("liUser").value, document.getElementById("liPass").value);
+        toast("Conta","Login realizado","ok");
+        show("ovAuth", false);
+        await applyGate();
+      }catch(e){ toast("Erro", e.message || "Falha no login","warn"); }
     });
 
-    on('#gClose2','click', ()=> showOverlay('ovGate', false));
-    on('#gOpenI4','click', openI4);
-    on('#gRetry','click', async ()=>{ showOverlay('ovGate', false); await applyGate(); });
-    on('#gLogout','click', async ()=>{ showOverlay('ovGate', false); await logoutFromNexus(); });
+    on("#suBtn","click", async function(){
+      try{
+        const u = await createUserFromNexus(
+          document.getElementById("suUser").value,
+          document.getElementById("suPass").value,
+          document.getElementById("suName").value
+        );
+        toast("Conta","Criada no i4 (aguardando liberação)","ok");
+        await loginFromNexus(u.username, document.getElementById("suPass").value);
+        show("ovAuth", false);
+        await applyGate();
+      }catch(e){ toast("Erro", e.message || "Falha ao criar conta","warn"); }
+    });
 
-    // inicia checagem
+    on("#reqBtn","click", requestNexus);
+
+    on("#gClose2","click", function(){ show("ovGate", false); });
+    on("#gOpenI4","click", openI4);
+    on("#gRetry","click", async function(){ show("ovGate", false); await applyGate(); });
+    on("#gLogout","click", async function(){ show("ovGate", false); await logoutFromNexus(); });
+
     applyGate();
   });
 
@@ -2997,92 +2973,6 @@
       <div class="tiny" id="tourMeta"></div>
     </div>
     <div class="tourRing" id="tourRing" aria-hidden="true"></div>
-  </div>
-
-
-  <!-- Auth (i4) -->
-  <div class="overlay" id="ovAuth" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-label="Entrar ou criar conta (i4)">
-      <div class="mHead">
-        <div>
-          <div class="t">Conta i4 (SSO)</div>
-          <div class="s">Entre ou crie sua conta. O conteúdo do NEXUS é liberado conforme o plano/pagamento aprovado no i4.</div>
-        </div>
-        <div class="flex">
-          <button class="btn small ghost" id="aClose">Fechar</button>
-        </div>
-      </div>
-      <div class="mBody" style="overflow:auto;-webkit-overflow-scrolling:touch">
-        <div class="grid2">
-          <div class="notice">
-            <b>Entrar</b>
-            <div style="height:10px"></div>
-            <label>Usuário</label>
-            <input class="field" id="liUser" placeholder="ex: wilso"/>
-            <div style="height:10px"></div>
-            <label>Senha</label>
-            <input class="field" id="liPass" type="password" placeholder="••••••"/>
-            <div style="height:12px"></div>
-            <button class="btn primary" id="liBtn">Entrar</button>
-            <div class="tiny" style="margin-top:10px">Dica: se você já tem conta no i4, use o mesmo login aqui.</div>
-          </div>
-          <div class="notice">
-            <b>Criar conta</b>
-            <div style="height:10px"></div>
-            <label>Usuário</label>
-            <input class="field" id="suUser" placeholder="sem espaços"/>
-            <div style="height:10px"></div>
-            <label>Nome completo</label>
-            <input class="field" id="suName" placeholder="Seu nome"/>
-            <div style="height:10px"></div>
-            <label>Senha</label>
-            <input class="field" id="suPass" type="password" placeholder="mín. 4 caracteres"/>
-            <div style="height:12px"></div>
-            <button class="btn primary" id="suBtn">Criar conta (i4)</button>
-            <div class="tiny" style="margin-top:10px">Após criar, o NEXUS pode ficar bloqueado até o admin do i4 aprovar pagamento/liberação do app.</div>
-          </div>
-        </div>
-        <div class="hr"></div>
-        <div class="notice">
-          <b>Status do acesso</b><br/>
-          <span id="accessLine">—</span><br/><br/>
-          <button class="btn small" id="reqBtn">Solicitar liberação do NEXUS</button>
-        </div>
-      </div>
-      <div class="mFoot">
-        <div class="tiny">Você pode gerenciar conta/plano no i4. Clique em <b>i4 Conta</b> no topo.</div>
-        <div class="flex">
-          <button class="btn small" id="openI4fromAuth">Abrir i4</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Gate (bloqueio por plano/pagamento) -->
-  <div class="overlay" id="ovGate" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-label="Acesso bloqueado">
-      <div class="mHead">
-        <div>
-          <div class="t">🔒 NEXUS bloqueado pelo i4</div>
-          <div class="s">Sua conta existe, mas o acesso ao NEXUS ainda não foi liberado (plano/pagamento/admin).</div>
-        </div>
-        <div class="flex">
-          <button class="btn small ghost" id="gClose2">Fechar</button>
-        </div>
-      </div>
-      <div class="mBody" style="overflow:auto;-webkit-overflow-scrolling:touch">
-        <div class="notice" id="gateMsg">—</div>
-        <div style="height:12px"></div>
-        <div class="safeX" style="display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn primary" id="gOpenI4">Ir para i4 (assinar/liberar)</button>
-          <button class="btn" id="gRetry">Tentar novamente</button>
-          <button class="btn danger" id="gLogout">Sair</button>
-        </div>
-      </div>
-      <div class="mFoot">
-        <div class="tiny">Dica: no i4, o admin pode ativar <b>defaultAllow.nexus</b> e aprovar o pagamento.</div>
-      </div>
-    </div>
   </div>
 
 </body>
