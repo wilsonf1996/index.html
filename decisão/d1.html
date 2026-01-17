@@ -207,7 +207,8 @@
     }
 
     /* Modal */
-    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.58);display:none;align-items:center;justify-content:center;padding:14px;z-index:80}
+    .overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:14px;z-index:80;background:rgba(0,0,0,.62);backdrop-filter: blur(10px);}
+    .overlay.show{display:flex;}
     .modal{
       width:min(1100px, 100%);
       max-height:min(92vh, 860px);
@@ -465,6 +466,10 @@
   </div>
 
 <script>
+
+  // ===== Safe DOM bind helpers (evita travar o app se algum elemento nao existir) =====
+  const on = (sel, evt, fn, opts) => { const el = document.querySelector(sel); if(el) el.addEventListener(evt, fn, opts); };
+  const onId = (id, evt, fn, opts) => { const el = document.getElementById(id); if(el) el.addEventListener(evt, fn, opts); };
 (()=> {
   'use strict';
 
@@ -1630,7 +1635,7 @@
       renderLive();
     });
 
-    $('#wf_reset').addEventListener('click', ()=>{
+    on('#wf_reset','click', ()=>{
       // restore from saved
       const saved = getActive();
       Object.assign(local, deepClone(saved));
@@ -1639,7 +1644,7 @@
       renderWeights(); renderLive();
     });
 
-    $('#wf_apply').addEventListener('click', ()=>{
+    on('#wf_apply','click', ()=>{
       const real = getActive();
       if(!real) return;
       real.criteria = deepClone(local.criteria);
@@ -1740,7 +1745,7 @@
     const today = new Date();
     inp.value = today.toISOString().slice(0,10);
 
-    $('#tl_add').addEventListener('click', ()=>{
+    on('#tl_add','click', ()=>{
       const type = $('#tl_type').value;
       const at = new Date($('#tl_at').value || today.toISOString().slice(0,10)).toISOString();
       const text = ($('#tl_text').value || '').trim();
@@ -1753,7 +1758,7 @@
       setSys('Adicionado','ok'); setTimeout(()=>setSys('Pronto','ok'), 700);
     });
 
-    $('#tl_markReview').addEventListener('click', ()=>{
+    on('#tl_markReview','click', ()=>{
       pushTrail(d, 'review', 'Revisão concluída e estado reavaliado.');
       touch(d); save(S); renderAll();
     });
@@ -1801,7 +1806,7 @@
       });
     });
 
-    $('#ns_save').addEventListener('click', ()=>{
+    on('#ns_save','click', ()=>{
       const ns = S.settings.northStar;
       ns.vision = $('#ns_vision').value.trim();
       ns.principles = ($('#ns_principles').value||'').split('\n').map(s=>s.trim()).filter(Boolean);
@@ -1811,7 +1816,7 @@
       setSys('Bússola salva','ok'); setTimeout(()=>setSys('Pronto','ok'), 700);
     });
 
-    $('#mkAligned').addEventListener('click', ()=>{
+    on('#mkAligned','click', ()=>{
       const base = makeDecision({
         title: 'Nova decisão alinhada',
         domain: d.domain,
@@ -1839,7 +1844,7 @@
       setSys('Criada','ok'); setTimeout(()=>setSys('Pronto','ok'), 700);
     });
 
-    $('#mkPremortem').addEventListener('click', ()=>{
+    on('#mkPremortem','click', ()=>{
       const base = makeDecision({
         title: 'Nova decisão (pré‑mortem)',
         domain: d.domain,
@@ -2180,9 +2185,9 @@
   }
 
   function wireNotesEditor(d){
-    $('#n_ass').addEventListener('input', ()=> d.notes.assumptions = $('#n_ass').value);
-    $('#n_evd').addEventListener('input', ()=> d.notes.evidence = $('#n_evd').value);
-    $('#n_pm').addEventListener('input', ()=> d.notes.preMortem = $('#n_pm').value);
+    on('#n_ass','input', ()=> d.notes.assumptions = $('#n_ass').value);
+    on('#n_evd','input', ()=> d.notes.evidence = $('#n_evd').value);
+    on('#n_pm','input', ()=> d.notes.preMortem = $('#n_pm').value);
     $$('textarea[data-pros]').forEach(t=>{
       t.addEventListener('input', ()=> d.notes.pros[t.dataset.pros] = t.value);
     });
@@ -2257,7 +2262,7 @@
         </div>
       </div>
     `;
-    $('#libImport').addEventListener('click', ()=>{
+    on('#libImport','click', ()=>{
       const m = S.library[libOpenIndex];
       const d = makeDecision({
         title: m.title,
@@ -2310,7 +2315,7 @@
   });
 
   // search
-  $('#q').addEventListener('input', ()=> renderLeft());
+  on('#q','input', ()=> renderLeft());
 
   // examples
   function loadExamples(){
@@ -2349,10 +2354,10 @@
     renderAll();
   }
 
-  $('#btnExamples').addEventListener('click', loadExamples);
+  on('#btnExamples','click', loadExamples);
 
   // top actions
-  $('#btnNew').addEventListener('click', ()=>{
+  on('#btnNew','click', ()=>{
     const d = makeDecision({ title: 'Nova decisão', domain:'Outro', status:'Em análise', reviewDays:14, seed:'B' });
     S.decisions.unshift(d);
     activeId = d.id; S.lastOpenId = activeId;
@@ -2361,13 +2366,13 @@
     openEditor(d.id);
   });
 
-  $('#btnExport').addEventListener('click', ()=>{
+  on('#btnExport','click', ()=>{
     const data = JSON.stringify(S, null, 2);
     download('nexus_decisions_export.json', data, 'application/json');
     setSys('Exportado','ok'); setTimeout(()=>setSys('Pronto','ok'), 700);
   });
 
-  $('#btnImport').addEventListener('click', ()=>{
+  on('#btnImport','click', ()=>{
     const inp = document.createElement('input');
     inp.type = 'file';
     inp.accept = 'application/json';
@@ -2392,29 +2397,29 @@
     inp.click();
   });
 
-  $('#btnHelp').addEventListener('click', ()=>{ openGuide(); });
+  on('#btnHelp','click', ()=>{ openGuide(); });
 
 // main buttons
-  $('#btnQuickFill').addEventListener('click', ()=>{
+  on('#btnQuickFill','click', ()=>{
     const d = getActive(); if(!d) return;
     autoSeedDecision(d, Math.random()>.5?'A':'B');
     pushTrail(d,'note','Preenchimento automático aplicado.');
     touch(d); save(S); renderAll();
   });
-  $('#btnRecalc').addEventListener('click', ()=>{
+  on('#btnRecalc','click', ()=>{
     setSys('Recalculado','ok'); setTimeout(()=>setSys('Pronto','ok'), 600);
     renderAll();
   });
-  $('#btnStar').addEventListener('click', ()=>{
+  on('#btnStar','click', ()=>{
     const d = getActive(); if(!d) return;
     d.starred = !d.starred;
     touch(d); save(S); renderAll();
   });
-  $('#btnEdit').addEventListener('click', ()=>{
+  on('#btnEdit','click', ()=>{
     const d = getActive(); if(!d) return;
     openEditor(d.id);
   });
-  $('#btnDel').addEventListener('click', ()=>{
+  on('#btnDel','click', ()=>{
     const d = getActive(); if(!d) return;
     if(!confirm('Excluir esta decisão?')) return;
     S.decisions = S.decisions.filter(x=>x.id!==d.id);
@@ -2425,12 +2430,12 @@
   });
 
   // modal wiring
-  $('#mClose').addEventListener('click', closeEditor);
-  $('#ov').addEventListener('click', (e)=>{
+  on('#mClose','click', closeEditor);
+  on('#ov','click', (e)=>{
     if(e.target.id==='ov') closeEditor();
   });
 
-  $('#mSave').addEventListener('click', ()=>{
+  on('#mSave','click', ()=>{
     const d = S.decisions.find(x=>x.id===editingId);
     if(!d) return;
 
@@ -2452,7 +2457,7 @@
     setSys('Salvo','ok'); setTimeout(()=>setSys('Pronto','ok'), 700);
   });
 
-  $('#eMode').addEventListener('click', (e)=>{
+  on('#eMode','click', (e)=>{
     const b = e.target.closest('button[data-mode]');
     if(!b) return;
     const d = S.decisions.find(x=>x.id===editingId);
@@ -2460,14 +2465,14 @@
     setEditMode(b.dataset.mode, d);
   });
 
-  $('#mNormalize').addEventListener('click', ()=>{
+  on('#mNormalize','click', ()=>{
     const d = S.decisions.find(x=>x.id===editingId); if(!d) return;
     normalizeWeights(d);
     renderCritBox(d);
     setEditMode(editingMode, d);
     setSys('Pesos normalizados','ok'); setTimeout(()=>setSys('Editando','warn'), 600);
   });
-  $('#mReset').addEventListener('click', ()=>{
+  on('#mReset','click', ()=>{
     const d = S.decisions.find(x=>x.id===editingId); if(!d) return;
     // set all matrix values to 0
     for(const o of d.options){
@@ -2478,14 +2483,14 @@
     setEditMode('matrix', d);
     setSys('Matriz zerada','warn');
   });
-  $('#mAuto').addEventListener('click', ()=>{
+  on('#mAuto','click', ()=>{
     const d = S.decisions.find(x=>x.id===editingId); if(!d) return;
     autoSeedDecision(d, Math.random()>.5?'A':'B');
     pushTrail(d,'note','Auto: exemplo (A/B) aplicado.');
     setEditMode(editingMode, d);
     setSys('Auto preenchido','ok'); setTimeout(()=>setSys('Editando','warn'), 700);
   });
-  $('#mPreMortem').addEventListener('click', ()=>{
+  on('#mPreMortem','click', ()=>{
     const d = S.decisions.find(x=>x.id===editingId); if(!d) return;
     d.notes.preMortem = d.notes.preMortem || 'Imagine que falhou. Liste 5 razões e mitigações.';
     setEditMode('notes', d);
@@ -2540,18 +2545,20 @@
   init();
 
 
-  // guide / tour
-  $('#gClose').addEventListener('click', closeGuide);
-  $('#gStartTour').addEventListener('click', ()=>{ closeGuide(); startTour(); });
-  $('#gLoadExamples').addEventListener('click', ()=>{ loadExamples(true); toast('Exemplos','10 demos carregados'); renderLeft(); });
-  $('#gOpenAcademyTab').addEventListener('click', ()=>{ mainTab='academy'; closeGuide(); renderAll(); });
-  $('#gShortcuts').addEventListener('click', ()=>{ toast('Atalhos','Ctrl+Shift+N / Ctrl+E / Ctrl+Enter / Ctrl+K / Ctrl+L','ok'); });
+  // guide / tour (safe binds)
+  const onId = (id, evt, fn)=>{ const el = document.getElementById(id); if(el) el.addEventListener(evt, fn); };
 
-  $('#tourExit').addEventListener('click', endTour);
-  $('#tourPrev').addEventListener('click', ()=>{ tourI = Math.max(0, tourI-1); showTour(tourI); });
-  $('#tourNext').addEventListener('click', ()=>{ tourI = Math.min(TOUR.length-1, tourI+1); showTour(tourI); });
+  onId('gClose','click', closeGuide);
+  onId('gStartTour','click', ()=>{ closeGuide(); startTour(); });
+  onId('gLoadExamples','click', ()=>{ loadExamples(true); toast('Exemplos','10 demos carregados'); renderLeft(); });
+  onId('gOpenAcademyTab','click', ()=>{ mainTab='academy'; closeGuide(); renderAll(); });
+  onId('gShortcuts','click', ()=>{ toast('Atalhos','Ctrl+Shift+N / Ctrl+E / Ctrl+Enter / Ctrl+K / Ctrl+L','ok'); });
 
-  window.addEventListener('resize', ()=>{ if($('#tour').classList.contains('show')) showTour(tourI); });
+  onId('tourExit','click', endTour);
+  onId('tourPrev','click', ()=>{ tourI = Math.max(0, tourI-1); showTour(tourI); });
+  onId('tourNext','click', ()=>{ tourI = Math.min(TOUR.length-1, tourI+1); showTour(tourI); });
+
+  window.addEventListener('resize', ()=>{ const t=document.getElementById('tour'); if(t && t.classList.contains('show')) showTour(tourI); });
 
 
   /* =========================
@@ -2574,11 +2581,29 @@
 
   const PATH = {
     users: "/portal_users",
+    usernames: "/portal_usernames",
     access: "/portal_access",
     planRequests: "/portal_plan_requests",
     sessions: "/portal_sessions",
     nexusData: "/portal_apps_data/nexus"
   };
+
+  // ====== i4-compatible helpers (NEXUS) ======
+  function safeTextLocal(s){ return String(s ?? "").replace(/[<>]/g,"").trim(); }
+  function normalizeKeyLocal(s){
+    return safeTextLocal(s)
+      .toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+      .replace(/[^a-z0-9]+/g,"_")
+      .replace(/^_+|_+$/g,"")
+      .slice(0, 80);
+  }
+  async function sha256Local(text){
+    const enc = new TextEncoder().encode(String(text ?? ""));
+    const buf = await crypto.subtle.digest("SHA-256", enc);
+    const arr = Array.from(new Uint8Array(buf));
+    return arr.map(b=>b.toString(16).padStart(2,"0")).join("");
+  }
 
   function initFirebase(){
     try{
@@ -2603,8 +2628,25 @@
   }
 
   function getPortalSession(){
-    try{ const s4 = JSON.parse(localStorage.getItem("portal_session_v4")||"null"); if(s4 && s4.userKey) return s4; }catch(e){}
-    try{ const s3 = JSON.parse(localStorage.getItem("portal_session_v3")||"null"); if(s3 && s3.userKey) return s3; }catch(e){}
+    const keys = ["portal_session_v4","portal_session_v3","portal_session","i4_session"];
+    for(const k of keys){
+      try{
+        const raw = localStorage.getItem(k);
+        if(!raw) continue;
+        const s = JSON.parse(raw);
+        const sess = (s && (s.session || s.data)) ? (s.session || s.data) : s;
+        if(sess && (sess.userKey || sess.uid)){
+          return {
+            userKey: sess.userKey || sess.uid,
+            username: sess.username || sess.user || sess.email || "",
+            fullName: sess.fullName || sess.name || "",
+            role: sess.role || "user",
+            status: sess.status || "active",
+            sessionToken: sess.sessionToken || sess.token || sess.i4_session || ""
+          };
+        }
+      }catch(e){}
+    }
     return null;
   }
 
@@ -2670,53 +2712,82 @@
     const bAuth = document.getElementById("btnAuth");
     const bOut  = document.getElementById("btnLogout");
     if(!bAuth || !bOut) return;
-    bAuth.disabled = !!logged;
-    bAuth.style.opacity = logged ? .55 : 1;
+    bAuth.textContent = logged ? "Conta" : "Entrar";
+    bAuth.disabled = false; // sempre abre modal
+    bAuth.style.opacity = 1;
     bOut.disabled = !logged;
-    bOut.style.opacity = logged ? 1 : .55;
+    bOut.style.opacity = logged ? 1 : .45;
   }
 
-  async function createUserFromNexus(username, pass, fullName){
+    async function createUserFromNexus(username, pass, fullName){
     initFirebase();
     if(!db) throw new Error("Banco indisponível");
-    username = (username||"").trim().toLowerCase();
-    if(username.length < 3) throw new Error("Usuário inválido");
-    if((pass||"").length < 4) throw new Error("Senha muito curta");
+    const uname = safeTextLocal(username);
+    const ukey = normalizeKeyLocal(uname);
+    if(!ukey || ukey.length < 3) throw new Error("Usuário inválido");
+    if(String(pass||"").length < 4) throw new Error("Senha muito curta");
 
-    const exists = await db.ref(PATH.users).orderByChild("username").equalTo(username).once("value");
-    if(exists.exists()) throw new Error("Usuário já existe");
+    const mapSnap = await db.ref(PATH.usernames + "/" + ukey).once("value");
+    if(mapSnap.exists()) throw new Error("Esse usuário já existe");
 
-    const userKey = db.ref(PATH.users).push().key;
+    const passHash = await sha256Local(pass);
+    const userRef = db.ref(PATH.users).push();
+    const userKey = userRef.key;
+
     const user = {
       userKey: userKey,
-      username: username,
-      fullName: fullName || username,
-      password: pass,
+      username: uname,
+      usernameKey: ukey,
+      fullName: safeTextLocal(fullName || uname),
+      passHash: passHash,
       role: "user",
       status: "active",
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      updatedAt: Date.now()
     };
-    await db.ref(PATH.users + "/" + userKey).set(user);
-    await db.ref(PATH.access + "/" + userKey).set({
+
+    const updates = {};
+    updates[PATH.users + "/" + userKey] = user;
+    updates[PATH.usernames + "/" + ukey] = { userKey: userKey };
+
+    updates[PATH.access + "/" + userKey] = {
       userKey: userKey,
+      plan: "-",
       accessStatus: "pending",
       paymentStatus: "pending",
-      defaultAllow: { nexus:false },
+      requestedPlan: "",
+      requestedCents: 0,
+      requestedAt: 0,
+      defaultAllow: { nexus: false },
+      extras: {},
       updatedAt: Date.now()
-    });
+    };
+
+    await db.ref().update(updates);
     return user;
   }
 
   async function loginFromNexus(username, pass){
     initFirebase();
     if(!db) throw new Error("Banco indisponível");
-    username = (username||"").trim().toLowerCase();
-    const snap = await db.ref(PATH.users).orderByChild("username").equalTo(username).once("value");
-    if(!snap.exists()) throw new Error("Usuário não encontrado");
-    let user = null;
-    snap.forEach(function(ch){ user = ch.val(); });
-    if(!user) throw new Error("Usuário inválido");
-    if((user.password||"") !== pass) throw new Error("Senha incorreta");
+    const uname = safeTextLocal(username);
+    const ukey = normalizeKeyLocal(uname);
+    if(!ukey) throw new Error("Usuário inválido");
+
+    const mapSnap = await db.ref(PATH.usernames + "/" + ukey).once("value");
+    if(!mapSnap.exists()) throw new Error("Usuário não encontrado");
+
+    const userKey = (mapSnap.val()||{}).userKey;
+    if(!userKey) throw new Error("Usuário inválido");
+
+    const userSnap = await db.ref(PATH.users + "/" + userKey).once("value");
+    if(!userSnap.exists()) throw new Error("Usuário inválido");
+    const user = userSnap.val();
+
+    if(user.status === "blocked") throw new Error("Conta bloqueada. Contate o administrador.");
+
+    const hash = await sha256Local(pass);
+    if(hash !== (user.passHash||"")) throw new Error("Senha incorreta");
 
     const token = "ps_" + Math.random().toString(16).slice(2) + Date.now().toString(16);
     const exp = Date.now() + (7*24*60*60*1000);
@@ -2736,11 +2807,12 @@
       sessionToken: token,
       issuedAt: Date.now()
     };
+
     setPortalSession(sess);
     return sess;
   }
 
-  async function logoutFromNexus(){
+async function logoutFromNexus(){
     initFirebase();
     try{
       const s = getPortalSession();
@@ -2751,6 +2823,7 @@
     setAuthButtons(false);
     show("ovGate", false);
     show("ovAuth", false);
+    try{ const st=document.getElementById("syncText"); if(st) st.textContent="Offline (sem i4)"; }catch(e){}
     try{ toast("Conta","Deslogado","ok"); }catch(e){}
   }
 
@@ -2926,7 +2999,25 @@
     on("#gRetry","click", async function(){ show("ovGate", false); await applyGate(); });
     on("#gLogout","click", async function(){ show("ovGate", false); await logoutFromNexus(); });
 
-    applyGate();
+    
+    // Delegação robusta: evita travar cliques por binds faltando (Guia/Tour)
+    document.addEventListener('click', (e)=>{
+      const t = e.target;
+      if(!t) return;
+      const id = t.id || '';
+      if(id === 'gClose'){
+        const ov = t.closest('.overlay') || document.getElementById('ovGuide') || document.getElementById('guide') || document.getElementById('guidePanel');
+        if(ov){ ov.classList.remove('show'); ov.setAttribute('aria-hidden','true'); }
+      }
+      if(id === 'gStartTour'){
+        const ov = t.closest('.overlay') || document.getElementById('ovGuide') || document.getElementById('guide') || document.getElementById('guidePanel');
+        if(ov){ ov.classList.remove('show'); ov.setAttribute('aria-hidden','true'); }
+        const tour = document.getElementById('tour');
+        if(tour){ tour.classList.add('show'); tour.setAttribute('aria-hidden','false'); }
+      }
+    }, {capture:true});
+
+applyGate();
   });
 
 })();
