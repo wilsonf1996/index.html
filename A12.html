@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Maintenance OS Elite V2</title>
+  <style>
+    :root{
+      --bg:#070707;
+      --bg2:#130708;
+      --panel:#131313;
+      --panel2:#1b1112;
+      --card:#171717;
+      --line:#342022;
+      --line2:#582629;
+      --text:#f7f2ef;
+      --muted:#bcaea8;
+      --accent:#d90429;
+      --accent2:#ff304f;
+      --gold:#ffcf66;
+      --ok:#1fca7c;
+      --warn:#35a7ff;
+      --bad:#ff5470;
+      --soft:#a77dff;
+      --shadow:0 24px 60px rgba(0,0,0,.54);
+      --radius:24px;
+      --radius-sm:14px;
+    }
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;
+      padding:0;
+      min-height:100%;
+      font-family:Segoe UI,Arial,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(217,4,41,.20), transparent 28%),
+        radial-gradient(circle at top right, rgba(255,207,102,.08), transparent 20%),
+        linear-gradient(160deg, #050505 0%, #0b0b0b 34%, #140707 66%, #070707 100%);
+    }
+    body::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      background:
+        linear-gradient(120deg, transparent 0%, rgba(255,255,255,.02) 32%, transparent 50%),
+        repeating-linear-gradient(90deg, rgba(255,255,255,.010) 0 1px, transparent 1px 130px);
+      mix-blend-mode:screen;
+      opacity:.45;
+    }
+    .app{
+      position:relative;
+      z-index:1;
+      display:grid;
+      grid-template-columns:300px 1fr 430px;
+      grid-template-rows:84px 1fr;
+      min-height:100vh;
+      gap:14px;
+      padding:14px;
+    }
+    .topbar,.sidebar,.main,.rightbar{
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015)),
+        linear-gradient(180deg, #101010 0%, #121212 48%, #13090a 100%);
+      border:1px solid var(--line);
+      border-radius:28px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      min-height:0;
+    }
+    .topbar{
+      grid-column:1 / -1;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      padding:14px 18px;
+      position:relative;
+    }
+    .topbar::after{
+      content:"";
+      position:absolute;
+      right:-80px;
+      bottom:-120px;
+      width:340px;
+      height:220px;
+      background:radial-gradient(circle, rgba(217,4,41,.35), transparent 68%);
+    }
+    .brand,.top-actions{position:relative;z-index:1}
+    .brand{display:flex;gap:14px;align-items:center;min-width:0}
+    .logo{
+      width:50px;
+      height:50px;
+      border-radius:16px;
+      display:grid;
+      place-items:center;
+      font-weight:900;
+      letter-spacing:.05em;
+      background:linear-gradient(135deg,#ffcf66,#d90429 28%,#8f0b1f 100%);
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow:0 16px 34px rgba(217,4,41,.28);
+    }
+    h1,h2,h3,h4,p{margin:0}
+    .brand h1{font-size:22px;letter-spacing:.03em}
+    .brand p{margin-top:4px;color:var(--muted);font-size:13px}
+    .top-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+    .sidebar,.main,.rightbar{display:flex;flex-direction:column}
+    .section-head{
+      padding:16px 18px 12px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0));
+    }
+    .section-head h2,.section-head h3{font-size:16px;color:#ffd27a;letter-spacing:.04em}
+    .section-head p{margin-top:6px;font-size:12px;color:var(--muted);line-height:1.45}
+    .sidebar-scroll,.main-scroll,.right-scroll{overflow:auto;min-height:0;height:100%;padding:16px}
+    .panel-block{
+      margin-bottom:14px;
+      padding:14px;
+      border:1px solid #342223;
+      border-radius:22px;
+      background:linear-gradient(180deg,#151111,#120d0d);
+    }
+    .panel-block h4{margin:0 0 10px;font-size:14px;color:#ffd27a}
+    .small{font-size:12px;color:var(--muted);line-height:1.45}
+    .btn{
+      border:none;
+      border-radius:15px;
+      padding:12px 14px;
+      cursor:pointer;
+      font-weight:800;
+      color:var(--text);
+      transition:.18s ease;
+    }
+    .btn:hover{transform:translateY(-1px);filter:brightness(1.04)}
+    .btn.primary{background:linear-gradient(135deg,#d90429,#ff304f);box-shadow:0 12px 24px rgba(217,4,41,.22)}
+    .btn.good{background:linear-gradient(135deg,#169d61,#29cc84)}
+    .btn.warn{background:linear-gradient(135deg,#2086d9,#35a7ff)}
+    .btn.gold{background:linear-gradient(135deg,#c98e1d,#ffcf66);color:#241807}
+    .btn.danger{background:linear-gradient(135deg,#ca324d,#ff6780)}
+    .btn.ghost{background:linear-gradient(135deg,#1c1c1c,#111111);border:1px solid #39292a}
+    .footer-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .tab-grid{display:grid;gap:10px}
+    .tab-btn{
+      text-align:left;
+      border:1px solid #3a2628;
+      background:linear-gradient(180deg,#191313,#131111);
+      border-radius:18px;
+      padding:12px;
+      cursor:pointer;
+      color:var(--text);
+    }
+    .tab-btn.active{border-color:#98333f;background:linear-gradient(180deg, rgba(217,4,41,.20), rgba(255,176,32,.05)), linear-gradient(180deg,#1c1314,#120f10)}
+    .tab-btn strong{display:block;font-size:14px}
+    .tab-btn span{display:block;margin-top:5px;font-size:12px;color:var(--muted)}
+    .search,.field input,.field select,.field textarea{
+      width:100%;
+      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015)), #0d0d0d;
+      color:var(--text);
+      border:1px solid #302223;
+      border-radius:15px;
+      padding:12px 14px;
+      outline:none;
+    }
+    .search:focus,input:focus,select:focus,textarea:focus{border-color:#8c1d2f;box-shadow:0 0 0 3px rgba(217,4,41,.16)}
+    .toolbar{display:grid;grid-template-columns:1.4fr repeat(5,1fr);gap:10px;margin-bottom:14px}
+    .cards{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:16px}
+    .card{
+      position:relative;
+      overflow:hidden;
+      background:linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.01)), linear-gradient(140deg, #171717 0%, #181212 66%, #200d10 100%);
+      border:1px solid #342425;
+      border-radius:20px;
+      padding:14px;
+    }
+    .card::after{
+      content:"";
+      position:absolute;
+      inset:auto -30px -44px auto;
+      width:120px;
+      height:120px;
+      background:radial-gradient(circle, rgba(217,4,41,.25), transparent 70%);
+    }
+    .label{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+    .value{font-size:24px;font-weight:900}
+    .sub{margin-top:6px;font-size:12px;color:#d7c7c1}
+    .pathbar{
+      background:#0e0b0b;
+      border:1px solid #372425;
+      border-radius:18px;
+      padding:10px 12px;
+      color:var(--muted);
+      margin-bottom:14px;
+      font-size:13px;
+    }
+    .items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .item-card{
+      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.012)), linear-gradient(150deg, #181818 0%, #181010 100%);
+      border:1px solid #352223;
+      border-radius:22px;
+      padding:14px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      position:relative;
+      overflow:hidden;
+      min-height:250px;
+    }
+    .item-card::before{
+      content:"";
+      position:absolute;
+      top:0;left:0;right:0;height:4px;
+      background:linear-gradient(90deg, #d90429, #ffcf66);
+    }
+    .item-top{display:flex;gap:12px;justify-content:space-between;align-items:flex-start}
+    .item-title{font-size:16px;font-weight:900;line-height:1.32}
+    .item-sub{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:5px 9px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:900;
+      border:1px solid transparent;
+      width:max-content;
+      max-width:100%;
+    }
+    .badge.red{background:rgba(255,84,112,.13);color:#ffd4dc;border-color:rgba(255,84,112,.35)}
+    .badge.blue{background:rgba(53,167,255,.13);color:#d7efff;border-color:rgba(53,167,255,.35)}
+    .badge.green{background:rgba(31,202,124,.13);color:#d9ffe9;border-color:rgba(31,202,124,.35)}
+    .badge.gold{background:rgba(255,207,102,.13);color:#fff1cd;border-color:rgba(255,207,102,.35)}
+    .badge.soft{background:rgba(167,125,255,.13);color:#ede4ff;border-color:rgba(167,125,255,.35)}
+    .mini{font-size:12px;color:var(--muted);text-align:right;white-space:nowrap}
+    .score-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+    .score-box{padding:10px;border-radius:16px;border:1px solid #342223;background:#131010}
+    .score-box .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+    .score-box .v{margin-top:4px;font-size:22px;font-weight:900}
+    .score-box.red{border-color:rgba(255,84,112,.42)}
+    .score-box.blue{border-color:rgba(53,167,255,.42)}
+    .score-box.green{border-color:rgba(31,202,124,.42)}
+    .score-box.gold{border-color:rgba(255,207,102,.42)}
+    .desc{font-size:13px;line-height:1.5;color:#e9ddda}
+    .detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .detail{padding:10px;border-radius:14px;background:#131010;border:1px solid #2f2021;font-size:12px;color:var(--muted)}
+    .detail strong{display:block;color:var(--text);font-size:12px;margin-bottom:4px}
+    .list{display:grid;gap:8px}
+    .list-item{background:#131010;border:1px solid #302121;border-radius:16px;padding:10px 12px;font-size:13px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+    .empty{border:1px dashed #4c2525;border-radius:20px;padding:28px 18px;text-align:center;color:var(--muted);background:#100d0d}
+    .field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+    .field label{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.03em}
+    textarea{min-height:88px;resize:vertical}
+    .range-row{display:grid;grid-template-columns:1fr 72px;gap:10px;align-items:center}
+    input[type="range"]{width:100%}
+    .status{min-height:20px;font-size:12px;color:var(--muted);margin-top:8px}
+    .status.ok{color:#7ef0b2}
+    .status.bad{color:#ff98aa}
+    .status.info{color:#9fd0ff}
+    .hidden{display:none !important}
+    .danger-zone{border:1px solid rgba(255,84,112,.35);background:linear-gradient(180deg, rgba(255,84,112,.08), rgba(255,84,112,.03));}
+    .quote{padding:12px;border-left:3px solid #ffcf66;background:#120e0f;border-radius:14px;color:#e8deda;font-size:13px;line-height:1.5}
+    @media (max-width: 1540px){
+      .app{grid-template-columns:280px 1fr 390px}
+      .cards{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .items{grid-template-columns:1fr}
+    }
+    @media (max-width: 1180px){
+      .app{grid-template-columns:1fr;grid-template-rows:84px auto auto auto}
+      .toolbar{grid-template-columns:1fr 1fr}
+      .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+    @media (max-width: 760px){
+      .toolbar,.cards,.detail-grid{grid-template-columns:1fr}
+      .topbar{flex-direction:column;align-items:flex-start}
+      .top-actions{width:100%}
+      .top-actions .btn{flex:1 1 auto}
+      .score-grid{grid-template-columns:1fr}
+    }
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">MO</div>
+        <div>
+          <h1>Maintenance OS Elite V2</h1>
+          <p>Hub avançado de inventário manutenção técnica engenharia e saúde física e psicológica</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="btn ghost" id="btnSeedAll">Criar base padrão turbo</button>
+        <button class="btn warn" id="btnRebuildInsights">Recalcular motor</button>
+        <button class="btn gold" id="btnExportJson">Exportar JSON</button>
+        <button class="btn ghost" id="btnImportJson">Importar JSON</button>
+        <button class="btn primary" id="btnBackHome">Voltar ao início</button>
+        <input id="importInput" class="hidden" type="file" accept="application/json" />
+      </div>
+    </header>
+
+    <aside class="sidebar">
+      <div class="section-head">
+        <h2>Hub e inteligência</h2>
+        <p>Escolha o macro app e refine filtros de prioridade risco excesso compra manutenção descanso e engenharia</p>
+      </div>
+      <div class="sidebar-scroll">
+        <div class="panel-block">
+          <h4>Apps do hub</h4>
+          <div class="tab-grid" id="tabGrid">
+            <button class="tab-btn active" data-app="inventory" id="tab-inventory"><strong>1. Inventário estratégico</strong><span>Roupas carro casa escritório academia softwares dinheiro</span></button>
+            <button class="tab-btn" data-app="maintenance" id="tab-maintenance"><strong>2. Manutenção técnica e engenharia</strong><span>Carro notebook ferramentas inspeção obra EPIs softwares e ativos</span></button>
+            <button class="tab-btn" data-app="wellbeing" id="tab-wellbeing"><strong>3. Saúde física e psicológica</strong><span>Sono foco estresse recuperação humor energia e rotina</span></button>
+          </div>
+        </div>
+
+        <div class="panel-block">
+          <h4>Regras de leitura</h4>
+          <div class="small">
+            0 a 2 crítico vermelho<br>
+            3 a 5 atenção azul<br>
+            6 a 8 bom monitorado dourado<br>
+            9 a 10 verde forte<br><br>
+            Excesso alto muda a decisão mesmo quando o estado está bom
+          </div>
+        </div>
+
+        <div class="panel-block">
+          <h4>Filtros rápidos</h4>
+          <div class="field">
+            <label>Busca</label>
+            <input id="searchInput" class="search" type="text" placeholder="Buscar por item categoria área tags ou ação" />
+          </div>
+          <div class="field">
+            <label>Categoria</label>
+            <select id="filterCategory" class="search"></select>
+          </div>
+          <div class="field">
+            <label>Ação</label>
+            <select id="filterAction" class="search">
+              <option value="">Todas</option>
+              <option value="comprar">Comprar</option>
+              <option value="trocar">Trocar</option>
+              <option value="manutencao">Manutenção</option>
+              <option value="descartar">Descartar</option>
+              <option value="monitorar">Monitorar</option>
+              <option value="calibrar">Calibrar</option>
+              <option value="inspecionar">Inspecionar</option>
+              <option value="treinar">Aproveitar</option>
+              <option value="descansar">Descansar</option>
+              <option value="reduzir_carga">Reduzir carga</option>
+              <option value="ok">OK</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Prioridade mínima</label>
+            <select id="filterPriority" class="search">
+              <option value="0">Todas</option>
+              <option value="20">20+</option>
+              <option value="35">35+</option>
+              <option value="50">50+</option>
+              <option value="65">65+</option>
+            </select>
+          </div>
+          <div class="footer-actions">
+            <button class="btn ghost" id="btnClearFilters">Limpar filtros</button>
+          </div>
+        </div>
+
+        <div class="panel-block">
+          <h4>Lista crítica</h4>
+          <div id="criticalList" class="list"></div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="section-head">
+        <h2>Explorer operacional</h2>
+        <p>Base avançada com mais variáveis de decisão custo ciclo de manutenção risco impacto e recomendação narrativa</p>
+      </div>
+      <div class="main-scroll">
+        <div class="toolbar">
+          <input id="quickName" class="search" type="text" placeholder="Novo item rápido ex: pneu dianteiro esquerdo" />
+          <select id="quickCategory" class="search"></select>
+          <select id="quickArea" class="search"></select>
+          <input id="quickTags" class="search" type="text" placeholder="tags por ponto e vírgula" />
+          <button class="btn primary" id="btnQuickAdd">Adicionar item rápido</button>
+          <button class="btn ghost" id="btnSmartPreset">Aplicar preset do app</button>
+        </div>
+
+        <div class="pathbar" id="currentAppPath">App atual: Inventário estratégico</div>
+
+        <div class="cards">
+          <div class="card"><div class="label">Itens do app</div><div class="value" id="kpiTotal">0</div><div class="sub">Itens filtrados pela aba atual</div></div>
+          <div class="card"><div class="label">Críticos</div><div class="value" id="kpiCritical">0</div><div class="sub">Prioridade alta ou vermelho</div></div>
+          <div class="card"><div class="label">Compra / troca</div><div class="value" id="kpiBuy">0</div><div class="sub">Aquisição ou substituição</div></div>
+          <div class="card"><div class="label">Manutenção</div><div class="value" id="kpiMaintenance">0</div><div class="sub">Serviço reparo abastecimento revisão</div></div>
+          <div class="card"><div class="label">Excesso</div><div class="value" id="kpiExcess">0</div><div class="sub">Itens que podem ser reduzidos</div></div>
+          <div class="card"><div class="label">Custo estimado</div><div class="value" id="kpiCost">R$ 0</div><div class="sub">Compra manutenção e reposição</div></div>
+        </div>
+
+        <div id="itemsList" class="items"></div>
+      </div>
+    </main>
+
+    <aside class="rightbar">
+      <div class="section-head">
+        <h2>Motor de cadastro e análise</h2>
+        <p>Mais complexo com visão técnica risco impacto engenharia custo excesso disponibilidade e ciclo de revisão</p>
+      </div>
+      <div class="right-scroll">
+        <div class="panel-block">
+          <h4>Item selecionado ou novo</h4>
+          <div class="field">
+            <label>Nome do item</label>
+            <input id="itemName" type="text" placeholder="Ex: óleo do motor ou camisa azul marinho" />
+          </div>
+          <div class="field">
+            <label>Categoria</label>
+            <select id="itemCategory"></select>
+          </div>
+          <div class="field">
+            <label>Área</label>
+            <select id="itemArea"></select>
+          </div>
+          <div class="field">
+            <label>Tipo</label>
+            <select id="itemType">
+              <option value="ativo">Ativo</option>
+              <option value="consumivel">Consumível</option>
+              <option value="servico">Serviço</option>
+              <option value="software">Software</option>
+              <option value="estado_interno">Estado interno</option>
+              <option value="equipamento">Equipamento</option>
+              <option value="documento">Documento</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Essencialidade</label>
+            <div class="range-row"><input id="itemEssential" type="range" min="0" max="10" step="1" value="8" /><strong id="itemEssentialValue">8</strong></div>
+          </div>
+          <div class="field">
+            <label>Estado / condição</label>
+            <div class="range-row"><input id="itemState" type="range" min="0" max="10" step="1" value="7" /><strong id="itemStateValue">7</strong></div>
+          </div>
+          <div class="field">
+            <label>Disponibilidade / cobertura</label>
+            <div class="range-row"><input id="itemAvailability" type="range" min="0" max="10" step="1" value="7" /><strong id="itemAvailabilityValue">7</strong></div>
+          </div>
+          <div class="field">
+            <label>Excesso / sobra / redundância</label>
+            <div class="range-row"><input id="itemExcess" type="range" min="0" max="10" step="1" value="1" /><strong id="itemExcessValue">1</strong></div>
+          </div>
+          <div class="field">
+            <label>Risco técnico ou risco humano</label>
+            <div class="range-row"><input id="itemRisk" type="range" min="0" max="10" step="1" value="3" /><strong id="itemRiskValue">3</strong></div>
+          </div>
+          <div class="field">
+            <label>Impacto financeiro ou operacional</label>
+            <div class="range-row"><input id="itemImpact" type="range" min="0" max="10" step="1" value="5" /><strong id="itemImpactValue">5</strong></div>
+          </div>
+          <div class="field">
+            <label>Urgência percebida</label>
+            <div class="range-row"><input id="itemUrgency" type="range" min="0" max="10" step="1" value="5" /><strong id="itemUrgencyValue">5</strong></div>
+          </div>
+          <div class="field">
+            <label>Quantidade ideal</label>
+            <input id="itemIdealQty" type="number" min="0" step="1" value="1" />
+          </div>
+          <div class="field">
+            <label>Quantidade atual</label>
+            <input id="itemQty" type="number" min="0" step="1" value="1" />
+          </div>
+          <div class="field">
+            <label>Custo de compra ou troca</label>
+            <input id="itemReplaceCost" type="number" min="0" step="0.01" placeholder="0.00" />
+          </div>
+          <div class="field">
+            <label>Custo de manutenção</label>
+            <input id="itemMaintenanceCost" type="number" min="0" step="0.01" placeholder="0.00" />
+          </div>
+          <div class="field">
+            <label>Dias de ciclo de revisão</label>
+            <input id="itemCycleDays" type="number" min="0" step="1" value="30" />
+          </div>
+          <div class="field">
+            <label>Última ação</label>
+            <input id="itemLastAction" type="date" />
+          </div>
+          <div class="field">
+            <label>Próxima revisão planejada</label>
+            <input id="itemNextReview" type="date" />
+          </div>
+          <div class="field">
+            <label>Tempo estimado para resolver em horas</label>
+            <input id="itemTimeToFix" type="number" min="0" step="0.5" value="1" />
+          </div>
+          <div class="field">
+            <label>Tags</label>
+            <input id="itemTags" type="text" placeholder="carro; pneu; urgente" />
+          </div>
+          <div class="field">
+            <label>Notas</label>
+            <textarea id="itemNotes" placeholder="Observações técnicas operacionais pessoais ou psicológicas"></textarea>
+          </div>
+          <div class="footer-actions">
+            <button class="btn good" id="btnSave">Salvar item</button>
+            <button class="btn ghost" id="btnClearForm">Limpar</button>
+            <button class="btn warn" id="btnApplyAutoDates">Datas automáticas</button>
+          </div>
+          <div id="statusMessage" class="status"></div>
+        </div>
+
+        <div class="panel-block">
+          <h4>Motor interpretativo</h4>
+          <div id="insightBox" class="quote">Selecione um item para ver a leitura executiva completa</div>
+        </div>
+
+        <div class="panel-block">
+          <h4>Resumo de ações</h4>
+          <div id="summaryList" class="list"></div>
+        </div>
+
+        <div class="panel-block danger-zone">
+          <h4>Zona de limpeza</h4>
+          <div class="small">Exclui apenas o item selecionado no momento</div>
+          <div class="footer-actions" style="margin-top:10px">
+            <button class="btn danger" id="btnDelete">Excluir item selecionado</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAIp-rFuZZsBCNVJ3pSge4TE-XUuwYygrI",
+      authDomain: "agenda-6accc.firebaseapp.com",
+      databaseURL: "https://agenda-6accc-default-rtdb.firebaseio.com",
+      projectId: "agenda-6accc",
+      storageBucket: "agenda-6accc.appspot.com",
+      messagingSenderId: "794262176773",
+      appId: "1:794262176773:web:c4e3837b29f635d5dc086c",
+      measurementId: "G-CVBQ54PERH"
+    };
+
+    const app = firebase.initializeApp(firebaseConfig);
+    const database = firebase.database(app);
+    const itemsRef = database.ref('/maintenance_os_elite_v2/items');
+    const settingsRef = database.ref('/maintenance_os_elite_v2/settings');
+
+    const APP_LABELS = {
+      inventory: 'Inventário estratégico',
+      maintenance: 'Manutenção técnica e engenharia',
+      wellbeing: 'Saúde física e psicológica'
+    };
+
+    const APP_CATEGORIES = {
+      inventory: ['Roupas','Sapatos','Carro','Casa','Escritório','Academia','Tecnologia','Softwares','Financeiro','Acessórios'],
+      maintenance: ['Carro Mecânico','Carro Segurança','Carro Conforto','Ferramentas','Obra e Campo','EPI','TI e Backup','Instrumentação','Software Técnico','Documentos Técnicos'],
+      wellbeing: ['Sono','Energia','Humor','Estresse','Foco','Treino e Recuperação','Relações','Rotina','Saúde Física','Saúde Mental']
+    };
+
+    const APP_AREAS = {
+      inventory: ['Pessoal','Trabalho','Casa','Veículo','Imagem','Digital','Financeiro'],
+      maintenance: ['Veículo','Engenharia','Campo','Escritório','Digital','Segurança','Inspeção'],
+      wellbeing: ['Corpo','Mente','Rotina','Social','Performance']
+    };
+
+    let currentApp = 'inventory';
+    let itemsMap = {};
+    let selectedItemId = null;
+
+    const el = id => document.getElementById(id);
+
+    function nowIso(){ return new Date().toISOString(); }
+    function todayIso(){ return new Date().toISOString().slice(0,10); }
+    function safeNum(v){ const n = Number(v); return Number.isFinite(n) ? n : 0; }
+    function normalizeTags(text){ return String(text || '').split(';').map(s => s.trim()).filter(Boolean); }
+    function money(v){ const n = safeNum(v); return n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+    function showStatus(msg, mode=''){ const n = el('statusMessage'); n.textContent = msg || ''; n.className = 'status' + (mode ? ' ' + mode : ''); }
+    function escapeHtml(str){ return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+    function daysBetween(a,b){ if(!a || !b) return 0; const da = new Date(a); const db = new Date(b); return Math.round((db - da)/(1000*60*60*24)); }
+    function addDays(dateStr, days){ const d = dateStr ? new Date(dateStr) : new Date(); d.setDate(d.getDate() + safeNum(days)); return d.toISOString().slice(0,10); }
+    function formatDate(value){ if(!value) return '-'; const d = new Date(value); return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString('pt-BR'); }
+    function getSeverityByScore(score){ const n = safeNum(score); if(n <= 2) return 'red'; if(n <= 5) return 'blue'; if(n <= 8) return 'gold'; return 'green'; }
+
+    function syncRangeOutputs(){
+      ['Essential','State','Availability','Excess','Risk','Impact','Urgency'].forEach(key => {
+        const range = el('item' + key);
+        const out = el('item' + key + 'Value');
+        range.addEventListener('input', () => out.textContent = range.value);
+      });
+    }
+
+    function fillSelect(selectId, values, includeAll=false, labelAll='Todas as categorias'){
+      const node = el(selectId);
+      node.innerHTML = '';
+      if(includeAll){
+        const op = document.createElement('option');
+        op.value = '';
+        op.textContent = labelAll;
+        node.appendChild(op);
+      }
+      values.forEach(v => {
+        const op = document.createElement('option');
+        op.value = v;
+        op.textContent = v;
+        node.appendChild(op);
+      });
+    }
+
+    function itemArray(){ return Object.entries(itemsMap || {}).map(([id,data]) => ({id,...data})); }
+
+    function evaluateItem(item){
+      const state = safeNum(item.stateScore);
+      const availability = safeNum(item.availabilityScore);
+      const excess = safeNum(item.excessScore);
+      const essential = safeNum(item.essential);
+      const risk = safeNum(item.riskScore);
+      const impact = safeNum(item.impactScore);
+      const urgency = safeNum(item.urgencyScore);
+      const qty = safeNum(item.quantity);
+      const idealQty = Math.max(0, safeNum(item.idealQuantity));
+      const replaceCost = safeNum(item.replaceCost);
+      const maintenanceCost = safeNum(item.maintenanceCost);
+      const cycleDays = safeNum(item.cycleDays);
+      const hours = safeNum(item.timeToFixHours);
+      const appKey = item.app || 'inventory';
+      const daysLate = item.nextReviewDate ? Math.max(0, daysBetween(item.nextReviewDate, todayIso())) : 0;
+      const underQty = Math.max(0, idealQty - qty);
+      const overQty = Math.max(0, qty - idealQty);
+      const datePenalty = Math.min(15, daysLate / 3);
+      let priority = (10 - state) * 3 + (10 - availability) * 2 + risk * 2.6 + impact * 2.2 + urgency * 2.2 + essential * 1.8 + datePenalty;
+      priority += underQty * 4 + overQty * 1.2 + excess * 1.5;
+
+      let action = 'monitorar';
+      let color = 'gold';
+      let title = 'Monitorar';
+      let detail = 'Item em condição razoável mas ainda pede leitura periódica.';
+      let estimatedCost = 0;
+
+      if(appKey === 'wellbeing'){
+        if(state <= 2 || availability <= 2 || risk >= 9){
+          action = 'descansar';
+          color = 'red';
+          title = 'Recuperação imediata';
+          detail = 'Seu estado está crítico. Priorize sono pausa hidratação alimentação leve redução de demanda e proteção da agenda.';
+          estimatedCost = maintenanceCost;
+          priority += 22;
+        }else if(state <= 5 || availability <= 5 || urgency >= 7 || risk >= 7){
+          action = 'reduzir_carga';
+          color = 'blue';
+          title = 'Reduzir carga e corrigir rota';
+          detail = 'Você ainda consegue operar mas com risco de queda. Ajuste treino trabalho social e tela. Faça manutenção humana hoje.';
+          estimatedCost = maintenanceCost;
+          priority += 12;
+        }else if(state >= 9 && availability >= 9 && risk <= 3){
+          action = 'treinar';
+          color = 'green';
+          title = 'Janela de alta performance';
+          detail = 'Momento bom para produzir treinar estudar ou avançar em tarefas mais nobres mantendo disciplina e monitoramento.';
+          priority -= 14;
+        }else{
+          action = 'monitorar';
+          color = 'gold';
+          title = 'Bom com atenção';
+          detail = 'Condição funcional. Vale manter rotina estável para não perder tração.';
+          priority += 3;
+        }
+      }else if(appKey === 'maintenance'){
+        if(excess >= 8 && qty > idealQty + 1){
+          action = 'descartar';
+          color = 'red';
+          title = 'Excesso técnico';
+          detail = 'Existe duplicidade ou estoque alto demais para o uso real. Reduza peso parado custo oculto e dispersão.';
+          priority += 10;
+        }else if(state <= 2 || risk >= 9 || daysLate > 20){
+          action = state <= 2 ? 'trocar' : 'inspecionar';
+          color = 'red';
+          title = state <= 2 ? 'Substituição urgente' : 'Inspeção urgente';
+          detail = 'A condição técnica está crítica ou vencida. Não empurre para frente. Resolva antes de gerar falha operacional ou risco de segurança.';
+          estimatedCost = Math.max(replaceCost, maintenanceCost);
+          priority += 18;
+        }else if(availability <= 3 && essential >= 7){
+          action = 'comprar';
+          color = 'red';
+          title = 'Comprar ou reabastecer';
+          detail = 'Item técnico essencial com cobertura fraca. Recomposição recomendada agora para não travar operação.';
+          estimatedCost = replaceCost || maintenanceCost;
+          priority += 16;
+        }else if(state <= 5 || risk >= 6 || urgency >= 7 || daysLate > 0){
+          action = /pneu|calibr|press/i.test(item.name || '') ? 'calibrar' : 'manutencao';
+          color = 'blue';
+          title = action === 'calibrar' ? 'Calibrar / ajustar' : 'Manutenção recomendada';
+          detail = action === 'calibrar'
+            ? 'O item pede ajuste fino. Pequena ação agora pode evitar desgaste acelerado e perda de desempenho.'
+            : 'O item ainda opera mas já pede revisão limpeza lubrificação alinhamento atualização ou reparo.';
+          estimatedCost = maintenanceCost;
+          priority += 9;
+        }else if(state >= 9 && availability >= 9 && risk <= 3 && excess <= 4){
+          action = 'ok';
+          color = 'green';
+          title = 'Operação forte';
+          detail = 'Ativo técnico em ótimo nível. Manter rotina de inspeção e continuar usando com confiança.';
+          priority -= 12;
+        }
+      }else{
+        if(excess >= 8 && qty >= idealQty + 2){
+          action = 'descartar';
+          color = 'red';
+          title = 'Excesso claro';
+          detail = 'Você tem mais do que precisa. Vender doar reduzir ou parar de recomprar libera caixa espaço e foco.';
+          priority += 12;
+        }else if(state <= 2){
+          action = 'trocar';
+          color = 'red';
+          title = 'Troca urgente';
+          detail = 'A condição já não sustenta uso confiante. Troque antes de virar custo invisível ou desgaste de imagem.';
+          estimatedCost = replaceCost;
+          priority += 15;
+        }else if(availability <= 2 && essential >= 7){
+          action = 'comprar';
+          color = 'red';
+          title = 'Compra urgente';
+          detail = 'Item importante sem cobertura real. Comprar ou repor agora protege a rotina e reduz improviso.';
+          estimatedCost = replaceCost;
+          priority += 15;
+        }else if(state <= 5 || availability <= 5 || urgency >= 7){
+          action = 'manutencao';
+          color = 'blue';
+          title = 'Avaliar e ajustar';
+          detail = 'O item não está ruim porém pede manutenção lavagem conserto revisão ou reabastecimento.';
+          estimatedCost = maintenanceCost;
+          priority += 7;
+        }else if(state >= 9 && availability >= 9 && excess <= 3){
+          action = 'ok';
+          color = 'green';
+          title = 'Excelente';
+          detail = 'O item está novo forte ou muito bem coberto. Nenhuma ação agora.';
+          priority -= 10;
+        }
+      }
+
+      if(underQty > 0 && appKey !== 'wellbeing' && action !== 'comprar'){
+        priority += underQty * 5;
+        if(essential >= 6 && availability <= 6){
+          action = 'comprar';
+          color = 'red';
+          title = 'Cobertura abaixo do ideal';
+          detail = 'A quantidade atual está menor que a quantidade alvo. Vale completar o kit.';
+          estimatedCost = replaceCost * underQty || replaceCost;
+        }
+      }
+
+      const executive = `${title}. ${detail} Prioridade ${Math.round(priority)}. Risco ${risk}/10. Impacto ${impact}/10. Urgência ${urgency}/10. Custo estimado ${money(estimatedCost)}.`;
+      return {
+        action,
+        color,
+        title,
+        detail,
+        executive,
+        priority: Math.round(priority),
+        estimatedCost,
+        underQty,
+        overQty,
+        daysLate,
+        stateColor:getSeverityByScore(state),
+        availabilityColor:getSeverityByScore(availability),
+        excessColor: excess >= 8 ? 'red' : excess >= 6 ? 'gold' : 'green'
+      };
+    }
+
+    function currentFilteredItems(){
+      const q = el('searchInput').value.trim().toLowerCase();
+      const categoryFilter = el('filterCategory').value;
+      const actionFilter = el('filterAction').value;
+      const priorityMin = safeNum(el('filterPriority').value);
+      return itemArray().filter(item => {
+        if((item.app || 'inventory') !== currentApp) return false;
+        const ev = evaluateItem(item);
+        if(categoryFilter && item.category !== categoryFilter) return false;
+        if(actionFilter && ev.action !== actionFilter) return false;
+        if(ev.priority < priorityMin) return false;
+        if(!q) return true;
+        const hay = [item.name,item.category,item.area,item.type,item.notes,...(item.tags || []),ev.action,ev.title].join(' ').toLowerCase();
+        return hay.includes(q);
+      }).sort((a,b) => evaluateItem(b).priority - evaluateItem(a).priority || String(a.name).localeCompare(String(b.name),'pt-BR'));
+    }
+
+    function renderCurrentAppSelectors(){
+      fillSelect('filterCategory', APP_CATEGORIES[currentApp], true, 'Todas as categorias');
+      fillSelect('quickCategory', APP_CATEGORIES[currentApp]);
+      fillSelect('itemCategory', APP_CATEGORIES[currentApp]);
+      fillSelect('quickArea', APP_AREAS[currentApp]);
+      fillSelect('itemArea', APP_AREAS[currentApp]);
+      el('currentAppPath').textContent = 'App atual: ' + APP_LABELS[currentApp];
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.app === currentApp));
+    }
+
+    function renderItems(){
+      const wrap = el('itemsList');
+      const items = currentFilteredItems();
+      wrap.innerHTML = '';
+      if(!items.length){
+        wrap.innerHTML = '<div class="empty">Nenhum item encontrado com os filtros atuais</div>';
+        return;
+      }
+      items.forEach(item => {
+        const ev = evaluateItem(item);
+        const card = document.createElement('div');
+        card.className = 'item-card';
+        card.innerHTML = `
+          <div class="item-top">
+            <div>
+              <div class="item-title">${escapeHtml(item.name || 'Item sem nome')}</div>
+              <div class="item-sub">
+                <span class="badge soft">${escapeHtml(APP_LABELS[item.app] || item.app || '-')}</span>
+                <span class="badge gold">${escapeHtml(item.category || '-')}</span>
+                <span class="badge green">${escapeHtml(item.area || '-')}</span>
+                <span class="badge ${ev.color}">${escapeHtml(ev.title)}</span>
+              </div>
+            </div>
+            <div class="mini">Prioridade<br><strong>${ev.priority}</strong></div>
+          </div>
+          <div class="score-grid">
+            <div class="score-box ${ev.stateColor}"><div class="k">Estado</div><div class="v">${safeNum(item.stateScore)}</div></div>
+            <div class="score-box ${ev.availabilityColor}"><div class="k">Cobertura</div><div class="v">${safeNum(item.availabilityScore)}</div></div>
+            <div class="score-box ${ev.excessColor}"><div class="k">Excesso</div><div class="v">${safeNum(item.excessScore)}</div></div>
+          </div>
+          <div class="desc">${escapeHtml(ev.detail)}</div>
+          <div class="detail-grid">
+            <div class="detail"><strong>Risco / Impacto / Urgência</strong>${safeNum(item.riskScore)} / ${safeNum(item.impactScore)} / ${safeNum(item.urgencyScore)}</div>
+            <div class="detail"><strong>Quantidade</strong>${safeNum(item.quantity)} atual de ${safeNum(item.idealQuantity)} ideal</div>
+            <div class="detail"><strong>Próxima revisão</strong>${escapeHtml(formatDate(item.nextReviewDate))}</div>
+            <div class="detail"><strong>Custo estimado</strong>${escapeHtml(money(ev.estimatedCost))}</div>
+          </div>
+          <div class="footer-actions">
+            <button class="btn primary" data-act="open" data-id="${item.id}">Abrir</button>
+            <button class="btn ghost" data-act="preset-good" data-id="${item.id}">10 verde</button>
+            <button class="btn warn" data-act="preset-mid" data-id="${item.id}">5 azul</button>
+            <button class="btn danger" data-act="preset-bad" data-id="${item.id}">0 vermelho</button>
+          </div>
+        `;
+        wrap.appendChild(card);
+      });
+      wrap.querySelectorAll('[data-act="open"]').forEach(btn => btn.onclick = () => loadItemToForm(btn.dataset.id));
+      wrap.querySelectorAll('[data-act="preset-good"]').forEach(btn => btn.onclick = () => applyQuickState(btn.dataset.id, 10, 10, 0));
+      wrap.querySelectorAll('[data-act="preset-mid"]').forEach(btn => btn.onclick = () => applyQuickState(btn.dataset.id, 5, 5, 2));
+      wrap.querySelectorAll('[data-act="preset-bad"]').forEach(btn => btn.onclick = () => applyQuickState(btn.dataset.id, 0, 0, 0));
+    }
+
+    function renderKPIs(){
+      const items = itemArray().filter(i => (i.app || 'inventory') === currentApp);
+      const evals = items.map(i => ({item:i, ev:evaluateItem(i)}));
+      el('kpiTotal').textContent = String(items.length);
+      el('kpiCritical').textContent = String(evals.filter(x => x.ev.priority >= 50 || x.ev.color === 'red').length);
+      el('kpiBuy').textContent = String(evals.filter(x => ['comprar','trocar'].includes(x.ev.action)).length);
+      el('kpiMaintenance').textContent = String(evals.filter(x => ['manutencao','calibrar','inspecionar'].includes(x.ev.action)).length);
+      el('kpiExcess').textContent = String(evals.filter(x => x.ev.action === 'descartar' || safeNum(x.item.excessScore) >= 7).length);
+      const cost = evals.reduce((acc,x) => acc + x.ev.estimatedCost, 0);
+      el('kpiCost').textContent = money(cost);
+    }
+
+    function renderCriticalList(){
+      const list = el('criticalList');
+      const items = currentFilteredItems().slice(0,8);
+      list.innerHTML = '';
+      if(!items.length){ list.innerHTML = '<div class="empty">Sem itens críticos nesta vista</div>'; return; }
+      items.forEach(item => {
+        const ev = evaluateItem(item);
+        const row = document.createElement('div');
+        row.className = 'list-item';
+        row.innerHTML = `<span>${escapeHtml(item.name)}</span><span>${escapeHtml(ev.title)} · ${ev.priority}</span>`;
+        row.onclick = () => loadItemToForm(item.id);
+        list.appendChild(row);
+      });
+    }
+
+    function renderSummary(){
+      const list = el('summaryList');
+      const counts = {};
+      itemArray().filter(i => (i.app || 'inventory') === currentApp).forEach(item => {
+        const action = evaluateItem(item).action;
+        counts[action] = (counts[action] || 0) + 1;
+      });
+      const order = Object.entries(counts).sort((a,b) => b[1] - a[1]);
+      list.innerHTML = '';
+      if(!order.length){ list.innerHTML = '<div class="empty">Sem dados ainda</div>'; return; }
+      order.forEach(([k,v]) => {
+        const row = document.createElement('div');
+        row.className = 'list-item';
+        row.innerHTML = `<span>${escapeHtml(k)}</span><span>${v}</span>`;
+        list.appendChild(row);
+      });
+    }
+
+    function renderAll(){
+      renderCurrentAppSelectors();
+      renderItems();
+      renderKPIs();
+      renderCriticalList();
+      renderSummary();
+    }
+
+    function clearForm(){
+      selectedItemId = null;
+      el('itemName').value = '';
+      el('itemType').value = 'ativo';
+      el('itemEssential').value = 8;
+      el('itemState').value = 7;
+      el('itemAvailability').value = 7;
+      el('itemExcess').value = 1;
+      el('itemRisk').value = 3;
+      el('itemImpact').value = 5;
+      el('itemUrgency').value = 5;
+      el('itemIdealQty').value = 1;
+      el('itemQty').value = 1;
+      el('itemReplaceCost').value = '';
+      el('itemMaintenanceCost').value = '';
+      el('itemCycleDays').value = 30;
+      el('itemLastAction').value = todayIso();
+      el('itemNextReview').value = addDays(todayIso(), 30);
+      el('itemTimeToFix').value = 1;
+      el('itemTags').value = '';
+      el('itemNotes').value = '';
+      renderCurrentAppSelectors();
+      syncOutputValues();
+      el('insightBox').textContent = 'Selecione um item para ver a leitura executiva completa';
+      showStatus('Formulário limpo', 'info');
+    }
+
+    function syncOutputValues(){
+      ['Essential','State','Availability','Excess','Risk','Impact','Urgency'].forEach(key => {
+        el('item' + key + 'Value').textContent = el('item' + key).value;
+      });
+    }
+
+    function collectFormData(){
+      return {
+        app: currentApp,
+        name: el('itemName').value.trim(),
+        category: el('itemCategory').value,
+        area: el('itemArea').value,
+        type: el('itemType').value,
+        essential: safeNum(el('itemEssential').value),
+        stateScore: safeNum(el('itemState').value),
+        availabilityScore: safeNum(el('itemAvailability').value),
+        excessScore: safeNum(el('itemExcess').value),
+        riskScore: safeNum(el('itemRisk').value),
+        impactScore: safeNum(el('itemImpact').value),
+        urgencyScore: safeNum(el('itemUrgency').value),
+        idealQuantity: safeNum(el('itemIdealQty').value),
+        quantity: safeNum(el('itemQty').value),
+        replaceCost: safeNum(el('itemReplaceCost').value),
+        maintenanceCost: safeNum(el('itemMaintenanceCost').value),
+        cycleDays: safeNum(el('itemCycleDays').value),
+        lastActionDate: el('itemLastAction').value || '',
+        nextReviewDate: el('itemNextReview').value || '',
+        timeToFixHours: safeNum(el('itemTimeToFix').value),
+        tags: normalizeTags(el('itemTags').value),
+        notes: el('itemNotes').value.trim(),
+        updatedAt: nowIso()
+      };
+    }
+
+    async function saveItem(){
+      const data = collectFormData();
+      if(!data.name){ showStatus('Digite o nome do item', 'bad'); return; }
+      try{
+        if(selectedItemId){
+          const existing = itemsMap[selectedItemId] || {};
+          await itemsRef.child(selectedItemId).update({...existing, ...data});
+          showStatus('Item atualizado', 'ok');
+        }else{
+          data.createdAt = nowIso();
+          const ref = itemsRef.push();
+          await ref.set(data);
+          selectedItemId = ref.key;
+          showStatus('Item salvo', 'ok');
+        }
+      }catch(err){
+        console.error(err);
+        showStatus('Erro ao salvar: ' + err.message, 'bad');
+      }
+    }
+
+    function loadItemToForm(id){
+      const item = itemsMap[id];
+      if(!item) return;
+      selectedItemId = id;
+      currentApp = item.app || 'inventory';
+      renderCurrentAppSelectors();
+      el('itemName').value = item.name || '';
+      el('itemCategory').value = item.category || APP_CATEGORIES[currentApp][0];
+      el('itemArea').value = item.area || APP_AREAS[currentApp][0];
+      el('itemType').value = item.type || 'ativo';
+      el('itemEssential').value = safeNum(item.essential || 0);
+      el('itemState').value = safeNum(item.stateScore || 0);
+      el('itemAvailability').value = safeNum(item.availabilityScore || 0);
+      el('itemExcess').value = safeNum(item.excessScore || 0);
+      el('itemRisk').value = safeNum(item.riskScore || 0);
+      el('itemImpact').value = safeNum(item.impactScore || 0);
+      el('itemUrgency').value = safeNum(item.urgencyScore || 0);
+      el('itemIdealQty').value = safeNum(item.idealQuantity || 0);
+      el('itemQty').value = safeNum(item.quantity || 0);
+      el('itemReplaceCost').value = safeNum(item.replaceCost || 0) || '';
+      el('itemMaintenanceCost').value = safeNum(item.maintenanceCost || 0) || '';
+      el('itemCycleDays').value = safeNum(item.cycleDays || 0) || 30;
+      el('itemLastAction').value = item.lastActionDate || '';
+      el('itemNextReview').value = item.nextReviewDate || '';
+      el('itemTimeToFix').value = safeNum(item.timeToFixHours || 1);
+      el('itemTags').value = (item.tags || []).join('; ');
+      el('itemNotes').value = item.notes || '';
+      syncOutputValues();
+      el('insightBox').textContent = evaluateItem(item).executive;
+      renderAll();
+      showStatus('Item carregado no formulário', 'info');
+    }
+
+    async function deleteSelected(){
+      if(!selectedItemId){ showStatus('Nenhum item selecionado', 'bad'); return; }
+      const item = itemsMap[selectedItemId];
+      if(!item) return;
+      const ok = confirm(`Excluir o item "${item.name}"?`);
+      if(!ok) return;
+      try{
+        await itemsRef.child(selectedItemId).remove();
+        clearForm();
+        showStatus('Item excluído', 'ok');
+      }catch(err){
+        console.error(err);
+        showStatus('Erro ao excluir: ' + err.message, 'bad');
+      }
+    }
+
+    async function applyQuickState(id, state, availability, excess){
+      const item = itemsMap[id];
+      if(!item) return;
+      try{
+        await itemsRef.child(id).update({
+          stateScore: state,
+          availabilityScore: availability,
+          excessScore: excess,
+          updatedAt: nowIso()
+        });
+        if(selectedItemId === id) loadItemToForm(id);
+      }catch(err){
+        console.error(err);
+      }
+    }
+
+    async function quickAdd(){
+      const name = el('quickName').value.trim();
+      if(!name){ showStatus('Digite o nome do item rápido', 'bad'); return; }
+      const base = defaultItem(currentApp, el('quickCategory').value, el('quickArea').value, name);
+      base.tags = normalizeTags(el('quickTags').value);
+      try{
+        await itemsRef.push().set(base);
+        el('quickName').value = '';
+        el('quickTags').value = '';
+        showStatus('Item rápido adicionado', 'ok');
+      }catch(err){
+        console.error(err);
+        showStatus('Erro ao adicionar: ' + err.message, 'bad');
+      }
+    }
+
+    function applySmartPreset(){
+      const presets = {
+        inventory: {
+          name:'Camisa azul marinho social', category:'Roupas', area:'Imagem', type:'ativo', essential:8, stateScore:7, availabilityScore:6, excessScore:4, riskScore:2, impactScore:6, urgencyScore:5, idealQuantity:4, quantity:2, replaceCost:169, maintenanceCost:25, cycleDays:90, timeToFixHours:0.5
+        },
+        maintenance: {
+          name:'Pneu dianteiro esquerdo', category:'Carro Segurança', area:'Veículo', type:'equipamento', essential:10, stateScore:4, availabilityScore:6, excessScore:0, riskScore:9, impactScore:9, urgencyScore:8, idealQuantity:1, quantity:1, replaceCost:420, maintenanceCost:45, cycleDays:30, timeToFixHours:1
+        },
+        wellbeing: {
+          name:'Energia física geral', category:'Energia', area:'Corpo', type:'estado_interno', essential:10, stateScore:5, availabilityScore:5, excessScore:0, riskScore:7, impactScore:8, urgencyScore:7, idealQuantity:1, quantity:1, replaceCost:0, maintenanceCost:0, cycleDays:1, timeToFixHours:2
+        }
+      };
+      const p = presets[currentApp];
+      clearForm();
+      el('itemName').value = p.name;
+      el('itemCategory').value = p.category;
+      el('itemArea').value = p.area;
+      el('itemType').value = p.type;
+      el('itemEssential').value = p.essential;
+      el('itemState').value = p.stateScore;
+      el('itemAvailability').value = p.availabilityScore;
+      el('itemExcess').value = p.excessScore;
+      el('itemRisk').value = p.riskScore;
+      el('itemImpact').value = p.impactScore;
+      el('itemUrgency').value = p.urgencyScore;
+      el('itemIdealQty').value = p.idealQuantity;
+      el('itemQty').value = p.quantity;
+      el('itemReplaceCost').value = p.replaceCost;
+      el('itemMaintenanceCost').value = p.maintenanceCost;
+      el('itemCycleDays').value = p.cycleDays;
+      el('itemLastAction').value = todayIso();
+      el('itemNextReview').value = addDays(todayIso(), p.cycleDays);
+      el('itemTimeToFix').value = p.timeToFixHours;
+      syncOutputValues();
+      showStatus('Preset aplicado', 'info');
+    }
+
+    function applyAutoDates(){
+      const last = el('itemLastAction').value || todayIso();
+      const cycle = safeNum(el('itemCycleDays').value || 30);
+      el('itemLastAction').value = last;
+      el('itemNextReview').value = addDays(last, cycle);
+      showStatus('Datas automáticas aplicadas', 'info');
+    }
+
+    function defaultItem(appKey, category, area, name){
+      const baseByApp = {
+        inventory:{ essential:7, stateScore:7, availabilityScore:7, excessScore:2, riskScore:2, impactScore:5, urgencyScore:4, idealQuantity:1, quantity:1, replaceCost:120, maintenanceCost:20, cycleDays:90, type:'ativo' },
+        maintenance:{ essential:8, stateScore:6, availabilityScore:6, excessScore:0, riskScore:6, impactScore:7, urgencyScore:6, idealQuantity:1, quantity:1, replaceCost:250, maintenanceCost:60, cycleDays:30, type:'equipamento' },
+        wellbeing:{ essential:10, stateScore:7, availabilityScore:7, excessScore:0, riskScore:5, impactScore:8, urgencyScore:5, idealQuantity:1, quantity:1, replaceCost:0, maintenanceCost:0, cycleDays:1, type:'estado_interno' }
+      };
+      const b = baseByApp[appKey];
+      return {
+        app: appKey,
+        category,
+        area,
+        name,
+        type:b.type,
+        essential:b.essential,
+        stateScore:b.stateScore,
+        availabilityScore:b.availabilityScore,
+        excessScore:b.excessScore,
+        riskScore:b.riskScore,
+        impactScore:b.impactScore,
+        urgencyScore:b.urgencyScore,
+        idealQuantity:b.idealQuantity,
+        quantity:b.quantity,
+        replaceCost:b.replaceCost,
+        maintenanceCost:b.maintenanceCost,
+        cycleDays:b.cycleDays,
+        lastActionDate: todayIso(),
+        nextReviewDate: addDays(todayIso(), b.cycleDays),
+        timeToFixHours: 1,
+        tags: [],
+        notes: '',
+        createdAt: nowIso(),
+        updatedAt: nowIso()
+      };
+    }
+
+    function makeSeed(appKey, category, area, names, extra={}){
+      return names.map((name, index) => {
+        const item = defaultItem(appKey, category, area, name);
+        item.stateScore = [8,7,6,9,5,7,8,4,9,6][index % 10];
+        item.availabilityScore = [8,7,5,9,6,7,8,5,9,6][index % 10];
+        item.excessScore = extra.excessBase != null ? extra.excessBase : [1,2,0,1,3,2,0,1,0,2][index % 10];
+        item.riskScore = extra.riskBase != null ? extra.riskBase : [2,3,5,2,6,4,3,7,2,5][index % 10];
+        item.impactScore = extra.impactBase != null ? extra.impactBase : [5,6,7,5,8,7,6,9,5,7][index % 10];
+        item.urgencyScore = extra.urgencyBase != null ? extra.urgencyBase : [4,5,6,3,7,5,4,8,3,6][index % 10];
+        item.essential = extra.essentialBase != null ? extra.essentialBase : item.essential;
+        item.replaceCost = extra.replaceCostBase != null ? extra.replaceCostBase + index * 5 : item.replaceCost;
+        item.maintenanceCost = extra.maintenanceCostBase != null ? extra.maintenanceCostBase + index * 2 : item.maintenanceCost;
+        item.cycleDays = extra.cycleDaysBase != null ? extra.cycleDaysBase : item.cycleDays;
+        item.timeToFixHours = extra.timeBase != null ? extra.timeBase : item.timeToFixHours;
+        item.tags = extra.tags ? [...extra.tags] : [];
+        return item;
+      });
+    }
+
+    function seedData(){
+      return [
+        ...makeSeed('inventory','Roupas','Imagem',['Camisa azul marinho','Camisa branca social','Camisa preta básica','Camisa cinza','Polo azul','Polo branca','Calça chino bege','Calça chino marinho','Jeans escuro','Jaqueta leve','Camiseta treino preta','Camiseta treino azul'],{essentialBase:8,replaceCostBase:140,maintenanceCostBase:18,tags:['roupa']}),
+        ...makeSeed('inventory','Sapatos','Imagem',['Sapato social marrom','Sapato preto','Tênis branco casual','Tênis treino','Bota casual','Cinto couro marrom','Cinto couro preto'],{essentialBase:8,replaceCostBase:220,maintenanceCostBase:35,tags:['imagem']}),
+        ...makeSeed('inventory','Carro','Veículo',['Combustível','Óleo reserva','Palheta limpador','Estepe','Macaco','Triângulo','Chave de roda','Limpador de para-brisa','Água para radiador','Aditivo'],{essentialBase:9,replaceCostBase:90,maintenanceCostBase:25,tags:['carro']}),
+        ...makeSeed('inventory','Casa','Casa',['Toalhas','Lençóis','Travesseiro','Talheres','Panelas','Lâmpadas reserva','Produtos limpeza','Papel higiênico','Filtro água','Ferramentas básicas casa'],{essentialBase:7,replaceCostBase:80,maintenanceCostBase:15,tags:['casa']}),
+        ...makeSeed('inventory','Escritório','Trabalho',['Caderno técnico','Canetas','Mouse','Teclado','Monitor','Cadeira escritório','Mochila notebook','Case iPad','Kindle','Carregador reserva'],{essentialBase:8,replaceCostBase:130,maintenanceCostBase:20,tags:['trabalho']}),
+        ...makeSeed('inventory','Academia','Pessoal',['Creatina','Garrafa água','Tênis academia reserva','Short treino','Camisa treino reserva','Fone treino','Toalha treino','Mochila academia'],{essentialBase:6,replaceCostBase:100,maintenanceCostBase:12,tags:['academia']}),
+        ...makeSeed('inventory','Tecnologia','Digital',['iPhone','iPad','Notebook','Apple Watch','Cabo Lightning','Carregador MagSafe','Bateria externa','Película','Capa celular','HD externo'],{essentialBase:9,replaceCostBase:260,maintenanceCostBase:40,tags:['tech']}),
+        ...makeSeed('inventory','Softwares','Digital',['ChatGPT','iCloud','Antivírus','App financeiro','App checklist','App documentos','Backup nuvem','Office','PDF editor','Licença CAD leve'],{essentialBase:8,replaceCostBase:60,maintenanceCostBase:20,tags:['software']}),
+        ...makeSeed('inventory','Financeiro','Financeiro',['Reserva emergência','Caixa manutenção carro','Caixa roupas','Caixa tecnologia','Caixa casa','Saldo cartão','Saldo débito','Verba lazer'],{essentialBase:10,replaceCostBase:0,maintenanceCostBase:0,tags:['financeiro']}),
+        ...makeSeed('maintenance','Carro Mecânico','Veículo',['Óleo do motor','Filtro de óleo','Filtro de ar','Filtro de cabine','Correia','Velas','Bateria','Alinhamento','Balanceamento','Suspensão dianteira','Suspensão traseira','Freio dianteiro','Freio traseiro','Embreagem'],{essentialBase:10,replaceCostBase:250,maintenanceCostBase:120,riskBase:8,impactBase:8,urgencyBase:7,cycleDaysBase:30,tags:['carro','mecanica']}),
+        ...makeSeed('maintenance','Carro Segurança','Veículo',['Pneu dianteiro esquerdo','Pneu dianteiro direito','Pneu traseiro esquerdo','Pneu traseiro direito','Estepe calibragem','Luzes farol','Luzes freio','Luzes seta','Limpador para-brisa','Cinto segurança'],{essentialBase:10,replaceCostBase:320,maintenanceCostBase:50,riskBase:9,impactBase:9,urgencyBase:8,cycleDaysBase:15,tags:['seguranca']}),
+        ...makeSeed('maintenance','Carro Conforto','Veículo',['Ar-condicionado','Multimídia','Vidros elétricos','Trava elétrica','Som automotivo','Limpeza interna','Lavagem externa','Película','Tapetes','Porta-malas organização'],{essentialBase:6,replaceCostBase:180,maintenanceCostBase:60,riskBase:4,impactBase:5,urgencyBase:4,cycleDaysBase:45,tags:['conforto']}),
+        ...makeSeed('maintenance','Ferramentas','Engenharia',['Trena laser','Trena manual','Paquímetro','Nível laser','Martelo','Jogo chave Allen','Jogo soquetes','Torquímetro','Lanterna','Escada'],{essentialBase:8,replaceCostBase:150,maintenanceCostBase:25,riskBase:5,impactBase:7,urgencyBase:5,cycleDaysBase:60,tags:['ferramenta']}),
+        ...makeSeed('maintenance','Obra e Campo','Campo',['Capacete','Colete refletivo','Botina','Luvas','Óculos proteção','Protetor auricular','Pasta obra','Checklist vistoria','Prancha A3','Caneta obra'],{essentialBase:9,replaceCostBase:95,maintenanceCostBase:20,riskBase:8,impactBase:8,urgencyBase:6,cycleDaysBase:30,tags:['obra','campo']}),
+        ...makeSeed('maintenance','EPI','Segurança',['Capacete reserva','Botina reserva','Máscara PFF2','Perneira','Cinto para altura','Protetor solar campo','Capa de chuva','Jaqueta impermeável'],{essentialBase:9,replaceCostBase:110,maintenanceCostBase:18,riskBase:8,impactBase:8,urgencyBase:6,cycleDaysBase:30,tags:['epi']}),
+        ...makeSeed('maintenance','TI e Backup','Digital',['Backup notebook','Backup celular','SSD notebook','Limpeza notebook','Temperatura notebook','Pasta nuvem engenharia','Sincronização celular','Senhas críticas','Autenticação 2FA','Fonte notebook'],{essentialBase:9,replaceCostBase:180,maintenanceCostBase:35,riskBase:7,impactBase:9,urgencyBase:6,cycleDaysBase:20,tags:['backup','ti']}),
+        ...makeSeed('maintenance','Instrumentação','Inspeção',['Calibração trena laser','Calibração nível','Bateria de instrumentos','Case instrumentos','Checklist inspeção','Planilha campo','Fotos de obra backup'],{essentialBase:8,replaceCostBase:160,maintenanceCostBase:40,riskBase:7,impactBase:8,urgencyBase:6,cycleDaysBase:30,tags:['inspecao']}),
+        ...makeSeed('maintenance','Software Técnico','Escritório',['Atualização CAD','Atualização planilhas','Modelos memorial','Modelo laudo','Licença cálculo','Biblioteca detalhes','Backup códigos HTML','Checklist revisão projetos'],{essentialBase:8,replaceCostBase:120,maintenanceCostBase:30,riskBase:6,impactBase:8,urgencyBase:5,cycleDaysBase:20,tags:['software','engenharia']}),
+        ...makeSeed('maintenance','Documentos Técnicos','Escritório',['CREA ativo','ART em dia','CNH','Documento carro','Seguro carro','IPVA','Licenciamento','Notas fiscais manutenção'],{essentialBase:9,replaceCostBase:0,maintenanceCostBase:0,riskBase:8,impactBase:8,urgencyBase:7,cycleDaysBase:30,tags:['documento']}),
+        ...makeSeed('wellbeing','Sono','Corpo',['Horas dormidas','Qualidade do sono','Sono profundo','Latência do sono','Acordar bem','Sono após treino','Sono sem tela'],{essentialBase:10,riskBase:8,impactBase:9,urgencyBase:8,cycleDaysBase:1,replaceCostBase:0,maintenanceCostBase:0,tags:['sono']}),
+        ...makeSeed('wellbeing','Energia','Performance',['Energia manhã','Energia tarde','Energia noite','Vontade de agir','Disposição treino','Sensação de corpo leve','Recuperação geral'],{essentialBase:10,riskBase:7,impactBase:8,urgencyBase:7,cycleDaysBase:1,replaceCostBase:0,maintenanceCostBase:0,tags:['energia']}),
+        ...makeSeed('wellbeing','Humor','Mente',['Alegria','Calma','Paciência','Irritação','Satisfação pessoal','Autoestima','Confiança'],{essentialBase:9,riskBase:7,impactBase:7,urgencyBase:6,cycleDaysBase:1,replaceCostBase:0,maintenanceCostBase:0,tags:['humor']}),
+        ...makeSeed('wellbeing','Estresse','Mente',['Nível de estresse','Pressão mental','Sobrecarga','Sensação de urgência','Cansaço decisório','Fadiga social'],{essentialBase:10,riskBase:9,impactBase:8,urgencyBase:8,cycleDaysBase:1,replaceCostBase:0,maintenanceCostBase:0,tags:['estresse']}),
+        ...makeSeed('wellbeing','Foco','Performance',['Clareza mental','Capacidade de concentração','Disciplina','Memória de curto prazo','Execução profunda','Procrastinação'],{essentialBase:9,riskBase:6,impactBase:9,urgencyBase:7,cycleDaysBase:1,replaceCostBase:0,maintenanceCostBase:0,tags:['foco']}),
+        ...makeSeed('wellbeing','Treino e Recuperação','Corpo',['Dor muscular','Mobilidade','Recuperação pós treino','Fôlego','Respiração','Dor de cabeça','Hidratação'],{essentialBase:9,riskBase:7,impactBase:8,urgencyBase:7,cycleDaysBase:1,replaceCostBase:0,maintenanceCostBase:0,tags:['treino']}),
+        ...makeSeed('wellbeing','Relações','Social',['Paciência social','Bateria social','Contato saudável','Tempo sozinho saudável','Qualidade de conversa'],{essentialBase:7,riskBase:5,impactBase:6,urgencyBase:5,cycleDaysBase:2,replaceCostBase:0,maintenanceCostBase:0,tags:['social']}),
+        ...makeSeed('wellbeing','Rotina','Rotina',['Qualidade manhã','Qualidade almoço','Qualidade noite','Tempo de tela','Organização do dia','Sensação de progresso','Equilíbrio trabalho vida'],{essentialBase:9,riskBase:6,impactBase:8,urgencyBase:6,cycleDaysBase:1,replaceCostBase:0,maintenanceCostBase:0,tags:['rotina']}),
+        ...makeSeed('wellbeing','Saúde Física','Corpo',['Dor lombar','Postura','Digestão','Fome equilibrada','Libido','Tensão muscular'],{essentialBase:9,riskBase:7,impactBase:8,urgencyBase:6,cycleDaysBase:1,replaceCostBase:0,maintenanceCostBase:0,tags:['saude']}),
+        ...makeSeed('wellbeing','Saúde Mental','Mente',['Ansiedade','Calma interna','Presença mental','Esperança','Sentido de progresso','Capacidade de decisão'],{essentialBase:10,riskBase:8,impactBase:9,urgencyBase:7,cycleDaysBase:1,replaceCostBase:0,maintenanceCostBase:0,tags:['mente']})
+      ];
+    }
+
+    async function seedAll(){
+      try{
+        const existing = itemArray();
+        if(existing.length){
+          const ok = confirm('Já existem itens salvos. Deseja adicionar a base padrão sem apagar os atuais?');
+          if(!ok) return;
+        }
+        const data = seedData();
+        for(const item of data){
+          await itemsRef.push().set(item);
+        }
+        showStatus('Base padrão turbo criada com sucesso', 'ok');
+      }catch(err){
+        console.error(err);
+        showStatus('Erro ao criar base: ' + err.message, 'bad');
+      }
+    }
+
+    function exportJson(){
+      const blob = new Blob([JSON.stringify({items:itemsMap, exportedAt:nowIso()}, null, 2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'maintenance_os_elite_v2_export.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      showStatus('Exportação concluída', 'ok');
+    }
+
+    function importJsonFile(file){
+      const reader = new FileReader();
+      reader.onload = async e => {
+        try{
+          const parsed = JSON.parse(e.target.result);
+          const arr = parsed.items ? Object.values(parsed.items) : Array.isArray(parsed) ? parsed : [];
+          if(!arr.length){ showStatus('JSON sem itens válidos', 'bad'); return; }
+          for(const item of arr){
+            item.createdAt = item.createdAt || nowIso();
+            item.updatedAt = nowIso();
+            await itemsRef.push().set(item);
+          }
+          showStatus('Importação concluída', 'ok');
+        }catch(err){
+          console.error(err);
+          showStatus('Erro ao importar JSON', 'bad');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function bindEvents(){
+      syncRangeOutputs();
+      renderCurrentAppSelectors();
+      syncOutputValues();
+
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.onclick = () => {
+          currentApp = btn.dataset.app;
+          selectedItemId = null;
+          renderAll();
+          clearForm();
+          settingsRef.child('currentApp').set(currentApp).catch(()=>{});
+        };
+      });
+
+      el('btnSave').onclick = saveItem;
+      el('btnDelete').onclick = deleteSelected;
+      el('btnClearForm').onclick = clearForm;
+      el('btnQuickAdd').onclick = quickAdd;
+      el('btnSmartPreset').onclick = applySmartPreset;
+      el('btnSeedAll').onclick = seedAll;
+      el('btnRebuildInsights').onclick = () => { renderAll(); showStatus('Motor recalculado', 'info'); };
+      el('btnExportJson').onclick = exportJson;
+      el('btnImportJson').onclick = () => el('importInput').click();
+      el('importInput').addEventListener('change', e => { const file = e.target.files[0]; if(file) importJsonFile(file); e.target.value = ''; });
+      el('btnApplyAutoDates').onclick = applyAutoDates;
+      el('btnBackHome').onclick = () => window.location.href = 'https://wilsonf1996.github.io/index.html/';
+      el('btnClearFilters').onclick = () => {
+        el('searchInput').value = '';
+        el('filterAction').value = '';
+        el('filterPriority').value = '0';
+        renderCurrentAppSelectors();
+        renderAll();
+      };
+      ['searchInput','filterCategory','filterAction','filterPriority'].forEach(id => {
+        el(id).addEventListener('input', renderAll);
+        el(id).addEventListener('change', renderAll);
+      });
+      ['itemState','itemAvailability','itemExcess','itemRisk','itemImpact','itemUrgency','itemEssential'].forEach(id => {
+        el(id).addEventListener('input', () => {
+          syncOutputValues();
+          const preview = evaluateItem(collectFormData());
+          el('insightBox').textContent = preview.executive;
+        });
+      });
+      ['itemName','itemNotes','itemQty','itemIdealQty','itemReplaceCost','itemMaintenanceCost','itemCycleDays','itemLastAction','itemNextReview','itemTimeToFix','itemCategory','itemArea','itemType'].forEach(id => {
+        el(id).addEventListener('input', () => {
+          const data = collectFormData();
+          if(data.name) el('insightBox').textContent = evaluateItem(data).executive;
+        });
+        el(id).addEventListener('change', () => {
+          const data = collectFormData();
+          if(data.name) el('insightBox').textContent = evaluateItem(data).executive;
+        });
+      });
+    }
+
+    function subscribeData(){
+      itemsRef.on('value', snap => {
+        itemsMap = snap.val() || {};
+        renderAll();
+      });
+      settingsRef.child('currentApp').once('value').then(snap => {
+        const val = snap.val();
+        if(val && APP_LABELS[val]) currentApp = val;
+        renderAll();
+      }).catch(() => renderAll());
+    }
+
+    function bootstrap(){
+      bindEvents();
+      subscribeData();
+      clearForm();
+      showStatus('App carregado', 'info');
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>
