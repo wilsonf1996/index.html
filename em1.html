@@ -1,0 +1,483 @@
+import React, { useMemo, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Calculator, Sigma, Ruler, StretchHorizontal, FileText, RefreshCcw, BarChart3 } from "lucide-react";
+
+const steels = [
+  {
+    id: "generico",
+    name: "Aço genérico",
+    E: 200000,
+    fy: 250,
+    fu: 400,
+    note: "Valor clássico para exercícios introdutórios"
+  },
+  {
+    id: "astm_a36",
+    name: "ASTM A36",
+    E: 200000,
+    fy: 250,
+    fu: 400,
+    note: "Aço estrutural muito comum"
+  },
+  {
+    id: "astm_a572_50",
+    name: "ASTM A572 Gr 50",
+    E: 200000,
+    fy: 345,
+    fu: 450,
+    note: "Aço estrutural de maior resistência"
+  },
+  {
+    id: "sae_1020",
+    name: "SAE 1020",
+    E: 205000,
+    fy: 350,
+    fu: 420,
+    note: "Aço carbono de uso geral"
+  },
+  {
+    id: "sae_1045",
+    name: "SAE 1045",
+    E: 205000,
+    fy: 530,
+    fu: 625,
+    note: "Aço com resistência mais elevada"
+  },
+  {
+    id: "inox_304",
+    name: "Inox 304",
+    E: 193000,
+    fy: 215,
+    fu: 505,
+    note: "Aço inoxidável austenítico"
+  }
+];
+
+const unitForceMap = {
+  N: 1,
+  kN: 1000,
+  tf: 9806.65
+};
+
+const unitLengthMap = {
+  mm: 1,
+  cm: 10,
+  m: 1000
+};
+
+function formatNumber(value, digits = 2) {
+  if (!Number.isFinite(value)) return "--";
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits
+  }).format(value);
+}
+
+function safeNum(v, fallback = 0) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function sectionArea(type, dims) {
+  const { d, b, h } = dims;
+  if (type === "circular") return (Math.PI * d * d) / 4;
+  if (type === "retangular") return b * h;
+  return 0;
+}
+
+function sectionLabel(type) {
+  return type === "circular" ? "Circular" : "Retangular";
+}
+
+function stressClass(ratio) {
+  if (ratio < 0.4) return "bg-emerald-500/15 text-emerald-300 border-emerald-400/30";
+  if (ratio < 0.8) return "bg-amber-500/15 text-amber-300 border-amber-400/30";
+  return "bg-rose-500/15 text-rose-300 border-rose-400/30";
+}
+
+export default function App() {
+  const [steelId, setSteelId] = useState("generico");
+  const [forceValue, setForceValue] = useState(35);
+  const [forceUnit, setForceUnit] = useState("kN");
+  const [lengthValue, setLengthValue] = useState(3.5);
+  const [lengthUnit, setLengthUnit] = useState("m");
+  const [sectionType, setSectionType] = useState("circular");
+  const [diameter, setDiameter] = useState(25.4);
+  const [width, setWidth] = useState(50);
+  const [height, setHeight] = useState(20);
+  const [customE, setCustomE] = useState(0);
+  const [modeE, setModeE] = useState("catalogo");
+
+  const steel = steels.find((s) => s.id === steelId) ?? steels[0];
+
+  const results = useMemo(() => {
+    const E = modeE === "catalogo" ? steel.E : safeNum(customE, steel.E);
+    const F_N = safeNum(forceValue) * unitForceMap[forceUnit];
+    const L_mm = safeNum(lengthValue) * unitLengthMap[lengthUnit];
+    const area_mm2 = sectionArea(sectionType, {
+      d: safeNum(diameter),
+      b: safeNum(width),
+      h: safeNum(height)
+    });
+
+    const sigma_MPa = area_mm2 > 0 ? F_N / area_mm2 : 0;
+    const epsilon = E > 0 ? sigma_MPa / E : 0;
+    const delta_mm = epsilon * L_mm;
+    const delta_cm = delta_mm / 10;
+    const delta_m = delta_mm / 1000;
+    const area_cm2 = area_mm2 / 100;
+    const utilFy = steel.fy > 0 ? sigma_MPa / steel.fy : 0;
+    const utilFu = steel.fu > 0 ? sigma_MPa / steel.fu : 0;
+
+    return {
+      E,
+      F_N,
+      L_mm,
+      area_mm2,
+      area_cm2,
+      sigma_MPa,
+      epsilon,
+      delta_mm,
+      delta_cm,
+      delta_m,
+      utilFy,
+      utilFu
+    };
+  }, [steel, forceValue, forceUnit, lengthValue, lengthUnit, sectionType, diameter, width, height, customE, modeE]);
+
+  function loadExample() {
+    setSteelId("generico");
+    setForceValue(35);
+    setForceUnit("kN");
+    setLengthValue(3.5);
+    setLengthUnit("m");
+    setSectionType("circular");
+    setDiameter(25.4);
+    setModeE("catalogo");
+    setCustomE(0);
+  }
+
+  function clearAll() {
+    setSteelId("generico");
+    setForceValue(0);
+    setForceUnit("kN");
+    setLengthValue(0);
+    setLengthUnit("m");
+    setSectionType("circular");
+    setDiameter(0);
+    setWidth(0);
+    setHeight(0);
+    setModeE("catalogo");
+    setCustomE(0);
+  }
+
+  const memorial = `1. DADOS DE ENTRADA\n\nTipo de aço: ${steel.name}\nMódulo de elasticidade adotado: ${formatNumber(results.E, 0)} MPa\nForça axial: ${formatNumber(forceValue, 2)} ${forceUnit}\nComprimento inicial: ${formatNumber(lengthValue, 3)} ${lengthUnit}\nSeção: ${sectionLabel(sectionType)}\n${sectionType === "circular" ? `Diâmetro: ${formatNumber(diameter, 2)} mm` : `Base: ${formatNumber(width, 2)} mm\nAltura: ${formatNumber(height, 2)} mm`}\n\n2. ÁREA DA SEÇÃO\n\nA = ${sectionType === "circular" ? "π·d²/4" : "b·h"}\nA = ${formatNumber(results.area_mm2, 2)} mm² = ${formatNumber(results.area_cm2, 2)} cm²\n\n3. TENSÃO NORMAL\n\nσ = F/A\nσ = ${formatNumber(results.sigma_MPa, 2)} MPa\n\n4. DEFORMAÇÃO ESPECÍFICA\n\nε = σ/E\nε = ${results.epsilon.toExponential(4).replace(".", ",")}\n\n5. ALONGAMENTO\n\nΔL = ε·L0\nΔL = ${formatNumber(results.delta_mm, 3)} mm\nΔL = ${formatNumber(results.delta_cm, 4)} cm\nΔL = ${formatNumber(results.delta_m, 6)} m\n\n6. LEITURA RÁPIDA\n\nUtilização em relação ao escoamento fy = ${(results.utilFy * 100).toFixed(1).replace(".", ",")}%\nUtilização em relação à resistência última fu = ${(results.utilFu * 100).toFixed(1).replace(".", ",")}%\n\nConclusão: para os dados adotados o alongamento calculado da barra é de ${formatNumber(results.delta_mm, 3)} mm.`;
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      <div className="mx-auto max-w-7xl p-4 md:p-8">
+        <div className="mb-6 grid gap-4 lg:grid-cols-[1.4fr_0.9fr]">
+          <Card className="border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 shadow-2xl">
+            <CardContent className="p-6 md:p-8">
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <Badge className="rounded-full bg-blue-500/15 text-blue-300 hover:bg-blue-500/15">AxialLab Pro</Badge>
+                <Badge className="rounded-full bg-violet-500/15 text-violet-300 hover:bg-violet-500/15">Tração simples</Badge>
+                <Badge className="rounded-full bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/15">Múltiplos aços</Badge>
+              </div>
+              <h1 className="text-3xl font-black tracking-tight md:text-5xl">
+                App hiper mega 10 para tração simples em barras de aço
+              </h1>
+              <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
+                Calcula área tensão deformação e alongamento com entradas variáveis. Já vem pronto para resolver o exemplo da imagem e também outros casos com seção circular ou retangular.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Button onClick={loadExample} className="rounded-2xl">Carregar exemplo do livro</Button>
+                <Button variant="outline" onClick={clearAll} className="rounded-2xl border-slate-700 bg-slate-900/50">Limpar</Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-800 bg-slate-900 shadow-2xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <BarChart3 className="h-5 w-5" />
+                Resultado principal
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              <div className="rounded-3xl border border-slate-800 bg-slate-950 p-5">
+                <div className="text-sm text-slate-400">Alongamento</div>
+                <div className="mt-2 text-4xl font-black text-blue-300">{formatNumber(results.delta_mm, 3)} mm</div>
+                <div className="mt-1 text-sm text-slate-400">{formatNumber(results.delta_cm, 4)} cm  |  {formatNumber(results.delta_m, 6)} m</div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                  <div className="text-xs uppercase tracking-wider text-slate-500">Tensão</div>
+                  <div className="mt-2 text-2xl font-bold">{formatNumber(results.sigma_MPa, 2)} MPa</div>
+                </div>
+                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                  <div className="text-xs uppercase tracking-wider text-slate-500">Área</div>
+                  <div className="mt-2 text-2xl font-bold">{formatNumber(results.area_cm2, 2)} cm²</div>
+                </div>
+              </div>
+              <div className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${stressClass(results.utilFy)}`}>
+                Uso em relação ao escoamento fy: {formatNumber(results.utilFy * 100, 1)}%
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Tabs defaultValue="calculadora" className="space-y-4">
+          <TabsList className="flex h-auto flex-wrap justify-start gap-2 rounded-2xl bg-slate-900 p-2">
+            <TabsTrigger value="calculadora" className="rounded-xl">Calculadora</TabsTrigger>
+            <TabsTrigger value="passo" className="rounded-xl">Passo a passo</TabsTrigger>
+            <TabsTrigger value="memorial" className="rounded-xl">Memorial</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="calculadora">
+            <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+              <Card className="border-slate-800 bg-slate-900">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <Calculator className="h-5 w-5" />
+                    Entradas do problema
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-5">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-2 md:col-span-2">
+                      <Label>Tipo de aço</Label>
+                      <Select value={steelId} onValueChange={setSteelId}>
+                        <SelectTrigger className="border-slate-700 bg-slate-950">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {steels.map((item) => (
+                            <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-slate-400">{steel.note}</p>
+                    </div>
+
+                    <div className="grid gap-2 md:col-span-2">
+                      <Label>Módulo de elasticidade</Label>
+                      <div className="grid gap-2 md:grid-cols-[1fr_1fr_1fr]">
+                        <Button type="button" variant={modeE === "catalogo" ? "default" : "outline"} onClick={() => setModeE("catalogo")} className="rounded-xl">Usar catálogo</Button>
+                        <Button type="button" variant={modeE === "manual" ? "default" : "outline"} onClick={() => setModeE("manual")} className="rounded-xl">Informar manualmente</Button>
+                        <Input value={modeE === "catalogo" ? steel.E : customE} onChange={(e) => setCustomE(e.target.value)} disabled={modeE === "catalogo"} className="border-slate-700 bg-slate-950" />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label>Força axial</Label>
+                      <Input type="number" value={forceValue} onChange={(e) => setForceValue(e.target.value)} className="border-slate-700 bg-slate-950" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Unidade da força</Label>
+                      <Select value={forceUnit} onValueChange={setForceUnit}>
+                        <SelectTrigger className="border-slate-700 bg-slate-950"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="N">N</SelectItem>
+                          <SelectItem value="kN">kN</SelectItem>
+                          <SelectItem value="tf">tf</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label>Comprimento inicial</Label>
+                      <Input type="number" value={lengthValue} onChange={(e) => setLengthValue(e.target.value)} className="border-slate-700 bg-slate-950" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Unidade do comprimento</Label>
+                      <Select value={lengthUnit} onValueChange={setLengthUnit}>
+                        <SelectTrigger className="border-slate-700 bg-slate-950"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="mm">mm</SelectItem>
+                          <SelectItem value="cm">cm</SelectItem>
+                          <SelectItem value="m">m</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <Separator className="bg-slate-800" />
+
+                  <div className="grid gap-3">
+                    <Label>Geometria da seção</Label>
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="button" variant={sectionType === "circular" ? "default" : "outline"} onClick={() => setSectionType("circular")} className="rounded-xl">Circular</Button>
+                      <Button type="button" variant={sectionType === "retangular" ? "default" : "outline"} onClick={() => setSectionType("retangular")} className="rounded-xl">Retangular</Button>
+                    </div>
+                  </div>
+
+                  {sectionType === "circular" ? (
+                    <div className="grid gap-2">
+                      <Label>Diâmetro em mm</Label>
+                      <Input type="number" value={diameter} onChange={(e) => setDiameter(e.target.value)} className="border-slate-700 bg-slate-950" />
+                    </div>
+                  ) : (
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="grid gap-2">
+                        <Label>Base em mm</Label>
+                        <Input type="number" value={width} onChange={(e) => setWidth(e.target.value)} className="border-slate-700 bg-slate-950" />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Altura em mm</Label>
+                        <Input type="number" value={height} onChange={(e) => setHeight(e.target.value)} className="border-slate-700 bg-slate-950" />
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <div className="grid gap-4">
+                <Card className="border-slate-800 bg-slate-900">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-xl">
+                      <Sigma className="h-5 w-5" />
+                      Indicadores calculados
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid gap-4 md:grid-cols-2">
+                    <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                      <div className="text-xs uppercase tracking-wider text-slate-500">Área</div>
+                      <div className="mt-2 text-2xl font-bold">{formatNumber(results.area_mm2, 2)} mm²</div>
+                      <div className="text-sm text-slate-400">{formatNumber(results.area_cm2, 2)} cm²</div>
+                    </div>
+                    <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                      <div className="text-xs uppercase tracking-wider text-slate-500">Tensão normal</div>
+                      <div className="mt-2 text-2xl font-bold">{formatNumber(results.sigma_MPa, 2)} MPa</div>
+                      <div className="text-sm text-slate-400">σ = F / A</div>
+                    </div>
+                    <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                      <div className="text-xs uppercase tracking-wider text-slate-500">Deformação específica</div>
+                      <div className="mt-2 text-2xl font-bold">{results.epsilon.toExponential(4).replace(".", ",")}</div>
+                      <div className="text-sm text-slate-400">ε = σ / E</div>
+                    </div>
+                    <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                      <div className="text-xs uppercase tracking-wider text-slate-500">Alongamento</div>
+                      <div className="mt-2 text-2xl font-bold text-blue-300">{formatNumber(results.delta_mm, 3)} mm</div>
+                      <div className="text-sm text-slate-400">ΔL = ε · L0</div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-slate-800 bg-slate-900">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-xl">
+                      <Ruler className="h-5 w-5" />
+                      Propriedades do aço escolhido
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid gap-3 md:grid-cols-3">
+                    <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                      <div className="text-xs uppercase tracking-wider text-slate-500">E</div>
+                      <div className="mt-2 text-2xl font-bold">{formatNumber(steel.E, 0)} MPa</div>
+                    </div>
+                    <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                      <div className="text-xs uppercase tracking-wider text-slate-500">fy</div>
+                      <div className="mt-2 text-2xl font-bold">{formatNumber(steel.fy, 0)} MPa</div>
+                    </div>
+                    <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                      <div className="text-xs uppercase tracking-wider text-slate-500">fu</div>
+                      <div className="mt-2 text-2xl font-bold">{formatNumber(steel.fu, 0)} MPa</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="passo">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Card className="border-slate-800 bg-slate-900">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <StretchHorizontal className="h-5 w-5" />
+                    Resolução passo a passo
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-5 text-sm leading-7 text-slate-300">
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                    <div className="font-semibold text-slate-100">1. Área da seção</div>
+                    <div className="mt-2 text-slate-300">
+                      {sectionType === "circular" ? "A = π·d²/4" : "A = b·h"}
+                    </div>
+                    <div className="mt-2 text-lg font-bold text-slate-100">A = {formatNumber(results.area_mm2, 2)} mm²</div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                    <div className="font-semibold text-slate-100">2. Tensão normal</div>
+                    <div className="mt-2">σ = F / A</div>
+                    <div className="mt-2 text-lg font-bold text-slate-100">σ = {formatNumber(results.sigma_MPa, 2)} MPa</div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                    <div className="font-semibold text-slate-100">3. Deformação específica</div>
+                    <div className="mt-2">ε = σ / E</div>
+                    <div className="mt-2 text-lg font-bold text-slate-100">ε = {results.epsilon.toExponential(4).replace(".", ",")}</div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                    <div className="font-semibold text-slate-100">4. Alongamento final</div>
+                    <div className="mt-2">ΔL = ε · L0</div>
+                    <div className="mt-2 text-lg font-bold text-blue-300">ΔL = {formatNumber(results.delta_mm, 3)} mm</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-slate-800 bg-slate-900">
+                <CardHeader>
+                  <CardTitle className="text-xl">Leitura técnica</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 text-sm leading-7 text-slate-300">
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                    Para este tipo de exercício o módulo de elasticidade costuma variar pouco entre aços comuns. Por isso a mudança do tipo de aço altera mais as reservas resistentes do que o alongamento em si.
+                  </div>
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                    O alongamento cresce quando a força aumenta ou quando o comprimento inicial aumenta. O alongamento cai quando a área da seção aumenta ou quando o módulo E aumenta.
+                  </div>
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                    Resultado atual: a barra apresenta tensão de <span className="font-bold text-slate-100">{formatNumber(results.sigma_MPa, 2)} MPa</span> e alongamento de <span className="font-bold text-blue-300">{formatNumber(results.delta_mm, 3)} mm</span>.
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="memorial">
+            <Card className="border-slate-800 bg-slate-900">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <FileText className="h-5 w-5" />
+                  Memorial pronto para copiar
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-3xl border border-slate-800 bg-slate-950 p-5">
+                  <pre className="whitespace-pre-wrap font-mono text-sm leading-7 text-slate-200">{memorial}</pre>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <Button onClick={() => navigator.clipboard.writeText(memorial)} className="rounded-2xl">Copiar memorial</Button>
+                  <Button variant="outline" onClick={loadExample} className="rounded-2xl border-slate-700 bg-slate-900/50">
+                    <RefreshCcw className="mr-2 h-4 w-4" />
+                    Recarregar exemplo
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+}
