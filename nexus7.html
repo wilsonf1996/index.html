@@ -35232,6 +35232,42 @@ renderView=function(){reviewRenderBase();nxInstallReviewActions()};
 const reportDataBase=reportData;let reportScope='';
 reportData=function(){const scope=NX.account+':'+NX.space?.id;if(reportScope!==scope){Object.assign(REPORT,{days:30,project:'',owner:''});reportScope=scope;}return reportDataBase()};
 
+// Análises temporais compartilhadas: nunca removem registros do estado persistido.
+const NX_TIME={from:'',to:'',scope:''};
+NX_COLLECTIONS.push('investments');
+NX_RULES.rules.nexoV1.spaces.$sid.records.$key['.validate']=NX_RULES.rules.nexoV1.spaces.$sid.records.$key['.validate'].replace("newData.child('collection').val() === 'projects'", "newData.child('collection').val() === 'investments' || newData.child('collection').val() === 'projects'");
+function nxRange(){return {from:NX_TIME.from||addDays(today(),-29),to:NX_TIME.to||today()}}
+function nxInRange(date,range=nxRange()){const d=String(date||'').slice(0,10);return /^\d{4}-\d{2}-\d{2}$/.test(d)&&d>=range.from&&d<=range.to}
+function nxInvestmentEdit(item={}){
+ nxForm(item.id?'Editar posição':'Registrar investimento',[
+ ['name','Ativo / ticker'],['kind','Classe','select',['Renda fixa','Ações','Fundos imobiliários','ETF','Fundo','Criptoativo','Outro']],['institution','Instituição'],['date','Data da posição','date'],['cost','Custo total da posição (R$)','number'],['value','Valor de mercado da posição (R$)','number'],['income','Proventos acumulados desta posição (R$)','number'],['fees','Custos e impostos adicionais (R$)','number'],['notes','Observações','textarea']],
+ {kind:'Renda fixa',date:today(),cost:0,value:0,income:0,fees:0,...item},d=>{if(!d.name.trim())throw Error('Informe o ativo.');for(const k of ['cost','value','income','fees'])if(!Number.isFinite(Number(d[k]))||Number(d[k])<0)throw Error('Use valores não negativos.');nxUpsert('investments',d)},item.id?()=>nxDelete('investments',item.id):null);
+}
+function nxInvestmentStats(rows){return rows.reduce((a,r)=>{a.cost+=Number(r.cost)||0;a.value+=Number(r.value)||0;a.income+=Number(r.income)||0;a.fees+=Number(r.fees)||0;return a},{cost:0,value:0,income:0,fees:0})}
+function nxInvestmentPanel(){const rows=(state.investments||[]).filter(r=>nxInRange(r.date)),s=nxInvestmentStats(rows),gain=s.value+s.income-s.cost-s.fees,base=s.cost+s.fees;
+ return `<section class="pro-card"><div class="actions"><h2>Investimentos</h2><button class="btn primary" id="nxInvestmentNew">Registrar posição</button><button class="btn" id="nxInvestmentExport">Exportar CSV</button></div><p class="pro-muted">Uma posição atual por ativo. Valores informados manualmente em reais; atualize a posição existente. O filtro seleciona a data de avaliação. O resultado é acumulado desde a aquisição, não a rentabilidade do intervalo nem uma cotação em tempo real.</p><div class="pro-kpis">${proMetric('Custo + despesas',money(base),'Posições selecionadas')}${proMetric('Valor de mercado',money(s.value),'Avaliação informada')}${proMetric('Resultado com proventos',money(gain),'Valor + proventos − custo − despesas')}${proMetric('Retorno acumulado',base?(gain/base*100).toFixed(2)+'%':'—','Sobre custo + despesas')}</div>${nxChartCard('Alocação por classe',[...new Set(rows.map(r=>r.kind))].map(label=>({label,value:rows.filter(r=>r.kind===label).reduce((n,r)=>n+Number(r.value||0),0)})),{type:'donut',unit:' R$',series:['Valor de mercado']})}<div class="data-wrap"><table class="data-table"><thead><tr><th>Ativo</th><th>Avaliação</th><th>Custo</th><th>Mercado</th><th>Resultado</th><th></th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.name)}<br>${esc(r.institution||'')}</td><td>${nxDate(r.date)}</td><td>${money(r.cost)}</td><td>${money(r.value)}</td><td>${money(Number(r.value)+Number(r.income||0)-Number(r.cost)-Number(r.fees||0))}</td><td><button class="btn" data-investment="${esc(r.id)}">Editar</button></td></tr>`).join('')||'<tr><td colspan="6">Nenhuma posição avaliada neste período.</td></tr>'}</tbody></table></div></section>`;
+}
+function nxTemporalPanel(){
+ const page=$('#page .page');if(!page||['settings','accounts','diagnostics','modules'].includes(currentView))return;
+ const scope=NX.account+':'+NX.space?.id;if(NX_TIME.scope!==scope){Object.assign(NX_TIME,{scope,from:'',to:''})}
+ const range=nxRange(),days=Math.round((Date.parse(range.to)-Date.parse(range.from))/86400000)+1,previous={from:addDays(range.from,-days),to:addDays(range.from,-1)};
+ const map={health:['healthLogs','date'],goals:['habitLogs','date'],notes:['notes','updatedAt'],docs:['docs','updatedAt'],calendar:['appointments','start'],field:['fieldRecords','capturedAt'],activities:['sessions','startedAt'],business:['crmInteractions','date'],workspace:['groupPosts','publishedAt'],risks:['risks','updatedAt'],audit:['audit','createdAt']};
+ const [collection,field]=map[currentView]||['tasks','end'];
+ const records=state[collection]||[],date=r=>r[field]||r.date||r.createdAt,now=records.filter(r=>nxInRange(date(r))),before=records.filter(r=>nxInRange(date(r),previous));
+ const paid=(state.transactions||[]).filter(t=>t.status==='Pago'&&['Receita','Despesa'].includes(t.type));
+ const cash=(period,type)=>paid.filter(t=>t.type===type&&nxInRange(t.paidDate||t.date,period)).reduce((n,t)=>n+Number(t.amount||0),0);
+ const financial=['money','finance','analytics','dashboard'].includes(currentView);
+ const el=document.createElement('section');el.className='pro-card';el.style.margin='18px 0';el.id='nxTemporal';
+ el.innerHTML=`<h2>Análise por período</h2><form id="nxTemporalForm" class="actions" style="align-items:end;flex-wrap:wrap"><label>De<input class="input" type="date" name="from" required value="${range.from}"></label><label>Até<input class="input" type="date" name="to" required value="${range.to}"></label><button class="btn primary">Aplicar</button>${[7,30,90,365].map(n=>`<button type="button" class="btn" data-time-days="${n}">${n} dias</button>`).join('')}</form><p class="pro-muted">Este painel compara ${nxDate(range.from)} a ${nxDate(range.to)} com ${nxDate(previous.from)} a ${nxDate(previous.to)}. Os filtros próprios das listas abaixo continuam independentes.</p><div class="pro-kpis">${proMetric('Registros no período',now.length,collection+' · data: '+field)}${proMetric('Período anterior',before.length,'Mesmo número de dias')}${proMetric('Variação',before.length?((now.length-before.length)/before.length*100).toFixed(1)+'%':'—','Sem base anterior: sem percentual')}${proMetric('Sem data',records.filter(r=>!date(r)).length,'Excluídos da comparação')}</div>${nxChartCard('Registros por dia',[...new Set(now.map(r=>String(date(r)).slice(0,10)))].sort().map(label=>({label,value:now.filter(r=>String(date(r)).slice(0,10)===label).length})),{type:'bar',series:['Registros']})}${financial?`<h3>Fluxo financeiro realizado</h3><div class="pro-kpis">${proMetric('Recebido',money(cash(range,'Receita')),'Anterior: '+money(cash(previous,'Receita')))}${proMetric('Pago',money(cash(range,'Despesa')),'Anterior: '+money(cash(previous,'Despesa')))}${proMetric('Resultado',money(cash(range,'Receita')-cash(range,'Despesa')),'Anterior: '+money(cash(previous,'Receita')-cash(previous,'Despesa')))}</div>`:''}`;
+ page.insertBefore(el,page.children[1]||null);
+ $('#nxTemporalForm').onsubmit=e=>{e.preventDefault();const f=new FormData(e.currentTarget),from=f.get('from'),to=f.get('to');if(from>to)return toast('A data inicial deve ser anterior à final.','error');Object.assign(NX_TIME,{from,to});renderView()};
+ $$('[data-time-days]').forEach(b=>b.onclick=()=>{Object.assign(NX_TIME,{from:addDays(today(),1-Number(b.dataset.timeDays)),to:today()});renderView()});
+ if(currentView==='money'){const investment=document.createElement('div');investment.innerHTML=nxInvestmentPanel();el.after(investment);$('#nxInvestmentNew').onclick=()=>nxInvestmentEdit();$('#nxInvestmentExport').onclick=()=>nxCsv('investimentos',(state.investments||[]).filter(r=>nxInRange(r.date)),['name','kind','institution','date','cost','value','income','fees']);$$('[data-investment]').forEach(b=>b.onclick=()=>nxInvestmentEdit(byId(state.investments,b.dataset.investment)))}
+ nxChartBind(el);if(currentView==='money')nxChartBind(el.nextElementSibling);proEnhanceCharts();
+}
+const nxTemporalRenderBase=renderView;
+renderView=function(){nxTemporalRenderBase();nxTemporalPanel()};
+
       init().catch((err) => {
         console.error(err);
         document.body.innerHTML =
