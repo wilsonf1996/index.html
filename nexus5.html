@@ -22860,7 +22860,7 @@ body{font-family:Arial,Helvetica,sans-serif!important}
       };
 
       /* Nexo 1.0 – integration layer. Original scheduling and engineering tools retained. */
-      const NX_VERSION = "3.4.0";
+      const NX_VERSION = "3.4.2";
       const NX_COLLECTIONS = [
         "projects",
         "members",
@@ -23469,10 +23469,16 @@ body{font-family:Arial,Helvetica,sans-serif!important}
               .once("value");
             for (const id of Object.keys(snap.val() || {})) {
               try {
-                const [m, a] = await Promise.all([
+                const [m, a, h, pending] = await Promise.all([
                   cloud.db.ref("nexoV1/spaces/" + id + "/meta").once("value"),
                   cloud.db
                     .ref("nexoV1/spaces/" + id + "/members")
+                    .once("value"),
+                  cloud.db
+                    .ref("nexoV1/spaces/" + id + "/inviteHistory")
+                    .once("value"),
+                  cloud.db
+                    .ref("nexoV1/spaces/" + id + "/pendingMembers")
                     .once("value"),
                 ]);
                 if (!m.exists() || !a.child(user.uid).exists()) continue;
@@ -23484,6 +23490,8 @@ body{font-family:Arial,Helvetica,sans-serif!important}
                     Object.entries(a.val()).map(([k, v]) => [k, v.role]),
                   ),
                   people: a.val(),
+                  inviteHistory: h.val() || {},
+                  pendingMembers: pending.val() || {},
                   cloud: true,
                 };
                 if (old) Object.assign(old, sp);
@@ -23582,6 +23590,18 @@ body{font-family:Arial,Helvetica,sans-serif!important}
           nxMigrate();
           await nxSaveSpaces();
           nxSyncStatus();
+        });
+        subscribe(root.child("inviteHistory"), "value", async (snap) => {
+          if (epoch !== NX.epoch) return;
+          sp.inviteHistory = snap.val() || {};
+          await nxSaveSpaces();
+          if (currentView === "workspace") renderView();
+        });
+        subscribe(root.child("pendingMembers"), "value", async (snap) => {
+          if (epoch !== NX.epoch) return;
+          sp.pendingMembers = snap.val() || {};
+          await nxSaveSpaces();
+          if (currentView === "workspace") renderView();
         });
         subscribe(root.child("records"), "value", async (snap) => {
           if (epoch !== NX.epoch) return;
@@ -27146,6 +27166,9 @@ body{font-family:Arial,Helvetica,sans-serif!important}
         );
         nxSetAction("join-space", () => nxJoinInvite());
         nxSetAction("invite-space", nxInvite);
+        $$("[data-group-copy-link]").forEach((b) => (b.onclick = () => { nxCopy(b.dataset.groupCopyLink); toast("Link do grupo copiado."); }));
+        $$("[data-group-open-people]").forEach((b) => (b.onclick = () => { NX2.tab.groups = "people"; renderView(); }));
+        $$("[data-pending-copy]").forEach((b) => (b.onclick = () => { if (b.dataset.pendingCopy) { nxCopy(b.dataset.pendingCopy); toast("Link copiado."); } }));
         nxSetAction("google", connectGoogle);
         nxSetAction("publish-space", nxPublishSpace);
         $$("[data-space-open]").forEach(
@@ -27286,8 +27309,13 @@ body{font-family:Arial,Helvetica,sans-serif!important}
             await cloud.db
               .ref(`nexoV1/spaces/${NX.space.id}/inviteHistory/${token}`)
               .set({ ...invite, token, link: inviteLink });
+            await cloud.db
+              .ref(`nexoV1/spaces/${NX.space.id}/pendingMembers/${token}`)
+              .set({ email: invite.email, role: invite.role, token, link: inviteLink, status: "pending", addedAt: firebase.database.ServerValue.TIMESTAMP });
             NX.space.inviteHistory = NX.space.inviteHistory || {};
             NX.space.inviteHistory[token] = { ...invite, token, link: inviteLink };
+            NX.space.pendingMembers = NX.space.pendingMembers || {};
+            NX.space.pendingMembers[token] = { email: invite.email, role: invite.role, token, link: inviteLink, status: "pending", addedAt: Date.now() };
             await nxSaveSpaces();
             setTimeout(() => {
               const u = new URL(inviteLink);
@@ -27342,6 +27370,9 @@ body{font-family:Arial,Helvetica,sans-serif!important}
             await cloud.db
               .ref(`nexoV1/users/${cloud.user.uid}/spaces/${sp}`)
               .set(true);
+            await cloud.db
+              .ref(`nexoV1/spaces/${sp}/pendingMembers/${token}/status`)
+              .set("accepted");
             const [meta, members] = await Promise.all([
               cloud.db.ref(`nexoV1/spaces/${sp}/meta`).once("value"),
               cloud.db.ref(`nexoV1/spaces/${sp}/members`).once("value"),
@@ -28643,18 +28674,23 @@ body{font-family:Arial,Helvetica,sans-serif!important}
           .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
           .map((i) => `<div class="nx-row nx-between nx-wrap" style="border-top:1px solid var(--line);padding:12px 0"><div><strong>${esc(i.email)}</strong><div class="nx-small nx-muted">${i.role === "viewer" ? "Somente leitura" : "Pode editar"} · Link permanente</div></div><div class="actions"><button class="btn sm" data-history-copy="${esc(i.token || "")}">Copiar link</button><button class="btn sm danger" data-history-revoke="${esc(i.token || "")}">Revogar</button></div></div>`)
           .join("") || '<p class="nx-small nx-muted">Nenhum convite criado neste grupo.</p>';
+        const pending = Object.values(NX.space?.pendingMembers || {})
+          .filter((i) => i.status !== "accepted")
+          .map((i) => `<div class="nx-row nx-between nx-wrap" style="border-top:1px solid var(--line);padding:12px 0"><div><strong>${esc(i.email)}</strong><div class="nx-small nx-muted">${i.role === "viewer" ? "Somente leitura" : "Pode editar"} · Aguardando login/aceite</div></div><button class="btn sm" data-pending-copy="${esc(i.link || "")}">Copiar link</button></div>`)
+          .join("") || '<p class="nx-small nx-muted">Nenhuma pessoa pendente.</p>';
         const access = $("#page .page > section.nx-card");
         if (access && NX.space?.kind !== "personal" && NX.space?.kind !== "demo") {
           const card = document.createElement("section");
           card.className = "nx-card";
           card.style.marginTop = "18px";
-          card.innerHTML = `<h3>Histórico de convites e links</h3><p class="nx-small nx-muted">Cada e-mail autorizado e seu link permanente ficam registrados neste grupo.</p>${history}`;
+          card.innerHTML = `<h3>Convites, links e pessoas autorizadas</h3><p class="nx-small nx-muted">O e-mail é adicionado imediatamente ao espaço como participante pendente. Quando a pessoa entrar com o Google cadastrado, o Firebase ativa o acesso dela.</p><h4>Pessoas adicionadas aguardando entrada</h4>${pending}<h4 style="margin-top:18px">Histórico de links permanentes</h4>${history}`;
           access.insertAdjacentElement("afterend", card);
           $$("[data-history-copy]").forEach((b) => (b.onclick = () => {
             const i = NX.space.inviteHistory?.[b.dataset.historyCopy];
             if (i?.link) { nxCopy(i.link); toast("Link do grupo copiado."); }
             else toast("Link não encontrado neste aparelho.", "error");
           }));
+          $$("[data-pending-copy]").forEach((b) => (b.onclick = () => { if (b.dataset.pendingCopy) { nxCopy(b.dataset.pendingCopy); toast("Link copiado."); } }));
           $$("[data-history-revoke]").forEach((b) => (b.onclick = () => confirmAction("Revogar este convite?", "O link deixará de funcionar para novas entradas.", async () => {
             const token = b.dataset.historyRevoke;
             try {
@@ -30799,6 +30835,12 @@ body{font-family:Arial,Helvetica,sans-serif!important}
           .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
         return `<article class="nx-v2-panel" style="margin-bottom:15px"><div class="nx-v2-row" style="padding-top:0"><div class="nx-v2-avatar">${initials(p.authorName || nx2Person(p.authorId))}</div><div class="nx-v2-row-main"><strong>${esc(p.title || "Atualização")}</strong><p class="nx-v2-muted">${esc(p.authorName || nx2Person(p.authorId))} · ${nx2DateTime(p.publishedAt || p.createdAt)}${p.pinned ? " · fixado" : ""}</p></div><div class="actions">${nxGroupCanChange(p) ? `<button class="btn sm" data-post-edit="${p.id}">Editar</button><button class="btn sm danger" data-post-delete="${p.id}">Excluir</button>` : ""}${nxOwner() ? `<button class="btn sm" data-post-pin="${p.id}">${p.pinned ? "Desafixar" : "Fixar"}</button>` : ""}</div></div><div class="nx-v2-feed">${esc(p.body || "")}</div>${p.tags?.length ? `<p class="nx-v2-muted">${p.tags.map((t) => `#${esc(t)}`).join(" ")}</p>` : ""}<div style="margin-top:14px;padding-left:16px;border-left:2px solid var(--line)">${replies.map((r) => `<div class="nx-v2-row"><div class="nx-v2-avatar" style="width:30px;height:30px">${initials(r.authorName || nx2Person(r.authorId))}</div><div class="nx-v2-row-main"><strong>${esc(r.authorName || nx2Person(r.authorId))}</strong><p>${esc(r.body)}</p><small class="nx-v2-muted">${nx2DateTime(r.createdAt)}</small></div></div>`).join("") || '<p class="nx-v2-muted">Ainda sem comentários.</p>'}<div class="actions" style="margin-top:10px"><input class="input" data-reply-input="${p.id}" placeholder="Responder ao post"><button class="btn sm" data-reply="${p.id}">Responder</button></div></div></article>`;
       }
+      function nxGroupInviteBanner() {
+        if (!NX.space?.cloud || !["family", "company", "social"].includes(NX.space?.kind)) return "";
+        const links = Object.values(NX.space.inviteHistory || {}).filter((i) => i.link);
+        const latest = links.at(-1);
+        return `<section class="nx-v2-panel nx-group-invite-banner" style="margin-bottom:16px"><div class="nx-v2-row"><div class="nx-v2-row-main"><strong>Link permanente do grupo</strong><p class="nx-v2-muted">O link fica visível para os membros autorizados. ${nxOwner() ? 'Adicione novas pessoas pela aba Pessoas.' : 'Compartilhe somente com pessoas da equipe.'}</p></div>${nxOwner() ? '<button class="btn primary" data-nx="invite-space">Adicionar pessoa</button>' : ''}</div>${latest ? `<label class="field" style="margin-top:12px"><span>Último link criado</span><input class="input" readonly value="${esc(latest.link)}" onclick="this.select()"></label><div class="actions" style="margin-top:8px"><button class="btn sm" data-group-copy-link="${esc(latest.link)}">Copiar link</button><button class="btn sm" data-group-open-people>Pessoas autorizadas</button></div>` : `<p class="nx-small nx-muted">${nxOwner() ? 'Nenhum link criado ainda. Clique em Adicionar pessoa para gerar o primeiro.' : 'O administrador ainda não criou um link.'}</p>`}</section>`;
+      }
       function nxGroupOverview() {
         const s = NX.space,
           people = Object.entries(s.people || s.roles || {}),
@@ -30831,7 +30873,7 @@ body{font-family:Arial,Helvetica,sans-serif!important}
           tab = NX2.tab.groups || "overview";
         let body = "";
         if (tab === "wall") {
-          body = `<div class="actions" style="margin-bottom:16px">${nxButton("Novo post", "new-post", "primary", "plus")}<span class="nx-v2-muted">Posts e respostas ficam visíveis para os membros autorizados deste espaço.</span></div>${nxGroupPosts().map(nxGroupPostCard).join("") || nxEmpty("Mural vazio", "Registre uma atualização, decisão ou aviso para a equipe.")}`;
+          body = `${nxGroupInviteBanner()}<div class="actions" style="margin-bottom:16px">${nxButton("Novo post", "new-post", "primary", "plus")}<span class="nx-v2-muted">Posts e respostas ficam visíveis para os membros autorizados deste espaço.</span></div>${nxGroupPosts().map(nxGroupPostCard).join("") || nxEmpty("Mural vazio", "Registre uma atualização, decisão ou aviso para a equipe.")}`;
         } else if (tab === "activity") {
           body = `<div class="nx-v2-split"><section class="nx-v2-panel"><h3>Tarefas compartilhadas</h3>${
             state.tasks
@@ -30863,7 +30905,8 @@ body{font-family:Arial,Helvetica,sans-serif!important}
           const people = Object.entries(
             NX.space.people || NX.space.roles || {},
           );
-          body = `<section class="nx-v2-panel"><div class="nx-v2-row"><div class="nx-v2-row-main"><strong>Acesso real por membro</strong><p class="nx-v2-muted">As regras do Firebase protegem o espaço. Um membro do espaço compartilhado consegue consultar os registros compartilhados; dados pessoais de saúde ficam fora dele.</p></div><button class="btn primary" data-nx="invite-space">Convidar</button></div>${people.map(([id, p]) => `<div class="nx-v2-row"><div class="nx-v2-avatar">${esc(initials(p.name || id))}</div><div class="nx-v2-row-main"><strong>${esc(p.name || id)}</strong><p class="nx-v2-muted">${esc(p.email || "")} · ${esc(p.role || "viewer")}</p></div>${nxOwner() && id !== NX.space.owner ? `<button class="btn sm danger" data-person-remove="${id}">Remover</button>` : ""}</div>`).join("")}</section>`;
+          const pending = Object.values(NX.space.pendingMembers || {});
+          body = `<section class="nx-v2-panel"><div class="nx-v2-row"><div class="nx-v2-row-main"><strong>Acesso real por membro</strong><p class="nx-v2-muted">As regras do Firebase protegem o espaço. Um membro do espaço compartilhado consegue consultar os registros compartilhados; dados pessoais de saúde ficam fora dele.</p></div><button class="btn primary" data-nx="invite-space">Adicionar pessoa</button></div>${people.map(([id, p]) => `<div class="nx-v2-row"><div class="nx-v2-avatar">${esc(initials(p.name || id))}</div><div class="nx-v2-row-main"><strong>${esc(p.name || id)}</strong><p class="nx-v2-muted">${esc(p.email || "")} · ${esc(p.role || "viewer")}</p></div>${nxOwner() && id !== NX.space.owner ? `<button class="btn sm danger" data-person-remove="${id}">Remover</button>` : ""}</div>`).join("")}</section>${pending.length ? `<section class="nx-v2-panel" style="margin-top:15px"><h3>Pessoas adicionadas aguardando entrada</h3><p class="nx-v2-muted">Elas já estão registradas no grupo. O acesso aos dados começa quando entrarem com o e-mail Google cadastrado.</p>${pending.map((p) => `<div class="nx-v2-row"><div class="nx-v2-avatar">@</div><div class="nx-v2-row-main"><strong>${esc(p.email)}</strong><p class="nx-v2-muted">${p.role === "viewer" ? "Somente leitura" : "Pode editar"} · Pendente</p></div><button class="btn sm" data-pending-copy="${esc(p.link || "")}">Copiar link</button></div>`).join("")}</section>` : ""}`;
         } else if (tab === "settings") {
           body = `<section class="nx-v2-panel">${nxButton("Salvar descrição", "group-edit", "primary")}<p class="nx-v2-muted">Defina objetivo, regras de uso, horário de reuniões e o que pode ser compartilhado. Dados pessoais sensíveis devem permanecer no espaço pessoal.</p></section><section class="nx-v2-panel" style="margin-top:15px"><h3>Espaços separados</h3><p class="nx-v2-muted">Para um subconjunto realmente privado, crie um novo espaço com membros próprios; não use apenas uma tag ou filtro de tela.</p>${nxButton("Criar novo espaço", "new-space")}</section>`;
         } else body = nxGroupOverview();
