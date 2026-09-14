@@ -22860,7 +22860,7 @@ body{font-family:Arial,Helvetica,sans-serif!important}
       };
 
       /* Nexo 1.0 – integration layer. Original scheduling and engineering tools retained. */
-      const NX_VERSION = "3.3.1";
+      const NX_VERSION = "3.4.0";
       const NX_COLLECTIONS = [
         "projects",
         "members",
@@ -27275,17 +27275,26 @@ body{font-family:Arial,Helvetica,sans-serif!important}
                 role: d.role,
                 owner: cloud.user.uid,
                 spaceName: NX.space.name,
-                expiresAt: Date.now() + 7 * 86400000,
+              // Link permanente; o administrador pode revogá-lo removendo o convite.
+              expiresAt: null,
                 createdAt: firebase.database.ServerValue.TIMESTAMP,
               };
+            const inviteUrl = new URL(location.href);
+            inviteUrl.hash = "invite=" + token;
+            const inviteLink = inviteUrl.href;
             await cloud.db.ref("nexoV1/invites/" + token).set(invite);
+            await cloud.db
+              .ref(`nexoV1/spaces/${NX.space.id}/inviteHistory/${token}`)
+              .set({ ...invite, token, link: inviteLink });
+            NX.space.inviteHistory = NX.space.inviteHistory || {};
+            NX.space.inviteHistory[token] = { ...invite, token, link: inviteLink };
+            await nxSaveSpaces();
             setTimeout(() => {
-              const u = new URL(location.href);
-              u.hash = "invite=" + token;
+              const u = new URL(inviteLink);
               overlay(
                 modal(
                   "Convite criado",
-                  `<p>Destinatário: <strong>${esc(invite.email)}</strong></p><p>Válido por 7 dias. Somente a conta Google deste e-mail poderá aceitar.</p><label class="field"><span>Link completo do convite</span><input class="input" id="nxInviteLink" readonly value="${esc(u.href)}" onclick="this.select()"></label><label class="field"><span>Código do convite</span><input class="input" id="nxInviteCode" readonly value="${token}" onclick="this.select()"></label><p class="nx-small nx-muted">Envie o link completo acima. Ele precisa manter o trecho <code>#invite=...</code> no final. Se preferir, envie o código separado.</p>`,
+                  `<p>Destinatário: <strong>${esc(invite.email)}</strong></p><p>Este link é permanente até ser revogado pelo administrador. Somente o e-mail Google cadastrado poderá concluir a entrada.</p><label class="field"><span>Link completo do convite</span><input class="input" id="nxInviteLink" readonly value="${esc(u.href)}" onclick="this.select()"></label><label class="field"><span>Código do convite</span><input class="input" id="nxInviteCode" readonly value="${token}" onclick="this.select()"></label><p class="nx-small nx-muted">Envie o link completo acima. Ele precisa manter o trecho <code>#invite=...</code> no final. O link também fica no histórico do grupo.</p>`,
                   nxButton("Copiar link", "copy-invite-link") +
                     nxButton("Copiar código", "copy-invite-code", "primary"),
                 ),
@@ -27317,7 +27326,7 @@ body{font-family:Arial,Helvetica,sans-serif!important}
             const ref = cloud.db.ref("nexoV1/invites/" + token),
               snap = await ref.once("value"),
               invite = snap.val();
-            if (!invite || invite.expiresAt < Date.now())
+            if (!invite || (invite.expiresAt && invite.expiresAt < Date.now()))
               throw Error("Convite expirado ou indisponível.");
             if (invite.email.toLowerCase() !== cloud.user.email?.toLowerCase())
               throw Error("Entre com o Google destinatário deste convite.");
@@ -28630,6 +28639,34 @@ body{font-family:Arial,Helvetica,sans-serif!important}
       const nxWorkspaceBase = nxWorkspace;
       nxWorkspace = function () {
         nxWorkspaceBase();
+        const history = Object.values(NX.space?.inviteHistory || {})
+          .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+          .map((i) => `<div class="nx-row nx-between nx-wrap" style="border-top:1px solid var(--line);padding:12px 0"><div><strong>${esc(i.email)}</strong><div class="nx-small nx-muted">${i.role === "viewer" ? "Somente leitura" : "Pode editar"} · Link permanente</div></div><div class="actions"><button class="btn sm" data-history-copy="${esc(i.token || "")}">Copiar link</button><button class="btn sm danger" data-history-revoke="${esc(i.token || "")}">Revogar</button></div></div>`)
+          .join("") || '<p class="nx-small nx-muted">Nenhum convite criado neste grupo.</p>';
+        const access = $("#page .page > section.nx-card");
+        if (access && NX.space?.kind !== "personal" && NX.space?.kind !== "demo") {
+          const card = document.createElement("section");
+          card.className = "nx-card";
+          card.style.marginTop = "18px";
+          card.innerHTML = `<h3>Histórico de convites e links</h3><p class="nx-small nx-muted">Cada e-mail autorizado e seu link permanente ficam registrados neste grupo.</p>${history}`;
+          access.insertAdjacentElement("afterend", card);
+          $$("[data-history-copy]").forEach((b) => (b.onclick = () => {
+            const i = NX.space.inviteHistory?.[b.dataset.historyCopy];
+            if (i?.link) { nxCopy(i.link); toast("Link do grupo copiado."); }
+            else toast("Link não encontrado neste aparelho.", "error");
+          }));
+          $$("[data-history-revoke]").forEach((b) => (b.onclick = () => confirmAction("Revogar este convite?", "O link deixará de funcionar para novas entradas.", async () => {
+            const token = b.dataset.historyRevoke;
+            try {
+              if (cloud.db && NX.space.cloud) await cloud.db.ref("nexoV1/invites/" + token).remove();
+              if (cloud.db && NX.space.cloud) await cloud.db.ref(`nexoV1/spaces/${NX.space.id}/inviteHistory/${token}`).remove();
+              delete NX.space.inviteHistory[token];
+              await nxSaveSpaces();
+              renderView();
+              toast("Convite revogado.");
+            } catch (e) { nxCloudError(e); }
+          })));
+        }
         $$("[data-remove-uid]").forEach(
           (b) =>
             (b.onclick = () =>
