@@ -5079,6 +5079,14 @@ body{font-family:Arial,Helvetica,sans-serif!important}
         flex-wrap: wrap;
         margin-bottom: 16px;
       }
+      .crm-actions .actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .crm-actions .btn {
+        min-height: 38px;
+      }
       .crm-filters .nx-v2-toolbar {
         align-items: end;
         margin-bottom: 10px;
@@ -5096,6 +5104,7 @@ body{font-family:Arial,Helvetica,sans-serif!important}
         gap: 12px;
         overflow-x: auto;
         padding: 4px 2px 8px;
+        scrollbar-width: thin;
       }
       .crm-column {
         min-height: 240px;
@@ -5103,6 +5112,7 @@ body{font-family:Arial,Helvetica,sans-serif!important}
         border-radius: 14px;
         background: color-mix(in srgb, var(--surface3) 55%, transparent);
         padding: 12px;
+        align-self: start;
       }
       .crm-column header {
         display: flex;
@@ -35310,10 +35320,10 @@ function n5ConvertOpportunity(o){if(!nxCanEdit())throw Error('Acesso somente lei
 }
 function n5SyncDialog(){overlay(modal('Sincronização do espaço',`<p>Conta: ${esc(cloud.user?.email||'Local')}<br>Espaço: ${esc(NX.space.name)}<br>Conexão: ${NX.connection?'Conectado':'Sem conexão confirmada'}<br>Último envio: ${NX.lastSync?nx2DateTime(NX.lastSync):'Ainda não confirmado'}<br>Pendências: ${Object.keys(NX.pending).length+NX.filesPending.length}<br>Conflitos: ${Object.keys(NX.conflicts).length}</p><p>${esc(NX.error||'Nenhum erro registrado.')}</p>`, '<button class="btn" data-close>Fechar</button><button class="btn primary" id="n5Retry">Tentar novamente</button><button class="btn" id="n5Diagnostics">Abrir diagnóstico</button>'));bindModalClose();$('#n5Retry').onclick=async()=>{await nxFlush(true);n5SyncDialog()};$('#n5Diagnostics').onclick=()=>{closeOverlay();navigate('diagnostics')}}
 function n5Extras(){const page=$('#page .page');if(!page)return;const badge=$('#nxCloudBadge');if(badge){badge.onclick=n5SyncDialog;badge.style.cursor='pointer';badge.setAttribute('role','button');badge.tabIndex=0;badge.onkeydown=e=>{if(e.key==='Enter')n5SyncDialog()}}
- if(currentView==='business'&&NX2.tab.management==='crm'){const box=document.createElement('section');box.className='pro-card';box.innerHTML='<h3>Vendas prontas para execução</h3>'+(state.opportunities||[]).filter(o=>o.stage==='won').map(o=>`<div class="pro-row"><strong>${esc(o.name)}</strong><button class="btn" data-convert-sale="${esc(o.id)}">${o.convertedProjectId?'Abrir projeto':'Criar projeto e recebimento'}</button></div>`).join('');page.append(box);$$('[data-convert-sale]').forEach(b=>b.onclick=()=>{const o=byId(state.opportunities,b.dataset.convertSale);if(o.convertedProjectId){selectedProject=o.convertedProjectId;return navigate('tasks')}confirmAction('Converter venda?','Cria um projeto quando necessário, uma tarefa inicial e um recebimento pendente. Revise os prazos depois da conversão.',()=>{try{selectedProject=n5ConvertOpportunity(o);navigate('tasks')}catch(e){toast(e.message,'error')}})})}
+ if((currentView==='business'||currentView==='crm')&&NX2.tab.management==='crm'){const box=document.createElement('section');box.className='pro-card';box.innerHTML='<h3>Vendas prontas para execução</h3>'+(state.opportunities||[]).filter(o=>o.stage==='won').map(o=>`<div class="pro-row"><strong>${esc(o.name)}</strong><button class="btn" data-convert-sale="${esc(o.id)}">${o.convertedProjectId?'Abrir projeto':'Criar projeto e recebimento'}</button></div>`).join('');page.append(box);$$('[data-convert-sale]').forEach(b=>b.onclick=()=>{const o=byId(state.opportunities,b.dataset.convertSale);if(o.convertedProjectId){selectedProject=o.convertedProjectId;return navigate('tasks')}confirmAction('Converter venda?','Cria um projeto quando necessário, uma tarefa inicial e um recebimento pendente. Revise os prazos depois da conversão.',()=>{try{selectedProject=n5ConvertOpportunity(o);navigate('tasks')}catch(e){toast(e.message,'error')}})})}
 }
 const n5RenderBase=renderView;
-renderView=function(){if(currentView==='money'&&NX.ready){nx2CleanView();n5Finance();accountContext()}else n5RenderBase();n5Extras()};
+renderView=function(){if(currentView==='money'&&NX.ready){nx2CleanView();n5Finance();accountContext()}else if(currentView==='crm'&&NX.ready){nx2CleanView();NX2.tab.management='crm';nxManagement();accountContext()}else n5RenderBase();n5Extras()};
 
 function n5AgendaAppointments(){const events=n5Rows('appointments');const visits=n5Rows('crmVisits').filter(v=>v.startAt&&v.status!=='Cancelada').map(v=>({id:'visit:'+v.id,title:v.title||'Visita comercial',date:v.startAt.slice(0,10),time:v.startAt.slice(11,16)||'09:00',duration:v.duration||60,location:v.location||'',type:'Visita',projectId:v.projectId}));return [...events,...visits]}
 function n5AgendaEdit(id){if(id.startsWith('visit:'))return nxCrmVisitEdit(byId(state.crmVisits,id.slice(6)));return nxEditEvent(byId(state.appointments,id))}
@@ -35328,7 +35338,7 @@ nxGoogleCalendarSync=async function(){if(N5.calendarBusy)return;if(!cloud.user)r
  const response=await fetch(url,{method,headers,body:JSON.stringify(body)});if(!response.ok)throw Error(response.status===412?'Evento alterado durante o envio. Atualize e tente novamente.':'Google HTTP '+response.status);sent++;
  }toast(sent+' evento(s) enviados. Alterações do Nexo prevalecem nos campos enviados.')}catch(e){toast(e.message,'error')}finally{N5.calendarBusy=false}};
 function n5CalendarActions(){if(currentView!=='calendar')return;const panel=$('.nx-agenda-integrated-tools .actions');if(panel&&!$('#n5CalendarSend')){const b=document.createElement('button');b.id='n5CalendarSend';b.className='btn';b.textContent='Enviar ao Google';b.onclick=()=>confirmAction('Enviar agenda ao Google?','Compromissos, tarefas e visitas deste filtro serão criados ou atualizados no seu calendário principal. Revise os dados antes de continuar.',nxGoogleCalendarSync);panel.append(b)}}
-function n5Navigation(){const nav=$('.sidebar .nav');if(!nav)return;nav.innerHTML=nxNavButton(['dashboard','home','Meu dia'])+[['Pessoal',[['goals','goal','Metas e hábitos'],['health','health','Saúde'],['notes','note','Notas'],['calendar','calendar','Agenda']]],['Trabalho',[['tasks','task','Atividades'],['portfolio','project','Projetos'],['business','team','CRM e operação']]],['Gestão',[['money','money','Finanças'],['workspace','team','Espaços e equipes'],['analytics','chart','Análises'],['modules','menu','Todos os módulos']]]].map(([label,links])=>`<details ${links.some(l=>l[0]===currentView)?'open':''}><summary style="padding:12px;cursor:pointer">${label}</summary>${links.map(nxNavButton).join('')}</details>`).join('');nav.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>navigate(b.dataset.view))}
+function n5Navigation(){const nav=$('.sidebar .nav');if(!nav)return;nav.innerHTML=nxNavButton(['dashboard','home','Meu dia'])+[['Pessoal',[['goals','goal','Metas e hábitos'],['health','health','Saúde'],['notes','note','Notas'],['calendar','calendar','Agenda']]],['Trabalho',[['tasks','task','Atividades'],['portfolio','project','Projetos'],['crm','team','CRM'],['business','briefcase','Operação']]],['Gestão',[['money','money','Finanças'],['workspace','team','Espaços e equipes'],['analytics','chart','Análises'],['modules','menu','Todos os módulos']]]].map(([label,links])=>`<details ${links.some(l=>l[0]===currentView)?'open':''}><summary style="padding:12px;cursor:pointer">${label}</summary>${links.map(nxNavButton).join('')}</details>`).join('');nav.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>navigate(b.dataset.view))}
 function n5UnifiedTools(){const page=$('#page .page');if(!page)return;$('#nxTemporal')?.remove();if(['tasks','business','calendar','health','goals','notes','docs','activities','risks'].includes(currentView)&&!$('#n5Filters')){page.insertAdjacentHTML('afterbegin',n5FilterHTML());n5BindFilters()}
  if(currentView==='tasks'){const old=$('#proProjectFilter');if(old){old.value=n5Filter().project||'all';old.onchange=e=>{n5Filter().project=e.target.value==='all'?'':e.target.value;selectedProject=e.target.value;renderView()}}}
  n5Navigation();n5CalendarActions();
